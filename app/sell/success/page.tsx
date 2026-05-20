@@ -30,6 +30,13 @@ function IconApple({ className, style }: { className?: string; style?: React.CSS
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+interface ExtraDevice {
+  model: string;
+  storage: string;
+  estimatedPrice: number;
+  details: Array<{ title: string; value: string }>;
+}
+
 export interface SubmissionData {
   orderNumber: string;
   submittedAt: string;
@@ -40,6 +47,7 @@ export interface SubmissionData {
   estimatedPrice: number;
   priceMin: number;
   priceMax: number;
+  extraDevices?: ExtraDevice[];
   customer: { name: string; phone: string; email: string };
   appointment: {
     method: "branch" | "rider" | "parcel";
@@ -394,10 +402,12 @@ export default function SellSuccessPage() {
                   <div className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(184,134,11,0.1)" }}>
                     <Banknote size={15} style={{ color: "#B8860B" }} />
                   </div>
-                  <span className="text-xs font-medium" style={{ color: "#9CA3AF" }}>ราคาประเมินเบื้องต้น</span>
+                  <span className="text-xs font-medium" style={{ color: "#9CA3AF" }}>
+                    {(data?.extraDevices?.length ?? 0) > 0 ? `ราคารวม ${(data?.extraDevices?.length ?? 0) + 1} เครื่อง` : "ราคาประเมินเบื้องต้น"}
+                  </span>
                 </div>
                 <p className="text-lg md:text-xl font-bold leading-snug" style={{ color: "#B8860B" }}>
-                  ฿{(data?.estimatedPrice ?? 0).toLocaleString("th-TH")}
+                  ฿{((data?.estimatedPrice ?? 0) + (data?.extraDevices ?? []).reduce((s, d) => s + d.estimatedPrice, 0)).toLocaleString("th-TH")}
                 </p>
                 <p className="text-xs mt-1.5" style={{ color: "#9CA3AF" }}>ราคานี้อาจเปลี่ยนแปลงได้หลังตรวจสอบเครื่อง</p>
               </div>
@@ -478,20 +488,48 @@ export default function SellSuccessPage() {
 
               {/* Device */}
               <div className="rounded-2xl p-4 flex flex-col" style={{ border: "1px solid #E5E7EB" }}>
-                <p className="text-xs font-semibold text-black mb-3">ข้อมูลเครื่อง</p>
-                <div className="flex items-center gap-3 flex-1">
+                <p className="text-xs font-semibold text-black mb-3">
+                  {(data?.extraDevices?.length ?? 0) > 0 ? `สินค้าในรายการ (${(data?.extraDevices?.length ?? 0) + 1} เครื่อง)` : "ข้อมูลเครื่อง"}
+                </p>
+                {/* Primary device */}
+                <div className="flex items-center gap-3 mb-2">
                   <div className="w-12 h-12 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center" style={{ background: "#F5F5F7" }}>
                     {data?.model && getProductImage(data.model)
                       ? <img src={getProductImage(data.model)!} alt={data.model} className="w-full h-full object-contain p-1" />
                       : <IconApple className="w-7 h-7" style={{ color: "#ccc" }} />}
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-black leading-snug">{data?.model ?? "—"}</p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-bold text-black leading-snug">{data?.model ?? "—"}</p>
+                      {(data?.extraDevices?.length ?? 0) > 0 && (
+                        <span className="text-xs font-bold px-1.5 py-0.5 rounded flex-shrink-0" style={{ background: "rgba(184,134,11,0.15)", color: "#B8860B" }}>หลัก</span>
+                      )}
+                    </div>
                     <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>
                       {[data?.storage, data?.condition].filter(Boolean).join(" • ")}
                     </p>
                   </div>
+                  <span className="text-sm font-bold flex-shrink-0" style={{ color: "#B8860B" }}>฿{(data?.estimatedPrice ?? 0).toLocaleString("th-TH")}</span>
                 </div>
+                {/* Extra devices */}
+                {(data?.extraDevices ?? []).map((d, i) => (
+                  <div key={i} className="flex items-center gap-3 mb-2 pl-1 py-2 rounded-lg" style={{ borderTop: "1px solid #F3F4F6" }}>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-black">{d.model}</p>
+                      <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{d.storage}</p>
+                    </div>
+                    <span className="text-sm font-bold flex-shrink-0" style={{ color: "#374151" }}>฿{d.estimatedPrice.toLocaleString("th-TH")}</span>
+                  </div>
+                ))}
+                {/* Total row */}
+                {(data?.extraDevices?.length ?? 0) > 0 && (
+                  <div className="flex items-center justify-between py-2 px-3 rounded-lg mt-1" style={{ background: "#111" }}>
+                    <span className="text-xs font-semibold text-white">รวม {(data?.extraDevices?.length ?? 0) + 1} เครื่อง</span>
+                    <span className="text-sm font-bold" style={{ color: "#F0C040" }}>
+                      ฿{((data?.estimatedPrice ?? 0) + (data?.extraDevices ?? []).reduce((s, d) => s + d.estimatedPrice, 0)).toLocaleString("th-TH")}
+                    </span>
+                  </div>
+                )}
                 {openCard === "device" && data?.selections && (
                   <div className="mt-3 flex flex-col gap-0 rounded-xl overflow-hidden" style={{ border: "1px solid #F3F4F6", background: "#FAFAF8" }}>
                     {Object.entries(data.selections).filter(([, v]) => v).map(([k, v], i, arr) => {
@@ -623,9 +661,11 @@ export default function SellSuccessPage() {
 
               {/* Price */}
               <div className="px-4 py-3.5" style={{ borderBottom: "1px solid #F3F4F6" }}>
-                <p className="text-xs mb-0.5" style={{ color: "#9CA3AF" }}>ราคาประเมินเบื้องต้น</p>
+                <p className="text-xs mb-0.5" style={{ color: "#9CA3AF" }}>
+                  {(data?.extraDevices?.length ?? 0) > 0 ? `ราคารวม ${(data?.extraDevices?.length ?? 0) + 1} เครื่อง` : "ราคาประเมินเบื้องต้น"}
+                </p>
                 <p className="text-2xl font-bold" style={{ color: "#B8860B" }}>
-                  ฿{(data?.estimatedPrice ?? 0).toLocaleString("th-TH")}
+                  ฿{((data?.estimatedPrice ?? 0) + (data?.extraDevices ?? []).reduce((s, d) => s + d.estimatedPrice, 0)).toLocaleString("th-TH")}
                 </p>
               </div>
 

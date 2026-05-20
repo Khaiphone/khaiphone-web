@@ -1010,9 +1010,8 @@ function SellModelPageContent() {
         accountNumber: payMethod === "transfer" ? bankAccount : undefined,
         accountName:   payMethod === "transfer" ? bankAccountName : undefined,
       },
-      notes: extraDevices.length > 0
-        ? [notes, `สินค้าเพิ่มเติมในรายการ: ${extraDevices.map(d => `${d.model} ${d.storage} (฿${d.estimatedPrice.toLocaleString("th-TH")})`).join(", ")}`].filter(Boolean).join("\n")
-        : notes || undefined,
+      notes: notes || undefined,
+      extraDevices: extraDevices.length > 0 ? extraDevices : undefined,
     };
 
     // Save to Supabase (fire-and-forget on error so UX never blocks)
