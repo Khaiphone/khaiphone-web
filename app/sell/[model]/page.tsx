@@ -482,7 +482,13 @@ function SellModelPageContent() {
       const customDed = !!(match?.deductions && match.deductions.length > 0);
       setHasCustomDed(customDed);
       if (customDed) {
-        setGroupOptions(match!.deductions!.map(g => g.options));
+        setGroupOptions(DEFAULT_PRICING_CONFIG.groups.map((defaultGroup, gi) => {
+          const customGroup = match!.deductions![gi];
+          return defaultGroup.options.map((defaultOpt, oi) => ({
+            ...defaultOpt,
+            ded: customGroup?.options?.[oi]?.ded ?? defaultOpt.ded,
+          }));
+        }));
       } else {
         setGroupOptions(cfg.groups.map(g => g.options));
       }
