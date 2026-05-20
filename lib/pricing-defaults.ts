@@ -67,8 +67,8 @@ export const DEFAULT_PRICING_CONFIG: PricingConfig = {
       options: [
         { label: "แสดงภาพหน้าจอปกติ",                    ded: 0     },
         { label: "จุด Bright / จุดดำในวง / ขอบออกเขียว", ded: -1500 },
-        { label: "จุด Dead / จุดสี / สายเส้น / จอแปลม",  ded: -3000 },
-        { label: "ไม่สามารถตรวจสอบภาพหน้าจอได้",          ded: -2000 },
+        { label: "จุด Dead / จุดสี / ลายเส้น / จอปลอม",   ded: -3000 },
+        { label: "หน้าจอไม่แสดงผล / จอดับ",               ded: -2000 },
       ],
     },
     {
@@ -93,7 +93,7 @@ export const DEFAULT_PRICING_CONFIG: PricingConfig = {
     {
       key: "icloud", title: "iCloud / Activation Lock",
       options: [
-        { label: "สามารถออก iCloud ได้",         sub: "ไม่ติด Activation Lock / ตอแมน", ded: 0     },
+        { label: "สามารถออก iCloud ได้",         sub: "ไม่ติด Activation Lock / ไม่ติดล็อค MDM หรือ ติดผ่อน", ded: 0     },
         { label: "ติด iCloud / Activation Lock", sub: "ราคาจะลดลงอย่างมาก",             ded: -8000 },
       ],
     },
