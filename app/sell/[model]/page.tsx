@@ -534,12 +534,10 @@ function SellModelPageContent() {
     Promise.all([fetchActiveProducts(), fetchPricingConfig()]).then(([dbProducts, cfg]) => {
       if (dbProducts.length > 0) {
         setProducts(
-          ALL_PRODUCTS
-            .filter(p => dbProducts.some(d => d.model === p.model))
-            .map(p => {
-              const db = dbProducts.find(d => d.model === p.model);
-              return db ? { ...p, priceGood: db.price_good } : p;
-            })
+          ALL_PRODUCTS.map(p => {
+            const db = dbProducts.find(d => d.model === p.model);
+            return db ? { ...p, priceGood: db.price_good } : p;
+          })
         );
       }
       setStorageMultiplier(cfg.storageMultiplier);
