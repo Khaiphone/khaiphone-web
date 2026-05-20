@@ -12,7 +12,7 @@ import type { PricingOption } from "@/lib/pricing-defaults";
 
 const BUNDLE_KEY = "khaiphone_extra_devices";
 const BUNDLE_RETURN_KEY = "khaiphone_bundle_return";
-type ExtraDevice = { model: string; storage: string; estimatedPrice: number };
+type ExtraDevice = { model: string; storage: string; estimatedPrice: number; details: Array<{ title: string; value: string }> };
 
 // ─── Icon helpers ─────────────────────────────────────────────────────────────
 
@@ -935,6 +935,7 @@ function SellModelPageContent() {
       model: product.model,
       storage: picks[0] !== null ? storages[picks[0]] : "",
       estimatedPrice: price,
+      details: summaryRows,
     };
     try {
       const existing: ExtraDevice[] = JSON.parse(localStorage.getItem(BUNDLE_KEY) ?? "[]");
@@ -1316,15 +1317,29 @@ function SellModelPageContent() {
                       </div>
                       {/* Extra devices */}
                       {extraDevices.map((d, i) => (
-                        <div key={i} className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-black leading-snug">{d.model}</p>
-                            <p className="text-xs" style={{ color: "#9CA3AF" }}>{d.storage || "—"}</p>
+                        <div key={i} className="rounded-xl overflow-hidden" style={{ border: "1px solid #E5E7EB" }}>
+                          {/* Header row */}
+                          <div className="flex items-center gap-3 px-3 py-2.5" style={{ background: "#F9FAFB" }}>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-black leading-snug">{d.model}</p>
+                              <p className="text-xs" style={{ color: "#9CA3AF" }}>{d.storage || "—"}</p>
+                            </div>
+                            <p className="text-sm font-bold flex-shrink-0" style={{ color: "#6B7280" }}>฿{d.estimatedPrice.toLocaleString("th-TH")}</p>
+                            <button type="button" onClick={() => handleRemoveExtra(i)} className="flex-shrink-0 ml-1 p-1 rounded-full hover:bg-gray-100">
+                              <X size={13} style={{ color: "#9CA3AF" }} />
+                            </button>
                           </div>
-                          <p className="text-sm font-bold flex-shrink-0" style={{ color: "#6B7280" }}>฿{d.estimatedPrice.toLocaleString("th-TH")}</p>
-                          <button type="button" onClick={() => handleRemoveExtra(i)} className="flex-shrink-0 ml-1 p-1 rounded-full hover:bg-gray-100">
-                            <X size={13} style={{ color: "#9CA3AF" }} />
-                          </button>
+                          {/* Condition details */}
+                          {d.details && d.details.length > 0 && (
+                            <div className="px-3 pb-2" style={{ borderTop: "1px solid #F3F4F6", background: "#fff" }}>
+                              {d.details.map(({ title, value }) => (
+                                <div key={title} className="flex items-center justify-between py-1.5" style={{ borderBottom: "1px solid #F9FAFB" }}>
+                                  <span className="text-xs" style={{ color: "#9CA3AF" }}>{title}</span>
+                                  <span className="text-xs font-medium text-black text-right">{value}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                       {/* Total row — only shown when there are extra devices */}
