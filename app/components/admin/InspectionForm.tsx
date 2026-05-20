@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Plus, X, Camera, Check, AlertCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { saveInspectionPhotos } from "@/app/actions/inspection";
-import type { InspectionData, InspectionCriterion, FunctionalTest } from "@/lib/types/admin";
+import type { InspectionData, InspectionCriterion, FunctionalTest, ExtraDeviceInspection } from "@/lib/types/admin";
 
 const GOLD   = "#B8860B";
 const TEXT   = "#111111";
@@ -84,6 +84,13 @@ interface CriterionRow extends InspectionCriterion {
   _key: string;
 }
 
+interface ExtraDeviceRow {
+  model: string;
+  storage: string;
+  estimatedPrice: number;
+  details: Array<{ title: string; value: string }>;
+}
+
 interface Props {
   requestId: string;
   model?: string;
@@ -91,12 +98,13 @@ interface Props {
   estimatedPrice: number;
   deviceColor?: string;
   existing?: InspectionData;
+  extraDevices?: ExtraDeviceRow[];
   onSave: (data: InspectionData, newStatus: "contracting" | "price_negotiation" | "rejected", deviceColor: string) => Promise<void>;
   saving: boolean;
   showColorError?: boolean;
   onColorErrorCleared?: () => void;
   onColorChange?: (color: string) => void;
-  requireCustomerConfirm?: boolean; // true for admin-created orders (KP-)
+  requireCustomerConfirm?: boolean;
 }
 
 function buildInitCriteria(
@@ -118,7 +126,7 @@ function buildInitCriteria(
 }
 
 export default function InspectionForm({
-  requestId, model, selections, estimatedPrice, deviceColor, existing, onSave, saving,
+  requestId, model, selections, estimatedPrice, deviceColor, existing, extraDevices, onSave, saving,
   showColorError: externalColorError, onColorErrorCleared, onColorChange, requireCustomerConfirm,
 }: Props) {
   const colorOptions = model ? (MODEL_COLORS[model] ?? []) : [];
@@ -144,6 +152,18 @@ export default function InspectionForm({
   const [photoSaving,  setPhotoSaving] = useState(false);
   const [photoSaved,   setPhotoSaved]  = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const [extraInspections, setExtraInspections] = useState<ExtraDeviceInspection[]>(() => {
+    if (existing?.extraInspections?.length) return existing.extraInspections;
+    return (extraDevices ?? []).map(d => ({
+      model: d.model,
+      storage: d.storage,
+      originalPrice: d.estimatedPrice,
+      actualPrice: d.estimatedPrice,
+      result: "matched" as const,
+      issues: [],
+    }));
+  });
 
   const allPass      = criteria.every(c => c.pass) && issues.length === 0;
   const priceChanged = Number(actualPrice) !== estimatedPrice;
@@ -238,6 +258,10 @@ export default function InspectionForm({
       functionalTests,
       imei:   imei.trim() || undefined,
       serial: serial.trim() || undefined,
+      extraInspections: extraInspections.length > 0 ? extraInspections.map(e => ({
+        ...e,
+        result: e.actualPrice === e.originalPrice ? "matched" as const : "adjusted" as const,
+      })) : undefined,
     };
     await onSave(data, action, colorDraft.trim());
   }
@@ -539,6 +563,81 @@ export default function InspectionForm({
           </>
         )}
       </div>
+
+      {/* ── Extra device inspections ─────────────────────────────────────────── */}
+      {extraInspections.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          {sectionLabel(`ตรวจสภาพเครื่องเพิ่มเติม (${extraInspections.length} เครื่อง)`)}
+          {extraInspections.map((e, idx) => (
+            <div key={idx} style={{ background: "#F5F5F7", borderRadius: 14, padding: 14, marginBottom: 10, border: `1px solid ${BORDER}` }}>
+              <p style={{ color: TEXT, fontSize: 13, fontWeight: 700, margin: "0 0 12px" }}>
+                เครื่องที่ {idx + 2}: {e.model} {e.storage}
+              </p>
+
+              {/* Color */}
+              <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>สีตัวเครื่อง</label>
+              <input
+                value={e.color ?? ""}
+                onChange={ev => setExtraInspections(prev => prev.map((x, i) => i === idx ? { ...x, color: ev.target.value } : x))}
+                placeholder="เช่น Midnight, Natural Titanium"
+                style={{ width: "100%", background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "8px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, marginBottom: 10, fontFamily: "inherit" }}
+              />
+
+              {/* IMEI + Serial */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                <div>
+                  <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>IMEI</label>
+                  <input
+                    value={e.imei ?? ""}
+                    onChange={ev => setExtraInspections(prev => prev.map((x, i) => i === idx ? { ...x, imei: ev.target.value } : x))}
+                    placeholder="เช่น 356789123456789"
+                    maxLength={20}
+                    style={{ width: "100%", background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "8px 10px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>Serial</label>
+                  <input
+                    value={e.serial ?? ""}
+                    onChange={ev => setExtraInspections(prev => prev.map((x, i) => i === idx ? { ...x, serial: ev.target.value } : x))}
+                    placeholder="เช่น F2LJH0X7XY"
+                    maxLength={20}
+                    style={{ width: "100%", background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "8px 10px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" }}
+                  />
+                </div>
+              </div>
+
+              {/* Price */}
+              <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>ราคาที่รับซื้อจริง (บาท)</label>
+              <input
+                type="number"
+                value={e.actualPrice}
+                onChange={ev => setExtraInspections(prev => prev.map((x, i) => i === idx ? { ...x, actualPrice: Number(ev.target.value) || x.originalPrice } : x))}
+                style={{ width: "100%", background: "#fff", border: `1px solid ${e.actualPrice !== e.originalPrice ? "rgba(184,134,11,0.6)" : BORDER}`, borderRadius: 10, padding: "8px 12px", color: e.actualPrice !== e.originalPrice ? GOLD : TEXT, fontSize: 14, fontWeight: e.actualPrice !== e.originalPrice ? 700 : 400, outline: "none", boxSizing: "border-box" as const, marginBottom: 10, fontFamily: "inherit" }}
+              />
+              <p style={{ color: TEXT3, fontSize: 11, margin: "-6px 0 10px" }}>ราคาที่แจ้ง: ฿{e.originalPrice.toLocaleString("th-TH")}</p>
+
+              {/* Issues */}
+              <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 6 }}>ปัญหาที่พบ</label>
+              <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6, marginBottom: 4 }}>
+                {ISSUE_LIST.slice(0, 5).map(issue => {
+                  const checked = e.issues.includes(issue);
+                  return (
+                    <button
+                      key={issue}
+                      type="button"
+                      onClick={() => setExtraInspections(prev => prev.map((x, i) => i === idx ? { ...x, issues: checked ? x.issues.filter(s => s !== issue) : [...x.issues, issue] } : x))}
+                      style={{ padding: "4px 10px", borderRadius: 8, fontSize: 11, cursor: "pointer", fontFamily: "inherit", background: checked ? "#FEF3C7" : "#fff", color: checked ? "#92400E" : TEXT2, border: `1px solid ${checked ? "rgba(184,134,11,0.3)" : BORDER}` }}
+                    >
+                      {issue}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Action buttons ────────────────────────────────────────────────────── */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>

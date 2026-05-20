@@ -305,7 +305,12 @@ export default function ContractPage() {
     const cId    = idNumber || "—";
     const cAddr  = address   || "—";
     const cEmail = r.customer.email || "—";
-    const price  = r.device.actualPrice ?? r.device.estimatedPrice;
+    const mainPrice = r.device.actualPrice ?? r.device.estimatedPrice;
+    const extraInspArr = r.inspection?.extraInspections ?? [];
+    const extraTotal = (r.extraDevices ?? []).reduce((sum, d, i) => {
+      return sum + (extraInspArr[i]?.actualPrice ?? d.estimatedPrice);
+    }, 0);
+    const price  = mainPrice + extraTotal;
     const payM   = r.payment.method;
     const payTh  = payM === "cash" ? "เงินสด" : "โอนผ่านธนาคาร";
 
@@ -391,11 +396,12 @@ export default function ContractPage() {
     </div>`;
 
     // Device table
+    const accStr = esc([...accessories, ...(accessoriesOther.trim() ? [accessoriesOther.trim()] : [])].join(", ") || "—");
     c += `<div class="sec">📱 รายละเอียดทรัพย์สินที่ซื้อขาย</div>
     <table class="dtable">
       <tr><th>ประเภทอุปกรณ์</th><th>IMEI</th><th>ยี่ห้อ / รุ่น</th><th>Serial Number</th></tr>
       <tr>
-        <td>โทรศัพท์มือถือ</td>
+        <td>โทรศัพท์มือถือ ${(r.extraDevices ?? []).length > 0 ? "(เครื่องที่ 1)" : ""}</td>
         <td style="font-family:monospace">${esc(imei || "—")}</td>
         <td style="font-weight:600">${esc(r.device.model)}</td>
         <td style="font-family:monospace">${esc(serial || "—")}</td>
@@ -405,8 +411,32 @@ export default function ContractPage() {
         <td>${esc(r.device.storage)}</td>
         <td>${esc(r.device.condition)}</td>
         <td>${esc(r.device.color ?? "—")}</td>
-        <td>${esc([...accessories, ...(accessoriesOther.trim() ? [accessoriesOther.trim()] : [])].join(", ") || "—")}</td>
+        <td>${accStr}</td>
       </tr>
+      ${(r.extraDevices ?? []).map((d, i) => {
+        const ei = extraInspArr[i];
+        return `
+      <tr><th colspan="4" style="background:#2a2a4e">เครื่องที่ ${i + 2}: ${esc(d.model)}</th></tr>
+      <tr><th>ประเภทอุปกรณ์</th><th>IMEI</th><th>ยี่ห้อ / รุ่น</th><th>Serial Number</th></tr>
+      <tr>
+        <td>โทรศัพท์มือถือ</td>
+        <td style="font-family:monospace">${esc(ei?.imei || "—")}</td>
+        <td style="font-weight:600">${esc(d.model)}</td>
+        <td style="font-family:monospace">${esc(ei?.serial || "—")}</td>
+      </tr>
+      <tr><th>ความจุ</th><th>สภาพสินค้า</th><th>สี</th><th>ราคา</th></tr>
+      <tr>
+        <td>${esc(d.storage)}</td>
+        <td>—</td>
+        <td>${esc(ei?.color || "—")}</td>
+        <td style="font-weight:600;color:#c9a84c">฿${(ei?.actualPrice ?? d.estimatedPrice).toLocaleString("th-TH")}</td>
+      </tr>`;
+      }).join("")}
+      ${(r.extraDevices ?? []).length > 0 ? `
+      <tr>
+        <td colspan="3" style="font-weight:700;text-align:right">ราคารวมทั้งหมด (${(r.extraDevices ?? []).length + 1} เครื่อง)</td>
+        <td style="font-weight:800;color:#c9a84c;font-size:13px">฿${price.toLocaleString("th-TH")}</td>
+      </tr>` : ""}
     </table>`;
 
     // Inspection criteria table (if available)
@@ -611,13 +641,21 @@ export default function ContractPage() {
           <div class="sec">📱 รายละเอียดสินค้า</div>
           <table class="dtable">
             <tr><th>รายการ</th><th>รายละเอียด</th></tr>
-            <tr><td>รุ่น / Model</td><td style="font-weight:600">${esc(r.device.model)}</td></tr>
+            <tr><td>รุ่น / Model ${(r.extraDevices ?? []).length > 0 ? "(เครื่องที่ 1)" : ""}</td><td style="font-weight:600">${esc(r.device.model)}</td></tr>
             <tr><td>ความจุ / Storage</td><td>${esc(r.device.storage)}</td></tr>
             <tr><td>สี / Color</td><td>${esc(r.device.color ?? "—")}</td></tr>
             <tr><td>IMEI</td><td style="font-family:monospace;font-size:10px">${esc(imei || "—")}</td></tr>
             <tr><td>Serial Number</td><td style="font-family:monospace;font-size:10px">${esc(serial || "—")}</td></tr>
             <tr><td>สภาพ / Condition</td><td>${esc(r.device.condition)}</td></tr>
-            <tr><td>อุปกรณ์ที่ให้มา</td><td>${esc([...accessories, ...(accessoriesOther.trim() ? [accessoriesOther.trim()] : [])].join(", ") || "—")}</td></tr>
+            <tr><td>อุปกรณ์ที่ให้มา</td><td>${accStr}</td></tr>
+            ${(r.extraDevices ?? []).map((d, i) => {
+              const ei = extraInspArr[i];
+              return `<tr><td colspan="2" style="background:#f5f4f0;font-weight:700;color:#1a1a2e">เครื่องที่ ${i + 2}: ${esc(d.model)} ${esc(d.storage)}</td></tr>
+              <tr><td>IMEI</td><td style="font-family:monospace;font-size:10px">${esc(ei?.imei || "—")}</td></tr>
+              <tr><td>Serial Number</td><td style="font-family:monospace;font-size:10px">${esc(ei?.serial || "—")}</td></tr>
+              <tr><td>สี / Color</td><td>${esc(ei?.color || "—")}</td></tr>
+              <tr><td>ราคา</td><td style="font-weight:600;color:#c9a84c">฿${(ei?.actualPrice ?? d.estimatedPrice).toLocaleString("th-TH")}</td></tr>`;
+            }).join("")}
             <tr><td>วันที่ทำรายการ</td><td>${dateStr}</td></tr>
           </table>
         </div>

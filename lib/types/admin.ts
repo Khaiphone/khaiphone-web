@@ -54,6 +54,18 @@ export interface FunctionalTest {
   note?: string;
 }
 
+export interface ExtraDeviceInspection {
+  model: string;
+  storage: string;
+  originalPrice: number;
+  actualPrice: number;
+  result: InspectionResult;
+  issues: string[];
+  imei?: string;
+  serial?: string;
+  color?: string;
+}
+
 export interface InspectionData {
   arrivedAt?: string;
   inspectedAt: string;
@@ -68,9 +80,9 @@ export interface InspectionData {
   negotiationRespondedAt: string | null;
   negotiationRespondedBy: "customer" | "staff" | null;
   functionalTests?: FunctionalTest[];
-  // Device identifiers captured during physical inspection
   imei?: string;
   serial?: string;
+  extraInspections?: ExtraDeviceInspection[];
 }
 
 export interface AdminRequest {

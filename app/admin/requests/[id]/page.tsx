@@ -847,6 +847,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                 estimatedPrice={request.device.estimatedPrice}
                 deviceColor={request.device.color ?? ""}
                 existing={request.inspection}
+                extraDevices={request.extraDevices}
                 onSave={handleInspectionSave}
                 saving={inspSaving}
                 showColorError={showColorError}
