@@ -542,9 +542,12 @@ function SellModelPageContent() {
 
   const isWizardDone = step >= TOTAL_STEPS;
   const isWizard     = !isWizardDone;
-  const currentPick  = isWizard ? (picks[step] ?? null) : null;
   const isResultPhase = isWizardDone && searchParams.get("r") === "1";
   const isFormPhase   = isWizardDone && !isResultPhase;
+
+  // Local pick for instant UI feedback — synced to URL only when advancing to next step
+  const [localPick, setLocalPick] = useState<number | null>(picks[step] ?? null);
+  useEffect(() => { setLocalPick(picks[step] ?? null); }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const nameRef  = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
@@ -764,9 +767,10 @@ function SellModelPageContent() {
     p.set(key, value);
     return `/sell/${params.model}?${p.toString()}`;
   }
-  function nextUrl() {
+  function nextUrl(pick: number | null = localPick) {
     const p = new URLSearchParams(searchParams.toString());
     p.set("step", String(step + 1));
+    if (pick !== null) p.set(`s${step}`, String(pick));
     return `/sell/${params.model}?${p.toString()}`;
   }
   function backUrl() {
@@ -828,16 +832,16 @@ function SellModelPageContent() {
 
                 <div className="flex flex-col gap-3">
                   {stepOpts.map((opt, i) => {
-                    const selected = currentPick === i;
+                    const selected = localPick === i;
                     return (
                       <button
                         key={i}
                         type="button"
                         onClick={() => {
+                          setLocalPick(i);
                           const newPicks = [...picks];
                           newPicks[step] = i;
                           saveWizard(step, newPicks);
-                          router.push(urlWith(`s${step}`, String(i)), { scroll: false });
                         }}
                         className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 w-full text-left"
                         style={{
@@ -867,7 +871,7 @@ function SellModelPageContent() {
 
                 {/* Next / back / iCloud-locked */}
                 <div className="mt-5">
-                  {step === TOTAL_STEPS - 1 && currentPick === 1 ? (
+                  {step === TOTAL_STEPS - 1 && localPick === 1 ? (
                     <>
                       {step > 0 && (
                         <a
@@ -918,10 +922,14 @@ function SellModelPageContent() {
                           <ChevronLeft size={15} /> ย้อนกลับ
                         </a>
                       )}
-                      {currentPick !== null ? (
+                      {localPick !== null ? (
                         <a
-                          href={nextUrl()}
-                          onClick={() => saveWizard(step + 1, picks)}
+                          href={nextUrl(localPick)}
+                          onClick={() => {
+                            const newPicks = [...picks];
+                            newPicks[step] = localPick;
+                            saveWizard(step + 1, newPicks);
+                          }}
                           className="flex items-center justify-center py-3.5 rounded-full font-bold text-sm text-white"
                           style={{ background: "#B8860B", flex: step > 0 ? "2 1 0" : "1 1 0" }}
                         >
