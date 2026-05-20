@@ -1,0 +1,107 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { Home, ClipboardList, CalendarDays, Bell, MoreHorizontal } from "lucide-react";
+import { fetchRequests } from "@/app/actions/admin-requests";
+
+const GOLD     = "#B8860B";
+const INACTIVE = "#9CA3AF";
+
+const TABS = [
+  { label: "หน้าหลัก",  icon: Home,           href: "/admin/dashboard"     },
+  { label: "คำขอ",      icon: ClipboardList,  href: "/admin/requests"      },
+  { label: "นัดหมาย",   icon: CalendarDays,   href: "/admin/appointments"  },
+  { label: "แจ้งเตือน", icon: Bell,           href: "/admin/notifications" },
+  { label: "เพิ่มเติม", icon: MoreHorizontal, href: "/admin/more"          },
+] as const;
+
+export default function BottomTabNav() {
+  const pathname = usePathname();
+  const router   = useRouter();
+  const [newCount, setNewCount] = useState(0);
+
+  useEffect(() => {
+    fetchRequests().then(reqs => {
+      setNewCount(reqs.filter(r => r.status === "new").length);
+    });
+  }, [pathname]);
+
+  const unreadCount = 0;
+
+  return (
+    <nav
+      className="md:hidden"
+      style={{
+        position: "fixed",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        background: "#ffffff",
+        borderTop: "1px solid #E5E7EB",
+        paddingBottom: "env(safe-area-inset-bottom)",
+        zIndex: 50,
+        WebkitTransform: "translateZ(0)",
+      }}
+    >
+      <div style={{ display: "flex", height: "56px" }}>
+        {TABS.map(({ label, icon: Icon, href }) => {
+          const active = pathname === href || (href !== "/admin/dashboard" && pathname.startsWith(href));
+          const badge  =
+            href === "/admin/requests"      ? newCount    :
+            href === "/admin/notifications" ? unreadCount : 0;
+
+          return (
+            <button
+              key={href}
+              onClick={() => router.push(href)}
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "3px",
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                color: active ? GOLD : INACTIVE,
+                touchAction: "manipulation",
+                position: "relative",
+                minHeight: "44px",
+                padding: 0,
+              }}
+            >
+              <div style={{ position: "relative" }}>
+                <Icon size={21} strokeWidth={active ? 2.5 : 1.75} />
+                {badge > 0 && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: "-5px",
+                      right: "-8px",
+                      background: "#EF4444",
+                      color: "#fff",
+                      fontSize: "9px",
+                      fontWeight: 700,
+                      padding: "1px 4px",
+                      borderRadius: "999px",
+                      minWidth: "15px",
+                      textAlign: "center",
+                      lineHeight: "14px",
+                    }}
+                  >
+                    {badge > 9 ? "9+" : badge}
+                  </span>
+                )}
+              </div>
+              <span style={{ fontSize: "10px", fontWeight: active ? 700 : 400, lineHeight: 1, color: active ? GOLD : INACTIVE }}>
+                {label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}

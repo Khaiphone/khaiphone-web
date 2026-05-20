@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3001)",
+      "Bash(curl -s http://localhost:3001)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(find /tmp -name \"*.png\" -o -name \"*.jpg\" -o -name \"*.webp\" 2>/dev/null | head -10)",
+      "Read(//private/tmp/**)",
+      "Bash(find /Users/salapaotarn/Downloads /Users/salapaotarn/Desktop -maxdepth 2 \\\\\\( -name \"*.png\" -o -name \"*.jpg\" -o -name \"*.jpeg\" -o -name \"*.webp\" \\\\\\) -newer /Users/salapaotarn/Desktop/khaiphone-web/package.json 2>/dev/null | head -10)",
+      "Read(//Users/salapaotarn/Downloads/**)",
+      "Bash(cp \"/Users/salapaotarn/Downloads/Hero Background.png\" \"/Users/salapaotarn/Desktop/khaiphone-web/public/hero-products.png\" && echo \"done\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/hero-products.png)",
+      "Bash(sips -g pixelWidth -g pixelHeight \"/Users/salapaotarn/Desktop/khaiphone-web/public/hero-products.png\")",
+      "Bash(find /Users/salapaotarn/Downloads /Users/salapaotarn/Desktop -maxdepth 2 \\\\\\( -name \"*.png\" -o -name \"*.jpg\" -o -name \"*.jpeg\" \\\\\\) -newer /Users/salapaotarn/Desktop/khaiphone-web/public/hero-products.png 2>/dev/null)",
+      "Read(//Users/salapaotarn/Desktop/**)",
+      "Bash(sips -g pixelWidth -g pixelHeight \"/Users/salapaotarn/Downloads/Hero Background transparent.png\")",
+      "Bash(python3 -c \"from PIL import Image; img = Image.open\\('/Users/salapaotarn/Downloads/Hero Background transparent.png'\\); print\\(img.size, img.mode\\)\")",
+      "Bash(sips -g all \"/Users/salapaotarn/Downloads/Hero Background transparent.png\")",
+      "Bash(convert --version)",
+      "Bash(sips -g pixelWidth -g pixelHeight -g hasAlpha \"/Users/salapaotarn/Downloads/Hero Backgroud khaiphone.png\")",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(mkdir -p /Users/salapaotarn/Desktop/khaiphone-web/app/estimate/\\\\[model\\\\])",
+      "Bash(lsof -i :3000 -sTCP:LISTEN)"
+    ],
+    "additionalDirectories": [
+      "/Users/salapaotarn/Downloads",
+      "/Users/salapaotarn/Desktop/khaiphone-web/app/estimate"
+    ]
+  }
+}

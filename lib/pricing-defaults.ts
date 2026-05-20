@@ -1,0 +1,101 @@
+export type PricingOption = { label: string; sub?: string; ded: number };
+export type PricingGroup  = { key: string; title: string; options: PricingOption[] };
+export type PricingConfig = { storageMultiplier: number; groups: PricingGroup[] };
+
+export function getModelTypeOpts(model: string): PricingOption[] {
+  const gen = parseInt(model.match(/iPhone (\d+)/)?.[1] ?? "0", 10);
+  if (gen >= 14) {
+    return [
+      { label: "เครื่องศูนย์ไทย ZP/A", sub: "ราคาสูงสุด",   ded: 0     },
+      { label: "เครื่องนอก / ไม่ทราบ", sub: "ราคาเริ่มต้น", ded: -1000 },
+    ];
+  }
+  if (gen >= 11) {
+    return [
+      { label: "เครื่องศูนย์ไทย TH/A", sub: "ราคาสูงสุด",   ded: 0     },
+      { label: "เครื่องนอก / ไม่ทราบ", sub: "ราคาเริ่มต้น", ded: -1500 },
+    ];
+  }
+  // iPad / MacBook / Watch — คงเดิม 3 ตัวเลือก
+  return [
+    { label: "เครื่องศูนย์ไทย TH/A",                  sub: "ราคาสูงสุด",         ded: 0     },
+    { label: "เครื่องศูนย์ไทย ZP/A รุ่น 14,15,16,17", sub: "ราคาใกล้เคียง TH/A", ded: -500  },
+    { label: "เครื่องนอก / ไม่ทราบ",                  sub: "ราคาเริ่มต้น",        ded: -1500 },
+  ];
+}
+
+export const DEFAULT_PRICING_CONFIG: PricingConfig = {
+  storageMultiplier: 0.12,
+  groups: [
+    {
+      key: "model_type", title: "Model ของเครื่อง",
+      options: [
+        { label: "เครื่องศูนย์ไทย TH/A",                  sub: "ราคาสูงสุด",         ded: 0     },
+        { label: "เครื่องศูนย์ไทย ZP/A รุ่น 14,15,16,17", sub: "ราคาใกล้เคียง TH/A", ded: -500  },
+        { label: "เครื่องนอก / ไม่ทราบ",                  sub: "ราคาเริ่มต้น",        ded: -1500 },
+      ],
+    },
+    {
+      key: "warranty", title: "ประกัน",
+      options: [
+        { label: "ประกันเหลือมากกว่า 4 เดือน", ded: 0     },
+        { label: "ประกันเหลือน้อยกว่า 4 เดือน", ded: -500  },
+        { label: "การรับประกันสิ้นสุดแล้ว",       ded: -1000 },
+      ],
+    },
+    {
+      key: "body", title: "สภาพตัวเครื่อง",
+      options: [
+        { label: "ไม่มีรอยขีดข่วน",          sub: "สภาพสวยมาก", ded: 0     },
+        { label: "มีรอยนิดหน่อย / รอยเคสกัด", sub: "สภาพดี",     ded: -500  },
+        { label: "มีรอยมาก / กลอก / สีหลุด", sub: "สภาพพอใช้",  ded: -2000 },
+        { label: "ตัวเครื่องมีรอยตก",        sub: "สภาพไม่ดี",  ded: -3500 },
+        { label: "ฝาหลัง / กระจกหลังแตก",     sub: "สภาพเสีย",   ded: -5000 },
+      ],
+    },
+    {
+      key: "screen", title: "สภาพหน้าจอ",
+      options: [
+        { label: "หน้าจอไม่มีรอย",                 ded: 0     },
+        { label: "หน้าจอมีรอยบางๆ",               ded: -300  },
+        { label: "หน้าจอมีรอยขีดข่วน หรือ รอยสดุดบนจอ", ded: -1000 },
+        { label: "หน้าจอแตก",                          ded: -3000 },
+      ],
+    },
+    {
+      key: "display", title: "การแสดงภาพหน้าจอ",
+      options: [
+        { label: "แสดงภาพหน้าจอปกติ",                    ded: 0     },
+        { label: "จุด Bright / จุดดำในวง / ขอบออกเขียว", ded: -1500 },
+        { label: "จุด Dead / จุดสี / สายเส้น / จอแปลม",  ded: -3000 },
+        { label: "ไม่สามารถตรวจสอบภาพหน้าจอได้",          ded: -2000 },
+      ],
+    },
+    {
+      key: "battery", title: "สุขภาพแบตเตอรี่",
+      options: [
+        { label: "สุขภาพแบต 100%",                           ded: 0     },
+        { label: "สุขภาพมากกว่า 90%",                        ded: -200  },
+        { label: "สุขภาพแบต 85–90%",                         ded: -500  },
+        { label: "สุขภาพแบต 80–84%",                         ded: -1000 },
+        { label: "สุขภาพแบตต่ำกว่า 80% (Service Recommend)", ded: -2000 },
+      ],
+    },
+    {
+      key: "accessory", title: "อุปกรณ์เสริม",
+      options: [
+        { label: "มีกล่อง / อุปกรณ์ครบ",      ded: 0    },
+        { label: "มีกล่อง / อุปกรณ์ไม่ครบ",   ded: -200 },
+        { label: "มีอุปกรณ์ / ไม่มีกล่อง",    ded: -300 },
+        { label: "ไม่มีกล่อง / ไม่มีอุปกรณ์", ded: -500 },
+      ],
+    },
+    {
+      key: "icloud", title: "iCloud / Activation Lock",
+      options: [
+        { label: "สามารถออก iCloud ได้",         sub: "ไม่ติด Activation Lock / ตอแมน", ded: 0     },
+        { label: "ติด iCloud / Activation Lock", sub: "ราคาจะลดลงอย่างมาก",             ded: -8000 },
+      ],
+    },
+  ],
+};

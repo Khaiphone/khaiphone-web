@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+:root {
+  --gold: #B8860B;
+  --gold-light: #D4A017;
+  --gold-dark: #8B6508;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-prompt), "Prompt", sans-serif;
+}
+
+/* Prevent iOS Safari auto-zoom on input focus (triggers when font-size < 16px) */
+input, textarea, select {
+  font-size: 16px;
+}
+
