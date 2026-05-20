@@ -77,6 +77,16 @@ function getProductImage(model: string): string | null {
   // iPad Gen
   const genM = model.match(/iPad Gen (\d+)/);
   if (genM) return `/ipad-gen-${genM[1]}.webp`;
+  // Apple Watch
+  if (model.includes("Apple Watch")) {
+    const seriesM = model.match(/Series (\d+)/);
+    if (seriesM) return `/apple-watch-series-${seriesM[1]}.webp`;
+    const seM = model.match(/SE \(Gen (\d+)\)/);
+    if (seM) return `/apple-watch-se-${seM[1]}.webp`;
+    if (model.includes("Ultra 3")) return `/apple-watch-ultra-3.webp`;
+    if (model.includes("Ultra 2")) return `/apple-watch-ultra-2.webp`;
+    if (model.includes("Ultra"))   return `/apple-watch-ultra-1.webp`;
+  }
   return null;
 }
 
