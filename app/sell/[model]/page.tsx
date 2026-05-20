@@ -7,7 +7,7 @@ import Header from "../../components/Header";
 import { submitRequest } from "@/app/actions/submit-request";
 import { fetchActiveProducts } from "@/app/actions/products";
 import { fetchPricingConfig } from "@/app/actions/pricing-config";
-import { getModelTypeOpts } from "@/lib/pricing-defaults";
+import { getModelTypeOpts, DEFAULT_PRICING_CONFIG } from "@/lib/pricing-defaults";
 import type { PricingOption } from "@/lib/pricing-defaults";
 
 // ─── Icon helpers ─────────────────────────────────────────────────────────────
@@ -497,7 +497,9 @@ function SellModelPageContent() {
   const router       = useRouter();
 
   const [products, setProducts] = useState<Product[]>(ALL_PRODUCTS);
-  const [groupOptions, setGroupOptions] = useState<PricingOption[][] | null>(null);
+  const [groupOptions, setGroupOptions] = useState<PricingOption[][]>(
+    DEFAULT_PRICING_CONFIG.groups.map(g => g.options),
+  );
   const [storageMultiplier, setStorageMultiplier] = useState(0.12);
   const [storagePrices, setStoragePrices] = useState<Record<string, number> | null>(null);
   const [hasCustomDed, setHasCustomDed]   = useState(false);
@@ -752,12 +754,11 @@ function SellModelPageContent() {
     router.push("/sell/success");
   }
 
-  const effectiveGroupOptions: PricingOption[][] | null = groupOptions === null ? null
-    : (!hasCustomDed && product
-      ? [getModelTypeOpts(product.model), ...groupOptions.slice(1)]
-      : groupOptions);
+  const effectiveGroupOptions: PricingOption[][] = !hasCustomDed && product
+    ? [getModelTypeOpts(product.model), ...groupOptions.slice(1)]
+    : groupOptions;
 
-  const price = product && effectiveGroupOptions ? calcPrice(product, picks, effectiveGroupOptions, storageMultiplier, storagePrices) : 0;
+  const price = product ? calcPrice(product, picks, effectiveGroupOptions, storageMultiplier, storagePrices) : 0;
   const { min: priceMin, max: priceMax } = calcPriceRange(price);
   const summaryRows = product ? buildSummaryRows(picks, storages) : [];
 
@@ -792,9 +793,9 @@ function SellModelPageContent() {
     ? "/sell"
     : backUrl();
 
-  const stepOpts: PricingOption[] | null = isWizard && step === 0
+  const stepOpts: PricingOption[] = isWizard && step === 0
     ? storages.map(s => ({ label: s, ded: 0 }))
-    : (effectiveGroupOptions ? (effectiveGroupOptions[step - 1] ?? []) : null);
+    : (effectiveGroupOptions[step - 1] ?? []);
 
   return (
     <div className={`min-h-screen bg-gray-50 ${isFormPhase ? "pb-24 md:pb-10" : "pb-14"}`}>
@@ -831,12 +832,7 @@ function SellModelPageContent() {
                 <h2 className="text-lg font-bold text-black mb-4">{STEP_TITLES[step]}</h2>
 
                 <div className="flex flex-col gap-3">
-                  {stepOpts === null ? (
-                    [1,2,3].map(n => (
-                      <div key={n} className="h-14 rounded-2xl animate-pulse" style={{ background: "#F3F4F6" }} />
-                    ))
-                  ) : null}
-                  {(stepOpts ?? []).map((opt, i) => {
+                  {stepOpts.map((opt, i) => {
                     const selected = localPick === i;
                     return (
                       <button
