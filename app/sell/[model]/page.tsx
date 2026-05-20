@@ -111,52 +111,11 @@ const ALL_PRODUCTS: Product[] = [
 
 interface Opt { label: string; sub?: string; ded: number }
 
-const MODEL_TYPE_OPTS: Opt[] = [
-  { label: "เครื่องศูนย์ไทย TH/A",                  sub: "ราคาสูงสุด",         ded: 0     },
-  { label: "เครื่องศูนย์ไทย ZP/A รุ่น 14,15,16,17", sub: "ราคาใกล้เคียง TH/A", ded: -500  },
-  { label: "เครื่องนอก / ไม่ทราบ",                  sub: "ราคาเริ่มต้น",       ded: -1500 },
-];
-const WARRANTY_OPTS: Opt[] = [
-  { label: "ประกันเหลือมากกว่า 4 เดือน", ded: 0     },
-  { label: "ประกันเหลือน้อยกว่า 4 เดือน", ded: -500  },
-  { label: "หมดประกัน",                   ded: -1000 },
-];
-const BODY_OPTS: Opt[] = [
-  { label: "ไม่มีรอยขีดข่วน",          sub: "สภาพสวยมาก", ded: 0     },
-  { label: "มีรอยนิดหน่อย / รอยแมค",   sub: "สภาพดี",     ded: -500  },
-  { label: "มีรอยมาก / กลอก / สีหลุด", sub: "สภาพพอใช้",  ded: -2000 },
-  { label: "ตัวเครื่องมีรอยตก",        sub: "สภาพไม่ดี",  ded: -3500 },
-  { label: "ผาก้อ / กระจกหลังแตก",     sub: "สภาพเสีย",   ded: -5000 },
-];
-const SCREEN_OPTS: Opt[] = [
-  { label: "หน้าจอไม่มีรอย",                 ded: 0     },
-  { label: "หน้าจอมีรอยบางๆ",               ded: -300  },
-  { label: "หน้าจอมีรอยขีดข่วน / รอยแตะดู", ded: -1000 },
-  { label: "หน้าจอมีรอยแตกข้างๆ",           ded: -3000 },
-];
-const DISPLAY_OPTS: Opt[] = [
-  { label: "แสดงภาพหน้าจอปกติ",                    ded: 0     },
-  { label: "จุด Bright / จุดดำในวง / ขอบออกเขียว", ded: -1500 },
-  { label: "จุด Dead / จุดสี / สายเส้น / จอแปลม",  ded: -3000 },
-  { label: "ไม่สามารถตรวจสอบภาพหน้าจอได้",          ded: -2000 },
-];
-const BATTERY_OPTS: Opt[] = [
-  { label: "สุขภาพแบต 100%",                           ded: 0     },
-  { label: "สุขภาพมากกว่า 90%",                        ded: -200  },
-  { label: "สุขภาพแบต 85–90%",                         ded: -500  },
-  { label: "สุขภาพแบต 80–84%",                         ded: -1000 },
-  { label: "สุขภาพแบตต่ำกว่า 80% (Service Recommend)", ded: -2000 },
-];
-const ACCESSORY_OPTS: Opt[] = [
-  { label: "มีกล่อง / อุปกรณ์ครบ",      ded: 0    },
-  { label: "มีกล่อง / อุปกรณ์ไม่ครบ",   ded: -200 },
-  { label: "มีอุปกรณ์ / ไม่มีกล่อง",    ded: -300 },
-  { label: "ไม่มีกล่อง / ไม่มีอุปกรณ์", ded: -500 },
-];
-const ICLOUD_OPTS: Opt[] = [
-  { label: "สามารถออก iCloud ได้",         sub: "ไม่ติด Activation Lock / ตอแมน", ded: 0     },
-  { label: "ติด iCloud / Activation Lock", sub: "ราคาจะลดลงอย่างมาก",             ded: -8000 },
-];
+// Single source of truth — derived from DEFAULT_PRICING_CONFIG so summary labels always match wizard options
+const [
+  _MODEL_TYPE_GROUP, WARRANTY_OPTS, BODY_OPTS, SCREEN_OPTS,
+  DISPLAY_OPTS, BATTERY_OPTS, ACCESSORY_OPTS, ICLOUD_OPTS,
+] = DEFAULT_PRICING_CONFIG.groups.map(g => g.options) as Opt[][];
 
 const THAI_BANKS = [
   { code: "BBL",   short: "กรุงเทพ",            color: "#1E3A8A", logo: "/banks/bbl.webp"   },
@@ -204,7 +163,7 @@ const STEP_TITLES = [
 
 const STEP_OPTS: (Opt[] | null)[] = [
   null,
-  MODEL_TYPE_OPTS,
+  _MODEL_TYPE_GROUP,
   WARRANTY_OPTS,
   BODY_OPTS,
   SCREEN_OPTS,
@@ -250,7 +209,7 @@ function shortenModelLabel(label: string) {
 function buildSummaryRows(picks: (number | null)[], storages: string[]) {
   return [
     { title: "ความจุ",     value: picks[0] !== null ? (storages[picks[0]] ?? null) : null },
-    { title: "Model",      value: picks[1] !== null ? (shortenModelLabel(MODEL_TYPE_OPTS[picks[1]]?.label ?? "")) || null : null },
+    { title: "Model",      value: picks[1] !== null ? (shortenModelLabel(_MODEL_TYPE_GROUP[picks[1]]?.label ?? "")) || null : null },
     { title: "ประกัน",     value: picks[2] !== null ? (WARRANTY_OPTS[picks[2]]?.label ?? null) : null },
     { title: "ตัวเครื่อง", value: picks[3] !== null ? (BODY_OPTS[picks[3]]?.label ?? null) : null },
     { title: "หน้าจอ",     value: picks[4] !== null ? (SCREEN_OPTS[picks[4]]?.label ?? null) : null },
@@ -714,7 +673,7 @@ function SellModelPageContent() {
       condition: picks[3] !== null ? BODY_OPTS[picks[3]]?.sub ?? "" : "",
       selections: {
         storage:     picks[0] !== null ? storages[picks[0]] : "",
-        modelType:   picks[1] !== null ? MODEL_TYPE_OPTS[picks[1]]?.label ?? "" : "",
+        modelType:   picks[1] !== null ? _MODEL_TYPE_GROUP[picks[1]]?.label ?? "" : "",
         warranty:    picks[2] !== null ? WARRANTY_OPTS[picks[2]]?.label ?? "" : "",
         body:        picks[3] !== null ? BODY_OPTS[picks[3]]?.label ?? "" : "",
         screen:      picks[4] !== null ? SCREEN_OPTS[picks[4]]?.label ?? "" : "",
