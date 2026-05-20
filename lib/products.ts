@@ -101,10 +101,55 @@ export const macbooks: Product[] = [
 ];
 
 export const watches: Product[] = [
-  { id: "aws10",  model: "Apple Watch Series 10",    storage: "32GB",  isNew: true, priceGood: 8500,  priceFair: 7000,  pricePoor: 4500  },
-  { id: "awu3",   model: "Apple Watch Ultra 2",      storage: "64GB",               priceGood: 18000, priceFair: 15000, pricePoor: 10000 },
-  { id: "aws9",   model: "Apple Watch Series 9",     storage: "32GB",               priceGood: 6500,  priceFair: 5200,  pricePoor: 3300  },
-  { id: "awse2",  model: "Apple Watch SE (2nd Gen)", storage: "32GB",               priceGood: 4200,  priceFair: 3300,  pricePoor: 2000  },
+  // Series 6 (40mm / 44mm)
+  { id: "aws640g",  model: "Apple Watch Series 6 40mm (GPS)",          storage: "—", priceGood: 1000,  priceFair: 800,   pricePoor: 600   },
+  { id: "aws644g",  model: "Apple Watch Series 6 44mm (GPS)",          storage: "—", priceGood: 1500,  priceFair: 1200,  pricePoor: 800   },
+  { id: "aws640c",  model: "Apple Watch Series 6 40mm (GPS+Cellular)", storage: "—", priceGood: 1500,  priceFair: 1200,  pricePoor: 800   },
+  { id: "aws644c",  model: "Apple Watch Series 6 44mm (GPS+Cellular)", storage: "—", priceGood: 2000,  priceFair: 1600,  pricePoor: 1100  },
+  // Series 7 (41mm / 45mm)
+  { id: "aws741g",  model: "Apple Watch Series 7 41mm (GPS)",          storage: "—", priceGood: 2000,  priceFair: 1600,  pricePoor: 1100  },
+  { id: "aws745g",  model: "Apple Watch Series 7 45mm (GPS)",          storage: "—", priceGood: 2500,  priceFair: 2000,  pricePoor: 1400  },
+  { id: "aws741c",  model: "Apple Watch Series 7 41mm (GPS+Cellular)", storage: "—", priceGood: 2500,  priceFair: 2000,  pricePoor: 1400  },
+  { id: "aws745c",  model: "Apple Watch Series 7 45mm (GPS+Cellular)", storage: "—", priceGood: 3000,  priceFair: 2400,  pricePoor: 1700  },
+  // Series 8 (41mm / 45mm)
+  { id: "aws841g",  model: "Apple Watch Series 8 41mm (GPS)",          storage: "—", priceGood: 2500,  priceFair: 2000,  pricePoor: 1400  },
+  { id: "aws845g",  model: "Apple Watch Series 8 45mm (GPS)",          storage: "—", priceGood: 3000,  priceFair: 2400,  pricePoor: 1700  },
+  { id: "aws841c",  model: "Apple Watch Series 8 41mm (GPS+Cellular)", storage: "—", priceGood: 3000,  priceFair: 2400,  pricePoor: 1700  },
+  { id: "aws845c",  model: "Apple Watch Series 8 45mm (GPS+Cellular)", storage: "—", priceGood: 3500,  priceFair: 2800,  pricePoor: 1900  },
+  // Series 9 (41mm / 45mm)
+  { id: "aws941g",  model: "Apple Watch Series 9 41mm (GPS)",          storage: "—", priceGood: 3000,  priceFair: 2400,  pricePoor: 1700  },
+  { id: "aws945g",  model: "Apple Watch Series 9 45mm (GPS)",          storage: "—", priceGood: 3500,  priceFair: 2800,  pricePoor: 1900  },
+  { id: "aws941c",  model: "Apple Watch Series 9 41mm (GPS+Cellular)", storage: "—", priceGood: 3500,  priceFair: 2800,  pricePoor: 1900  },
+  { id: "aws945c",  model: "Apple Watch Series 9 45mm (GPS+Cellular)", storage: "—", priceGood: 4000,  priceFair: 3200,  pricePoor: 2200  },
+  // Series 10 (42mm / 46mm)
+  { id: "aws1042g", model: "Apple Watch Series 10 42mm (GPS)",          storage: "—", isNew: true, priceGood: 4000,  priceFair: 3200,  pricePoor: 2200  },
+  { id: "aws1046g", model: "Apple Watch Series 10 46mm (GPS)",          storage: "—", isNew: true, priceGood: 4500,  priceFair: 3600,  pricePoor: 2500  },
+  { id: "aws1042c", model: "Apple Watch Series 10 42mm (GPS+Cellular)", storage: "—", isNew: true, priceGood: 4500,  priceFair: 3600,  pricePoor: 2500  },
+  { id: "aws1046c", model: "Apple Watch Series 10 46mm (GPS+Cellular)", storage: "—", isNew: true, priceGood: 5000,  priceFair: 4000,  pricePoor: 2800  },
+  // Series 11 (42mm / 46mm)
+  { id: "aws1142g", model: "Apple Watch Series 11 42mm (GPS)",          storage: "—", isNew: true, priceGood: 5500,  priceFair: 4400,  pricePoor: 3000  },
+  { id: "aws1146g", model: "Apple Watch Series 11 46mm (GPS)",          storage: "—", isNew: true, priceGood: 6500,  priceFair: 5200,  pricePoor: 3600  },
+  { id: "aws1142c", model: "Apple Watch Series 11 42mm (GPS+Cellular)", storage: "—", isNew: true, priceGood: 6500,  priceFair: 5200,  pricePoor: 3600  },
+  { id: "aws1146c", model: "Apple Watch Series 11 46mm (GPS+Cellular)", storage: "—", isNew: true, priceGood: 7500,  priceFair: 6000,  pricePoor: 4100  },
+  // SE Gen 1 (40mm / 44mm)
+  { id: "awse140g", model: "Apple Watch SE (Gen 1) 40mm (GPS)",          storage: "—", priceGood: 1000,  priceFair: 800,   pricePoor: 600   },
+  { id: "awse144g", model: "Apple Watch SE (Gen 1) 44mm (GPS)",          storage: "—", priceGood: 1500,  priceFair: 1200,  pricePoor: 800   },
+  { id: "awse140c", model: "Apple Watch SE (Gen 1) 40mm (GPS+Cellular)", storage: "—", priceGood: 1500,  priceFair: 1200,  pricePoor: 800   },
+  { id: "awse144c", model: "Apple Watch SE (Gen 1) 44mm (GPS+Cellular)", storage: "—", priceGood: 2000,  priceFair: 1600,  pricePoor: 1100  },
+  // SE Gen 2 (40mm / 44mm)
+  { id: "awse240g", model: "Apple Watch SE (Gen 2) 40mm (GPS)",          storage: "—", priceGood: 2000,  priceFair: 1600,  pricePoor: 1100  },
+  { id: "awse244g", model: "Apple Watch SE (Gen 2) 44mm (GPS)",          storage: "—", priceGood: 2500,  priceFair: 2000,  pricePoor: 1400  },
+  { id: "awse240c", model: "Apple Watch SE (Gen 2) 40mm (GPS+Cellular)", storage: "—", priceGood: 2500,  priceFair: 2000,  pricePoor: 1400  },
+  { id: "awse244c", model: "Apple Watch SE (Gen 2) 44mm (GPS+Cellular)", storage: "—", priceGood: 3000,  priceFair: 2400,  pricePoor: 1700  },
+  // SE Gen 3 (40mm / 44mm)
+  { id: "awse340g", model: "Apple Watch SE (Gen 3) 40mm (GPS)",          storage: "—", isNew: true, priceGood: 3000,  priceFair: 2400,  pricePoor: 1700  },
+  { id: "awse344g", model: "Apple Watch SE (Gen 3) 44mm (GPS)",          storage: "—", isNew: true, priceGood: 3500,  priceFair: 2800,  pricePoor: 1900  },
+  { id: "awse340c", model: "Apple Watch SE (Gen 3) 40mm (GPS+Cellular)", storage: "—", isNew: true, priceGood: 4000,  priceFair: 3200,  pricePoor: 2200  },
+  { id: "awse344c", model: "Apple Watch SE (Gen 3) 44mm (GPS+Cellular)", storage: "—", isNew: true, priceGood: 4500,  priceFair: 3600,  pricePoor: 2500  },
+  // Ultra
+  { id: "awu1",    model: "Apple Watch Ultra",   storage: "—", priceGood: 7000,  priceFair: 5600,  pricePoor: 3900  },
+  { id: "awu2",    model: "Apple Watch Ultra 2", storage: "—", priceGood: 11000, priceFair: 8800,  pricePoor: 6000  },
+  { id: "awu3",    model: "Apple Watch Ultra 3", storage: "—", isNew: true, priceGood: 20000, priceFair: 16000, pricePoor: 11000 },
 ];
 
 export const allProducts: Product[] = [...iphones, ...ipads, ...macbooks, ...watches];

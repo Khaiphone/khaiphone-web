@@ -167,10 +167,53 @@ const ALL_PRODUCTS: Product[] = [
   { model: 'MacBook Air 15" M3',     storage: "256GB / 512GB / 1TB",     priceGood: 42000 },
   { model: 'MacBook Air 13" M3',     storage: "256GB / 512GB / 1TB",     priceGood: 35000 },
   { model: 'MacBook Pro 14" M3',     storage: "512GB / 1TB",             priceGood: 55000 },
-  { model: "Apple Watch Series 10",  storage: "32GB",                    priceGood: 8500  },
-  { model: "Apple Watch Ultra 2",    storage: "64GB",                    priceGood: 18000 },
-  { model: "Apple Watch Series 9",   storage: "32GB",                    priceGood: 6500  },
-  { model: "Apple Watch SE (2nd Gen)", storage: "32GB",                  priceGood: 4200  },
+  // Apple Watch Series 6
+  { model: "Apple Watch Series 6 40mm (GPS)",          storage: "—", priceGood: 1000  },
+  { model: "Apple Watch Series 6 44mm (GPS)",          storage: "—", priceGood: 1500  },
+  { model: "Apple Watch Series 6 40mm (GPS+Cellular)", storage: "—", priceGood: 1500  },
+  { model: "Apple Watch Series 6 44mm (GPS+Cellular)", storage: "—", priceGood: 2000  },
+  // Apple Watch Series 7
+  { model: "Apple Watch Series 7 41mm (GPS)",          storage: "—", priceGood: 2000  },
+  { model: "Apple Watch Series 7 45mm (GPS)",          storage: "—", priceGood: 2500  },
+  { model: "Apple Watch Series 7 41mm (GPS+Cellular)", storage: "—", priceGood: 2500  },
+  { model: "Apple Watch Series 7 45mm (GPS+Cellular)", storage: "—", priceGood: 3000  },
+  // Apple Watch Series 8
+  { model: "Apple Watch Series 8 41mm (GPS)",          storage: "—", priceGood: 2500  },
+  { model: "Apple Watch Series 8 45mm (GPS)",          storage: "—", priceGood: 3000  },
+  { model: "Apple Watch Series 8 41mm (GPS+Cellular)", storage: "—", priceGood: 3000  },
+  { model: "Apple Watch Series 8 45mm (GPS+Cellular)", storage: "—", priceGood: 3500  },
+  // Apple Watch Series 9
+  { model: "Apple Watch Series 9 41mm (GPS)",          storage: "—", priceGood: 3000  },
+  { model: "Apple Watch Series 9 45mm (GPS)",          storage: "—", priceGood: 3500  },
+  { model: "Apple Watch Series 9 41mm (GPS+Cellular)", storage: "—", priceGood: 3500  },
+  { model: "Apple Watch Series 9 45mm (GPS+Cellular)", storage: "—", priceGood: 4000  },
+  // Apple Watch Series 10
+  { model: "Apple Watch Series 10 42mm (GPS)",          storage: "—", priceGood: 4000  },
+  { model: "Apple Watch Series 10 46mm (GPS)",          storage: "—", priceGood: 4500  },
+  { model: "Apple Watch Series 10 42mm (GPS+Cellular)", storage: "—", priceGood: 4500  },
+  { model: "Apple Watch Series 10 46mm (GPS+Cellular)", storage: "—", priceGood: 5000  },
+  // Apple Watch Series 11
+  { model: "Apple Watch Series 11 42mm (GPS)",          storage: "—", priceGood: 5500  },
+  { model: "Apple Watch Series 11 46mm (GPS)",          storage: "—", priceGood: 6500  },
+  { model: "Apple Watch Series 11 42mm (GPS+Cellular)", storage: "—", priceGood: 6500  },
+  { model: "Apple Watch Series 11 46mm (GPS+Cellular)", storage: "—", priceGood: 7500  },
+  // Apple Watch SE
+  { model: "Apple Watch SE (Gen 1) 40mm (GPS)",          storage: "—", priceGood: 1000  },
+  { model: "Apple Watch SE (Gen 1) 44mm (GPS)",          storage: "—", priceGood: 1500  },
+  { model: "Apple Watch SE (Gen 1) 40mm (GPS+Cellular)", storage: "—", priceGood: 1500  },
+  { model: "Apple Watch SE (Gen 1) 44mm (GPS+Cellular)", storage: "—", priceGood: 2000  },
+  { model: "Apple Watch SE (Gen 2) 40mm (GPS)",          storage: "—", priceGood: 2000  },
+  { model: "Apple Watch SE (Gen 2) 44mm (GPS)",          storage: "—", priceGood: 2500  },
+  { model: "Apple Watch SE (Gen 2) 40mm (GPS+Cellular)", storage: "—", priceGood: 2500  },
+  { model: "Apple Watch SE (Gen 2) 44mm (GPS+Cellular)", storage: "—", priceGood: 3000  },
+  { model: "Apple Watch SE (Gen 3) 40mm (GPS)",          storage: "—", priceGood: 3000  },
+  { model: "Apple Watch SE (Gen 3) 44mm (GPS)",          storage: "—", priceGood: 3500  },
+  { model: "Apple Watch SE (Gen 3) 40mm (GPS+Cellular)", storage: "—", priceGood: 4000  },
+  { model: "Apple Watch SE (Gen 3) 44mm (GPS+Cellular)", storage: "—", priceGood: 4500  },
+  // Apple Watch Ultra
+  { model: "Apple Watch Ultra",   storage: "—", priceGood: 7000  },
+  { model: "Apple Watch Ultra 2", storage: "—", priceGood: 11000 },
+  { model: "Apple Watch Ultra 3", storage: "—", priceGood: 20000 },
 ];
 
 // ─── Step options ─────────────────────────────────────────────────────────────
