@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { ChevronDown, Search, X } from "lucide-react";
+import { iphones, ipads, macbooks, watches } from "@/lib/products";
+import type { Product } from "@/lib/products";
 
 type IconProps = { className?: string; style?: React.CSSProperties };
 
@@ -22,76 +24,11 @@ function formatPrice(n: number) {
 
 type Condition = "good" | "fair" | "poor";
 
-interface Product {
-  id: string;
-  model: string;
-  storage?: string;
-  isNew?: boolean;
-  discontinued?: boolean;
-  priceGood: number;
-  priceFair: number;
-  pricePoor: number;
-}
-
-const iphones: Product[] = [
-  { id: "i17pm",  model: "iPhone 17 Pro Max", storage: "256GB / 512GB / 1TB",   isNew: true, priceGood: 38000, priceFair: 34000, pricePoor: 26000 },
-  { id: "i17p",   model: "iPhone 17 Pro",     storage: "256GB / 512GB / 1TB",   isNew: true, priceGood: 32000, priceFair: 28000, pricePoor: 21000 },
-  { id: "i17air", model: "iPhone 17 Air",     storage: "128GB / 256GB / 512GB", isNew: true, priceGood: 28000, priceFair: 24000, pricePoor: 18000 },
-  { id: "i17",    model: "iPhone 17",         storage: "128GB / 256GB / 512GB", isNew: true, priceGood: 26000, priceFair: 22000, pricePoor: 16000 },
-  { id: "i17e",   model: "iPhone 17e",        storage: "128GB / 256GB",         isNew: true, priceGood: 18000, priceFair: 15000, pricePoor: 10000 },
-  { id: "i16pm", model: "iPhone 16 Pro Max", storage: "256GB / 512GB / 1TB", priceGood: 30000, priceFair: 26000, pricePoor: 19000 },
-  { id: "i16p", model: "iPhone 16 Pro", storage: "256GB / 512GB / 1TB", priceGood: 25000, priceFair: 21000, pricePoor: 15000 },
-  { id: "i16", model: "iPhone 16", storage: "128GB / 256GB / 512GB", priceGood: 20000, priceFair: 17000, pricePoor: 12000 },
-  { id: "i16plus", model: "iPhone 16 Plus", storage: "128GB / 256GB / 512GB", priceGood: 22000, priceFair: 18000, pricePoor: 13000 },
-  { id: "i15pm", model: "iPhone 15 Pro Max", storage: "256GB / 512GB / 1TB", priceGood: 24000, priceFair: 20000, pricePoor: 14000 },
-  { id: "i15p", model: "iPhone 15 Pro", storage: "128GB / 256GB / 512GB / 1TB", priceGood: 19000, priceFair: 16000, pricePoor: 11000 },
-  { id: "i15", model: "iPhone 15", storage: "128GB / 256GB / 512GB", priceGood: 15000, priceFair: 12500, pricePoor: 8500 },
-  { id: "i15plus", model: "iPhone 15 Plus", storage: "128GB / 256GB / 512GB", priceGood: 16500, priceFair: 13500, pricePoor: 9500 },
-  { id: "i14pm", model: "iPhone 14 Pro Max", storage: "128GB / 256GB / 512GB / 1TB", priceGood: 18000, priceFair: 14500, pricePoor: 9500 },
-  { id: "i14p", model: "iPhone 14 Pro", storage: "128GB / 256GB / 512GB / 1TB", priceGood: 14000, priceFair: 11000, pricePoor: 7000 },
-  { id: "i14", model: "iPhone 14", storage: "128GB / 256GB / 512GB", priceGood: 11000, priceFair: 8500, pricePoor: 5500 },
-  { id: "i14plus", model: "iPhone 14 Plus", storage: "128GB / 256GB / 512GB", priceGood: 12000, priceFair: 9500, pricePoor: 6000 },
-  { id: "i13pm", model: "iPhone 13 Pro Max", storage: "128GB / 256GB / 512GB / 1TB", priceGood: 13500, priceFair: 10500, pricePoor: 6500 },
-  { id: "i13p", model: "iPhone 13 Pro", storage: "128GB / 256GB / 512GB / 1TB", priceGood: 10500, priceFair: 8000, pricePoor: 5000 },
-  { id: "i13", model: "iPhone 13", storage: "128GB / 256GB / 512GB", priceGood: 8500, priceFair: 6500, pricePoor: 4000 },
-  { id: "i13mini", model: "iPhone 13 mini", storage: "128GB / 256GB / 512GB", discontinued: true, priceGood: 0, priceFair: 0, pricePoor: 0 },
-  { id: "i12pm", model: "iPhone 12 Pro Max", storage: "128GB / 256GB / 512GB", priceGood: 9000, priceFair: 7000, pricePoor: 4200 },
-  { id: "i12p", model: "iPhone 12 Pro", storage: "128GB / 256GB / 512GB", priceGood: 7500, priceFair: 5800, pricePoor: 3500 },
-  { id: "i12", model: "iPhone 12", storage: "64GB / 128GB / 256GB", priceGood: 6000, priceFair: 4500, pricePoor: 2800 },
-  { id: "i12mini", model: "iPhone 12 mini", storage: "64GB / 128GB / 256GB", discontinued: true, priceGood: 0, priceFair: 0, pricePoor: 0 },
-  { id: "i11pm", model: "iPhone 11 Pro Max", storage: "64GB / 256GB / 512GB", priceGood: 7000, priceFair: 5500, pricePoor: 3200 },
-  { id: "i11p", model: "iPhone 11 Pro", storage: "64GB / 256GB / 512GB", priceGood: 5800, priceFair: 4300, pricePoor: 2500 },
-  { id: "i11", model: "iPhone 11", storage: "64GB / 128GB / 256GB", priceGood: 4800, priceFair: 3500, pricePoor: 2000 },
-];
-
-const ipads: Product[] = [
-  { id: "ipm7", model: "iPad Pro 13\" M4", storage: "256GB / 512GB / 1TB / 2TB", isNew: true, priceGood: 28000, priceFair: 23000, pricePoor: 16000 },
-  { id: "ipm4", model: "iPad Pro 11\" M4", storage: "256GB / 512GB / 1TB / 2TB", isNew: true, priceGood: 22000, priceFair: 18000, pricePoor: 12000 },
-  { id: "iair6", model: "iPad Air 13\" M2", storage: "128GB / 256GB / 512GB / 1TB", priceGood: 18000, priceFair: 14500, pricePoor: 9500 },
-  { id: "iair5", model: "iPad Air 11\" M2", storage: "128GB / 256GB / 512GB / 1TB", priceGood: 14000, priceFair: 11000, pricePoor: 7000 },
-  { id: "ipad10", model: "iPad (10th Gen)", storage: "64GB / 256GB", priceGood: 9000, priceFair: 7000, pricePoor: 4500 },
-];
-
-const macbooks: Product[] = [
-  { id: "mbpm4max", model: "MacBook Pro 16\" M4 Max", storage: "512GB / 1TB / 2TB", isNew: true, priceGood: 95000, priceFair: 82000, pricePoor: 62000 },
-  { id: "mbpm4", model: "MacBook Pro 14\" M4 Pro", storage: "512GB / 1TB", isNew: true, priceGood: 72000, priceFair: 62000, pricePoor: 46000 },
-  { id: "mba15", model: "MacBook Air 15\" M3", storage: "256GB / 512GB / 1TB", priceGood: 42000, priceFair: 35000, pricePoor: 25000 },
-  { id: "mba13", model: "MacBook Air 13\" M3", storage: "256GB / 512GB / 1TB", priceGood: 35000, priceFair: 29000, pricePoor: 20000 },
-  { id: "mbpm3", model: "MacBook Pro 14\" M3", storage: "512GB / 1TB", priceGood: 55000, priceFair: 46000, pricePoor: 33000 },
-];
-
-const watches: Product[] = [
-  { id: "aws10", model: "Apple Watch Series 10", storage: "32GB", isNew: true, priceGood: 8500, priceFair: 7000, pricePoor: 4500 },
-  { id: "awu3", model: "Apple Watch Ultra 2", storage: "64GB", priceGood: 18000, priceFair: 15000, pricePoor: 10000 },
-  { id: "aws9", model: "Apple Watch Series 9", storage: "32GB", priceGood: 6500, priceFair: 5200, pricePoor: 3300 },
-  { id: "awse2", model: "Apple Watch SE (2nd Gen)", storage: "32GB", priceGood: 4200, priceFair: 3300, pricePoor: 2000 },
-];
-
 const TABS = [
-  { key: "iphone", label: "iPhone", products: iphones },
-  { key: "ipad", label: "iPad", products: ipads },
-  { key: "macbook", label: "MacBook", products: macbooks },
-  { key: "watch", label: "Apple Watch", products: watches },
+  { key: "iphone",  label: "iPhone",      products: iphones  },
+  { key: "ipad",    label: "iPad",        products: ipads    },
+  { key: "macbook", label: "Mac",         products: macbooks },
+  { key: "watch",   label: "Apple Watch", products: watches  },
 ] as const;
 
 type TabKey = typeof TABS[number]["key"];
@@ -108,19 +45,61 @@ function getPrice(p: Product, cond: Condition) {
   return p.pricePoor;
 }
 
-function getIphoneImage(model: string): string | null {
-  if (model.includes("Air")) return `/iPhone-air.webp`;
-  const match = model.match(/iPhone (\d+)/);
-  if (!match) return null;
-  const gen = parseInt(match[1]);
-  if (gen < 11 || gen > 17) return null;
-  if (model.includes("Pro")) return `/iPhone-${gen}-pro-max.webp`;
-  if (model.endsWith("e")) return `/iPhone-${gen}e.webp`;
-  return `/iPhone-${gen}.webp`;
+function getProductImage(model: string): string | null {
+  // iPhone
+  if (model.includes("iPhone") && model.includes("Air")) return `/iPhone-air.webp`;
+  const iphoneM = model.match(/iPhone (\d+)/);
+  if (iphoneM) {
+    const gen = parseInt(iphoneM[1]);
+    if (gen < 11 || gen > 17) return null;
+    if (model.includes("Pro")) return `/iPhone-${gen}-pro-max.webp`;
+    if (model.endsWith("e")) return `/iPhone-${gen}e.webp`;
+    return `/iPhone-${gen}.webp`;
+  }
+  // iPad Pro
+  if (model.includes("iPad Pro")) {
+    if (model.includes("2020")) return `/ipad-pro-11-old.webp`;
+    const chipM = model.match(/\bM(\d)\b/);
+    if (chipM) return `/ipad-pro-m${chipM[1]}.webp`;
+  }
+  // iPad Air
+  if (model.includes("iPad Air")) {
+    const airM = model.match(/iPad Air (\d+)/);
+    if (airM) return `/ipad-air-${airM[1]}.webp`;
+  }
+  // iPad mini
+  if (model.includes("iPad mini")) {
+    const miniM = model.match(/iPad mini (\d+)/);
+    if (miniM) return `/ipad-mini-${miniM[1]}.webp`;
+  }
+  // iPad Gen
+  const genM = model.match(/iPad Gen (\d+)/);
+  if (genM) return `/ipad-gen-${genM[1]}.webp`;
+  // Mac
+  if (model.startsWith("MacBook") || model.startsWith("Mac mini") || model.startsWith("iMac")) {
+    if (model.includes("MacBook Neo")) return `/macbook-neo.webp`;
+    const chipM = model.match(/\bM(\d)\b/);
+    const chip = chipM ? chipM[1] : null;
+    if (model.includes("MacBook Air")) return chip ? `/macbook-air-m${chip}.webp` : null;
+    if (model.includes("MacBook Pro")) return chip ? `/macbook-pro-m${chip}.webp` : null;
+    if (model.includes("Mac mini"))   return chip ? `/mac-mini-m${chip}.webp`    : null;
+    if (model.includes("iMac"))       return chip ? `/imac-m${chip}.webp`        : null;
+  }
+  // Apple Watch
+  if (model.includes("Apple Watch")) {
+    const seriesM = model.match(/Series (\d+)/);
+    if (seriesM) return `/apple-watch-series-${seriesM[1]}.webp`;
+    const seM = model.match(/SE \(Gen (\d+)\)/);
+    if (seM) return `/apple-watch-se-${seM[1]}.webp`;
+    if (model.includes("Ultra 3")) return `/apple-watch-ultra-3.webp`;
+    if (model.includes("Ultra 2")) return `/apple-watch-ultra-2.webp`;
+    if (model.includes("Ultra"))   return `/apple-watch-ultra-1.webp`;
+  }
+  return null;
 }
 
 function ProductCard({ p, condition }: { p: Product; condition: Condition }) {
-  const img = getIphoneImage(p.model);
+  const img = getProductImage(p.model);
 
   return (
     <details className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden group" style={p.discontinued ? { pointerEvents: "none" } : {}}>
@@ -227,7 +206,6 @@ function RubSuePageContent() {
       {/* Sticky filter area */}
       <div className="bg-white border-b border-gray-100 sticky top-[65px] z-40">
         <div className="max-w-6xl mx-auto px-4">
-          {/* Tabs — native <a> links so iOS Safari works */}
           <div className="flex gap-0 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
             {TABS.map(tab => (
               <a
@@ -248,7 +226,6 @@ function RubSuePageContent() {
 
       {/* Filter bar */}
       <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row gap-3">
-        {/* Condition select */}
         <div className="relative">
           <select
             value={condition}
@@ -263,7 +240,6 @@ function RubSuePageContent() {
           <ChevronDown size={15} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "#6B7280" }} />
         </div>
 
-        {/* Search */}
         <div className="relative flex-1 max-w-sm">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#9CA3AF" }} />
           <input
@@ -281,7 +257,6 @@ function RubSuePageContent() {
           )}
         </div>
 
-        {/* Result count */}
         <p className="self-center text-sm text-gray-400 hidden md:block">
           {filtered.length} รายการ
         </p>
