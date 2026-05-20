@@ -545,9 +545,11 @@ function SellModelPageContent() {
   const isResultPhase = isWizardDone && searchParams.get("r") === "1";
   const isFormPhase   = isWizardDone && !isResultPhase;
 
-  // Local pick for instant UI feedback — synced to URL only when advancing to next step
-  const [localPick, setLocalPick] = useState<number | null>(picks[step] ?? null);
-  useEffect(() => { setLocalPick(picks[step] ?? null); }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Local pick tracks { step, pick } so stale values from a previous step never bleed into the new step
+  const [localPickState, setLocalPickState] = useState<{ step: number; pick: number } | null>(
+    picks[step] !== null ? { step, pick: picks[step]! } : null,
+  );
+  const localPick = localPickState?.step === step ? localPickState.pick : (picks[step] ?? null);
 
   const nameRef  = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
@@ -838,7 +840,7 @@ function SellModelPageContent() {
                         key={i}
                         type="button"
                         onClick={() => {
-                          setLocalPick(i);
+                          setLocalPickState({ step, pick: i });
                           const newPicks = [...picks];
                           newPicks[step] = i;
                           saveWizard(step, newPicks);
