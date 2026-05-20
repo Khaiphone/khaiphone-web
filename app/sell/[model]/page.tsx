@@ -719,7 +719,7 @@ function SellModelPageContent() {
     router.push("/sell/success");
   }
 
-  const effectiveGroupOptions: PricingOption[][] = !hasCustomDed && product
+  const effectiveGroupOptions: PricingOption[][] = product
     ? [getModelTypeOpts(product.model), ...groupOptions.slice(1)]
     : groupOptions;
 
