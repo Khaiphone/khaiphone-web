@@ -30,6 +30,42 @@ const reviews = [
     product: { model: "iPhone 13", storage: "128GB", color: "Midnight", image: "/iPhone-13.webp" },
     soldDate: "18 พ.ค. 2569",
   },
+  {
+    name: "มิ้นท์",
+    phone: "089-xxx-xx33",
+    initials: "มท",
+    date: "15 พ.ค. 2569",
+    text: "ค้นหาที่รับซื้อมาหลายเจ้า ที่นี่ให้ราคาดีและตอบไวมากค่ะ นัดรับวันรุ่งขึ้นเลย ไม่ต้องรอนาน เงินโอนมาครบ พอใจมากเลยค่ะ",
+    product: { model: "iPhone 16 Pro", storage: "256GB", color: "Desert Titanium", image: "/iPhone-16-pro-max.webp" },
+    soldDate: "15 พ.ค. 2569",
+  },
+  {
+    name: "เจมส์",
+    phone: "098-xxx-xx07",
+    initials: "จม",
+    date: "12 พ.ค. 2569",
+    text: "เครื่องแตกขายไม่ออกเลย ลองถามที่นี่ยังรับอยู่ ราคาก็โอเคครับ มานัดรับถึงที่ด้วย ดีกว่าเอาไปขายพันทิปเยอะเลย",
+    product: { model: "iPhone 12 Pro Max", storage: "256GB", color: "Pacific Blue", image: "/iPhone-12.webp" },
+    soldDate: "12 พ.ค. 2569",
+  },
+  {
+    name: "แนน",
+    phone: "091-xxx-xx45",
+    initials: "นน",
+    date: "10 พ.ค. 2569",
+    text: "ขายครั้งแรกเลยค่ะ กังวลมากว่าจะเจ๊กหรือเปล่า แต่พอคุยไลน์ได้ราคาดี มานัดรับถึงออฟฟิศเลย สะดวกมากๆ ขายซ้ำแน่นอนค่ะ",
+    product: { model: "iPhone 15 Plus", storage: "128GB", color: "Yellow", image: "/iPhone-15.webp" },
+    soldDate: "10 พ.ค. 2569",
+  },
+  {
+    name: "ต้น",
+    phone: "081-xxx-xx19",
+    initials: "ตน",
+    date: "7 พ.ค. 2569",
+    text: "ถามราคาหลายร้าน ที่นี่ให้สูงสุดครับ ตกลงแล้วมารับเย็นวันเดียวกันเลย เช็คเครื่องเร็วมาก โอนเงินทันที ไม่มีดีเลย์",
+    product: { model: "iPhone 14", storage: "128GB", color: "Blue", image: "/iPhone-14.webp" },
+    soldDate: "7 พ.ค. 2569",
+  },
 ];
 
 const TRUST_BADGES = [
