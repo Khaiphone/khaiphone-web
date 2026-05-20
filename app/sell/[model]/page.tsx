@@ -2,13 +2,17 @@
 
 import { Fragment, useState, useRef, useEffect, Suspense } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { ChevronLeft, Check, Lock, ChevronRight, User, Truck, Calendar, Banknote, ShieldCheck, MapPin, Building2, Clock, Phone } from "lucide-react";
+import { ChevronLeft, Check, Lock, ChevronRight, User, Truck, Calendar, Banknote, ShieldCheck, MapPin, Building2, Clock, Phone, Plus, X } from "lucide-react";
 import Header from "../../components/Header";
 import { submitRequest } from "@/app/actions/submit-request";
 import { fetchActiveProducts } from "@/app/actions/products";
 import { fetchPricingConfig } from "@/app/actions/pricing-config";
 import { getModelTypeOpts, DEFAULT_PRICING_CONFIG } from "@/lib/pricing-defaults";
 import type { PricingOption } from "@/lib/pricing-defaults";
+
+const BUNDLE_KEY = "khaiphone_extra_devices";
+const BUNDLE_RETURN_KEY = "khaiphone_bundle_return";
+type ExtraDevice = { model: string; storage: string; estimatedPrice: number };
 
 // ─── Icon helpers ─────────────────────────────────────────────────────────────
 
@@ -862,6 +866,8 @@ function SellModelPageContent() {
   const [bankName, setBankName] = useState("");
   const [bankAccount, setBankAccount] = useState("");
   const [bankAccountName, setBankAccountName] = useState("");
+  const [extraDevices, setExtraDevices] = useState<ExtraDevice[]>([]);
+  const [bundleReturn, setBundleReturn] = useState<string | null>(null);
 
   // Sync appointment time when date changes — auto-select first valid slot
   useEffect(() => {
@@ -869,6 +875,16 @@ function SellModelPageContent() {
     const slots = getAvailableTimeSlots(appointDate);
     if (slots.length > 0 && !slots.includes(appointTime)) setAppointTime(slots[0]);
   }, [appointDate]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load bundle state from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(BUNDLE_KEY);
+      if (stored) setExtraDevices(JSON.parse(stored) as ExtraDevice[]);
+      const ret = localStorage.getItem(BUNDLE_RETURN_KEY);
+      if (ret) setBundleReturn(ret);
+    } catch {}
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchCurrentLocation() {
     if (!navigator.geolocation) { setRiderAddress("เบราว์เซอร์ไม่รองรับการระบุตำแหน่ง"); return; }
@@ -910,6 +926,32 @@ function SellModelPageContent() {
     } finally {
       setLocationLoading(false);
     }
+  }
+
+  function handleAddMoreDevice() {
+    try { localStorage.setItem(BUNDLE_RETURN_KEY, window.location.href); } catch {}
+    router.push("/sell");
+  }
+
+  function handleAddToBundle() {
+    if (!product) return;
+    const device: ExtraDevice = {
+      model: product.model,
+      storage: picks[0] !== null ? storages[picks[0]] : "",
+      estimatedPrice: price,
+    };
+    try {
+      const existing: ExtraDevice[] = JSON.parse(localStorage.getItem(BUNDLE_KEY) ?? "[]");
+      localStorage.setItem(BUNDLE_KEY, JSON.stringify([...existing, device]));
+      localStorage.removeItem(BUNDLE_RETURN_KEY);
+    } catch {}
+    router.push(bundleReturn!);
+  }
+
+  function handleRemoveExtra(idx: number) {
+    const updated = extraDevices.filter((_, i) => i !== idx);
+    setExtraDevices(updated);
+    try { localStorage.setItem(BUNDLE_KEY, JSON.stringify(updated)); } catch {}
   }
 
   async function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -964,6 +1006,9 @@ function SellModelPageContent() {
         accountNumber: payMethod === "transfer" ? bankAccount : undefined,
         accountName:   payMethod === "transfer" ? bankAccountName : undefined,
       },
+      notes: extraDevices.length > 0
+        ? [notes, `สินค้าเพิ่มเติมในรายการ: ${extraDevices.map(d => `${d.model} ${d.storage} (฿${d.estimatedPrice.toLocaleString("th-TH")})`).join(", ")}`].filter(Boolean).join("\n")
+        : notes || undefined,
     };
 
     // Save to Supabase (fire-and-forget on error so UX never blocks)
@@ -976,6 +1021,7 @@ function SellModelPageContent() {
     // Keep localStorage as backup for success page display
     try { localStorage.setItem("khaiphone_submission", JSON.stringify({ ...submission, submittedAt: new Date().toISOString() })); } catch {}
     try { localStorage.removeItem(WIZARD_KEY); } catch {}
+    try { localStorage.removeItem(BUNDLE_KEY); localStorage.removeItem(BUNDLE_RETURN_KEY); } catch {}
     router.push("/sell/success");
   }
 
@@ -1152,18 +1198,29 @@ function SellModelPageContent() {
                         </a>
                       )}
                       {localPick !== null ? (
-                        <a
-                          href={nextUrl(localPick)}
-                          onClick={() => {
-                            const newPicks = [...picks];
-                            newPicks[step] = localPick;
-                            saveWizard(step + 1, newPicks);
-                          }}
-                          className="flex items-center justify-center py-3.5 rounded-full font-bold text-sm text-white"
-                          style={{ background: "#B8860B", flex: step > 0 ? "2 1 0" : "1 1 0" }}
-                        >
-                          {step === TOTAL_STEPS - 1 ? "กรอกข้อมูลเพื่อดูราคา →" : "ถัดไป →"}
-                        </a>
+                        <div className="flex flex-col gap-2" style={{ flex: step > 0 ? "2 1 0" : "1 1 0" }}>
+                          {step === TOTAL_STEPS - 1 && bundleReturn && (
+                            <button
+                              onClick={() => { const np = [...picks]; np[step] = localPick; saveWizard(step + 1, np); handleAddToBundle(); }}
+                              className="flex items-center justify-center gap-2 w-full py-3.5 rounded-full font-bold text-sm text-white"
+                              style={{ background: "#111111" }}
+                            >
+                              <Plus size={15} /> เพิ่มสินค้านี้เข้ารายการขาย
+                            </button>
+                          )}
+                          <a
+                            href={nextUrl(localPick)}
+                            onClick={() => {
+                              const newPicks = [...picks];
+                              newPicks[step] = localPick;
+                              saveWizard(step + 1, newPicks);
+                            }}
+                            className="flex items-center justify-center py-3.5 rounded-full font-bold text-sm text-white w-full"
+                            style={{ background: "#B8860B" }}
+                          >
+                            {step === TOTAL_STEPS - 1 ? (bundleReturn ? "ประเมินเครื่องนี้แยก →" : "กรอกข้อมูลเพื่อดูราคา →") : "ถัดไป →"}
+                          </a>
+                        </div>
                       ) : (
                         <div
                           className="flex items-center justify-center py-3.5 rounded-full font-bold text-sm"
@@ -1231,6 +1288,45 @@ function SellModelPageContent() {
                         </div>
                       ))}
                     </div>
+                  </div>
+
+                  {/* Bundle: สินค้าในรายการนี้ */}
+                  <div className="bg-white rounded-2xl p-5" style={{ border: "1px solid #E5E7EB" }}>
+                    <h3 className="font-bold text-black mb-3">สินค้าที่จะขายในครั้งนี้</h3>
+                    <div className="flex flex-col gap-2 mb-3">
+                      {/* Current device (primary) */}
+                      <div className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: "rgba(184,134,11,0.06)", border: "1px solid rgba(184,134,11,0.2)" }}>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-black leading-snug">{product?.model}</p>
+                          <p className="text-xs" style={{ color: "#9CA3AF" }}>
+                            {picks[0] !== null ? storages[picks[0]] : ""}
+                            {picks[3] !== null ? ` • ${BODY_OPTS[picks[3]]?.sub ?? ""}` : ""}
+                          </p>
+                        </div>
+                        <p className="text-sm font-bold flex-shrink-0" style={{ color: "#B8860B" }}>฿{price.toLocaleString("th-TH")}</p>
+                      </div>
+                      {/* Extra devices */}
+                      {extraDevices.map((d, i) => (
+                        <div key={i} className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-black leading-snug">{d.model}</p>
+                            <p className="text-xs" style={{ color: "#9CA3AF" }}>{d.storage}</p>
+                          </div>
+                          <p className="text-sm font-bold flex-shrink-0" style={{ color: "#6B7280" }}>฿{d.estimatedPrice.toLocaleString("th-TH")}</p>
+                          <button type="button" onClick={() => handleRemoveExtra(i)} className="flex-shrink-0 ml-1">
+                            <X size={14} style={{ color: "#9CA3AF" }} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddMoreDevice}
+                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold"
+                      style={{ border: "1.5px dashed #D1D5DB", color: "#6B7280" }}
+                    >
+                      <Plus size={14} /> ประเมินสินค้าเพิ่ม
+                    </button>
                   </div>
 
                   {/* Form */}
