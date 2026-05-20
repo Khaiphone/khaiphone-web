@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, Suspense, useEffect, useState } from "react";
+import { Fragment, Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { fetchRequestByOrderNumber } from "@/app/actions/admin-requests";
 import { customerRespondToNegotiation } from "@/app/actions/inspection";
@@ -151,11 +151,13 @@ function StatusTimeline({
   doneUpTo = 0,
   compact = false,
   stepTimestamps,
+  currentStepRef,
 }: {
   submittedAt: string;
   doneUpTo?: number;
   compact?: boolean;
   stepTimestamps?: (string | null)[];
+  currentStepRef?: React.RefObject<HTMLDivElement | null>;
 }) {
   function tsFor(i: number): { date: string; time: string } | null {
     const raw = stepTimestamps?.[i] ?? (i === 0 ? submittedAt : null);
@@ -256,7 +258,7 @@ function StatusTimeline({
           const current = i === doneUpTo + 1;
           const ts = done ? tsFor(i) : null;
           return (
-            <div key={i} className="flex items-start gap-2.5">
+            <div key={i} ref={current ? currentStepRef : undefined} className="flex items-start gap-2.5">
               <div className="flex flex-col items-center flex-shrink-0">
                 <div
                   className="rounded-full border-2 flex items-center justify-center"
@@ -331,6 +333,9 @@ function RequestDetailInner() {
   const searchParams = useSearchParams();
   const id = params.id as string;
   const phoneParam = searchParams.get("phone") ?? "";
+
+  const currentStepRef = useRef<HTMLDivElement | null>(null);
+  const prevDoneUpTo   = useRef(-1);
 
   const [sub, setSub] = useState<SubmissionData | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "unauthorized" | "notfound">("loading");
@@ -437,6 +442,15 @@ function RequestDetailInner() {
   }, [id, phoneParam]);
 
   // Realtime subscription — อัพเดตทันทีเมื่อ admin เปลี่ยนสถานะ
+  useEffect(() => {
+    if (prevDoneUpTo.current === -1) { prevDoneUpTo.current = doneUpTo; return; }
+    if (doneUpTo === prevDoneUpTo.current) return;
+    prevDoneUpTo.current = doneUpTo;
+    setTimeout(() => {
+      currentStepRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 300);
+  }, [doneUpTo]);
+
   useEffect(() => {
     if (state !== "ok" || !sub) return;
 
@@ -630,7 +644,7 @@ function RequestDetailInner() {
                   รีเฟรช
                 </button>
               </div>
-              <StatusTimeline submittedAt={sub.submittedAt} doneUpTo={doneUpTo} stepTimestamps={stepTimestamps} />
+              <StatusTimeline submittedAt={sub.submittedAt} doneUpTo={doneUpTo} stepTimestamps={stepTimestamps} currentStepRef={currentStepRef} />
             </div>
 
             {/* Notice: cancelled or rejected */}
