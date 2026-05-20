@@ -130,23 +130,20 @@ export default function ReviewSection() {
         </div>
 
         {/* Trust Badges */}
-        <div
-          className="flex gap-3 mb-8 overflow-x-auto pb-1"
-          style={{ scrollbarWidth: "none" }}
-        >
+        <div className="grid grid-cols-3 gap-2 md:gap-3 mb-8">
           {TRUST_BADGES.map(({ Icon, title, sub }) => (
             <div
               key={title}
-              className="flex items-center gap-3 flex-shrink-0 rounded-xl px-4 py-3"
+              className="flex flex-col md:flex-row items-center md:items-center gap-1.5 md:gap-3 rounded-xl px-3 py-3 md:px-4 text-center md:text-left"
               style={{
                 background: "rgba(255,255,255,0.08)",
                 border: "1px solid rgba(255,255,255,0.12)",
               }}
             >
-              <Icon size={18} color="#D4AF37" />
+              <Icon size={18} color="#D4AF37" className="flex-shrink-0" />
               <div>
                 <p className="text-white text-xs font-semibold leading-snug">{title}</p>
-                <p className="text-xs" style={{ color: "#9CA3AF" }}>{sub}</p>
+                <p className="text-xs hidden md:block" style={{ color: "#9CA3AF" }}>{sub}</p>
               </div>
             </div>
           ))}
