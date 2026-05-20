@@ -23,6 +23,7 @@ export async function fetchProducts(): Promise<ProductRow[]> {
     .select("*")
     .order("category")
     .order("price_good", { ascending: false });
+
   return data ?? [];
 }
 
@@ -30,10 +31,11 @@ export async function fetchActiveProducts(): Promise<ProductRow[]> {
   const supabase = createServerClient();
   const { data } = await supabase
     .from("products")
-    .select("id, model, storage, price_good, storage_prices, category, active, deductions, updated_at")
+    .select("*")
     .eq("active", true)
     .order("category")
     .order("price_good", { ascending: false });
+
   return data ?? [];
 }
 
@@ -44,6 +46,7 @@ export async function fetchProductById(id: string): Promise<ProductRow | null> {
     .select("*")
     .eq("id", id)
     .single();
+
   return data ?? null;
 }
 
@@ -55,8 +58,13 @@ export async function updateProduct(
   const supabase = createServerClient();
   const { error } = await supabase
     .from("products")
-    .update({ ...updates, updated_at: new Date().toISOString(), ...(updatedBy ? { updated_by: updatedBy } : {}) })
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString(),
+      ...(updatedBy ? { updated_by: updatedBy } : {}),
+    })
     .eq("id", id);
+
   if (error) return { success: false as const, error: error.message };
   return { success: true as const };
 }
@@ -69,8 +77,13 @@ export async function updateProductStoragePrices(
   const supabase = createServerClient();
   const { error } = await supabase
     .from("products")
-    .update({ storage_prices, updated_at: new Date().toISOString(), ...(updatedBy ? { updated_by: updatedBy } : {}) })
+    .update({
+      storage_prices,
+      updated_at: new Date().toISOString(),
+      ...(updatedBy ? { updated_by: updatedBy } : {}),
+    })
     .eq("id", id);
+
   if (error) return { success: false as const, error: error.message };
   return { success: true as const };
 }
@@ -83,8 +96,13 @@ export async function updateProductDeductions(
   const supabase = createServerClient();
   const { error } = await supabase
     .from("products")
-    .update({ deductions, updated_at: new Date().toISOString(), ...(updatedBy ? { updated_by: updatedBy } : {}) })
+    .update({
+      deductions,
+      updated_at: new Date().toISOString(),
+      ...(updatedBy ? { updated_by: updatedBy } : {}),
+    })
     .eq("id", id);
+
   if (error) return { success: false as const, error: error.message };
   return { success: true as const };
 }
@@ -98,7 +116,12 @@ export async function createProduct(product: {
   const supabase = createServerClient();
   const { error } = await supabase
     .from("products")
-    .insert({ ...product, active: true, updated_at: new Date().toISOString() });
+    .insert({
+      ...product,
+      active: true,
+      updated_at: new Date().toISOString(),
+    });
+
   if (error) return { success: false as const, error: error.message };
   return { success: true as const };
 }
