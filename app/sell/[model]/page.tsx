@@ -497,10 +497,7 @@ function SellModelPageContent() {
   const router       = useRouter();
 
   const [products, setProducts] = useState<Product[]>(ALL_PRODUCTS);
-  const [groupOptions, setGroupOptions] = useState<PricingOption[][]>([
-    MODEL_TYPE_OPTS, WARRANTY_OPTS, BODY_OPTS, SCREEN_OPTS,
-    DISPLAY_OPTS, BATTERY_OPTS, ACCESSORY_OPTS, ICLOUD_OPTS,
-  ]);
+  const [groupOptions, setGroupOptions] = useState<PricingOption[][] | null>(null);
   const [storageMultiplier, setStorageMultiplier] = useState(0.12);
   const [storagePrices, setStoragePrices] = useState<Record<string, number> | null>(null);
   const [hasCustomDed, setHasCustomDed]   = useState(false);
@@ -755,11 +752,12 @@ function SellModelPageContent() {
     router.push("/sell/success");
   }
 
-  const effectiveGroupOptions = !hasCustomDed && product
-    ? [getModelTypeOpts(product.model), ...groupOptions.slice(1)]
-    : groupOptions;
+  const effectiveGroupOptions: PricingOption[][] | null = groupOptions === null ? null
+    : (!hasCustomDed && product
+      ? [getModelTypeOpts(product.model), ...groupOptions.slice(1)]
+      : groupOptions);
 
-  const price = product ? calcPrice(product, picks, effectiveGroupOptions, storageMultiplier, storagePrices) : 0;
+  const price = product && effectiveGroupOptions ? calcPrice(product, picks, effectiveGroupOptions, storageMultiplier, storagePrices) : 0;
   const { min: priceMin, max: priceMax } = calcPriceRange(price);
   const summaryRows = product ? buildSummaryRows(picks, storages) : [];
 
@@ -794,9 +792,9 @@ function SellModelPageContent() {
     ? "/sell"
     : backUrl();
 
-  const stepOpts: PricingOption[] = isWizard && step === 0
+  const stepOpts: PricingOption[] | null = isWizard && step === 0
     ? storages.map(s => ({ label: s, ded: 0 }))
-    : (effectiveGroupOptions[step - 1] ?? []);
+    : (effectiveGroupOptions ? (effectiveGroupOptions[step - 1] ?? []) : null);
 
   return (
     <div className={`min-h-screen bg-gray-50 ${isFormPhase ? "pb-24 md:pb-10" : "pb-14"}`}>
@@ -833,7 +831,12 @@ function SellModelPageContent() {
                 <h2 className="text-lg font-bold text-black mb-4">{STEP_TITLES[step]}</h2>
 
                 <div className="flex flex-col gap-3">
-                  {stepOpts.map((opt, i) => {
+                  {stepOpts === null ? (
+                    [1,2,3].map(n => (
+                      <div key={n} className="h-14 rounded-2xl animate-pulse" style={{ background: "#F3F4F6" }} />
+                    ))
+                  ) : null}
+                  {(stepOpts ?? []).map((opt, i) => {
                     const selected = localPick === i;
                     return (
                       <button
