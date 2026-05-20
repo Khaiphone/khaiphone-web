@@ -35,14 +35,36 @@ function slugToModelName(slug: string): string {
 }
 
 function getIphoneImage(model: string): string | null {
-  if (model.includes("Air")) return `/iPhone-air.webp`;
-  const match = model.match(/iPhone (\d+)/);
-  if (!match) return null;
-  const gen = parseInt(match[1]);
-  if (gen < 11 || gen > 17) return null;
-  if (model.includes("Pro")) return `/iPhone-${gen}-pro-max.webp`;
-  if (model.endsWith("e")) return `/iPhone-${gen}e.webp`;
-  return `/iPhone-${gen}.webp`;
+  // iPhone
+  if (model.includes("iPhone") && model.includes("Air")) return `/iPhone-air.webp`;
+  const iphoneM = model.match(/iPhone (\d+)/);
+  if (iphoneM) {
+    const gen = parseInt(iphoneM[1]);
+    if (gen < 11 || gen > 17) return null;
+    if (model.includes("Pro")) return `/iPhone-${gen}-pro-max.webp`;
+    if (model.endsWith("e")) return `/iPhone-${gen}e.webp`;
+    return `/iPhone-${gen}.webp`;
+  }
+  // iPad Pro
+  if (model.includes("iPad Pro")) {
+    if (model.includes("2020")) return `/ipad-pro-2020.webp`;
+    const chipM = model.match(/\bM(\d)\b/);
+    if (chipM) return `/ipad-pro-m${chipM[1]}.webp`;
+  }
+  // iPad Air
+  if (model.includes("iPad Air")) {
+    const airM = model.match(/iPad Air (\d+)/);
+    if (airM) return `/ipad-air-${airM[1]}.webp`;
+  }
+  // iPad mini
+  if (model.includes("iPad mini")) {
+    const miniM = model.match(/iPad mini (\d+)/);
+    if (miniM) return `/ipad-mini-${miniM[1]}.webp`;
+  }
+  // iPad Gen
+  const genM = model.match(/iPad Gen (\d+)/);
+  if (genM) return `/ipad-gen-${genM[1]}.webp`;
+  return null;
 }
 
 const CATEGORY_IMAGES: Record<CategoryKey, { src: string; scale: number }> = {
