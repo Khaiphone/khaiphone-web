@@ -54,7 +54,7 @@ export default function AdminLoginPage() {
         <div style={{ textAlign: "center", marginBottom: "32px" }}>
           <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
             <Image
-              src="/logo-icon.png"
+              src="/logo-icon.webp"
               alt="ขายไอโฟน"
               width={56}
               height={56}

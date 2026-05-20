@@ -25,9 +25,9 @@ function IconLine({ className }: { className?: string }) {
 
 const SELL_CATEGORIES = [
   { name: "iPhone",      sub: "ทุกรุ่น ตั้งแต่ 11–17",  img: "/product-iphone.webp", href: "/sell?category=iphone" },
-  { name: "iPad",        sub: "iPad Air, Pro, mini",      img: "/product-ipad.png",    href: "/sell?category=ipad"   },
-  { name: "MacBook",     sub: "Air และ Pro ทุกรุ่น",      img: "/product-macbook.png", href: "/sell?category=macbook"},
-  { name: "Apple Watch", sub: "SE, Series, Ultra",         img: "/product-watch.png",   href: "/sell?category=watch"  },
+  { name: "iPad",        sub: "iPad Air, Pro, mini",      img: "/product-ipad.webp",    href: "/sell?category=ipad"   },
+  { name: "MacBook",     sub: "Air และ Pro ทุกรุ่น",      img: "/product-macbook.webp", href: "/sell?category=macbook"},
+  { name: "Apple Watch", sub: "SE, Series, Ultra",         img: "/product-watch.webp",   href: "/sell?category=watch"  },
 ];
 
 const navLinks = [
@@ -98,7 +98,7 @@ export default function Header() {
       <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <a href="/" className="flex items-center gap-0">
-            <img src="/logo-icon.png" alt="ขายไอโฟน.com" className="h-10 w-auto flex-shrink-0 md:mr-1" />
+            <img src="/logo-icon.webp" alt="ขายไอโฟน.com" className="h-10 w-auto flex-shrink-0 md:mr-1" />
             <div>
               <div className="font-bold text-lg leading-none text-black">ขายไอโฟน.com</div>
               <div className="text-xs text-gray-400">รับซื้อ-ขาย Apple มือสอง</div>
@@ -202,7 +202,7 @@ export default function Header() {
           {/* Drawer header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <div className="flex items-center gap-0">
-              <img src="/logo-icon.png" alt="ขายไอโฟน.com" className="h-10 w-auto flex-shrink-0" />
+              <img src="/logo-icon.webp" alt="ขายไอโฟน.com" className="h-10 w-auto flex-shrink-0" />
               <div>
                 <div className="font-bold text-base leading-none text-black">ขายไอโฟน.com</div>
                 <div className="text-xs text-gray-400">รับซื้อ-ขาย Apple มือสอง</div>

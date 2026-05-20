@@ -312,9 +312,9 @@ export default function ContractPage() {
     const dobStr = dob ? thDate(dob + "T00:00:00") : "";
 
     // Embed logo as base64 so the stored HTML works anywhere
-    let logoSrc = "/logo-icon.png";
+    let logoSrc = "/logo-icon.webp";
     try {
-      const resp = await fetch("/logo-icon.png");
+      const resp = await fetch("/logo-icon.webp");
       const blob = await resp.blob();
       logoSrc = await new Promise<string>((resolve) => {
         const reader = new FileReader();

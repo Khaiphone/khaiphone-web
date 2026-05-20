@@ -284,7 +284,7 @@ function FocusHeader({ backHref }: { backHref: string }) {
             className="flex-1 flex items-center justify-start gap-1 bg-transparent border-none"
             style={{ cursor: "pointer" }}
           >
-            <img src="/logo-icon.png" alt="ขายไอโฟน.com" className="h-8 w-auto flex-shrink-0" />
+            <img src="/logo-icon.webp" alt="ขายไอโฟน.com" className="h-8 w-auto flex-shrink-0" />
             <div className="flex flex-col text-left">
               <p className="font-bold text-sm text-black leading-tight">ขายไอโฟน.com</p>
               <p className="text-xs leading-tight" style={{ color: "#9CA3AF" }}>รับซื้อ Apple มือสอง</p>

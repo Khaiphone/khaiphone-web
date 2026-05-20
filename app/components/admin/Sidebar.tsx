@@ -140,7 +140,7 @@ export default function Sidebar() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <Image
-            src="/logo-icon.png"
+            src="/logo-icon.webp"
             alt="ขายไอโฟน"
             width={32}
             height={32}

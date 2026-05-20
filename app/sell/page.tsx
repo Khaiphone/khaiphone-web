@@ -47,9 +47,9 @@ function getIphoneImage(model: string): string | null {
 
 const CATEGORY_IMAGES: Record<CategoryKey, { src: string; scale: number }> = {
   iphone:  { src: "/product-iphone.webp", scale: 1    },
-  ipad:    { src: "/product-ipad.png",    scale: 1    },
-  macbook: { src: "/product-macbook.png", scale: 1.35 },
-  watch:   { src: "/product-watch.png",   scale: 1    },
+  ipad:    { src: "/product-ipad.webp",    scale: 1    },
+  macbook: { src: "/product-macbook.webp", scale: 1.35 },
+  watch:   { src: "/product-watch.webp",   scale: 1    },
 };
 
 function SellPageContent() {

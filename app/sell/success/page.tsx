@@ -769,7 +769,7 @@ export default function SellSuccessPage() {
           </div>
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-6">
             <div className="flex items-center gap-2.5">
-              <img src="/logo-icon.png" alt="ขายไอโฟน.com" className="h-8 w-auto" />
+              <img src="/logo-icon.webp" alt="ขายไอโฟน.com" className="h-8 w-auto" />
               <div>
                 <p className="text-sm font-bold text-white">ขายไอโฟน.com</p>
                 <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>© 2025 ขายไอโฟน.com</p>

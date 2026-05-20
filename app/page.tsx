@@ -192,7 +192,7 @@ export default function Home() {
 
             {/* Mobile: image full width */}
             <div className="md:hidden" style={{ margin: "-56px -1rem 0", width: "calc(100% + 2rem)" }}>
-              <img src="/hero-products.png" alt="Apple products" className="w-full h-auto block" />
+              <img src="/hero-products.webp" alt="Apple products" className="w-full h-auto block" />
             </div>
 
             {/* Mobile: badges below image */}
@@ -256,7 +256,7 @@ export default function Home() {
 
         {/* Desktop: image absolute-positioned from right */}
         <img
-          src="/hero-products.png"
+          src="/hero-products.webp"
           alt="iPhone, iPad, MacBook, Apple Watch, AirPods"
           className="hidden md:block absolute pointer-events-none select-none"
           style={{
@@ -308,9 +308,9 @@ export default function Home() {
           >
             {[
               { img: "/product-iphone.webp", name: "iPhone",      sub: "ทุกรุ่น", scale: 1,    href: "/sell?category=iphone" },
-              { img: "/product-ipad.png",    name: "iPad",         sub: "ทุกรุ่น", scale: 1,    href: "/sell?category=ipad"   },
-              { img: "/product-macbook.png", name: "MacBook",      sub: "ทุกรุ่น", scale: 1.35, href: "/sell?category=macbook"},
-              { img: "/product-watch.png",   name: "Apple Watch",  sub: "ทุกรุ่น", scale: 1,    href: "/sell?category=watch"  },
+              { img: "/product-ipad.webp",    name: "iPad",         sub: "ทุกรุ่น", scale: 1,    href: "/sell?category=ipad"   },
+              { img: "/product-macbook.webp", name: "MacBook",      sub: "ทุกรุ่น", scale: 1.35, href: "/sell?category=macbook"},
+              { img: "/product-watch.webp",   name: "Apple Watch",  sub: "ทุกรุ่น", scale: 1,    href: "/sell?category=watch"  },
               { img: "/product-airpods.webp",name: "AirPods",      sub: "ทุกรุ่น", scale: 1,    href: null                    },
             ].map((p) => (
               <a
