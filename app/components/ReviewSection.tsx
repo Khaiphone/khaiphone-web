@@ -66,6 +66,15 @@ const reviews = [
     product: { model: "iPhone 14", storage: "128GB", color: "Blue", image: "/iPhone-14.webp" },
     soldDate: "7 พ.ค. 2569",
   },
+  {
+    name: "ฝน",
+    phone: "086-xxx-xx61",
+    initials: "ฝน",
+    date: "5 พ.ค. 2569",
+    text: "ประเมินผ่านหน้าเว็บเองได้เลย เลือกรุ่น เลือกสภาพ ได้ราคามาทันที ไม่ต้องรอรีวิว ไม่ต้องทักไลน์ก่อน สะดวกมากค่ะ แล้วก็นัดรับได้เลย ราคาจริงได้ตามที่ประเมินไว้เลยค่ะ",
+    product: { model: "iPhone 15", storage: "256GB", color: "Pink", image: "/iPhone-15.webp" },
+    soldDate: "5 พ.ค. 2569",
+  },
 ];
 
 const TRUST_BADGES = [
