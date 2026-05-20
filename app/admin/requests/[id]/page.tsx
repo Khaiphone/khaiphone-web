@@ -484,6 +484,65 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </Card>
 
+        {/* A2. Bundle devices */}
+        {request.extraDevices.length > 0 && (
+          <Card>
+            <div style={{ padding: "16px" }}>
+              <SectionLabel>สินค้าในรายการ ({request.extraDevices.length + 1} เครื่อง)</SectionLabel>
+
+              {/* Primary device chip */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderRadius: 10, background: "rgba(184,134,11,0.08)", border: "1px solid rgba(184,134,11,0.2)", marginBottom: 8 }}>
+                <div>
+                  <p style={{ color: TEXT, fontWeight: 700, fontSize: 13, margin: 0 }}>{request.device.model} <span style={{ fontSize: 11, fontWeight: 500, color: GOLD, background: "rgba(184,134,11,0.12)", padding: "1px 6px", borderRadius: 6 }}>หลัก</span></p>
+                  <p style={{ color: TEXT3, fontSize: 12, margin: "2px 0 0" }}>{request.device.storage}</p>
+                </div>
+                <p style={{ color: GOLD, fontWeight: 700, fontSize: 14, margin: 0, fontVariantNumeric: "tabular-nums" }}>฿{request.device.estimatedPrice.toLocaleString("th-TH")}</p>
+              </div>
+
+              {/* Extra devices */}
+              {request.extraDevices.map((d, i) => (
+                <div key={i} style={{ borderRadius: 10, border: `1px solid ${BORDER}`, overflow: "hidden", marginBottom: i < request.extraDevices.length - 1 ? 8 : 0 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", background: "#F9FAFB" }}>
+                    <div>
+                      <p style={{ color: TEXT, fontWeight: 700, fontSize: 13, margin: 0 }}>{d.model}</p>
+                      <p style={{ color: TEXT3, fontSize: 12, margin: "2px 0 0" }}>{d.storage || "—"}</p>
+                    </div>
+                    <p style={{ color: TEXT2, fontWeight: 700, fontSize: 14, margin: 0, fontVariantNumeric: "tabular-nums" }}>฿{d.estimatedPrice.toLocaleString("th-TH")}</p>
+                  </div>
+                  {d.details.length > 0 && (
+                    <div style={{ padding: "6px 10px 8px", borderTop: `1px solid ${BORDER}` }}>
+                      {d.details.map(({ title, value }) => (
+                        <div key={title} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: `1px solid #F9FAFB` }}>
+                          <span style={{ color: TEXT3, fontSize: 12 }}>{title}</span>
+                          <span style={{ color: TEXT, fontSize: 12, fontWeight: 500, textAlign: "right" }}>{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* Total */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 10, borderTop: `1px solid ${BORDER}` }}>
+                <span style={{ color: TEXT2, fontSize: 13, fontWeight: 600 }}>รวมทั้งหมด</span>
+                <span style={{ color: GOLD, fontSize: 16, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+                  ฿{(request.device.estimatedPrice + request.extraDevices.reduce((s, d) => s + d.estimatedPrice, 0)).toLocaleString("th-TH")}
+                </span>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* A3. Customer notes (from sell form) */}
+        {request.customerNotes && (
+          <Card>
+            <div style={{ padding: "14px 16px" }}>
+              <SectionLabel>หมายเหตุจากลูกค้า</SectionLabel>
+              <p style={{ color: TEXT, fontSize: 13, margin: 0, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{request.customerNotes}</p>
+            </div>
+          </Card>
+        )}
+
         {/* B. Customer */}
         <Card>
           <div style={{ padding: "16px" }}>

@@ -110,6 +110,13 @@ export interface AdminRequest {
     slipUrl?: string;
     contractSignedAt?: string;
   };
+  customerNotes?: string;
+  extraDevices: Array<{
+    model: string;
+    storage: string;
+    estimatedPrice: number;
+    details: Array<{ title: string; value: string }>;
+  }>;
   notes: Array<{
     text: string;
     createdAt: string;

@@ -2,6 +2,13 @@
 
 import { createServerClient } from "@/lib/supabase-server";
 
+interface ExtraDevice {
+  model: string;
+  storage: string;
+  estimatedPrice: number;
+  details: Array<{ title: string; value: string }>;
+}
+
 interface SubmissionData {
   orderNumber: string;
   model: string;
@@ -19,6 +26,8 @@ interface SubmissionData {
     accountNumber?: string;
     accountName?: string;
   };
+  notes?: string;
+  extraDevices?: ExtraDevice[];
 }
 
 export async function submitRequest(data: SubmissionData) {
@@ -48,6 +57,8 @@ export async function submitRequest(data: SubmissionData) {
     payment_account_number: data.payment.accountNumber || null,
     status_log: [{ status: "new", timestamp: new Date().toISOString(), note: "คำขอใหม่จากเว็บไซต์" }],
     source: "website",
+    customer_notes:  data.notes        || null,
+    extra_devices:   data.extraDevices?.length ? data.extraDevices : [],
   });
 
   if (error) {
