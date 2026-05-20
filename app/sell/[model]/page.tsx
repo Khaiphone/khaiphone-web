@@ -735,17 +735,20 @@ function SellModelPageContent() {
   }
   function nextUrl(pick: number | null = localPick) {
     const p = new URLSearchParams(searchParams.toString());
+    p.delete("r");
     p.set("step", String(step + 1));
     if (pick !== null) p.set(`s${step}`, String(pick));
     return `/sell/${params.model}?${p.toString()}`;
   }
   function backUrl() {
     const p = new URLSearchParams(searchParams.toString());
+    p.delete("r");
     p.set("step", String(Math.max(0, step - 1)));
     return `/sell/${params.model}?${p.toString()}`;
   }
   function backToWizardUrl() {
     const p = new URLSearchParams(searchParams.toString());
+    p.delete("r");
     p.set("step", String(TOTAL_STEPS - 1));
     return `/sell/${params.model}?${p.toString()}`;
   }
