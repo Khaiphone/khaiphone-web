@@ -77,6 +77,16 @@ function getProductImage(model: string): string | null {
   // iPad Gen
   const genM = model.match(/iPad Gen (\d+)/);
   if (genM) return `/ipad-gen-${genM[1]}.webp`;
+  // Mac
+  if (model.startsWith("MacBook") || model.startsWith("Mac mini") || model.startsWith("iMac")) {
+    if (model.includes("MacBook Neo")) return `/macbook-neo.webp`;
+    const chipM = model.match(/\bM(\d)\b/);
+    const chip = chipM ? chipM[1] : null;
+    if (model.includes("MacBook Air")) return chip ? `/macbook-air-m${chip}.webp` : null;
+    if (model.includes("MacBook Pro")) return chip ? `/macbook-pro-m${chip}.webp` : null;
+    if (model.includes("Mac mini"))   return chip ? `/mac-mini-m${chip}.webp`    : null;
+    if (model.includes("iMac"))       return chip ? `/imac-m${chip}.webp`        : null;
+  }
   // Apple Watch
   if (model.includes("Apple Watch")) {
     const seriesM = model.match(/Series (\d+)/);
