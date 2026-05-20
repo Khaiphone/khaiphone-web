@@ -111,7 +111,7 @@ export interface AdminRequest {
     contractSignedAt?: string;
   };
   customerNotes?: string;
-  extraDevices: Array<{
+  extraDevices?: Array<{
     model: string;
     storage: string;
     estimatedPrice: number;
