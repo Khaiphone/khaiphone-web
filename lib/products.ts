@@ -41,11 +41,55 @@ export const iphones: Product[] = [
 ];
 
 export const ipads: Product[] = [
-  { id: "ipm7",   model: "iPad Pro 13\" M4",  storage: "256GB / 512GB / 1TB / 2TB",   isNew: true, priceGood: 28000, priceFair: 23000, pricePoor: 16000 },
-  { id: "ipm4",   model: "iPad Pro 11\" M4",  storage: "256GB / 512GB / 1TB / 2TB",   isNew: true, priceGood: 22000, priceFair: 18000, pricePoor: 12000 },
-  { id: "iair6",  model: "iPad Air 13\" M2",  storage: "128GB / 256GB / 512GB / 1TB",              priceGood: 18000, priceFair: 14500, pricePoor: 9500  },
-  { id: "iair5",  model: "iPad Air 11\" M2",  storage: "128GB / 256GB / 512GB / 1TB",              priceGood: 14000, priceFair: 11000, pricePoor: 7000  },
-  { id: "ipad10", model: "iPad (10th Gen)",   storage: "64GB / 256GB",                             priceGood: 9000,  priceFair: 7000,  pricePoor: 4500  },
+  // iPad Gen
+  { id: "ipad9w",     model: 'iPad Gen 9 (Wi-Fi)',                  storage: "64GB / 256GB",               priceGood: 2500,  priceFair: 2000,  pricePoor: 1400  },
+  { id: "ipad9c",     model: 'iPad Gen 9 (Wi-Fi + Cellular)',       storage: "64GB / 256GB",               priceGood: 4500,  priceFair: 3600,  pricePoor: 2500  },
+  { id: "ipad10w",    model: 'iPad Gen 10 (Wi-Fi)',                 storage: "64GB / 256GB",               priceGood: 5500,  priceFair: 4400,  pricePoor: 3000  },
+  { id: "ipad10c",    model: 'iPad Gen 10 (Wi-Fi + Cellular)',      storage: "64GB / 256GB",               priceGood: 7500,  priceFair: 6000,  pricePoor: 4200  },
+  { id: "ipad11w",    model: 'iPad Gen 11 A16 (Wi-Fi)',             storage: "128GB / 256GB",              isNew: true, priceGood: 7500,  priceFair: 6000,  pricePoor: 4200  },
+  { id: "ipad11c",    model: 'iPad Gen 11 A16 (Wi-Fi + Cellular)',  storage: "128GB / 256GB",              isNew: true, priceGood: 9500,  priceFair: 7600,  pricePoor: 5300  },
+  // iPad mini
+  { id: "imini6w",    model: 'iPad mini 6 (Wi-Fi)',                 storage: "64GB / 256GB",               priceGood: 5000,  priceFair: 4000,  pricePoor: 2800  },
+  { id: "imini6c",    model: 'iPad mini 6 (Wi-Fi + Cellular)',      storage: "64GB / 256GB",               priceGood: 7000,  priceFair: 5600,  pricePoor: 3900  },
+  { id: "imini7w",    model: 'iPad mini 7 (Wi-Fi)',                 storage: "128GB / 256GB",              isNew: true, priceGood: 8500,  priceFair: 6800,  pricePoor: 4800  },
+  { id: "imini7c",    model: 'iPad mini 7 (Wi-Fi + Cellular)',      storage: "128GB / 256GB",              isNew: true, priceGood: 10500, priceFair: 8400,  pricePoor: 5800  },
+  // iPad Air
+  { id: "iair5w",     model: 'iPad Air 5 (Wi-Fi)',                  storage: "64GB / 256GB",               priceGood: 6000,  priceFair: 4800,  pricePoor: 3300  },
+  { id: "iair5c",     model: 'iPad Air 5 (Wi-Fi + Cellular)',       storage: "64GB / 256GB",               priceGood: 8000,  priceFair: 6400,  pricePoor: 4400  },
+  { id: "iair611w",   model: 'iPad Air 6 11" (Wi-Fi)',              storage: "128GB / 256GB",              priceGood: 9500,  priceFair: 7600,  pricePoor: 5300  },
+  { id: "iair611c",   model: 'iPad Air 6 11" (Wi-Fi + Cellular)',   storage: "128GB / 256GB",              priceGood: 11500, priceFair: 9200,  pricePoor: 6400  },
+  { id: "iair613w",   model: 'iPad Air 6 13" (Wi-Fi)',              storage: "128GB / 256GB",              priceGood: 11500, priceFair: 9200,  pricePoor: 6400  },
+  { id: "iair613c",   model: 'iPad Air 6 13" (Wi-Fi + Cellular)',   storage: "128GB / 256GB",              priceGood: 13500, priceFair: 10800, pricePoor: 7500  },
+  { id: "iair711w",   model: 'iPad Air 7 11" (Wi-Fi)',              storage: "128GB / 256GB",              isNew: true, priceGood: 11500, priceFair: 9200,  pricePoor: 6400  },
+  { id: "iair711c",   model: 'iPad Air 7 11" (Wi-Fi + Cellular)',   storage: "128GB / 256GB",              isNew: true, priceGood: 13500, priceFair: 10800, pricePoor: 7500  },
+  { id: "iair713w",   model: 'iPad Air 7 13" (Wi-Fi)',              storage: "128GB / 256GB",              isNew: true, priceGood: 13500, priceFair: 10800, pricePoor: 7500  },
+  { id: "iair713c",   model: 'iPad Air 7 13" (Wi-Fi + Cellular)',   storage: "128GB / 256GB",              isNew: true, priceGood: 15500, priceFair: 12400, pricePoor: 8600  },
+  { id: "iair811w",   model: 'iPad Air 8 11" (Wi-Fi)',              storage: "128GB / 256GB",              isNew: true, priceGood: 15000, priceFair: 12000, pricePoor: 8400  },
+  { id: "iair811c",   model: 'iPad Air 8 11" (Wi-Fi + Cellular)',   storage: "128GB / 256GB",              isNew: true, priceGood: 17000, priceFair: 13600, pricePoor: 9500  },
+  { id: "iair813w",   model: 'iPad Air 8 13" (Wi-Fi)',              storage: "128GB / 256GB",              isNew: true, priceGood: 17500, priceFair: 14000, pricePoor: 9800  },
+  { id: "iair813c",   model: 'iPad Air 8 13" (Wi-Fi + Cellular)',   storage: "128GB / 256GB",              isNew: true, priceGood: 19500, priceFair: 15600, pricePoor: 10900 },
+  // iPad Pro 11"
+  { id: "ipro11-20w", model: 'iPad Pro 11" (2020) (Wi-Fi)',         storage: "128GB / 256GB / 512GB",      priceGood: 8000,  priceFair: 6400,  pricePoor: 4400  },
+  { id: "ipro11-20c", model: 'iPad Pro 11" (2020) (Wi-Fi + Cellular)', storage: "128GB / 256GB / 512GB",   priceGood: 10000, priceFair: 8000,  pricePoor: 5500  },
+  { id: "ipro11m1w",  model: 'iPad Pro 11" M1 (Wi-Fi)',             storage: "128GB / 256GB / 512GB",      priceGood: 10000, priceFair: 8000,  pricePoor: 5500  },
+  { id: "ipro11m1c",  model: 'iPad Pro 11" M1 (Wi-Fi + Cellular)',  storage: "128GB / 256GB / 512GB",      priceGood: 12000, priceFair: 9600,  pricePoor: 6700  },
+  { id: "ipro11m2w",  model: 'iPad Pro 11" M2 (Wi-Fi)',             storage: "128GB / 256GB / 512GB",      priceGood: 13000, priceFair: 10400, pricePoor: 7200  },
+  { id: "ipro11m2c",  model: 'iPad Pro 11" M2 (Wi-Fi + Cellular)',  storage: "128GB / 256GB / 512GB",      priceGood: 15000, priceFair: 12000, pricePoor: 8400  },
+  { id: "ipro11m4w",  model: 'iPad Pro 11" M4 (Wi-Fi)',             storage: "256GB / 512GB / 1TB / 2TB",  priceGood: 20000, priceFair: 16000, pricePoor: 11200 },
+  { id: "ipro11m4c",  model: 'iPad Pro 11" M4 (Wi-Fi + Cellular)',  storage: "256GB / 512GB / 1TB / 2TB",  priceGood: 22000, priceFair: 17600, pricePoor: 12300 },
+  { id: "ipro11m5w",  model: 'iPad Pro 11" M5 (Wi-Fi)',             storage: "256GB / 512GB",              isNew: true, priceGood: 23500, priceFair: 18800, pricePoor: 13200 },
+  { id: "ipro11m5c",  model: 'iPad Pro 11" M5 (Wi-Fi + Cellular)',  storage: "256GB / 512GB",              isNew: true, priceGood: 25500, priceFair: 20400, pricePoor: 14300 },
+  // iPad Pro 12.9" / 13"
+  { id: "ipro12-20w", model: 'iPad Pro 12.9" (2020) (Wi-Fi)',       storage: "128GB / 256GB / 512GB",      priceGood: 9000,  priceFair: 7200,  pricePoor: 5000  },
+  { id: "ipro12-20c", model: 'iPad Pro 12.9" (2020) (Wi-Fi + Cellular)', storage: "128GB / 256GB / 512GB", priceGood: 11000, priceFair: 8800,  pricePoor: 6200  },
+  { id: "ipro12m1w",  model: 'iPad Pro 12.9" M1 (Wi-Fi)',           storage: "128GB / 256GB / 512GB",      priceGood: 11500, priceFair: 9200,  pricePoor: 6400  },
+  { id: "ipro12m1c",  model: 'iPad Pro 12.9" M1 (Wi-Fi + Cellular)', storage: "128GB / 256GB / 512GB",     priceGood: 13500, priceFair: 10800, pricePoor: 7500  },
+  { id: "ipro12m2w",  model: 'iPad Pro 12.9" M2 (Wi-Fi)',           storage: "128GB / 256GB / 512GB",      priceGood: 14500, priceFair: 11600, pricePoor: 8100  },
+  { id: "ipro12m2c",  model: 'iPad Pro 12.9" M2 (Wi-Fi + Cellular)', storage: "128GB / 256GB / 512GB",     priceGood: 16500, priceFair: 13200, pricePoor: 9200  },
+  { id: "ipro13m4w",  model: 'iPad Pro 13" M4 (Wi-Fi)',             storage: "256GB / 512GB / 1TB / 2TB",  priceGood: 22500, priceFair: 18000, pricePoor: 12600 },
+  { id: "ipro13m4c",  model: 'iPad Pro 13" M4 (Wi-Fi + Cellular)',  storage: "256GB / 512GB / 1TB / 2TB",  priceGood: 24500, priceFair: 19600, pricePoor: 13700 },
+  { id: "ipro13m5w",  model: 'iPad Pro 13" M5 (Wi-Fi)',             storage: "256GB / 512GB",              isNew: true, priceGood: 25500, priceFair: 20400, pricePoor: 14300 },
+  { id: "ipro13m5c",  model: 'iPad Pro 13" M5 (Wi-Fi + Cellular)',  storage: "256GB / 512GB",              isNew: true, priceGood: 27500, priceFair: 22000, pricePoor: 15400 },
 ];
 
 export const macbooks: Product[] = [
