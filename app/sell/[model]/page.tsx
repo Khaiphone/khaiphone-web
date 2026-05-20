@@ -876,15 +876,16 @@ function SellModelPageContent() {
     if (slots.length > 0 && !slots.includes(appointTime)) setAppointTime(slots[0]);
   }, [appointDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Load bundle state from localStorage
+  // Load bundle state from localStorage — re-run when bundle_ts URL param changes (set on return from bundle flow)
+  const bundleTs = searchParams.get("bundle_ts");
   useEffect(() => {
     try {
       const stored = localStorage.getItem(BUNDLE_KEY);
-      if (stored) setExtraDevices(JSON.parse(stored) as ExtraDevice[]);
+      setExtraDevices(stored ? JSON.parse(stored) as ExtraDevice[] : []);
       const ret = localStorage.getItem(BUNDLE_RETURN_KEY);
-      if (ret) setBundleReturn(ret);
+      setBundleReturn(ret);
     } catch {}
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [bundleTs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchCurrentLocation() {
     if (!navigator.geolocation) { setRiderAddress("เบราว์เซอร์ไม่รองรับการระบุตำแหน่ง"); return; }
@@ -928,11 +929,6 @@ function SellModelPageContent() {
     }
   }
 
-  function handleAddMoreDevice() {
-    try { localStorage.setItem(BUNDLE_RETURN_KEY, window.location.href); } catch {}
-    router.push("/sell");
-  }
-
   function handleAddToBundle() {
     if (!product) return;
     const device: ExtraDevice = {
@@ -945,7 +941,14 @@ function SellModelPageContent() {
       localStorage.setItem(BUNDLE_KEY, JSON.stringify([...existing, device]));
       localStorage.removeItem(BUNDLE_RETURN_KEY);
     } catch {}
-    router.push(bundleReturn!);
+    // Add bundle_ts to return URL so the form page re-reads localStorage on arrival
+    try {
+      const retUrl = new URL(bundleReturn!, window.location.origin);
+      retUrl.searchParams.set("bundle_ts", Date.now().toString());
+      router.push(retUrl.pathname + retUrl.search);
+    } catch {
+      router.push(bundleReturn!);
+    }
   }
 
   function handleRemoveExtra(idx: number) {
@@ -1032,6 +1035,7 @@ function SellModelPageContent() {
   const price = product ? calcPrice(product, picks, effectiveGroupOptions, storageMultiplier, storagePrices) : 0;
   const { min: priceMin, max: priceMax } = calcPriceRange(price);
   const summaryRows = product ? buildSummaryRows(picks, storages) : [];
+  const totalBundlePrice = price + extraDevices.reduce((sum, d) => sum + d.estimatedPrice, 0);
 
   // URL helpers
   function urlWith(key: string, value: string) {
@@ -1250,8 +1254,10 @@ function SellModelPageContent() {
                         <p className="text-sm mt-1" style={{ color: "#9CA3AF" }}>กรุณากรอกข้อมูลสำหรับการขายและนัดหมาย</p>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="text-xs mb-0.5" style={{ color: "#9CA3AF" }}>ราคาประเมินของคุณ</p>
-                        <p className="text-2xl font-bold leading-tight" style={{ color: "#B8860B" }}>฿{price.toLocaleString("th-TH")}</p>
+                        <p className="text-xs mb-0.5" style={{ color: "#9CA3AF" }}>
+                          {extraDevices.length > 0 ? `ราคารวม ${extraDevices.length + 1} เครื่อง` : "ราคาประเมินของคุณ"}
+                        </p>
+                        <p className="text-2xl font-bold leading-tight" style={{ color: "#B8860B" }}>฿{totalBundlePrice.toLocaleString("th-TH")}</p>
                       </div>
                     </div>
                   </div>
@@ -1294,10 +1300,13 @@ function SellModelPageContent() {
                   <div className="bg-white rounded-2xl p-5" style={{ border: "1px solid #E5E7EB" }}>
                     <h3 className="font-bold text-black mb-3">สินค้าที่จะขายในครั้งนี้</h3>
                     <div className="flex flex-col gap-2 mb-3">
-                      {/* Current device (primary) */}
+                      {/* Current device (primary) — no delete button, shows "หลัก" badge */}
                       <div className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: "rgba(184,134,11,0.06)", border: "1px solid rgba(184,134,11,0.2)" }}>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-black leading-snug">{product?.model}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-sm font-semibold text-black leading-snug">{product?.model}</p>
+                            <span className="text-xs font-medium px-1.5 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.15)", color: "#B8860B" }}>หลัก</span>
+                          </div>
                           <p className="text-xs" style={{ color: "#9CA3AF" }}>
                             {picks[0] !== null ? storages[picks[0]] : ""}
                             {picks[3] !== null ? ` • ${BODY_OPTS[picks[3]]?.sub ?? ""}` : ""}
@@ -1310,23 +1319,33 @@ function SellModelPageContent() {
                         <div key={i} className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-black leading-snug">{d.model}</p>
-                            <p className="text-xs" style={{ color: "#9CA3AF" }}>{d.storage}</p>
+                            <p className="text-xs" style={{ color: "#9CA3AF" }}>{d.storage || "—"}</p>
                           </div>
                           <p className="text-sm font-bold flex-shrink-0" style={{ color: "#6B7280" }}>฿{d.estimatedPrice.toLocaleString("th-TH")}</p>
-                          <button type="button" onClick={() => handleRemoveExtra(i)} className="flex-shrink-0 ml-1">
-                            <X size={14} style={{ color: "#9CA3AF" }} />
+                          <button type="button" onClick={() => handleRemoveExtra(i)} className="flex-shrink-0 ml-1 p-1 rounded-full hover:bg-gray-100">
+                            <X size={13} style={{ color: "#9CA3AF" }} />
                           </button>
                         </div>
                       ))}
+                      {/* Total row — only shown when there are extra devices */}
+                      {extraDevices.length > 0 && (
+                        <div className="flex items-center justify-between px-3 pt-2" style={{ borderTop: "1px dashed #E5E7EB" }}>
+                          <p className="text-xs font-semibold" style={{ color: "#6B7280" }}>รวมทั้งหมด ({extraDevices.length + 1} เครื่อง)</p>
+                          <p className="text-sm font-bold" style={{ color: "#B8860B" }}>฿{totalBundlePrice.toLocaleString("th-TH")}</p>
+                        </div>
+                      )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleAddMoreDevice}
+                    {/* Use <a> tag to avoid form validation / beforeunload dialog */}
+                    <a
+                      href="/sell"
+                      onClick={() => {
+                        try { localStorage.setItem(BUNDLE_RETURN_KEY, window.location.href); } catch {}
+                      }}
                       className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold"
-                      style={{ border: "1.5px dashed #D1D5DB", color: "#6B7280" }}
+                      style={{ border: "1.5px dashed #D1D5DB", color: "#6B7280", textDecoration: "none" }}
                     >
                       <Plus size={14} /> ประเมินสินค้าเพิ่ม
-                    </button>
+                    </a>
                   </div>
 
                   {/* Form */}
@@ -2123,8 +2142,10 @@ function SellModelPageContent() {
         <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white" style={{ borderTop: "1px solid #E5E7EB" }}>
           <div className="flex items-center px-4 gap-3" style={{ height: 64 }}>
             <div className="flex flex-col flex-shrink-0">
-              <p className="text-xs leading-tight" style={{ color: "#9CA3AF" }}>ราคาประเมินของคุณ</p>
-              <p className="font-bold text-lg leading-tight" style={{ color: "#B8860B" }}>฿{price.toLocaleString("th-TH")}</p>
+              <p className="text-xs leading-tight" style={{ color: "#9CA3AF" }}>
+                {extraDevices.length > 0 ? `รวม ${extraDevices.length + 1} เครื่อง` : "ราคาประเมิน"}
+              </p>
+              <p className="font-bold text-lg leading-tight" style={{ color: "#B8860B" }}>฿{totalBundlePrice.toLocaleString("th-TH")}</p>
             </div>
             <button type="submit" form="sell-form"
               className="flex-1 flex items-center justify-center font-semibold text-white text-sm rounded-2xl"
