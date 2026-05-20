@@ -3,6 +3,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import { Truck, Banknote, Clock, ShieldCheck, ChevronDown, ChevronRight, Lock } from "lucide-react";
 import HowToSellSection from "./components/HowToSellSection";
+import ReviewSection from "./components/ReviewSection";
 import { blogPosts } from "@/lib/blogData";
 
 export const metadata: Metadata = {
@@ -343,31 +344,7 @@ export default function Home() {
       <HowToSellSection />
 
       {/* Reviews */}
-      <section className="py-8 md:py-16 px-4 bg-black text-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="mb-6 md:mb-8">
-            <p className="text-lg font-semibold mb-1">รีวิวจากลูกค้าจริง</p>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-yellow-400 text-xl">★★★★★</span>
-              <span className="text-3xl font-bold">5.0</span>
-            </div>
-            <p className="text-sm" style={{ color: "#9CA3AF" }}>จาก 1,200+ รีวิว</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {[
-              { name: "คุณนนท์", stars: 5, text: "ให้ราคาสูงจริง ได้เงินไว และมาเลยตกลงครับ" },
-              { name: "คุณอาร์ม", stars: 5, text: "บริการดีมากครับ รับถึงที่ สะดวกมาก" },
-              { name: "คุณปอ", stars: 5, text: "มีอาชีพ เช็คไว จ่ายทันที ประทับใจมากครับ" },
-            ].map((r) => (
-              <div key={r.name} className="bg-gray-800 rounded-2xl p-5">
-                <div className="flex items-center gap-1 text-yellow-400 mb-2">{"★".repeat(r.stars)}</div>
-                <p className="text-sm mb-3 leading-relaxed" style={{ color: "#D1D5DB" }}>{r.text}</p>
-                <p className="text-xs font-medium" style={{ color: "#6B7280" }}>{r.name}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <ReviewSection />
 
       {/* Comparison Section */}
       <section className="py-8 md:py-16 px-4 bg-gray-50">
