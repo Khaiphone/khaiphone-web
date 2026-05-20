@@ -14,9 +14,23 @@ export async function fetchPricingConfig(): Promise<PricingConfig> {
     .eq("id", 1)
     .single();
   const db = (data?.config ?? {}) as Partial<PricingConfig>;
+
+  // Always use labels from DEFAULT_PRICING_CONFIG (single source of truth for text).
+  // Only pull deduction values from DB so admin edits are preserved.
+  const groups = DEFAULT_PRICING_CONFIG.groups.map((defaultGroup, gi) => {
+    const dbGroup = db.groups?.[gi];
+    return {
+      ...defaultGroup,
+      options: defaultGroup.options.map((defaultOpt, oi) => ({
+        ...defaultOpt,
+        ded: dbGroup?.options?.[oi]?.ded ?? defaultOpt.ded,
+      })),
+    };
+  });
+
   return {
     storageMultiplier: db.storageMultiplier ?? DEFAULT_PRICING_CONFIG.storageMultiplier,
-    groups:            db.groups            ?? DEFAULT_PRICING_CONFIG.groups,
+    groups,
   };
 }
 
