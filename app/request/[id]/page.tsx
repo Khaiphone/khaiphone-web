@@ -14,6 +14,13 @@ import { supabase } from "@/lib/supabase";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+interface ExtraDevice {
+  model: string;
+  storage: string;
+  estimatedPrice: number;
+  details: Array<{ title: string; value: string }>;
+}
+
 interface SubmissionData {
   orderNumber: string;
   submittedAt: string;
@@ -26,6 +33,7 @@ interface SubmissionData {
   estimatedPrice: number;
   priceMin: number;
   priceMax: number;
+  extraDevices: ExtraDevice[];
   customer: { name: string; phone: string; email: string };
   appointment: {
     method: "branch" | "rider" | "parcel";
@@ -364,6 +372,7 @@ function RequestDetailInner() {
         estimatedPrice: dbReq.device.estimatedPrice,
         priceMin: 0,
         priceMax: 0,
+        extraDevices: dbReq.extraDevices ?? [],
         customer: { name: dbReq.customer.name, phone: dbReq.customer.phone, email: dbReq.customer.email },
         appointment: {
           method: dbReq.appointment.method as "branch" | "rider" | "parcel",
@@ -430,6 +439,7 @@ function RequestDetailInner() {
           setState("unauthorized");
           return;
         }
+        if (!parsed.extraDevices) parsed.extraDevices = [];
         setSub(parsed);
         setDoneUpTo(0);
         setState("ok");
@@ -612,11 +622,13 @@ function RequestDetailInner() {
                   <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>#{sub.orderNumber}</p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-xs mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>ราคาประเมิน</p>
-                  <p className="text-2xl md:text-3xl font-bold" style={{ color: "#F0C040" }}>
-                    ฿{sub.estimatedPrice.toLocaleString("th-TH")}
+                  <p className="text-xs mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+                    {sub.extraDevices?.length > 0 ? `ราคารวม ${sub.extraDevices.length + 1} เครื่อง` : "ราคาประเมิน"}
                   </p>
-                  {priceRangeLabel && (
+                  <p className="text-2xl md:text-3xl font-bold" style={{ color: "#F0C040" }}>
+                    ฿{(sub.estimatedPrice + (sub.extraDevices ?? []).reduce((s, d) => s + d.estimatedPrice, 0)).toLocaleString("th-TH")}
+                  </p>
+                  {priceRangeLabel && !sub.extraDevices?.length && (
                     <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>{priceRangeLabel}</p>
                   )}
                 </div>
@@ -1030,43 +1042,80 @@ function RequestDetailInner() {
                     <rect x="5" y="2" width="14" height="20" rx="2" /><path d="M12 18h.01" />
                   </svg>
                 </div>
-                <h2 className="font-bold text-black text-sm">ข้อมูลเครื่อง</h2>
+                <h2 className="font-bold text-black text-sm">
+                  {sub.extraDevices?.length > 0 ? `สินค้าในรายการ (${sub.extraDevices.length + 1} เครื่อง)` : "ข้อมูลเครื่อง"}
+                </h2>
               </div>
 
-              <div className="p-5">
-                {/* Model + image */}
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ width: 72, height: 72, background: "#F5F5F7" }}>
-                    {getProductImage(sub.model)
-                      ? <img src={getProductImage(sub.model)!} alt={sub.model} className="w-full h-full object-contain p-1" />
-                      : <IconApple style={{ width: 40, height: 40, color: "#ccc" }} />}
+              <div className="p-5 flex flex-col gap-3">
+                {/* Primary device */}
+                <div className="rounded-xl overflow-hidden" style={{ border: sub.extraDevices?.length > 0 ? "1.5px solid rgba(184,134,11,0.4)" : "1px solid #E5E7EB" }}>
+                  <div className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: selectionEntries.length > 0 ? "1px solid #F3F4F6" : "none", background: sub.extraDevices?.length > 0 ? "rgba(184,134,11,0.04)" : "#fff" }}>
+                    <div className="rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ width: 48, height: 48, background: "#F5F5F7" }}>
+                      {getProductImage(sub.model)
+                        ? <img src={getProductImage(sub.model)!} alt={sub.model} className="w-full h-full object-contain p-1" />
+                        : <IconApple style={{ width: 28, height: 28, color: "#ccc" }} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-black text-sm leading-snug">{sub.model}</p>
+                        {sub.extraDevices?.length > 0 && (
+                          <span className="text-xs font-bold px-1.5 py-0.5 rounded flex-shrink-0" style={{ background: "rgba(184,134,11,0.15)", color: "#B8860B" }}>หลัก</span>
+                        )}
+                      </div>
+                      <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>
+                        {[sub.storage, sub.color, sub.condition].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                    <span className="font-bold text-sm flex-shrink-0" style={{ color: "#B8860B" }}>฿{sub.estimatedPrice.toLocaleString("th-TH")}</span>
                   </div>
-                  <div>
-                    <p className="font-bold text-black text-base leading-snug">{sub.model}</p>
-                    <p className="text-sm mt-0.5" style={{ color: "#6B7280" }}>
-                      {[sub.storage, sub.color, sub.condition].filter(Boolean).join(" · ")}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Spec rows */}
-                <div className="rounded-xl overflow-hidden mb-3" style={{ border: "1px solid #E5E7EB" }}>
                   {selectionEntries.map(({ label, value }, i) => (
-                    <div key={i} className="flex justify-between px-4 py-2.5 items-center"
-                      style={{ borderBottom: i < selectionEntries.length - 1 ? "1px solid #F3F4F6" : "none", background: i % 2 === 0 ? "#fff" : "#FAFAFA" }}>
+                    <div key={i} className="flex justify-between px-4 py-2 items-center"
+                      style={{ borderBottom: i < selectionEntries.length - 1 ? "1px solid #F9FAFB" : "none", background: i % 2 === 0 ? "#fff" : "#FAFAFA" }}>
                       <span className="text-xs" style={{ color: "#9CA3AF" }}>{label}</span>
                       <span className="text-xs font-semibold text-black text-right max-w-[60%]">{value}</span>
                     </div>
                   ))}
                 </div>
 
-                {/* Price row */}
-                <div className="flex items-center justify-between py-3 px-4 rounded-xl" style={{ background: "#FAFAF8", border: "1px solid #E5E7EB" }}>
-                  <span className="text-sm" style={{ color: "#6B7280" }}>ราคาประเมิน</span>
-                  <span className="text-lg font-bold" style={{ color: "#B8860B" }}>฿{sub.estimatedPrice.toLocaleString("th-TH")}</span>
-                </div>
-                {priceRangeLabel && (
-                  <p className="text-xs mt-1.5 text-center" style={{ color: "#9CA3AF" }}>ช่วงราคา: {priceRangeLabel}</p>
+                {/* Extra devices */}
+                {(sub.extraDevices ?? []).map((extra, idx) => (
+                  <div key={idx} className="rounded-xl overflow-hidden" style={{ border: "1px solid #E5E7EB" }}>
+                    <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: extra.details?.length > 0 ? "1px solid #F3F4F6" : "none" }}>
+                      <div>
+                        <p className="font-bold text-black text-sm">{extra.model}</p>
+                        <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{extra.storage}</p>
+                      </div>
+                      <span className="font-bold text-sm" style={{ color: "#374151" }}>฿{extra.estimatedPrice.toLocaleString("th-TH")}</span>
+                    </div>
+                    {(extra.details ?? []).map((d, i) => (
+                      <div key={i} className="flex justify-between px-4 py-2 items-center"
+                        style={{ borderBottom: i < extra.details.length - 1 ? "1px solid #F9FAFB" : "none", background: i % 2 === 0 ? "#fff" : "#FAFAFA" }}>
+                        <span className="text-xs" style={{ color: "#9CA3AF" }}>{d.title}</span>
+                        <span className="text-xs font-semibold text-black text-right">{d.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+
+                {/* Total row (multi-device) */}
+                {sub.extraDevices?.length > 0 ? (
+                  <div className="flex items-center justify-between py-3 px-4 rounded-xl" style={{ background: "#111" }}>
+                    <span className="text-sm font-semibold text-white">ราคารวม {sub.extraDevices.length + 1} เครื่อง</span>
+                    <span className="text-lg font-bold" style={{ color: "#F0C040" }}>
+                      ฿{(sub.estimatedPrice + sub.extraDevices.reduce((s, d) => s + d.estimatedPrice, 0)).toLocaleString("th-TH")}
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between py-3 px-4 rounded-xl" style={{ background: "#FAFAF8", border: "1px solid #E5E7EB" }}>
+                      <span className="text-sm" style={{ color: "#6B7280" }}>ราคาประเมิน</span>
+                      <span className="text-lg font-bold" style={{ color: "#B8860B" }}>฿{sub.estimatedPrice.toLocaleString("th-TH")}</span>
+                    </div>
+                    {priceRangeLabel && (
+                      <p className="text-xs text-center" style={{ color: "#9CA3AF" }}>ช่วงราคา: {priceRangeLabel}</p>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -1153,7 +1202,7 @@ function RequestDetailInner() {
                 </span>
                 <p className="text-white font-bold text-sm leading-snug">#{sub.orderNumber}</p>
                 <p className="text-2xl font-bold mt-1" style={{ color: "#F0C040" }}>
-                  ฿{sub.estimatedPrice.toLocaleString("th-TH")}
+                  ฿{(sub.estimatedPrice + (sub.extraDevices ?? []).reduce((s, d) => s + d.estimatedPrice, 0)).toLocaleString("th-TH")}
                 </p>
               </div>
 
