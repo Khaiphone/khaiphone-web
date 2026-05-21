@@ -54,11 +54,10 @@ export async function fetchMyRole(userId: string): Promise<AdminRole> {
 
 export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
   const supabase = createServerClient();
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from("admin_users")
     .select("*")
     .order("created_at");
-  if (error) console.error("[fetchAdminUsers]", error.message, error.code);
   return ((data ?? []) as AdminUserRow[]).map(u => ({ ...u, permissions: u.permissions ?? [] }));
 }
 
