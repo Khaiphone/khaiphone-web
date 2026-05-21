@@ -5,6 +5,7 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { ChevronLeft, Check, Lock, ChevronRight, User, Truck, Calendar, Banknote, ShieldCheck, MapPin, Building2, Clock, Phone, Plus, X } from "lucide-react";
 import Header from "../../components/Header";
 import { submitRequest } from "@/app/actions/submit-request";
+import { trackEstimateEvent } from "@/app/actions/analytics";
 import { fetchActiveProducts } from "@/app/actions/products";
 import { fetchPricingConfig } from "@/app/actions/pricing-config";
 import { getModelTypeOpts, DEFAULT_PRICING_CONFIG } from "@/lib/pricing-defaults";
@@ -797,6 +798,33 @@ function SellModelPageContent() {
   const [isHydrated, setIsHydrated] = useState(false);
   useEffect(() => { setIsHydrated(true); }, []);
 
+  const trackedStepsRef = useRef(new Set<number>());
+  const sessionIdRef = useRef<string>("");
+  useEffect(() => {
+    try {
+      let sid = sessionStorage.getItem("kp_estimate_sid");
+      if (!sid) { sid = crypto.randomUUID(); sessionStorage.setItem("kp_estimate_sid", sid); }
+      sessionIdRef.current = sid;
+    } catch { sessionIdRef.current = Math.random().toString(36).slice(2); }
+  }, []);
+
+  // Track funnel steps
+  useEffect(() => {
+    if (!sessionIdRef.current || !product) return;
+    const sid = sessionIdRef.current;
+    if (step === 0 && !trackedStepsRef.current.has(-1)) {
+      trackedStepsRef.current.add(-1);
+      trackEstimateEvent({ sessionId: sid, event: "start", model: product.model });
+    } else if (step > 0 && step < TOTAL_STEPS && !trackedStepsRef.current.has(step)) {
+      trackedStepsRef.current.add(step);
+      trackEstimateEvent({ sessionId: sid, event: "step_reached", model: product.model, stepIndex: step, stepName: STEP_TITLES[step] });
+    } else if (step >= TOTAL_STEPS && !trackedStepsRef.current.has(TOTAL_STEPS)) {
+      trackedStepsRef.current.add(TOTAL_STEPS);
+      trackEstimateEvent({ sessionId: sid, event: "price_seen", model: product.model });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, product?.model]);
+
   // Restore wizard progress on fresh URL
   useEffect(() => {
     if (!isHydrated) return;
@@ -1020,6 +1048,7 @@ function SellModelPageContent() {
     } catch (err) {
       console.error("submitRequest failed:", err);
     }
+    trackEstimateEvent({ sessionId: sessionIdRef.current, event: "submit", model: product!.model });
 
     // Keep localStorage as backup for success page display
     try { localStorage.setItem("khaiphone_submission", JSON.stringify({ ...submission, submittedAt: new Date().toISOString() })); } catch {}
