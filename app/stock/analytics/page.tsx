@@ -128,16 +128,16 @@ function HourlyChart({ hourly, c }: { hourly: HourlyCount[]; c: ReturnType<typeo
         <p style={{ color: c.text3, fontSize: 13, margin: 0, textAlign: "center", padding: "20px 0" }}>ยังไม่มีข้อมูล</p>
       ) : (
         <>
-          <div style={{ display: "flex", gap: 3, height: 64, alignItems: "flex-end" }}>
+          <div style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 64 }}>
             {hourly.map(h => {
-              const pct = Math.round((h.count / max) * 100);
+              const barPx = h.count > 0 ? Math.max(Math.round((h.count / max) * 64), 4) : 0;
               const isMorning   = h.hour >= 6  && h.hour < 12;
               const isAfternoon = h.hour >= 12 && h.hour < 18;
               const isEvening   = h.hour >= 18 && h.hour < 24;
               const barColor    = isEvening ? c.gold : isAfternoon ? "#3b82f6" : isMorning ? "#22c55e" : c.text3;
               return (
-                <div key={h.hour} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                  <div style={{ width: "100%", height: `${Math.max(pct, pct > 0 ? 6 : 0)}%`, background: pct > 0 ? barColor : c.border, borderRadius: "3px 3px 0 0", transition: "height 0.4s ease" }} />
+                <div key={h.hour} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, alignSelf: "flex-end" }}>
+                  <div style={{ width: "100%", height: barPx, background: h.count > 0 ? barColor : c.border, borderRadius: "3px 3px 0 0", transition: "height 0.4s ease" }} />
                   <span style={{ fontSize: 7, color: c.text3, transform: h.hour % 3 === 0 ? "none" : "scale(0)", display: "block" }}>{h.hour}</span>
                 </div>
               );
@@ -168,14 +168,14 @@ function WeekdayChart({ weekday, c }: { weekday: WeekdayCount[]; c: ReturnType<t
       {!hasData ? (
         <p style={{ color: c.text3, fontSize: 13, margin: 0, textAlign: "center", padding: "20px 0" }}>ยังไม่มีข้อมูล</p>
       ) : (
-        <div style={{ display: "flex", gap: 8, height: 80, alignItems: "flex-end" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "flex-end", height: 80 }}>
           {weekday.map(d => {
-            const pct = Math.round((d.count / max) * 100);
+            const barPx = d.count > 0 ? Math.max(Math.round((d.count / max) * 70), 5) : 0;
             const isWeekend = d.day >= 5;
             return (
-              <div key={d.day} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+              <div key={d.day} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, alignSelf: "flex-end" }}>
                 {d.count > 0 && <span style={{ color: c.text3, fontSize: 10 }}>{d.count}</span>}
-                <div style={{ width: "100%", height: `${Math.max(pct, pct > 0 ? 8 : 4)}%`, background: pct > 0 ? (isWeekend ? c.gold : "#3b82f6") : c.border, borderRadius: "4px 4px 0 0", transition: "height 0.4s ease" }} />
+                <div style={{ width: "100%", height: barPx, background: d.count > 0 ? (isWeekend ? c.gold : "#3b82f6") : c.border, borderRadius: "4px 4px 0 0", transition: "height 0.4s ease" }} />
                 <span style={{ fontSize: 11, color: isWeekend ? c.gold : c.text2, fontWeight: isWeekend ? 700 : 400 }}>{d.label}</span>
               </div>
             );
@@ -203,8 +203,8 @@ function StorageChart({ storages, selectedModel, c }: { storages: StorageCount[]
       {filtered.length === 0 ? (
         <p style={{ color: c.text3, fontSize: 13, margin: 0, textAlign: "center", padding: "28px 0" }}>ยังไม่มีข้อมูล</p>
       ) : (
-        <div style={{ padding: "12px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
-          {filtered.slice(0, 10).map((s, i) => {
+        <div style={{ padding: "12px 20px", display: "flex", flexDirection: "column", gap: 10, maxHeight: 300, overflowY: "auto" }}>
+          {filtered.slice(0, 20).map((s, i) => {
             const pct = Math.round((s.count / max) * 100);
             const color = COLORS[i % COLORS.length];
             return (
@@ -244,6 +244,7 @@ function AvgPriceTable({ avgPrices, selectedModel, c }: { avgPrices: AvgPrice[];
               <span key={h} style={{ color: c.text3, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>{h}</span>
             ))}
           </div>
+          <div style={{ maxHeight: 320, overflowY: "auto" }}>
           {filtered.map((p, i) => (
             <div key={p.model} style={{ display: "grid", gridTemplateColumns: "1fr 90px 90px 90px 50px", gap: 8, padding: "11px 20px", borderBottom: i < filtered.length - 1 ? `1px solid ${c.border}` : "none", alignItems: "center" }}>
               <span style={{ color: c.text, fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.model}</span>
@@ -253,6 +254,7 @@ function AvgPriceTable({ avgPrices, selectedModel, c }: { avgPrices: AvgPrice[];
               <span style={{ color: c.text3, fontSize: 12, fontVariantNumeric: "tabular-nums" }}>{p.count}</span>
             </div>
           ))}
+          </div>
         </>
       )}
     </div>
@@ -275,7 +277,7 @@ function ModelBarChart({ models, total, c }: { models: ModelCount[]; total: numb
           <p style={{ color: c.text3, fontSize: 13, margin: 0 }}>ยังไม่มีข้อมูล</p>
         </div>
       ) : (
-        <div style={{ padding: "12px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ padding: "12px 20px", display: "flex", flexDirection: "column", gap: 10, maxHeight: 320, overflowY: "auto" }}>
           {models.map((m, i) => {
             const barPct    = (m.starts / maxStarts) * 100;
             const sharePct  = total > 0 ? Math.round((m.starts / total) * 100) : 0;
