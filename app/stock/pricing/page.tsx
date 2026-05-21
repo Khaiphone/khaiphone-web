@@ -10,6 +10,32 @@ import { fetchPriceRules, upsertPriceRule, deletePriceRule, fetchStockModels } f
 import type { PriceRule } from "@/app/actions/stock-pricing";
 
 const GRADES = ["A", "A-", "B+", "B", "B-", "C"];
+
+const IPHONE_PRESETS = [
+  // iPhone 17 Series
+  "iPhone 17 Pro Max", "iPhone 17 Pro", "iPhone 17 Plus", "iPhone 17",
+  // iPhone 16 Series
+  "iPhone 16 Pro Max", "iPhone 16 Pro", "iPhone 16 Plus", "iPhone 16",
+  // iPhone 15 Series
+  "iPhone 15 Pro Max", "iPhone 15 Pro", "iPhone 15 Plus", "iPhone 15",
+  // iPhone 14 Series
+  "iPhone 14 Pro Max", "iPhone 14 Pro", "iPhone 14 Plus", "iPhone 14",
+  // iPhone 13 Series
+  "iPhone 13 Pro Max", "iPhone 13 Pro", "iPhone 13 mini", "iPhone 13",
+  // iPhone 12 Series
+  "iPhone 12 Pro Max", "iPhone 12 Pro", "iPhone 12 mini", "iPhone 12",
+  // iPhone 11 Series
+  "iPhone 11 Pro Max", "iPhone 11 Pro", "iPhone 11",
+  // iPhone XS/XR
+  "iPhone XS Max", "iPhone XS", "iPhone XR",
+  // iPhone X
+  "iPhone X",
+  // iPhone 8/7/6
+  "iPhone 8 Plus", "iPhone 8", "iPhone 7 Plus", "iPhone 7",
+  "iPhone 6s Plus", "iPhone 6s", "iPhone 6 Plus", "iPhone 6",
+  // SE
+  "iPhone SE (3rd gen)", "iPhone SE (2nd gen)", "iPhone SE (1st gen)",
+];
 function fmt(n: number) { return n.toLocaleString("th-TH"); }
 function fmtDate(s: string) {
   if (!s) return "";
@@ -68,9 +94,21 @@ export default function PricingPage() {
     }));
   }, [filtered]);
 
+  const allModels = useMemo(() => {
+    const combined = [...new Set([...IPHONE_PRESETS, ...models])];
+    return combined.sort((a, b) => {
+      // Presets first, then stock-only models
+      const aPreset = IPHONE_PRESETS.includes(a);
+      const bPreset = IPHONE_PRESETS.includes(b);
+      if (aPreset && !bPreset) return -1;
+      if (!aPreset && bPreset) return 1;
+      return a.localeCompare(b);
+    });
+  }, [models]);
+
   const filteredModels = useMemo(() =>
-    models.filter(m => m.toLowerCase().includes(modelInput.toLowerCase()) && m !== modelInput),
-    [models, modelInput]
+    allModels.filter(m => m.toLowerCase().includes(modelInput.toLowerCase()) && m !== modelInput),
+    [allModels, modelInput]
   );
 
   function openAdd(prefillModel = "", prefillGrade = "A") {
