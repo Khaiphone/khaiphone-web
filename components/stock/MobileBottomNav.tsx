@@ -18,10 +18,10 @@ export default function MobileBottomNav() {
   const router = useRouter();
 
   return (
-    <div className="md:hidden" style={{
+    <div className="flex md:hidden" style={{
       position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50,
       background: c.card, borderTop: `1px solid ${c.border}`,
-      display: "flex", paddingBottom: "env(safe-area-inset-bottom)",
+      paddingBottom: "env(safe-area-inset-bottom)",
     }}>
       {TABS.map(({ icon: Icon, label, href }) => {
         const active = pathname.startsWith(href);
