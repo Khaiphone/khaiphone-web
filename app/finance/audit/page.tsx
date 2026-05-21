@@ -5,11 +5,11 @@ import { motion } from 'framer-motion'
 import { fetchFinanceAudit } from '@/app/actions/finance'
 import type { FinanceAuditEntry } from '@/app/actions/finance'
 
-const CARD = '#0D0D0D'
-const BORDER = 'rgba(255,255,255,0.08)'
+const CARD = 'var(--f-card)'
+const BORDER = 'var(--f-border)'
 const GOLD = '#B8860B'
-const TEXT2 = 'rgba(255,255,255,0.65)'
-const TEXT3 = 'rgba(255,255,255,0.35)'
+const TEXT2 = 'var(--f-text2)'
+const TEXT3 = 'var(--f-text3)'
 
 const fadeUp = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.25 } }
 
@@ -49,12 +49,12 @@ export default function AuditPage() {
         {(['finance', 'stock', 'system'] as const).map(cat => (
           <div key={cat} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '14px 18px', borderLeft: `3px solid ${CATEGORY_COLORS[cat]}` }}>
             <p style={{ margin: '0 0 4px', color: TEXT2, fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>{CATEGORY_MAP[cat]}</p>
-            <p style={{ margin: 0, color: '#FFF', fontSize: 22, fontWeight: 700 }}>{loading ? '—' : countByCategory(cat)}</p>
+            <p style={{ margin: 0, color: 'var(--f-text1)', fontSize: 22, fontWeight: 700 }}>{loading ? '—' : countByCategory(cat)}</p>
           </div>
         ))}
         <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '14px 18px', borderLeft: `3px solid ${GOLD}` }}>
           <p style={{ margin: '0 0 4px', color: TEXT2, fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>ทั้งหมด</p>
-          <p style={{ margin: 0, color: '#FFF', fontSize: 22, fontWeight: 700 }}>{loading ? '—' : logs.length}</p>
+          <p style={{ margin: 0, color: 'var(--f-text1)', fontSize: 22, fontWeight: 700 }}>{loading ? '—' : logs.length}</p>
         </div>
       </div>
 
@@ -89,8 +89,8 @@ export default function AuditPage() {
                     onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.02)'}
                     onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                     <td style={{ padding: '12px 16px', color: TEXT2, fontSize: 13, whiteSpace: 'nowrap' }}>{fmtDT(log.datetime)}</td>
-                    <td style={{ padding: '12px 16px', color: '#FFF', fontSize: 13, whiteSpace: 'nowrap' }}>{log.user}</td>
-                    <td style={{ padding: '12px 16px', color: '#FFF', fontSize: 13 }}>{log.action}</td>
+                    <td style={{ padding: '12px 16px', color: 'var(--f-text1)', fontSize: 13, whiteSpace: 'nowrap' }}>{log.user}</td>
+                    <td style={{ padding: '12px 16px', color: 'var(--f-text1)', fontSize: 13 }}>{log.action}</td>
                     <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
                       <span style={{ color: GOLD, fontSize: 13, fontWeight: 600 }}>{log.refNumber || '—'}</span>
                     </td>

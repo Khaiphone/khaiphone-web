@@ -47,8 +47,8 @@ export default function KpiCard({
   return (
     <div
       style={{
-        background: '#0D0D0D',
-        border: '1px solid rgba(255,255,255,0.08)',
+        background: 'var(--f-card)',
+        border: '1px solid var(--f-border)',
         borderRadius: 16,
         padding: isLg ? '20px 24px' : '16px 20px',
         display: 'flex',
@@ -59,7 +59,7 @@ export default function KpiCard({
       <p
         style={{
           margin: 0,
-          color: 'rgba(255,255,255,0.65)',
+          color: 'var(--f-text2)',
           fontSize: 11,
           fontWeight: 500,
           textTransform: 'uppercase',
@@ -71,7 +71,7 @@ export default function KpiCard({
       <p
         style={{
           margin: 0,
-          color: '#FFFFFF',
+          color: 'var(--f-text1)',
           fontSize: isLg ? 30 : 22,
           fontWeight: 700,
           letterSpacing: '-0.02em',

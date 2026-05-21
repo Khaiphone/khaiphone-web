@@ -6,11 +6,11 @@ import { Link2, Check, AlertCircle, Plus, X } from 'lucide-react'
 import { fetchFinanceIncome } from '@/app/actions/finance'
 import type { FinanceIncome } from '@/app/actions/finance'
 
-const CARD = '#0D0D0D'
-const BORDER = 'rgba(255,255,255,0.08)'
+const CARD = 'var(--f-card)'
+const BORDER = 'var(--f-border)'
 const GOLD = '#B8860B'
-const TEXT2 = 'rgba(255,255,255,0.65)'
-const TEXT3 = 'rgba(255,255,255,0.35)'
+const TEXT2 = 'var(--f-text2)'
+const TEXT3 = 'var(--f-text3)'
 const BANK_LS = 'khaiphone_bank_txs'
 
 const fadeUp = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.25 } }
@@ -105,7 +105,7 @@ export default function ReconcilePage() {
   const unmatchedBank = bankList.filter(b => !b.matched).length
   const unmatchedSys = sysList.filter(s => !s.matched).length
 
-  const inputStyle: React.CSSProperties = { width: '100%', padding: '8px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: '#FFF', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }
+  const inputStyle: React.CSSProperties = { width: '100%', padding: '8px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: 'var(--f-text1)', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }
 
   return (
     <motion.div {...fadeUp} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -122,11 +122,11 @@ export default function ReconcilePage() {
         </div>
         <div style={{ flex: 1 }} />
         {selectedBank && selectedSys && (
-          <button onClick={handleMatch} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 18px', borderRadius: 8, background: '#22c55e', border: 'none', color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
+          <button onClick={handleMatch} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 18px', borderRadius: 8, background: '#22c55e', border: 'none', color: 'var(--f-text1)', fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
             <Check size={16} /> จับคู่ที่เลือก
           </button>
         )}
-        <button onClick={handleAutoMatch} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 18px', borderRadius: 8, background: GOLD, border: 'none', color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
+        <button onClick={handleAutoMatch} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 18px', borderRadius: 8, background: GOLD, border: 'none', color: 'var(--f-text1)', fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
           <Link2 size={16} /> จับคู่อัตโนมัติ
         </button>
       </div>
@@ -137,7 +137,7 @@ export default function ReconcilePage() {
         <div style={{ flex: '1 1 280px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, overflow: 'hidden' }}>
           <div style={{ padding: '14px 20px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <p style={{ margin: 0, color: '#FFF', fontWeight: 700, fontSize: 14 }}>รายการธนาคาร</p>
+              <p style={{ margin: 0, color: 'var(--f-text1)', fontWeight: 700, fontSize: 14 }}>รายการธนาคาร</p>
               <p style={{ margin: '2px 0 0', color: TEXT2, fontSize: 12 }}>เพิ่มรายการจากสเตทเมนต์ธนาคาร</p>
             </div>
             <button onClick={() => setShowAddBank(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: `1px solid ${BORDER}`, color: TEXT2, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -153,7 +153,7 @@ export default function ReconcilePage() {
                   style={{ padding: '12px 20px', borderBottom: idx < bankList.length - 1 ? `1px solid ${BORDER}` : 'none', cursor: b.matched ? 'default' : 'pointer', background: selectedBank === b.id ? 'rgba(184,134,11,0.12)' : b.matched ? 'rgba(34,197,94,0.05)' : 'transparent', transition: 'background 0.1s', opacity: b.matched ? 0.6 : 1, display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span style={{ width: 8, height: 8, borderRadius: '50%', background: b.matched ? '#22c55e' : '#facc15', flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ margin: 0, color: '#FFF', fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.desc}</p>
+                    <p style={{ margin: 0, color: 'var(--f-text1)', fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.desc}</p>
                     <p style={{ margin: 0, color: TEXT3, fontSize: 12 }}>{fmtDate(b.date)}</p>
                   </div>
                   <span style={{ color: b.amount > 0 ? '#22c55e' : '#ef4444', fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap' }}>
@@ -179,7 +179,7 @@ export default function ReconcilePage() {
         {/* System side */}
         <div style={{ flex: '1 1 280px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, overflow: 'hidden' }}>
           <div style={{ padding: '14px 20px', borderBottom: `1px solid ${BORDER}` }}>
-            <p style={{ margin: 0, color: '#FFF', fontWeight: 700, fontSize: 14 }}>รายการในระบบ</p>
+            <p style={{ margin: 0, color: 'var(--f-text1)', fontWeight: 700, fontSize: 14 }}>รายการในระบบ</p>
             <p style={{ margin: '2px 0 0', color: TEXT2, fontSize: 12 }}>รายการขายออกจากฐานข้อมูล</p>
           </div>
           {loading ? (
@@ -193,7 +193,7 @@ export default function ReconcilePage() {
                   style={{ padding: '12px 20px', borderBottom: idx < sysList.length - 1 ? `1px solid ${BORDER}` : 'none', cursor: s.matched ? 'default' : 'pointer', background: selectedSys === s.id ? 'rgba(184,134,11,0.12)' : s.matched ? 'rgba(34,197,94,0.05)' : 'transparent', transition: 'background 0.1s', opacity: s.matched ? 0.6 : 1, display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.matched ? '#22c55e' : '#facc15', flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ margin: 0, color: '#FFF', fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.desc}</p>
+                    <p style={{ margin: 0, color: 'var(--f-text1)', fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.desc}</p>
                     <p style={{ margin: 0, color: TEXT3, fontSize: 12 }}>{s.refNumber} · {fmtDate(s.date)}</p>
                   </div>
                   <span style={{ color: '#22c55e', fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap' }}>+฿{s.amount.toLocaleString('th-TH')}</span>
@@ -213,7 +213,7 @@ export default function ReconcilePage() {
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
               style={{ background: '#111', border: `1px solid ${BORDER}`, borderRadius: 20, padding: 28, width: '100%', maxWidth: 400 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <p style={{ margin: 0, color: '#FFF', fontWeight: 700, fontSize: 15 }}>เพิ่มรายการธนาคาร</p>
+                <p style={{ margin: 0, color: 'var(--f-text1)', fontWeight: 700, fontSize: 15 }}>เพิ่มรายการธนาคาร</p>
                 <button onClick={() => setShowAddBank(false)} style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', padding: 4, display: 'flex' }}><X size={18} /></button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -232,7 +232,7 @@ export default function ReconcilePage() {
               </div>
               <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
                 <button onClick={() => setShowAddBank(false)} style={{ padding: '9px 18px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT2, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>ยกเลิก</button>
-                <button onClick={addBankTx} style={{ padding: '9px 20px', borderRadius: 8, background: GOLD, border: 'none', color: '#FFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>เพิ่ม</button>
+                <button onClick={addBankTx} style={{ padding: '9px 20px', borderRadius: 8, background: GOLD, border: 'none', color: 'var(--f-text1)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>เพิ่ม</button>
               </div>
             </motion.div>
           </motion.div>

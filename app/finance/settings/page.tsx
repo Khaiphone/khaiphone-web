@@ -6,11 +6,11 @@ import { Save, Check } from 'lucide-react'
 import { fetchFinanceSettings, saveFinanceSettings } from '@/app/actions/finance'
 import type { FinanceSettings } from '@/app/actions/finance'
 
-const CARD = '#0D0D0D'
-const BORDER = 'rgba(255,255,255,0.08)'
+const CARD = 'var(--f-card)'
+const BORDER = 'var(--f-border)'
 const GOLD = '#B8860B'
-const TEXT2 = 'rgba(255,255,255,0.65)'
-const TEXT3 = 'rgba(255,255,255,0.35)'
+const TEXT2 = 'var(--f-text2)'
+const TEXT3 = 'var(--f-text3)'
 
 const fadeUp = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.25 } }
 
@@ -24,7 +24,7 @@ const DEFAULT: FinanceSettings = {
 }
 
 function inputStyle(extra?: React.CSSProperties): React.CSSProperties {
-  return { width: '100%', padding: '10px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER}`, color: '#FFF', fontSize: 14, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', ...extra }
+  return { width: '100%', padding: '10px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER}`, color: 'var(--f-text1)', fontSize: 14, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', ...extra }
 }
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -68,7 +68,7 @@ export default function SettingsPage() {
   const SaveBtn = () => (
     <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12 }}>
       {errorMsg && <p style={{ margin: 0, color: '#ef4444', fontSize: 13 }}>{errorMsg}</p>}
-      <button onClick={handleSave} disabled={saving || loading} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', borderRadius: 10, background: saved ? '#22c55e' : GOLD, border: 'none', color: '#FFF', fontSize: 14, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'background 0.3s', opacity: saving ? 0.7 : 1 }}>
+      <button onClick={handleSave} disabled={saving || loading} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', borderRadius: 10, background: saved ? '#22c55e' : GOLD, border: 'none', color: 'var(--f-text1)', fontSize: 14, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'background 0.3s', opacity: saving ? 0.7 : 1 }}>
         {saved ? <Check size={16} /> : <Save size={16} />}
         {saving ? 'กำลังบันทึก...' : saved ? 'บันทึกแล้ว!' : 'บันทึกการตั้งค่า'}
       </button>
@@ -131,7 +131,7 @@ export default function SettingsPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}` }}>
                   <div>
-                    <p style={{ margin: 0, color: '#FFF', fontSize: 14, fontWeight: 600 }}>เปิดใช้งาน VAT</p>
+                    <p style={{ margin: 0, color: 'var(--f-text1)', fontSize: 14, fontWeight: 600 }}>เปิดใช้งาน VAT</p>
                     <p style={{ margin: 0, color: TEXT2, fontSize: 12, marginTop: 2 }}>ระบบจะคำนวณ VAT อัตโนมัติในทุกรายการ</p>
                   </div>
                   <Toggle value={settings.vatEnabled} onChange={v => set('vatEnabled', v)} />
@@ -148,7 +148,7 @@ export default function SettingsPage() {
                   <div>
                     <FieldLabel>ปีการเงิน (เริ่มต้น)</FieldLabel>
                     <select value={settings.fiscalYear} onChange={e => set('fiscalYear', e.target.value)} style={{ ...inputStyle(), cursor: 'pointer' }}>
-                      {['มกราคม', 'เมษายน', 'ตุลาคม'].map(m => <option key={m} value={m} style={{ background: '#1A1A1A' }}>{m}</option>)}
+                      {['มกราคม', 'เมษายน', 'ตุลาคม'].map(m => <option key={m} value={m} style={{ background: 'var(--f-card2)' }}>{m}</option>)}
                     </select>
                   </div>
                 </div>
@@ -163,9 +163,9 @@ export default function SettingsPage() {
                   <div>
                     <FieldLabel>ธนาคาร</FieldLabel>
                     <select value={settings.bankName} onChange={e => set('bankName', e.target.value)} style={{ ...inputStyle(), cursor: 'pointer' }}>
-                      <option value="" style={{ background: '#1A1A1A' }}>เลือกธนาคาร</option>
+                      <option value="" style={{ background: 'var(--f-card2)' }}>เลือกธนาคาร</option>
                       {['กสิกรไทย', 'กรุงเทพ', 'ไทยพาณิชย์', 'กรุงไทย', 'กรุงศรี', 'ทหารไทยธนชาต', 'ออมสิน'].map(b => (
-                        <option key={b} value={b} style={{ background: '#1A1A1A' }}>{b}</option>
+                        <option key={b} value={b} style={{ background: 'var(--f-card2)' }}>{b}</option>
                       ))}
                     </select>
                   </div>
@@ -192,7 +192,7 @@ export default function SettingsPage() {
                 ].map(item => (
                   <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}` }}>
                     <div>
-                      <p style={{ margin: 0, color: '#FFF', fontSize: 14, fontWeight: 600 }}>{item.label}</p>
+                      <p style={{ margin: 0, color: 'var(--f-text1)', fontSize: 14, fontWeight: 600 }}>{item.label}</p>
                       <p style={{ margin: 0, color: TEXT2, fontSize: 12, marginTop: 2 }}>{item.desc}</p>
                     </div>
                     <Toggle value={settings[item.key]} onChange={v => set(item.key, v)} />
@@ -210,7 +210,7 @@ export default function SettingsPage() {
       <AnimatePresence>
         {saved && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
-            style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', background: '#22c55e', borderRadius: 10, padding: '12px 24px', color: '#FFF', fontSize: 14, fontWeight: 600, zIndex: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 8 }}>
+            style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', background: '#22c55e', borderRadius: 10, padding: '12px 24px', color: 'var(--f-text1)', fontSize: 14, fontWeight: 600, zIndex: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 8 }}>
             <Check size={16} /> บันทึกการตั้งค่าเรียบร้อย
           </motion.div>
         )}

@@ -5,11 +5,11 @@ import { motion } from 'framer-motion'
 import { FileText, TrendingUp, TrendingDown, BarChart2, Banknote, ShoppingCart, Download, Loader } from 'lucide-react'
 import { fetchFinanceIncome, fetchFinancePurchases, fetchFinanceProfitByModel, fetchFinanceCashFlow } from '@/app/actions/finance'
 
-const CARD = '#0D0D0D'
-const BORDER = 'rgba(255,255,255,0.08)'
+const CARD = 'var(--f-card)'
+const BORDER = 'var(--f-border)'
 const GOLD = '#B8860B'
-const TEXT2 = 'rgba(255,255,255,0.65)'
-const TEXT3 = 'rgba(255,255,255,0.35)'
+const TEXT2 = 'var(--f-text2)'
+const TEXT3 = 'var(--f-text3)'
 
 const fadeUp = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.25 } }
 
@@ -129,7 +129,7 @@ export default function ReportsPage() {
     <motion.div {...fadeUp} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <p style={{ margin: '0 0 4px', color: '#FFF', fontWeight: 700, fontSize: 16 }}>รายงานการเงิน</p>
+          <p style={{ margin: '0 0 4px', color: 'var(--f-text1)', fontWeight: 700, fontSize: 16 }}>รายงานการเงิน</p>
           <p style={{ margin: 0, color: TEXT2, fontSize: 13 }}>เลือกประเภทรายงาน แล้วกด &ldquo;สร้างรายงาน&rdquo; เพื่อดาวน์โหลด CSV</p>
         </div>
       </div>
@@ -144,13 +144,13 @@ export default function ReportsPage() {
                 <div style={{ width: 44, height: 44, borderRadius: 12, background: `${r.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Icon size={22} color={r.color} />
                 </div>
-                <p style={{ margin: 0, color: '#FFF', fontWeight: 700, fontSize: 14 }}>{r.title}</p>
+                <p style={{ margin: 0, color: 'var(--f-text1)', fontWeight: 700, fontSize: 14 }}>{r.title}</p>
               </div>
               <p style={{ margin: 0, color: TEXT2, fontSize: 13, lineHeight: 1.5, flex: 1 }}>{r.desc}</p>
               <button
                 onClick={() => handleGenerate(r.key)}
                 disabled={isLoading || loading !== null}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 0', borderRadius: 10, background: isLoading ? 'rgba(184,134,11,0.5)' : GOLD, border: 'none', color: '#FFF', fontSize: 13, fontWeight: 600, cursor: isLoading || loading !== null ? 'not-allowed' : 'pointer', fontFamily: 'inherit', marginTop: 'auto' }}>
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 0', borderRadius: 10, background: isLoading ? 'rgba(184,134,11,0.5)' : GOLD, border: 'none', color: 'var(--f-text1)', fontSize: 13, fontWeight: 600, cursor: isLoading || loading !== null ? 'not-allowed' : 'pointer', fontFamily: 'inherit', marginTop: 'auto' }}>
                 {isLoading ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={14} />}
                 {isLoading ? 'กำลังสร้าง...' : 'สร้างรายงาน'}
               </button>
@@ -161,7 +161,7 @@ export default function ReportsPage() {
 
       {/* Toast */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', background: '#1A1A1A', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '12px 24px', color: '#FFF', fontSize: 14, fontWeight: 500, zIndex: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
+        <div style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', background: 'var(--f-card2)', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '12px 24px', color: 'var(--f-text1)', fontSize: 14, fontWeight: 500, zIndex: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
           {toast}
         </div>
       )}

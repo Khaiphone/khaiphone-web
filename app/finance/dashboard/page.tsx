@@ -21,11 +21,11 @@ import { fetchFinanceDashboard } from '@/app/actions/finance'
 import type { FinanceDashboard } from '@/app/actions/finance'
 import { useFinanceDate } from '@/app/components/finance/FinanceDateContext'
 
-const CARD = '#0D0D0D'
-const BORDER = 'rgba(255,255,255,0.08)'
+const CARD = 'var(--f-card)'
+const BORDER = 'var(--f-border)'
 const GOLD = '#B8860B'
-const TEXT2 = 'rgba(255,255,255,0.65)'
-const TEXT3 = 'rgba(255,255,255,0.35)'
+const TEXT2 = 'var(--f-text2)'
+const TEXT3 = 'var(--f-text3)'
 
 const CATEGORY_COLORS = ['#B8860B', '#3b82f6', '#a855f7', '#22c55e', '#ef4444', '#f59e0b', '#06b6d4']
 
@@ -95,7 +95,7 @@ export default function DashboardPage() {
       <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
         {/* Revenue vs Cost Line Chart */}
         <div style={{ flex: '2 1 340px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '20px 24px' }}>
-          <p style={{ color: '#FFFFFF', fontWeight: 700, fontSize: 15, margin: '0 0 16px' }}>
+          <p style={{ color: 'var(--f-text1)', fontWeight: 700, fontSize: 15, margin: '0 0 16px' }}>
             รายรับ vs ต้นทุน (รายเดือน)
           </p>
           {data.revenueByMonth.length === 0 ? (
@@ -107,7 +107,7 @@ export default function DashboardPage() {
                 <XAxis dataKey="date" tick={{ fill: TEXT3, fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: TEXT3, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `฿${(v / 1000).toFixed(0)}K`} width={52} />
                 <Tooltip
-                  contentStyle={{ background: '#1A1A1A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff' }}
+                  contentStyle={{ background: 'var(--f-card2)', border: '1px solid var(--f-border)', borderRadius: 8, color: 'var(--f-text1)' }}
                   formatter={(value) => fmt(Number(value))}
                 />
                 <Line type="monotone" dataKey="revenue" stroke="#22c55e" strokeWidth={2} dot={false} name="รายรับ" />
@@ -127,7 +127,7 @@ export default function DashboardPage() {
 
         {/* Profit Area Chart */}
         <div style={{ flex: '1.5 1 260px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '20px 24px' }}>
-          <p style={{ color: '#FFFFFF', fontWeight: 700, fontSize: 15, margin: '0 0 16px' }}>
+          <p style={{ color: 'var(--f-text1)', fontWeight: 700, fontSize: 15, margin: '0 0 16px' }}>
             กำไรสุทธิ (รายเดือน)
           </p>
           {data.profitByMonth.length === 0 ? (
@@ -145,7 +145,7 @@ export default function DashboardPage() {
                 <XAxis dataKey="date" tick={{ fill: TEXT3, fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: TEXT3, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `฿${(v / 1000).toFixed(0)}K`} width={52} />
                 <Tooltip
-                  contentStyle={{ background: '#1A1A1A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff' }}
+                  contentStyle={{ background: 'var(--f-card2)', border: '1px solid var(--f-border)', borderRadius: 8, color: 'var(--f-text1)' }}
                   formatter={(value) => fmt(Number(value))}
                 />
                 <Area type="monotone" dataKey="profit" stroke={GOLD} strokeWidth={2} fill="url(#profitGrad)" name="กำไร" />
@@ -159,7 +159,7 @@ export default function DashboardPage() {
       <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
         {/* Expense by Category */}
         <div style={{ flex: '1 1 280px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '20px 24px' }}>
-          <p style={{ color: '#FFFFFF', fontWeight: 700, fontSize: 15, margin: '0 0 16px' }}>
+          <p style={{ color: 'var(--f-text1)', fontWeight: 700, fontSize: 15, margin: '0 0 16px' }}>
             ค่าใช้จ่ายแยกตามประเภท
           </p>
           {data.expenseByCategory.length === 0 ? (
@@ -171,7 +171,7 @@ export default function DashboardPage() {
                   <XAxis type="number" tick={{ fill: TEXT3, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `฿${(v / 1000).toFixed(0)}K`} />
                   <YAxis type="category" dataKey="category" tick={{ fill: TEXT2, fontSize: 12 }} axisLine={false} tickLine={false} width={80} />
                   <Tooltip
-                    contentStyle={{ background: '#1A1A1A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff' }}
+                    contentStyle={{ background: 'var(--f-card2)', border: '1px solid var(--f-border)', borderRadius: 8, color: 'var(--f-text1)' }}
                     formatter={(value) => fmt(Number(value))}
                   />
                   <Bar dataKey="amount" radius={[0, 4, 4, 0]} name="จำนวน">
@@ -190,7 +190,7 @@ export default function DashboardPage() {
                       <span style={{ color: TEXT2, fontSize: 13 }}>{e.category}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ color: '#FFF', fontSize: 13, fontWeight: 600 }}>{fmt(e.amount)}</span>
+                      <span style={{ color: 'var(--f-text1)', fontSize: 13, fontWeight: 600 }}>{fmt(e.amount)}</span>
                       <span style={{ color: TEXT3, fontSize: 12 }}>{Math.round((e.amount / maxExpense) * 100)}%</span>
                     </div>
                   </div>
@@ -202,7 +202,7 @@ export default function DashboardPage() {
 
         {/* Top Models */}
         <div style={{ flex: '1 1 200px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '20px 24px' }}>
-          <p style={{ color: '#FFFFFF', fontWeight: 700, fontSize: 15, margin: '0 0 16px' }}>
+          <p style={{ color: 'var(--f-text1)', fontWeight: 700, fontSize: 15, margin: '0 0 16px' }}>
             Top รุ่นกำไรสูงสุด
           </p>
           {data.topModels.length === 0 ? (
@@ -221,7 +221,7 @@ export default function DashboardPage() {
                     {i + 1}
                   </span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ margin: 0, color: '#FFFFFF', fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <p style={{ margin: 0, color: 'var(--f-text1)', fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {m.model}
                     </p>
                     <p style={{ margin: 0, color: '#22c55e', fontSize: 12, fontWeight: 600 }}>

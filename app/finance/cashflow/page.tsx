@@ -5,11 +5,11 @@ import { motion } from 'framer-motion'
 import { fetchFinanceCashFlow } from '@/app/actions/finance'
 import type { FinanceCashFlowEntry, FinanceCashFlowSummary } from '@/app/actions/finance'
 
-const CARD = '#0D0D0D'
-const BORDER = 'rgba(255,255,255,0.08)'
+const CARD = 'var(--f-card)'
+const BORDER = 'var(--f-border)'
 const GOLD = '#B8860B'
-const TEXT2 = 'rgba(255,255,255,0.65)'
-const TEXT3 = 'rgba(255,255,255,0.35)'
+const TEXT2 = 'var(--f-text2)'
+const TEXT3 = 'var(--f-text3)'
 
 const fadeUp = {
   initial: { opacity: 0, y: 12 },
@@ -108,7 +108,7 @@ export default function CashFlowPage() {
                     onMouseLeave={(ev) => ((ev.currentTarget as HTMLTableRowElement).style.background = 'transparent')}
                   >
                     <td style={{ padding: '12px 16px', color: TEXT2, fontSize: 13, whiteSpace: 'nowrap' }}>{e.datetime}</td>
-                    <td style={{ padding: '12px 16px', color: '#FFFFFF', fontSize: 13 }}>
+                    <td style={{ padding: '12px 16px', color: 'var(--f-text1)', fontSize: 13 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{
                           width: 8, height: 8, borderRadius: '50%', flexShrink: 0,

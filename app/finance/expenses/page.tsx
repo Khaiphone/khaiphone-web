@@ -11,11 +11,11 @@ import {
 } from '@/app/actions/finance'
 import type { Expense, ExpenseStatus } from '@/app/actions/finance'
 
-const CARD = '#0D0D0D'
-const BORDER = 'rgba(255,255,255,0.08)'
+const CARD = 'var(--f-card)'
+const BORDER = 'var(--f-border)'
 const GOLD = '#B8860B'
-const TEXT2 = 'rgba(255,255,255,0.65)'
-const TEXT3 = 'rgba(255,255,255,0.35)'
+const TEXT2 = 'var(--f-text2)'
+const TEXT3 = 'var(--f-text3)'
 
 const fadeUp = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.25 } }
 
@@ -126,7 +126,7 @@ export default function ExpensesPage() {
   const paged = filtered.slice((page - 1) * perPage, page * perPage)
   const totalAmount = filtered.reduce((s, r) => s + r.amount, 0)
 
-  const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: '#FFF', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }
+  const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: 'var(--f-text1)', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }
   const labelStyle: React.CSSProperties = { display: 'block', color: TEXT2, fontSize: 12, fontWeight: 600, marginBottom: 5 }
 
   return (
@@ -136,12 +136,12 @@ export default function ExpensesPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 12px', flex: 1, minWidth: 180 }}>
           <Search size={14} color={TEXT3} />
           <input type="text" placeholder="ค้นหา รายการ / หมวดหมู่..." value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
-            style={{ background: 'none', border: 'none', outline: 'none', color: '#FFF', fontSize: 13, width: '100%', fontFamily: 'inherit' }} />
+            style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--f-text1)', fontSize: 13, width: '100%', fontFamily: 'inherit' }} />
         </div>
         <button onClick={load} title="รีเฟรช" style={{ display: 'flex', alignItems: 'center', padding: '9px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT2, cursor: 'pointer' }}>
           <RefreshCw size={15} />
         </button>
-        <button onClick={openAdd} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, background: GOLD, border: 'none', color: '#FFF', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
+        <button onClick={openAdd} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, background: GOLD, border: 'none', color: 'var(--f-text1)', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
           <Plus size={16} /> เพิ่มรายจ่าย
         </button>
       </div>
@@ -183,7 +183,7 @@ export default function ExpensesPage() {
                   onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                   <td style={{ padding: '12px 16px', color: TEXT2, fontSize: 13, whiteSpace: 'nowrap' }}>{fmt(r.date)}</td>
                   <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}><span style={{ color: GOLD, fontSize: 13, fontWeight: 600 }}>{r.refNumber}</span></td>
-                  <td style={{ padding: '12px 16px', color: '#FFF', fontSize: 13 }}>
+                  <td style={{ padding: '12px 16px', color: 'var(--f-text1)', fontSize: 13 }}>
                     <div>{r.product}</div>
                     {r.notes && <div style={{ color: TEXT3, fontSize: 11, marginTop: 2 }}>{r.notes}</div>}
                   </td>
@@ -220,7 +220,7 @@ export default function ExpensesPage() {
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
               style={{ background: '#111', border: `1px solid ${BORDER}`, borderRadius: 20, padding: 28, width: '100%', maxWidth: 480 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-                <p style={{ margin: 0, color: '#FFF', fontWeight: 700, fontSize: 16 }}>{modal === 'add' ? 'เพิ่มรายจ่าย' : 'แก้ไขรายจ่าย'}</p>
+                <p style={{ margin: 0, color: 'var(--f-text1)', fontWeight: 700, fontSize: 16 }}>{modal === 'add' ? 'เพิ่มรายจ่าย' : 'แก้ไขรายจ่าย'}</p>
                 <button onClick={() => setModal(null)} style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', padding: 4, display: 'flex' }}><X size={20} /></button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -232,7 +232,7 @@ export default function ExpensesPage() {
                   <div>
                     <label style={labelStyle}>หมวดหมู่</label>
                     <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
-                      {CATEGORIES.map(c => <option key={c} value={c} style={{ background: '#1A1A1A' }}>{c}</option>)}
+                      {CATEGORIES.map(c => <option key={c} value={c} style={{ background: 'var(--f-card2)' }}>{c}</option>)}
                     </select>
                   </div>
                 </div>
@@ -248,7 +248,7 @@ export default function ExpensesPage() {
                   <div>
                     <label style={labelStyle}>สถานะ</label>
                     <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as ExpenseStatus }))} style={{ ...inputStyle, cursor: 'pointer' }}>
-                      {STATUSES.map(s => <option key={s} value={s} style={{ background: '#1A1A1A' }}>{STATUS_LABELS[s]}</option>)}
+                      {STATUSES.map(s => <option key={s} value={s} style={{ background: 'var(--f-card2)' }}>{STATUS_LABELS[s]}</option>)}
                     </select>
                   </div>
                 </div>
@@ -260,7 +260,7 @@ export default function ExpensesPage() {
               </div>
               <div style={{ display: 'flex', gap: 10, marginTop: 24, justifyContent: 'flex-end' }}>
                 <button onClick={() => setModal(null)} disabled={saving} style={{ padding: '10px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT2, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>ยกเลิก</button>
-                <button onClick={handleSubmit} disabled={saving} style={{ padding: '10px 24px', borderRadius: 8, background: GOLD, border: 'none', color: '#FFF', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: saving ? 0.7 : 1 }}>
+                <button onClick={handleSubmit} disabled={saving} style={{ padding: '10px 24px', borderRadius: 8, background: GOLD, border: 'none', color: 'var(--f-text1)', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: saving ? 0.7 : 1 }}>
                   {saving ? 'กำลังบันทึก...' : modal === 'add' ? 'เพิ่มรายการ' : 'บันทึก'}
                 </button>
               </div>
@@ -276,11 +276,11 @@ export default function ExpensesPage() {
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
               style={{ background: '#111', border: `1px solid ${BORDER}`, borderRadius: 20, padding: 28, width: '100%', maxWidth: 360, textAlign: 'center' }}>
-              <p style={{ margin: '0 0 8px', color: '#FFF', fontWeight: 700, fontSize: 16 }}>ลบรายการ?</p>
+              <p style={{ margin: '0 0 8px', color: 'var(--f-text1)', fontWeight: 700, fontSize: 16 }}>ลบรายการ?</p>
               <p style={{ margin: '0 0 24px', color: TEXT2, fontSize: 14 }}>การกระทำนี้ไม่สามารถย้อนกลับได้</p>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
                 <button onClick={() => setDeleteId(null)} disabled={saving} style={{ padding: '10px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT2, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>ยกเลิก</button>
-                <button onClick={() => handleDelete(deleteId)} disabled={saving} style={{ padding: '10px 20px', borderRadius: 8, background: '#ef4444', border: 'none', color: '#FFF', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: saving ? 0.7 : 1 }}>
+                <button onClick={() => handleDelete(deleteId)} disabled={saving} style={{ padding: '10px 20px', borderRadius: 8, background: '#ef4444', border: 'none', color: 'var(--f-text1)', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: saving ? 0.7 : 1 }}>
                   {saving ? 'กำลังลบ...' : 'ลบ'}
                 </button>
               </div>

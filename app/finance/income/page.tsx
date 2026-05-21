@@ -6,11 +6,11 @@ import { Search } from 'lucide-react'
 import { fetchFinanceIncome } from '@/app/actions/finance'
 import type { FinanceIncome } from '@/app/actions/finance'
 
-const CARD = '#0D0D0D'
-const BORDER = 'rgba(255,255,255,0.08)'
+const CARD = 'var(--f-card)'
+const BORDER = 'var(--f-border)'
 const GOLD = '#B8860B'
-const TEXT2 = 'rgba(255,255,255,0.65)'
-const TEXT3 = 'rgba(255,255,255,0.35)'
+const TEXT2 = 'var(--f-text2)'
+const TEXT3 = 'var(--f-text3)'
 
 const fadeUp = {
   initial: { opacity: 0, y: 12 },
@@ -68,7 +68,7 @@ export default function IncomePage() {
             placeholder="ค้นหา เลขรายการ / ลูกค้า / รุ่น..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-            style={{ background: 'none', border: 'none', outline: 'none', color: '#FFFFFF', fontSize: 13, width: '100%', fontFamily: 'inherit' }}
+            style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--f-text1)', fontSize: 13, width: '100%', fontFamily: 'inherit' }}
           />
         </div>
       </div>
@@ -77,7 +77,7 @@ export default function IncomePage() {
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '14px 20px', flex: 1 }}>
           <p style={{ margin: '0 0 4px', color: TEXT2, fontSize: 11, textTransform: 'uppercase', fontWeight: 600 }}>จำนวนที่ขาย</p>
-          <p style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>{filtered.length} เครื่อง</p>
+          <p style={{ margin: 0, color: 'var(--f-text1)', fontSize: 22, fontWeight: 700 }}>{filtered.length} เครื่อง</p>
         </div>
         <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '14px 20px', flex: 1 }}>
           <p style={{ margin: '0 0 4px', color: TEXT2, fontSize: 11, textTransform: 'uppercase', fontWeight: 600 }}>รายรับรวม</p>
@@ -125,7 +125,7 @@ export default function IncomePage() {
                     <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
                       <span style={{ color: GOLD, fontSize: 13, fontWeight: 600 }}>{r.refNumber}</span>
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#FFFFFF', fontSize: 13 }}>{r.customerName || '—'}</td>
+                    <td style={{ padding: '12px 16px', color: 'var(--f-text1)', fontSize: 13 }}>{r.customerName || '—'}</td>
                     <td style={{ padding: '12px 16px', color: TEXT2, fontSize: 13 }}>{r.model} {r.storage}</td>
                     <td style={{ padding: '12px 16px', color: TEXT2, fontSize: 13, whiteSpace: 'nowrap' }}>{CHANNEL_LABELS[r.source] ?? r.source}</td>
                     <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
