@@ -456,3 +456,94 @@ export async function deleteExpense(id: string): Promise<{ success: true } | { s
   if (error) return { success: false, error: error.message };
   return { success: true };
 }
+
+// ─── Finance Settings (Supabase) ─────────────────────────────────────────────
+
+export type FinanceSettings = {
+  businessName: string;
+  taxId: string;
+  address: string;
+  phone: string;
+  email: string;
+  website: string;
+  vatEnabled: boolean;
+  vatRate: string;
+  withholdingTax: string;
+  fiscalYear: string;
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+  notifyNewRequest: boolean;
+  notifyLowStock: boolean;
+  notifyLargeProfit: boolean;
+};
+
+const DEFAULT_SETTINGS: FinanceSettings = {
+  businessName: "KHAIPHONE",
+  taxId: "",
+  address: "",
+  phone: "",
+  email: "",
+  website: "",
+  vatEnabled: false,
+  vatRate: "7",
+  withholdingTax: "3",
+  fiscalYear: "มกราคม",
+  bankName: "",
+  accountName: "",
+  accountNumber: "",
+  notifyNewRequest: true,
+  notifyLowStock: true,
+  notifyLargeProfit: false,
+};
+
+export async function fetchFinanceSettings(): Promise<FinanceSettings> {
+  const supabase = createServerClient();
+  const { data } = await supabase.from("finance_settings").select("*").eq("id", 1).single();
+  if (!data) return DEFAULT_SETTINGS;
+  return {
+    businessName:      data.business_name      ?? DEFAULT_SETTINGS.businessName,
+    taxId:             data.tax_id             ?? DEFAULT_SETTINGS.taxId,
+    address:           data.address            ?? DEFAULT_SETTINGS.address,
+    phone:             data.phone              ?? DEFAULT_SETTINGS.phone,
+    email:             data.email              ?? DEFAULT_SETTINGS.email,
+    website:           data.website            ?? DEFAULT_SETTINGS.website,
+    vatEnabled:        data.vat_enabled        ?? DEFAULT_SETTINGS.vatEnabled,
+    vatRate:           data.vat_rate           ?? DEFAULT_SETTINGS.vatRate,
+    withholdingTax:    data.withholding_tax    ?? DEFAULT_SETTINGS.withholdingTax,
+    fiscalYear:        data.fiscal_year        ?? DEFAULT_SETTINGS.fiscalYear,
+    bankName:          data.bank_name          ?? DEFAULT_SETTINGS.bankName,
+    accountName:       data.account_name       ?? DEFAULT_SETTINGS.accountName,
+    accountNumber:     data.account_number     ?? DEFAULT_SETTINGS.accountNumber,
+    notifyNewRequest:  data.notify_new_request ?? DEFAULT_SETTINGS.notifyNewRequest,
+    notifyLowStock:    data.notify_low_stock   ?? DEFAULT_SETTINGS.notifyLowStock,
+    notifyLargeProfit: data.notify_large_profit ?? DEFAULT_SETTINGS.notifyLargeProfit,
+  };
+}
+
+export async function saveFinanceSettings(
+  s: FinanceSettings,
+): Promise<{ success: true } | { success: false; error: string }> {
+  const supabase = createServerClient();
+  const { error } = await supabase.from("finance_settings").update({
+    business_name:       s.businessName,
+    tax_id:              s.taxId,
+    address:             s.address,
+    phone:               s.phone,
+    email:               s.email,
+    website:             s.website,
+    vat_enabled:         s.vatEnabled,
+    vat_rate:            s.vatRate,
+    withholding_tax:     s.withholdingTax,
+    fiscal_year:         s.fiscalYear,
+    bank_name:           s.bankName,
+    account_name:        s.accountName,
+    account_number:      s.accountNumber,
+    notify_new_request:  s.notifyNewRequest,
+    notify_low_stock:    s.notifyLowStock,
+    notify_large_profit: s.notifyLargeProfit,
+    updated_at:          new Date().toISOString(),
+  }).eq("id", 1);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
