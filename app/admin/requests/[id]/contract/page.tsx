@@ -180,7 +180,9 @@ export default function ContractPage() {
   const [accessories, setAccessories] = useState<string[]>(["ตัวเครื่อง"]);
   const [accessoriesOther, setAccessoriesOther] = useState("");
   const [txDate, setTxDate] = useState(new Date().toISOString().slice(0, 10));
-  const [extraDeviceDetails, setExtraDeviceDetails] = useState<Array<{serial: string; imei: string}>>([]);
+  const [extraDeviceDetails, setExtraDeviceDetails] = useState<Array<{
+    serial: string; imei: string; accessories: string[]; accessoriesOther: string;
+  }>>([]);
 
   // ID card photo
   const [idPhotoDataUrl, setIdPhotoDataUrl] = useState<string | null>(null);
@@ -212,8 +214,10 @@ export default function ContractPage() {
         setSerial((r.inspection?.serial ?? "").toUpperCase());
         setImei(r.inspection?.imei ?? "");
         const extras = (r.extraDevices ?? []).map((_, i) => ({
-          serial: (r.inspection?.extraInspections?.[i]?.serial ?? "").toUpperCase(),
-          imei:   r.inspection?.extraInspections?.[i]?.imei ?? "",
+          serial:           (r.inspection?.extraInspections?.[i]?.serial ?? "").toUpperCase(),
+          imei:             r.inspection?.extraInspections?.[i]?.imei ?? "",
+          accessories:      ["ตัวเครื่อง"],
+          accessoriesOther: "",
         }));
         setExtraDeviceDetails(extras);
       }
@@ -303,11 +307,11 @@ export default function ContractPage() {
   async function generateDocs() {
     if (!request) return;
 
-    const r        = request;
-    const now      = new Date();
-    const docNo    = r.orderNumber;
-    const dateStr  = thDate(txDate + "T00:00:00");
-    const timeStr  = thTime(now.toISOString());
+    const r         = request;
+    const now       = new Date();
+    const docNo     = r.orderNumber;
+    const dateStr   = thDate(txDate + "T00:00:00");
+    const timeStr   = thTime(now.toISOString());
     const dateShort = shortDate(txDate + "T00:00:00");
 
     const cName  = r.customer.name;
@@ -315,18 +319,13 @@ export default function ContractPage() {
     const cId    = idNumber || "—";
     const cAddr  = address   || "—";
     const cEmail = r.customer.email || "—";
-    const mainPrice = r.device.actualPrice ?? r.device.estimatedPrice;
-    const extraInspArr = r.inspection?.extraInspections ?? [];
-    const extraTotal = (r.extraDevices ?? []).reduce((sum, d, i) => {
-      return sum + (extraInspArr[i]?.actualPrice ?? d.estimatedPrice);
-    }, 0);
-    const price  = mainPrice + extraTotal;
     const payM   = r.payment.method;
     const payTh  = payM === "cash" ? "เงินสด" : "โอนผ่านธนาคาร";
-
     const dobStr = dob ? thDate(dob + "T00:00:00") : "";
 
-    // Embed logo as base64 so the stored HTML works anywhere
+    const extraInspArr = r.inspection?.extraInspections ?? [];
+
+    // Embed logo as base64
     let logoSrc = "/logo-icon.webp";
     try {
       const resp = await fetch("/logo-icon.webp");
@@ -338,254 +337,7 @@ export default function ContractPage() {
       });
     } catch {}
 
-    // ── BUILD CONTRACT ─────────────────────────────────────────────────────────
-    let c = `<div class="header">
-      <div class="logo-area">
-        <img src="${logoSrc}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0">
-        <div>
-          <div class="logo-name">ขายไอโฟน.com</div>
-          <div class="logo-sub">รับซื้อ-ขาย Apple มือสอง</div>
-        </div>
-      </div>
-      <div class="title-center">
-        <h1>สัญญาซื้อขายโทรศัพท์มือถือมือสอง</h1>
-        <div class="between">ระหว่าง <strong>ผู้ขาย</strong> และ <strong style="color:#FFD700">ขายไอโฟน.com</strong></div>
-      </div>
-      <div class="cno-box">
-        <div class="cno-label">เลขที่สัญญา (CONTRACT NO.)</div>
-        <div class="cno-value">${esc(docNo)}</div>
-        <div class="cno-date">วันที่ ${dateStr}<br>เวลา ${timeStr} น.</div>
-      </div>
-    </div>`;
-
-    c += `<div class="content">`;
-
-    // Top 3 columns
-    c += `<div class="top3">
-      <div class="icard">
-        <div class="icard-hd"><div class="hd-num">1</div> ผู้รับซื้อ</div>
-        <div class="icard-body">
-          <div style="font-weight:700;font-size:13px;color:#1a1a2e;margin-bottom:5px">ขายไอโฟน.com</div>
-          <div style="font-size:10px;color:#666;line-height:1.5;margin-bottom:8px">ประกอบธุรกิจรับซื้อ-ขายโทรศัพท์มือถือ<br>และอุปกรณ์อิเล็กทรอนิกส์มือสอง</div>
-          <div class="shop-row">📞 โทรศัพท์: 095-553-5167</div>
-          <div class="shop-row">💬 LINE: @khaiphone</div>
-          <div class="shop-row">🌐 เว็บไซต์: khaiphone.com</div>
-          <div style="margin-top:8px;padding:5px 8px;background:#f5f4f0;border-radius:5px;font-size:9.5px;color:#666;border-left:3px solid #c9a84c">ต่อไปในสัญญานี้เรียกว่า <strong>"ผู้รับซื้อ"</strong></div>
-        </div>
-      </div>
-      <div class="icard">
-        <div class="icard-hd"><div class="hd-num">2</div> ผู้ขาย</div>
-        <div class="icard-body">
-          <div class="f"><span class="fl">ชื่อ-นามสกุล</span><span class="fv">${esc(cName)}</span></div>
-          <div class="f"><span class="fl">เลขบัตรประชาชน</span><span class="fv" style="font-family:monospace">${esc(cId)}</span></div>
-          ${dobStr ? `<div class="f"><span class="fl">วันเดือนปีเกิด</span><span class="fv">${esc(dobStr)}</span></div>` : ""}
-          <div class="f"><span class="fl">ที่อยู่</span><span class="fv" style="white-space:pre-line;line-height:1.4">${esc(cAddr)}</span></div>
-          <div class="f"><span class="fl">เบอร์โทรศัพท์</span><span class="fv">${esc(cPhone)}</span></div>
-          <div class="f"><span class="fl">อีเมล</span><span class="fv">${esc(cEmail)}</span></div>
-          <div style="margin-top:8px;padding:5px 8px;background:#f5f4f0;border-radius:5px;font-size:9.5px;color:#666;border-left:3px solid #c9a84c">ต่อไปในสัญญานี้เรียกว่า <strong>"ผู้ขาย"</strong></div>
-        </div>
-      </div>
-      <div class="icard">
-        <div class="icard-hd"><div class="hd-num">3</div> ราคาซื้อขายและการชำระเงิน</div>
-        <div class="icard-body">
-          <div class="price-label">ราคาซื้อขายรวมทั้งสิ้น</div>
-          <div class="price-big">${price.toLocaleString("th-TH")}</div>
-          <div style="text-align:center;font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:4px">บาท</div>
-          <div style="border-top:1px solid #eee;padding-top:7px;margin-top:4px">
-            <div style="font-size:9.5px;color:#aaa;margin-bottom:5px">วิธีการชำระเงิน</div>
-            <div class="pay-badge">✓ ${payTh}</div>
-            ${payM === "transfer" ? `
-              <div style="font-size:9.5px;color:#aaa;margin:5px 0 3px">รายละเอียดบัญชีผู้ขาย</div>
-              <div class="f"><span class="fl">ธนาคาร</span><span class="fv">${esc(r.payment.bankName ?? "—")}</span></div>
-              <div class="f"><span class="fl">ชื่อบัญชี</span><span class="fv">${esc(r.payment.accountName ?? "—")}</span></div>
-              <div class="f"><span class="fl">เลขที่บัญชี</span><span class="fv" style="font-family:monospace">${esc(r.payment.accountNumber ?? "—")}</span></div>
-            ` : ""}
-          </div>
-        </div>
-      </div>
-    </div>`;
-
-    // Device table
-    const accStr = esc([...accessories, ...(accessoriesOther.trim() ? [accessoriesOther.trim()] : [])].join(", ") || "—");
-    c += `<div class="sec">📱 รายละเอียดทรัพย์สินที่ซื้อขาย</div>
-    <table class="dtable">
-      <tr><th>ประเภทอุปกรณ์</th><th>IMEI</th><th>ยี่ห้อ / รุ่น</th><th>Serial Number</th></tr>
-      <tr>
-        <td>โทรศัพท์มือถือ ${(r.extraDevices ?? []).length > 0 ? "(เครื่องที่ 1)" : ""}</td>
-        <td style="font-family:monospace">${esc(imei || "—")}</td>
-        <td style="font-weight:600">${esc(r.device.model)}</td>
-        <td style="font-family:monospace">${esc(serial || "—")}</td>
-      </tr>
-      <tr><th>ความจุ</th><th>สภาพสินค้า</th><th>สี</th><th>อุปกรณ์ที่ให้มา</th></tr>
-      <tr>
-        <td>${esc(r.device.storage)}</td>
-        <td>${esc(r.device.condition)}</td>
-        <td>${esc(r.device.color ?? "—")}</td>
-        <td>${accStr}</td>
-      </tr>
-      ${(r.extraDevices ?? []).length > 0 ? `<tr><td colspan="3" style="font-weight:700;text-align:right;background:#f5f4f0">ราคาเครื่องที่ 1</td><td style="font-weight:700;color:#c9a84c">฿${mainPrice.toLocaleString("th-TH")}</td></tr>` : ""}
-    </table>
-    ${(r.extraDevices ?? []).map((d, i) => {
-      const ei = extraInspArr[i];
-      const ed = extraDeviceDetails[i];
-      const xImei   = ed?.imei   || ei?.imei   || "—";
-      const xSerial = ed?.serial || ei?.serial || "—";
-      const xPrice  = ei?.actualPrice ?? d.estimatedPrice;
-      return `
-    <div class="device-page-break" style="margin-top:24px;padding-top:18px;border-top:3px solid #c9a84c">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <div style="background:#1a1a2e;color:#FFD700;font-size:11px;font-weight:700;padding:4px 12px;border-radius:6px">เครื่องที่ ${i + 2}</div>
-        <div style="font-size:14px;font-weight:700;color:#1a1a2e">${esc(d.model)} ${esc(d.storage)}</div>
-        <div style="margin-left:auto;font-size:14px;font-weight:800;color:#c9a84c">฿${xPrice.toLocaleString("th-TH")}</div>
-      </div>
-      <div class="sec">📱 รายละเอียดทรัพย์สินเครื่องที่ ${i + 2}</div>
-      <table class="dtable">
-        <tr><th>ประเภทอุปกรณ์</th><th>IMEI</th><th>ยี่ห้อ / รุ่น</th><th>Serial Number</th></tr>
-        <tr>
-          <td>โทรศัพท์มือถือ</td>
-          <td style="font-family:monospace">${esc(xImei)}</td>
-          <td style="font-weight:600">${esc(d.model)}</td>
-          <td style="font-family:monospace">${esc(xSerial)}</td>
-        </tr>
-        <tr><th>ความจุ</th><th>สภาพสินค้า</th><th>สี</th><th>ราคาที่รับซื้อ</th></tr>
-        <tr>
-          <td>${esc(d.storage)}</td>
-          <td>—</td>
-          <td>${esc(ei?.color || "—")}</td>
-          <td style="font-weight:700;color:#c9a84c;font-size:13px">฿${xPrice.toLocaleString("th-TH")}</td>
-        </tr>
-      </table>
-    </div>`;
-    }).join("")}
-    ${(r.extraDevices ?? []).length > 0 ? `
-    <div style="margin-top:12px;padding:10px 14px;background:#1a1a2e;border-radius:8px;display:flex;justify-content:space-between;align-items:center">
-      <span style="color:rgba(255,255,255,.8);font-size:12px;font-weight:600">ราคารวมทั้งหมด (${(r.extraDevices ?? []).length + 1} เครื่อง)</span>
-      <span style="color:#FFD700;font-size:18px;font-weight:800;font-family:monospace">฿${price.toLocaleString("th-TH")}</span>
-    </div>` : ""}`;
-
-    // Inspection criteria table (if available)
-    if (r.inspection?.criteria?.length) {
-      c += `<div class="sec">🔍 ผลการตรวจสอบสภาพจริง</div>
-      <table class="dtable">
-        <tr><th>รายการตรวจสอบ</th><th>สภาพที่แจ้ง</th><th>ผลตรวจจริง</th><th>ผ่าน</th></tr>
-        ${r.inspection.criteria.map(cr => `<tr>
-          <td>${esc(cr.label)}</td>
-          <td>${esc(cr.stated)}</td>
-          <td style="${!cr.pass ? "color:#DC2626;font-weight:600" : ""}">${esc(cr.actual)}</td>
-          <td style="text-align:center;font-size:13px">${cr.pass ? "✓" : "⚠"}</td>
-        </tr>`).join("")}
-      </table>`;
-      if (r.inspection.issues?.length) {
-        c += `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:5px;padding:7px 10px;font-size:10px;color:#991b1b;margin-bottom:10px">
-          ⚠ ปัญหาที่พบ: ${r.inspection.issues.map(esc).join(", ")}
-        </div>`;
-      }
-      if (r.inspection.functionalTests?.length) {
-        const allFuncPass = r.inspection.functionalTests.every(t => t.pass);
-        c += `<div class="sec">📲 ผลทดสอบการใช้งานภายใน</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:10px">
-          ${r.inspection.functionalTests.map(t => `
-            <div style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:5px;border:1px solid ${t.pass ? "#bbf7d0" : "#fecaca"};background:${t.pass ? "#f0fff4" : "#fef2f2"};font-size:10px;color:${t.pass ? "#065f46" : "#991b1b"}">
-              <span style="flex-shrink:0">${t.pass ? "✓" : "⚠"}</span>
-              <span style="line-height:1.3">${esc(t.label)}</span>
-            </div>`).join("")}
-        </div>
-        ${!allFuncPass ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:5px;padding:6px 10px;font-size:10px;color:#991b1b;margin-bottom:10px">⚠ มีฟังก์ชันที่ไม่ผ่าน: ${r.inspection.functionalTests.filter(t=>!t.pass).map(t=>esc(t.label)).join(", ")}</div>` : ""}`;
-      }
-    }
-
-    // Two-column: terms + checklist
-    c += `<div class="two-col">
-      <div>
-        <div class="sec">✅ ข้อตกลงและคำรับรองของผู้ขาย</div>
-        <ol class="terms-ol">
-          <li>ผู้ขายเป็นเจ้าของทรัพย์สินดังกล่าวโดยชอบด้วยกฎหมาย และมีสิทธิ์สมบูรณ์ในการขาย โอน และส่งมอบทรัพย์สินดังกล่าว</li>
-          <li>ทรัพย์สินดังกล่าวไม่ได้มาจากการกระทำผิดกฎหมาย ลักทรัพย์ ฉ้อโกง ยักยอก หรือการกระทำผิดใดๆ</li>
-          <li>ทรัพย์สินดังกล่าวไม่มีการผูกพัน สิทธิร้องกลับ หรือข้อพิพาทพาทางกฎหมายใดๆ</li>
-          <li>ผู้ขายได้ลบข้อมูลส่วนตัวทั้งหมดออกจากอุปกรณ์แล้ว และยินยอมให้ผู้รับซื้อดำเนินการรีเซ็ต ล้างข้อมูล ตรวจสอบอุปกรณ์ได้</li>
-          <li>ผู้ขายรับรองว่าอุปกรณ์ไม่ได้ถูกล็อค iCloud, Find My iPhone, MDM หรือระบบรักษาความปลอดภัยใดๆ ที่จะทำให้ผู้รับซื้อไม่สามารถใช้งานได้โดยสมบูรณ์</li>
-          <li>หากตรวจพบภายหลังว่าข้อมูลที่ให้ไว้เป็นเท็จ หรืออุปกรณ์มีปัญหาทางกฎหมาย ผู้ขายยืนยอมรับผิดชอบค่าเสียหายทั้งหมดที่เกิดขึ้น</li>
-          <li>กรรมสิทธิ์ในทรัพย์สินจะโอนให้ผู้รับซื้อทันทีเมื่อผู้ขายได้รับชำระเงินครบถ้วน</li>
-        </ol>
-      </div>
-      <div>
-        <div class="sec">🔍 การตรวจสอบสภาพสินค้า</div>
-        <div style="font-size:10px;color:#666;margin-bottom:6px;line-height:1.5">ผู้ขายยินยอมให้ผู้รับซื้อดำเนินการตรวจสอบ</div>
-        <ul class="check-list">
-          <li>หมายเลข IMEI</li><li>Serial Number</li><li>สถานะเครื่อง</li>
-          <li>ระบบล็อคต่างๆ</li><li>ประวัติซ่อม</li>
-          <li>สภาพภายนอกและภายใน</li><li>การทำงานของอุปกรณ์</li>
-        </ul>
-        <div class="rejected-box">หากตรวจพบความผิดปกติ ผู้รับซื้อมีสิทธิ์<br>• ปรับราคาซื้อขาย<br>• ยกเลิกธุรกรรม<br>• ระงับการชำระเงิน<br>ได้ตามความเหมาะสม</div>
-      </div>
-    </div>`;
-
-    // PDPA + extra terms
-    c += `<div class="two-col">
-      <div class="pdpa-box">
-        <div class="pdpa-title">🔒 การคุ้มครองข้อมูลส่วนบุคคล (PDPA)</div>
-        <div style="color:#78350f;font-size:10px;margin-bottom:5px">ผู้ขายยินยอมให้ผู้รับซื้อ เก็บ ใช้ และประมวลผลข้อมูลส่วนบุคคล เพื่อวัตถุประสงค์ดังต่อไปนี้</div>
-        <ul class="pdpa-list">
-          <li>ใช้ในการทำธุรกรรมซื้อขาย</li>
-          <li>ตรวจสอบและยืนยันตัวตน</li>
-          <li>ป้องกันการทุจริต</li>
-          <li>จัดเก็บเป็นหลักฐานทางธุรกิจและกฎหมาย</li>
-          <li>ใช้ในการติดต่อสอบถามหลังเสร็จสิ้นเกี่ยวกับธุรกรรม</li>
-        </ul>
-        <div style="margin-top:6px;font-size:10px;color:#92400e">ผู้รับซื้อจะดำเนินการตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562</div>
-      </div>
-      <div>
-        <div class="sec">📋 ข้อกำหนดเพิ่มเติม</div>
-        <ol class="terms-ol">
-          <li>สัญญานี้อยู่ภายใต้กฎหมายไทย</li>
-          <li>หากข้อความใดในสัญญานี้ไม่มีผลในโมงหรือใช้บังคับไม่ได้ ให้ถือว่าส่วนอื่นยังคงมีผลบังคับ</li>
-          <li>คู่สัญญาทั้งสองฝ่ายได้อ่านและเข้าใจข้อความทั้งหมดโดยละเอียดแล้ว และยืนยอมผูกพันตามสัญญานี้ทุกประการ</li>
-        </ol>
-      </div>
-    </div>`;
-
-    // ID card photo
-    if (idPhotoDataUrl) {
-      c += `<div class="id-photo-wrap">
-        <div class="id-photo-hd">📷 เอกสารยืนยันตัวตนผู้ขาย — สำเนาบัตรประชาชน (มี Watermark)</div>
-        <img src="${idPhotoDataUrl}" alt="บัตรประชาชน">
-      </div>`;
-    }
-
-    // Signatures
-    c += `<div class="sig2">
-      <div class="sb">
-        <div class="sa">${sigBuyerImg.current ? `<img src="${sigBuyerImg.current}" style="max-height:54px;max-width:100%;object-fit:contain">` : ""}</div>
-        <div class="sl"><strong>ลายมือชื่อผู้ขาย</strong><br>( ${esc(cName)} )<br>วันที่ ${dateShort}</div>
-      </div>
-      <div class="sb">
-        <div class="sa">${sigSellerImg.current ? `<img src="${sigSellerImg.current}" style="max-height:54px;max-width:100%;object-fit:contain">` : ""}</div>
-        <div class="sl"><strong>ลายมือชื่อผู้รับซื้อ</strong><br>( ขายไอโฟน.com )<br>วันที่ ${dateShort}</div>
-      </div>
-    </div>`;
-
-    c += `</div>`; // end content
-
-    // Footer
-    c += `<div class="footer">
-      <div>
-        <div style="font-size:11px;font-weight:700;color:#FFD700;margin-bottom:4px">🛡️ การยืนยันเอกสารดิจิทัล</div>
-        <div style="font-size:9px;color:rgba(255,255,255,.5);margin-bottom:5px;max-width:380px">เอกสารบันทึกขึ้นในรูปแบบดิจิทัลและสามารถตรวจสอบความถูกต้องได้ผ่านระบบ ขายไอโฟน.com</div>
-        <div class="fv-row"><span class="fv-lbl">Document ID :</span><span class="fv-val">${esc(docNo)}</span></div>
-        <div class="fv-row"><span class="fv-lbl">ตรวจสอบเอกสารได้ที่ :</span><span class="fv-val">khaiphone.com/verify</span></div>
-      </div>
-      <div class="footer-logo" style="text-align:right">
-        <div class="footer-brand">ขายไอโฟน.com</div>
-        <div class="footer-info">รับซื้อ-ขาย Apple มือสอง<br>📞 095-553-5167 &nbsp;💬 LINE: @khaiphone<br>🌐 khaiphone.com</div>
-      </div>
-    </div>`;
-
-    contractHTML.current = c;
-
-    // ── BUILD RECEIPT ──────────────────────────────────────────────────────────
-    const deviceFull = `${r.device.model} ${r.device.storage}${r.device.color ? " " + r.device.color : ""}`;
-
-    // Use locally uploaded slip (already base64), or fetch from stored URL as fallback
+    // ── FETCH SLIP ─────────────────────────────────────────────────────────────
     let slipImgSrc = slipDataUrl ?? "";
     if (!slipImgSrc && r.payment.slipUrl) {
       try {
@@ -599,187 +351,347 @@ export default function ContractPage() {
       } catch {}
     }
 
-    const paymentProofSection = r.payment.method === "transfer"
-      ? slipImgSrc
-        ? `<div style="margin:12px 0;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">
-            <div style="background:#f5f4f0;padding:7px 11px;border-bottom:1px solid #e5e7eb;font-size:10.5px;font-weight:700;color:#333">📎 หลักฐานการโอนเงิน (สลิป)</div>
-            <div style="padding:12px;text-align:center;background:#fafafa">
-              <img src="${slipImgSrc}" style="max-width:280px;max-height:380px;border-radius:6px;border:1px solid #e5e7eb;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
+    // ── BUILD DEVICE LIST ──────────────────────────────────────────────────────
+    const allDevices = [
+      {
+        label:           (r.extraDevices ?? []).length > 0 ? "เครื่องที่ 1" : "",
+        model:           r.device.model,
+        storage:         r.device.storage,
+        color:           r.device.color ?? "",
+        condition:       r.device.condition,
+        imei:            imei,
+        serial:          serial,
+        accessories:     [...accessories, ...(accessoriesOther.trim() ? [accessoriesOther.trim()] : [])],
+        price:           r.inspection?.actualPrice ?? r.device.estimatedPrice,
+        criteria:        (r.inspection?.criteria      ?? []) as NonNullable<typeof r.inspection>["criteria"],
+        issues:          r.inspection?.issues ?? [] as string[],
+        functionalTests: (r.inspection?.functionalTests ?? []) as NonNullable<typeof r.inspection>["functionalTests"],
+      },
+      ...(r.extraDevices ?? []).map((d, i) => {
+        const ei = extraInspArr[i];
+        const ed = extraDeviceDetails[i];
+        const xAcc = ed?.accessories ?? ["ตัวเครื่อง"];
+        const xAccOther = ed?.accessoriesOther ?? "";
+        return {
+          label:           `เครื่องที่ ${i + 2}`,
+          model:           d.model,
+          storage:         d.storage,
+          color:           ei?.color ?? "",
+          condition:       "—",
+          imei:            ed?.imei   || ei?.imei   || "",
+          serial:          ed?.serial || ei?.serial || "",
+          accessories:     [...xAcc, ...(xAccOther.trim() ? [xAccOther.trim()] : [])],
+          price:           ei?.actualPrice ?? d.estimatedPrice,
+          criteria:        (ei?.criteria      ?? []) as NonNullable<typeof r.inspection>["criteria"],
+          issues:          (ei?.issues        ?? []) as string[],
+          functionalTests: (ei?.functionalTests ?? []) as NonNullable<typeof r.inspection>["functionalTests"],
+        };
+      }),
+    ];
+    const totalDevices = allDevices.length;
+
+    // ── CONTRACT PAGE BUILDER ──────────────────────────────────────────────────
+    function buildContractPage(dev: (typeof allDevices)[number], devIdx: number, isFirst: boolean): string {
+      const accStr     = esc(dev.accessories.join(", ") || "—");
+      const contractNo = `${esc(docNo)}${totalDevices > 1 ? `-${devIdx + 1}` : ""}`;
+      let p = `<div class="header">
+        <div class="logo-area">
+          <img src="${logoSrc}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0">
+          <div><div class="logo-name">ขายไอโฟน.com</div><div class="logo-sub">รับซื้อ-ขาย Apple มือสอง</div></div>
+        </div>
+        <div class="title-center">
+          <h1>สัญญาซื้อขายโทรศัพท์มือถือมือสอง</h1>
+          ${dev.label ? `<div style="color:#FFD700;font-size:12px;font-weight:700;margin-top:2px">${dev.label}</div>` : ""}
+          <div class="between">ระหว่าง <strong>ผู้ขาย</strong> และ <strong style="color:#FFD700">ขายไอโฟน.com</strong></div>
+        </div>
+        <div class="cno-box">
+          <div class="cno-label">เลขที่สัญญา (CONTRACT NO.)</div>
+          <div class="cno-value">${contractNo}</div>
+          <div class="cno-date">วันที่ ${dateStr}<br>เวลา ${timeStr} น.</div>
+        </div>
+      </div>
+      <div class="content">
+        <div class="top3">
+          <div class="icard">
+            <div class="icard-hd"><div class="hd-num">1</div> ผู้รับซื้อ</div>
+            <div class="icard-body">
+              <div style="font-weight:700;font-size:13px;color:#1a1a2e;margin-bottom:5px">ขายไอโฟน.com</div>
+              <div style="font-size:10px;color:#666;line-height:1.5;margin-bottom:8px">ประกอบธุรกิจรับซื้อ-ขายโทรศัพท์มือถือ<br>และอุปกรณ์อิเล็กทรอนิกส์มือสอง</div>
+              <div class="shop-row">📞 โทรศัพท์: 095-553-5167</div><div class="shop-row">💬 LINE: @khaiphone</div><div class="shop-row">🌐 เว็บไซต์: khaiphone.com</div>
+              <div style="margin-top:8px;padding:5px 8px;background:#f5f4f0;border-radius:5px;font-size:9.5px;color:#666;border-left:3px solid #c9a84c">ต่อไปในสัญญานี้เรียกว่า <strong>"ผู้รับซื้อ"</strong></div>
             </div>
-          </div>`
-        : `<div style="margin:12px 0;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 13px;font-size:10.5px;color:#92400e">⚠ หมายเหตุ: ยังไม่มีหลักฐานการโอนเงิน กรุณาแนบสลิปในภายหลัง</div>`
-      : `<div style="margin:12px 0;background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:12px">
-          <div style="width:40px;height:40px;background:#16a34a;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px">💵</div>
+          </div>
+          <div class="icard">
+            <div class="icard-hd"><div class="hd-num">2</div> ผู้ขาย</div>
+            <div class="icard-body">
+              <div class="f"><span class="fl">ชื่อ-นามสกุล</span><span class="fv">${esc(cName)}</span></div>
+              <div class="f"><span class="fl">เลขบัตรประชาชน</span><span class="fv" style="font-family:monospace">${esc(cId)}</span></div>
+              ${dobStr ? `<div class="f"><span class="fl">วันเดือนปีเกิด</span><span class="fv">${esc(dobStr)}</span></div>` : ""}
+              <div class="f"><span class="fl">ที่อยู่</span><span class="fv" style="white-space:pre-line;line-height:1.4">${esc(cAddr)}</span></div>
+              <div class="f"><span class="fl">เบอร์โทรศัพท์</span><span class="fv">${esc(cPhone)}</span></div>
+              <div class="f"><span class="fl">อีเมล</span><span class="fv">${esc(cEmail)}</span></div>
+              <div style="margin-top:8px;padding:5px 8px;background:#f5f4f0;border-radius:5px;font-size:9.5px;color:#666;border-left:3px solid #c9a84c">ต่อไปในสัญญานี้เรียกว่า <strong>"ผู้ขาย"</strong></div>
+            </div>
+          </div>
+          <div class="icard">
+            <div class="icard-hd"><div class="hd-num">3</div> ราคาซื้อขายและการชำระเงิน</div>
+            <div class="icard-body">
+              <div class="price-label">${dev.label ? `ราคา${dev.label}` : "ราคาซื้อขายรวมทั้งสิ้น"}</div>
+              <div class="price-big">${dev.price.toLocaleString("th-TH")}</div>
+              <div style="text-align:center;font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:4px">บาท</div>
+              <div style="text-align:center;font-size:10px;color:#666;margin-bottom:7px">${bahtWords(dev.price)}</div>
+              <div style="border-top:1px solid #eee;padding-top:7px;margin-top:4px">
+                <div style="font-size:9.5px;color:#aaa;margin-bottom:5px">วิธีการชำระเงิน</div>
+                <div class="pay-badge">✓ ${payTh}</div>
+                ${payM === "transfer" ? `
+                  <div style="font-size:9.5px;color:#aaa;margin:5px 0 3px">รายละเอียดบัญชีผู้ขาย</div>
+                  <div class="f"><span class="fl">ธนาคาร</span><span class="fv">${esc(r.payment.bankName ?? "—")}</span></div>
+                  <div class="f"><span class="fl">ชื่อบัญชี</span><span class="fv">${esc(r.payment.accountName ?? "—")}</span></div>
+                  <div class="f"><span class="fl">เลขที่บัญชี</span><span class="fv" style="font-family:monospace">${esc(r.payment.accountNumber ?? "—")}</span></div>
+                ` : ""}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="sec">📱 รายละเอียดทรัพย์สินที่ซื้อขาย${dev.label ? ` — ${dev.label}` : ""}</div>
+        <table class="dtable">
+          <tr><th>ประเภทอุปกรณ์</th><th>IMEI</th><th>ยี่ห้อ / รุ่น</th><th>Serial Number</th></tr>
+          <tr>
+            <td>โทรศัพท์มือถือ</td>
+            <td style="font-family:monospace">${esc(dev.imei || "—")}</td>
+            <td style="font-weight:600">${esc(dev.model)}</td>
+            <td style="font-family:monospace">${esc(dev.serial || "—")}</td>
+          </tr>
+          <tr><th>ความจุ</th><th>สภาพสินค้า</th><th>สี</th><th>อุปกรณ์ที่ให้มา</th></tr>
+          <tr>
+            <td>${esc(dev.storage)}</td>
+            <td>${esc(dev.condition)}</td>
+            <td>${esc(dev.color || "—")}</td>
+            <td>${accStr}</td>
+          </tr>
+          <tr><td colspan="3" style="font-weight:700;text-align:right;background:#f5f4f0">ราคา${dev.label || "ซื้อขาย"}</td><td style="font-weight:700;color:#c9a84c">฿${dev.price.toLocaleString("th-TH")}</td></tr>
+        </table>`;
+      if ((dev.criteria ?? []).length) {
+        p += `<div class="sec">🔍 ผลการตรวจสอบสภาพจริง</div>
+        <table class="dtable">
+          <tr><th>รายการตรวจสอบ</th><th>สภาพที่แจ้ง</th><th>ผลตรวจจริง</th><th>ผ่าน</th></tr>
+          ${(dev.criteria ?? []).map(cr => `<tr><td>${esc(cr.label)}</td><td>${esc(cr.stated)}</td><td style="${!cr.pass ? "color:#DC2626;font-weight:600" : ""}">${esc(cr.actual)}</td><td style="text-align:center;font-size:13px">${cr.pass ? "✓" : "⚠"}</td></tr>`).join("")}
+        </table>`;
+        if ((dev.issues ?? []).length) p += `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:5px;padding:7px 10px;font-size:10px;color:#991b1b;margin-bottom:10px">⚠ ปัญหาที่พบ: ${(dev.issues ?? []).map(esc).join(", ")}</div>`;
+        if ((dev.functionalTests ?? []).length) {
+          const allPass = (dev.functionalTests ?? []).every(t => t.pass);
+          p += `<div class="sec">📲 ผลทดสอบการใช้งานภายใน</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:10px">
+            ${(dev.functionalTests ?? []).map(t => `<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:5px;border:1px solid ${t.pass ? "#bbf7d0" : "#fecaca"};background:${t.pass ? "#f0fff4" : "#fef2f2"};font-size:10px;color:${t.pass ? "#065f46" : "#991b1b"}"><span>${t.pass ? "✓" : "⚠"}</span><span>${esc(t.label)}</span></div>`).join("")}
+          </div>
+          ${!allPass ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:5px;padding:6px 10px;font-size:10px;color:#991b1b;margin-bottom:10px">⚠ มีฟังก์ชันที่ไม่ผ่าน: ${(dev.functionalTests ?? []).filter(t=>!t.pass).map(t=>esc(t.label)).join(", ")}</div>` : ""}`;
+        }
+      }
+      p += `<div class="two-col">
+        <div>
+          <div class="sec">✅ ข้อตกลงและคำรับรองของผู้ขาย</div>
+          <ol class="terms-ol">
+            <li>ผู้ขายเป็นเจ้าของทรัพย์สินดังกล่าวโดยชอบด้วยกฎหมาย และมีสิทธิ์สมบูรณ์ในการขาย โอน และส่งมอบทรัพย์สินดังกล่าว</li>
+            <li>ทรัพย์สินดังกล่าวไม่ได้มาจากการกระทำผิดกฎหมาย ลักทรัพย์ ฉ้อโกง ยักยอก หรือการกระทำผิดใดๆ</li>
+            <li>ทรัพย์สินดังกล่าวไม่มีการผูกพัน สิทธิร้องกลับ หรือข้อพิพาทพาทางกฎหมายใดๆ</li>
+            <li>ผู้ขายได้ลบข้อมูลส่วนตัวทั้งหมดออกจากอุปกรณ์แล้ว และยินยอมให้ผู้รับซื้อดำเนินการรีเซ็ต ล้างข้อมูล ตรวจสอบอุปกรณ์ได้</li>
+            <li>ผู้ขายรับรองว่าอุปกรณ์ไม่ได้ถูกล็อค iCloud, Find My iPhone, MDM หรือระบบรักษาความปลอดภัยใดๆ ที่จะทำให้ผู้รับซื้อไม่สามารถใช้งานได้โดยสมบูรณ์</li>
+            <li>หากตรวจพบภายหลังว่าข้อมูลที่ให้ไว้เป็นเท็จ หรืออุปกรณ์มีปัญหาทางกฎหมาย ผู้ขายยืนยอมรับผิดชอบค่าเสียหายทั้งหมดที่เกิดขึ้น</li>
+            <li>กรรมสิทธิ์ในทรัพย์สินจะโอนให้ผู้รับซื้อทันทีเมื่อผู้ขายได้รับชำระเงินครบถ้วน</li>
+          </ol>
+        </div>
+        <div>
+          <div class="sec">🔍 การตรวจสอบสภาพสินค้า</div>
+          <div style="font-size:10px;color:#666;margin-bottom:6px;line-height:1.5">ผู้ขายยินยอมให้ผู้รับซื้อดำเนินการตรวจสอบ</div>
+          <ul class="check-list"><li>หมายเลข IMEI</li><li>Serial Number</li><li>สถานะเครื่อง</li><li>ระบบล็อคต่างๆ</li><li>ประวัติซ่อม</li><li>สภาพภายนอกและภายใน</li><li>การทำงานของอุปกรณ์</li></ul>
+          <div class="rejected-box">หากตรวจพบความผิดปกติ ผู้รับซื้อมีสิทธิ์<br>• ปรับราคาซื้อขาย<br>• ยกเลิกธุรกรรม<br>• ระงับการชำระเงิน<br>ได้ตามความเหมาะสม</div>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="pdpa-box">
+          <div class="pdpa-title">🔒 การคุ้มครองข้อมูลส่วนบุคคล (PDPA)</div>
+          <div style="color:#78350f;font-size:10px;margin-bottom:5px">ผู้ขายยินยอมให้ผู้รับซื้อ เก็บ ใช้ และประมวลผลข้อมูลส่วนบุคคล เพื่อวัตถุประสงค์ดังต่อไปนี้</div>
+          <ul class="pdpa-list"><li>ใช้ในการทำธุรกรรมซื้อขาย</li><li>ตรวจสอบและยืนยันตัวตน</li><li>ป้องกันการทุจริต</li><li>จัดเก็บเป็นหลักฐานทางธุรกิจและกฎหมาย</li><li>ใช้ในการติดต่อสอบถามหลังเสร็จสิ้นเกี่ยวกับธุรกรรม</li></ul>
+          <div style="margin-top:6px;font-size:10px;color:#92400e">ผู้รับซื้อจะดำเนินการตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562</div>
+        </div>
+        <div>
+          <div class="sec">📋 ข้อกำหนดเพิ่มเติม</div>
+          <ol class="terms-ol">
+            <li>สัญญานี้อยู่ภายใต้กฎหมายไทย</li>
+            <li>หากข้อความใดในสัญญานี้ไม่มีผลในโมงหรือใช้บังคับไม่ได้ ให้ถือว่าส่วนอื่นยังคงมีผลบังคับ</li>
+            <li>คู่สัญญาทั้งสองฝ่ายได้อ่านและเข้าใจข้อความทั้งหมดโดยละเอียดแล้ว และยืนยอมผูกพันตามสัญญานี้ทุกประการ</li>
+          </ol>
+        </div>
+      </div>`;
+      if (isFirst && idPhotoDataUrl) {
+        p += `<div class="id-photo-wrap"><div class="id-photo-hd">📷 เอกสารยืนยันตัวตนผู้ขาย — สำเนาบัตรประชาชน (มี Watermark)</div><img src="${idPhotoDataUrl}" alt="บัตรประชาชน"></div>`;
+      }
+      p += `<div class="sig2">
+        <div class="sb"><div class="sa">${sigBuyerImg.current ? `<img src="${sigBuyerImg.current}" style="max-height:54px;max-width:100%;object-fit:contain">` : ""}</div><div class="sl"><strong>ลายมือชื่อผู้ขาย</strong><br>( ${esc(cName)} )<br>วันที่ ${dateShort}</div></div>
+        <div class="sb"><div class="sa">${sigSellerImg.current ? `<img src="${sigSellerImg.current}" style="max-height:54px;max-width:100%;object-fit:contain">` : ""}</div><div class="sl"><strong>ลายมือชื่อผู้รับซื้อ</strong><br>( ขายไอโฟน.com )<br>วันที่ ${dateShort}</div></div>
+      </div></div>
+      <div class="footer">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#FFD700;margin-bottom:4px">🛡️ การยืนยันเอกสารดิจิทัล</div>
+          <div style="font-size:9px;color:rgba(255,255,255,.5);margin-bottom:5px;max-width:380px">เอกสารบันทึกขึ้นในรูปแบบดิจิทัลและสามารถตรวจสอบความถูกต้องได้ผ่านระบบ ขายไอโฟน.com</div>
+          <div class="fv-row"><span class="fv-lbl">Document ID :</span><span class="fv-val">${contractNo}</span></div>
+          <div class="fv-row"><span class="fv-lbl">ตรวจสอบเอกสารได้ที่ :</span><span class="fv-val">khaiphone.com/verify</span></div>
+        </div>
+        <div class="footer-logo" style="text-align:right">
+          <div class="footer-brand">ขายไอโฟน.com</div>
+          <div class="footer-info">รับซื้อ-ขาย Apple มือสอง<br>📞 095-553-5167 &nbsp;💬 LINE: @khaiphone<br>🌐 khaiphone.com</div>
+        </div>
+      </div>`;
+      return p;
+    }
+
+    // ── RECEIPT PAGE BUILDER ───────────────────────────────────────────────────
+    function buildReceiptPage(dev: (typeof allDevices)[number], devIdx: number, isFirst: boolean): string {
+      const accStr    = esc(dev.accessories.join(", ") || "—");
+      const receiptNo = `${esc(docNo)}-R${totalDevices > 1 ? `-${devIdx + 1}` : ""}`;
+      let p = `<div class="header">
+        <div class="logo-area">
+          <img src="${logoSrc}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0">
+          <div><div class="logo-name">ขายไอโฟน.com</div><div class="logo-sub">รับซื้อ-ขาย Apple มือสอง</div></div>
+        </div>
+        <div class="title-center">
+          <h1>ใบสำคัญรับเงิน</h1>
+          ${totalDevices > 1 ? `<div style="color:#FFD700;font-size:12px;font-weight:700;margin-top:2px">${dev.label}</div>` : ""}
+          <div class="between">PAYMENT RECEIPT</div>
+        </div>
+        <div class="cno-box">
+          <div class="cno-label">เลขที่ใบรับเงิน (RECEIPT NO.)</div>
+          <div class="cno-value">${receiptNo}</div>
+          <div class="cno-date">วันที่ ${dateStr}<br>เวลา ${timeStr} น.</div>
+        </div>
+      </div>
+      <div style="background:#2a2a4e;padding:6px 20px;display:flex;align-items:center;justify-content:center;gap:20px;font-size:9.5px;color:rgba(255,255,255,.6)">
+        <span>📞 095-553-5167</span><span>💬 LINE: @khaiphone</span><span>🌐 khaiphone.com</span>
+      </div>
+      <div class="content">
+        <div class="two-col" style="margin-bottom:12px">
+          <div class="icard">
+            <div class="icard-hd"><div class="hd-num">1</div> ผู้รับเงิน (ผู้ขาย)</div>
+            <div class="icard-body">
+              <div class="f"><span class="fl">ชื่อ-นามสกุล</span><span class="fv" style="font-size:13px;font-weight:700;color:#1a1a2e">${esc(cName)}</span></div>
+              <div class="f"><span class="fl">เลขบัตรประชาชน</span><span class="fv" style="font-family:monospace">${esc(cId)}</span></div>
+              ${dobStr ? `<div class="f"><span class="fl">วันเดือนปีเกิด</span><span class="fv">${esc(dobStr)}</span></div>` : ""}
+              <div class="f"><span class="fl">เบอร์โทรศัพท์</span><span class="fv">${esc(cPhone)}</span></div>
+              <div class="f"><span class="fl">อีเมล</span><span class="fv">${esc(cEmail)}</span></div>
+            </div>
+          </div>
+          <div class="icard">
+            <div class="icard-hd"><div class="hd-num">2</div> ผู้จ่ายเงิน (ผู้รับซื้อ)</div>
+            <div class="icard-body">
+              <div style="font-weight:700;font-size:13px;color:#1a1a2e;margin-bottom:5px">ขายไอโฟน.com</div>
+              <div style="font-size:10px;color:#666;line-height:1.5;margin-bottom:8px">ประกอบธุรกิจรับซื้อ-ขายโทรศัพท์มือถือ<br>และอุปกรณ์อิเล็กทรอนิกส์มือสอง</div>
+              <div class="shop-row">📞 โทรศัพท์: 095-553-5167</div><div class="shop-row">💬 LINE: @khaiphone</div><div class="shop-row">🌐 เว็บไซต์: khaiphone.com</div>
+            </div>
+          </div>
+        </div>
+        <div class="two-col" style="margin-bottom:12px">
           <div>
-            <div style="font-size:11px;font-weight:700;color:#15803d;margin-bottom:2px">ชำระเงินสดเรียบร้อยแล้ว</div>
-            <div style="font-size:10px;color:#166534">มอบเงินสดจำนวน <strong>${price.toLocaleString("th-TH")} บาท</strong> ให้แก่ผู้ขายโดยตรง ณ วันที่ ${dateStr}</div>
+            <div class="sec">📱 รายละเอียดสินค้า${dev.label ? ` — ${dev.label}` : ""}</div>
+            <table class="dtable">
+              <tr><th>รายการ</th><th>รายละเอียด</th></tr>
+              <tr><td>รุ่น / Model</td><td style="font-weight:600">${esc(dev.model)}</td></tr>
+              <tr><td>ความจุ / Storage</td><td>${esc(dev.storage)}</td></tr>
+              <tr><td>สี / Color</td><td>${esc(dev.color || "—")}</td></tr>
+              <tr><td>IMEI</td><td style="font-family:monospace;font-size:10px">${esc(dev.imei || "—")}</td></tr>
+              <tr><td>Serial Number</td><td style="font-family:monospace;font-size:10px">${esc(dev.serial || "—")}</td></tr>
+              <tr><td>สภาพ / Condition</td><td>${esc(dev.condition)}</td></tr>
+              <tr><td>อุปกรณ์ที่ให้มา</td><td>${accStr}</td></tr>
+              <tr><td>วันที่ทำรายการ</td><td>${dateStr}</td></tr>
+            </table>
+          </div>
+          <div>
+            <div class="sec">💰 รายละเอียดการชำระเงิน</div>
+            <div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">
+              <div style="background:#1a1a2e;padding:10px 14px;text-align:center">
+                <div style="font-size:9px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">${dev.label ? `จำนวนเงิน${dev.label}` : "จำนวนเงินทั้งสิ้น"}</div>
+                <div style="font-size:30px;font-weight:800;color:#FFD700;font-family:monospace;line-height:1">${dev.price.toLocaleString("th-TH")}</div>
+                <div style="font-size:13px;font-weight:700;color:rgba(255,255,255,.8)">บาท</div>
+                <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:3px">${bahtWords(dev.price)}</div>
+              </div>
+              <div style="padding:10px 12px;font-size:10.5px;line-height:1.8">
+                <div style="display:flex;justify-content:space-between;border-bottom:1px solid #f0f0f0;padding-bottom:4px;margin-bottom:4px"><span style="color:#aaa">วิธีชำระเงิน</span><span style="font-weight:600">${payTh}</span></div>
+                ${payM === "transfer" ? `
+                  <div style="display:flex;justify-content:space-between;border-bottom:1px solid #f0f0f0;padding-bottom:4px;margin-bottom:4px"><span style="color:#aaa">ธนาคาร</span><span style="font-weight:600">${esc(r.payment.bankName ?? "—")}</span></div>
+                  <div style="display:flex;justify-content:space-between;border-bottom:1px solid #f0f0f0;padding-bottom:4px;margin-bottom:4px"><span style="color:#aaa">ชื่อบัญชี</span><span style="font-weight:600">${esc(r.payment.accountName ?? "—")}</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#aaa">เลขบัญชี</span><span style="font-weight:600;font-family:monospace">${esc(r.payment.accountNumber ?? "—")}</span></div>` : ""}
+              </div>
+            </div>
+            <div style="margin-top:8px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.25);border-radius:6px;padding:8px 10px;font-size:10px;color:#7a6020;text-align:center">
+              อ้างอิงสัญญาเลขที่ <strong style="font-family:monospace">${esc(docNo)}${totalDevices > 1 ? `-${devIdx + 1}` : ""}</strong>
+            </div>
+          </div>
+        </div>
+        <div class="two-col" style="margin-bottom:12px">
+          <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:12px 14px">
+            <div style="font-size:10.5px;font-weight:700;color:#15803d;margin-bottom:6px">✅ ข้าพเจ้าขอรับรองว่า</div>
+            <div style="font-size:10.5px;color:#166534;line-height:1.7">ข้าพเจ้า <strong>${esc(cName)}</strong> ได้รับเงินจำนวน <strong>${dev.price.toLocaleString("th-TH")} บาทถ้วน</strong> จาก <strong>${esc(staffName || "ขายไอโฟน.com")}</strong> เป็นค่าขาย${dev.label ? dev.label + " " : ""}โทรศัพท์มือถือ <strong>${esc(dev.model)} ${esc(dev.storage)}</strong> ตามสัญญาเลขที่ <strong>${receiptNo}</strong> เรียบร้อยแล้ว โดยสมัครใจ</div>
+          </div>
+          <div style="background:#fffbeb;border:1.5px solid #fcd34d;border-radius:8px;padding:12px 14px">
+            <div style="font-size:10.5px;font-weight:700;color:#92400e;margin-bottom:6px">📝 หมายเหตุ</div>
+            <div style="font-size:10.5px;color:#78350f;line-height:1.7">ทำ ณ วันที่ <strong>${dateStr}</strong> เวลา <strong>${timeStr} น.</strong><br>ผู้ดำเนินการ: <strong>${esc(staffName || "—")}</strong><br>ใบรับเงินนี้เป็นหลักฐานการได้รับเงินครบถ้วนสมบูรณ์</div>
           </div>
         </div>`;
-
-    let rh = `<div class="header">
-      <div class="logo-area">
-        <img src="${logoSrc}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0">
-        <div>
-          <div class="logo-name">ขายไอโฟน.com</div>
-          <div class="logo-sub">รับซื้อ-ขาย Apple มือสอง</div>
+      if (isFirst) {
+        if (payM === "transfer") {
+          p += slipImgSrc
+            ? `<div style="margin:12px 0;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden"><div style="background:#f5f4f0;padding:7px 11px;border-bottom:1px solid #e5e7eb;font-size:10.5px;font-weight:700;color:#333">📎 หลักฐานการโอนเงิน (สลิป)</div><div style="padding:12px;text-align:center;background:#fafafa"><img src="${slipImgSrc}" style="max-width:280px;max-height:380px;border-radius:6px;border:1px solid #e5e7eb;box-shadow:0 2px 8px rgba(0,0,0,0.08)"></div></div>`
+            : `<div style="margin:12px 0;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 13px;font-size:10.5px;color:#92400e">⚠ ยังไม่มีหลักฐานการโอนเงิน</div>`;
+        } else {
+          p += `<div style="margin:12px 0;background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;background:#16a34a;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px">💵</div><div><div style="font-size:11px;font-weight:700;color:#15803d;margin-bottom:2px">ชำระเงินสดเรียบร้อยแล้ว</div><div style="font-size:10px;color:#166534">มอบเงินสดจำนวน <strong>${dev.price.toLocaleString("th-TH")} บาท</strong> ให้แก่ผู้ขายโดยตรง ณ วันที่ ${dateStr}</div></div></div>`;
+        }
+      }
+      p += `<div class="sig2">
+          <div class="sb"><div class="sa">${sigBuyerImg.current ? `<img src="${sigBuyerImg.current}" style="max-height:54px;max-width:100%;object-fit:contain">` : ""}</div><div class="sl"><strong>ลายมือชื่อผู้รับเงิน (ผู้ขาย)</strong><br>( ${esc(cName)} )<br>วันที่ ${dateShort}</div></div>
+          <div class="sb"><div class="sa">${sigSellerImg.current ? `<img src="${sigSellerImg.current}" style="max-height:54px;max-width:100%;object-fit:contain">` : ""}</div><div class="sl"><strong>ลายมือชื่อผู้จ่ายเงิน (ผู้รับซื้อ)</strong><br>( ขายไอโฟน.com )<br>วันที่ ${dateShort}</div></div>
         </div>
-      </div>
-      <div class="title-center">
-        <h1>ใบสำคัญรับเงิน</h1>
-        <div class="between">PAYMENT RECEIPT</div>
-      </div>
-      <div class="cno-box">
-        <div class="cno-label">เลขที่ใบรับเงิน (RECEIPT NO.)</div>
-        <div class="cno-value">${esc(docNo)}-R</div>
-        <div class="cno-date">วันที่ ${dateStr}<br>เวลา ${timeStr} น.</div>
-      </div>
-    </div>
-    <div style="background:#2a2a4e;padding:6px 20px;display:flex;align-items:center;justify-content:center;gap:20px;font-size:9.5px;color:rgba(255,255,255,.6)">
-      <span>📞 095-553-5167</span><span>💬 LINE: @khaiphone</span><span>🌐 khaiphone.com</span>
-    </div>
-    <div class="content">
-      <div class="two-col" style="margin-bottom:12px">
-        <div class="icard">
-          <div class="icard-hd"><div class="hd-num">1</div> ผู้รับเงิน (ผู้ขาย)</div>
-          <div class="icard-body">
-            <div class="f"><span class="fl">ชื่อ-นามสกุล</span><span class="fv" style="font-size:13px;font-weight:700;color:#1a1a2e">${esc(cName)}</span></div>
-            <div class="f"><span class="fl">เลขบัตรประชาชน</span><span class="fv" style="font-family:monospace">${esc(cId)}</span></div>
-            ${dobStr ? `<div class="f"><span class="fl">วันเดือนปีเกิด</span><span class="fv">${esc(dobStr)}</span></div>` : ""}
-            <div class="f"><span class="fl">เบอร์โทรศัพท์</span><span class="fv">${esc(cPhone)}</span></div>
-            <div class="f"><span class="fl">อีเมล</span><span class="fv">${esc(cEmail)}</span></div>
-          </div>
-        </div>
-        <div class="icard">
-          <div class="icard-hd"><div class="hd-num">2</div> ผู้จ่ายเงิน (ผู้รับซื้อ)</div>
-          <div class="icard-body">
-            <div style="font-weight:700;font-size:13px;color:#1a1a2e;margin-bottom:5px">ขายไอโฟน.com</div>
-            <div style="font-size:10px;color:#666;line-height:1.5;margin-bottom:8px">ประกอบธุรกิจรับซื้อ-ขายโทรศัพท์มือถือ<br>และอุปกรณ์อิเล็กทรอนิกส์มือสอง</div>
-            <div class="shop-row">📞 โทรศัพท์: 095-553-5167</div>
-            <div class="shop-row">💬 LINE: @khaiphone</div>
-            <div class="shop-row">🌐 เว็บไซต์: khaiphone.com</div>
-          </div>
-        </div>
-      </div>
-      <div class="two-col" style="margin-bottom:12px">
-        <div>
-          <div class="sec">📱 รายละเอียดสินค้า</div>
-          <table class="dtable">
-            <tr><th>รายการ</th><th>รายละเอียด</th></tr>
-            <tr><td>รุ่น / Model ${(r.extraDevices ?? []).length > 0 ? "(เครื่องที่ 1)" : ""}</td><td style="font-weight:600">${esc(r.device.model)}</td></tr>
-            <tr><td>ความจุ / Storage</td><td>${esc(r.device.storage)}</td></tr>
-            <tr><td>สี / Color</td><td>${esc(r.device.color ?? "—")}</td></tr>
-            <tr><td>IMEI</td><td style="font-family:monospace;font-size:10px">${esc(imei || "—")}</td></tr>
-            <tr><td>Serial Number</td><td style="font-family:monospace;font-size:10px">${esc(serial || "—")}</td></tr>
-            <tr><td>สภาพ / Condition</td><td>${esc(r.device.condition)}</td></tr>
-            <tr><td>อุปกรณ์ที่ให้มา</td><td>${accStr}</td></tr>
-            ${(r.extraDevices ?? []).map((d, i) => {
-              const ei = extraInspArr[i];
-              const ed = extraDeviceDetails[i];
-              const xImei   = ed?.imei   || ei?.imei   || "—";
-              const xSerial = ed?.serial || ei?.serial || "—";
-              return `<tr><td colspan="2" style="background:#2a2a4e;color:#FFD700;font-weight:700;font-size:11px;letter-spacing:.5px">เครื่องที่ ${i + 2}: ${esc(d.model)} ${esc(d.storage)}</td></tr>
-              <tr><td>IMEI</td><td style="font-family:monospace;font-size:10px">${esc(xImei)}</td></tr>
-              <tr><td>Serial Number</td><td style="font-family:monospace;font-size:10px">${esc(xSerial)}</td></tr>
-              <tr><td>สี / Color</td><td>${esc(ei?.color || "—")}</td></tr>
-              <tr><td>ราคา</td><td style="font-weight:600;color:#c9a84c">฿${(ei?.actualPrice ?? d.estimatedPrice).toLocaleString("th-TH")}</td></tr>`;
-            }).join("")}
-            <tr><td>วันที่ทำรายการ</td><td>${dateStr}</td></tr>
-          </table>
-        </div>
-        <div>
-          <div class="sec">💰 รายละเอียดการชำระเงิน</div>
-          <div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">
-            <div style="background:#1a1a2e;padding:10px 14px;text-align:center">
-              <div style="font-size:9px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">จำนวนเงินทั้งสิ้น</div>
-              <div style="font-size:30px;font-weight:800;color:#FFD700;font-family:monospace;line-height:1">${price.toLocaleString("th-TH")}</div>
-              <div style="font-size:13px;font-weight:700;color:rgba(255,255,255,.8)">บาท</div>
-              <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:3px">${bahtWords(price)}</div>
+        <div style="margin-top:14px;border-top:1px solid #e5e7eb;padding-top:12px">
+          <div style="display:grid;grid-template-columns:1fr auto;gap:14px;align-items:start">
+            <div>
+              <div style="font-size:10px;font-weight:700;color:#1a1a2e;margin-bottom:5px">🛡️ การยืนยันเอกสารดิจิทัล</div>
+              <div style="margin-bottom:2px"><span style="font-size:9.5px;color:#aaa">Document ID :</span>&nbsp;<span style="font-size:9.5px;font-family:monospace;color:#1a1a2e;font-weight:600">${receiptNo}</span></div>
+              <div style="margin-bottom:2px"><span style="font-size:9.5px;color:#aaa">Verification Code :</span>&nbsp;<span style="font-size:9.5px;font-family:monospace;color:#c9a84c;font-weight:600">${receiptNo}-${dateShort.replace(/ \/ /g, "")}</span></div>
+              <div><span style="font-size:9.5px;color:#aaa">ตรวจสอบที่ :</span>&nbsp;<span style="font-size:9.5px;color:#1a1a2e">khaiphone.com/verify</span></div>
             </div>
-            <div style="padding:10px 12px;font-size:10.5px;line-height:1.8">
-              <div style="display:flex;justify-content:space-between;border-bottom:1px solid #f0f0f0;padding-bottom:4px;margin-bottom:4px">
-                <span style="color:#aaa">วิธีชำระเงิน</span><span style="font-weight:600">${payTh}</span>
-              </div>
-              ${payM === "transfer" ? `
-                <div style="display:flex;justify-content:space-between;border-bottom:1px solid #f0f0f0;padding-bottom:4px;margin-bottom:4px">
-                  <span style="color:#aaa">ธนาคาร</span><span style="font-weight:600">${esc(r.payment.bankName ?? "—")}</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;border-bottom:1px solid #f0f0f0;padding-bottom:4px;margin-bottom:4px">
-                  <span style="color:#aaa">ชื่อบัญชี</span><span style="font-weight:600">${esc(r.payment.accountName ?? "—")}</span>
-                </div>
-                <div style="display:flex;justify-content:space-between">
-                  <span style="color:#aaa">เลขบัญชี</span><span style="font-weight:600;font-family:monospace">${esc(r.payment.accountNumber ?? "—")}</span>
-                </div>` : ""}
-            </div>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=64x64&data=khaiphone.com%2Fverify%3Fid%3D${receiptNo}" style="width:64px;height:64px;border-radius:5px;border:1px solid #e5e7eb" onerror="this.style.display='none'">
           </div>
-          <div style="margin-top:8px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.25);border-radius:6px;padding:8px 10px;font-size:10px;color:#7a6020;text-align:center">
-            อ้างอิงสัญญาเลขที่ <strong style="font-family:monospace">${esc(docNo)}</strong>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px">
+            <div style="border:1px solid #e5e7eb;border-radius:6px;padding:8px;text-align:center"><div style="font-size:15px;margin-bottom:2px">🔒</div><div style="font-size:9.5px;font-weight:700;color:#1a1a2e">เอกสารปลอดภัย</div><div style="font-size:8.5px;color:#aaa">มีลายเซ็นดิจิทัล</div></div>
+            <div style="border:1px solid #e5e7eb;border-radius:6px;padding:8px;text-align:center"><div style="font-size:15px;margin-bottom:2px">✅</div><div style="font-size:9.5px;font-weight:700;color:#1a1a2e">ชำระครบถ้วน</div><div style="font-size:8.5px;color:#aaa">ยืนยันการรับเงิน</div></div>
+            <div style="border:1px solid #e5e7eb;border-radius:6px;padding:8px;text-align:center"><div style="font-size:15px;margin-bottom:2px">📋</div><div style="font-size:9.5px;font-weight:700;color:#1a1a2e">มีผลทางกฎหมาย</div><div style="font-size:8.5px;color:#aaa">ตามกฎหมายไทย</div></div>
           </div>
         </div>
       </div>
-      <div class="two-col" style="margin-bottom:12px">
-        <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:12px 14px">
-          <div style="font-size:10.5px;font-weight:700;color:#15803d;margin-bottom:6px">✅ ข้าพเจ้าขอรับรองว่า</div>
-          <div style="font-size:10.5px;color:#166534;line-height:1.7">ข้าพเจ้า <strong>${esc(cName)}</strong> ได้รับเงินจำนวน <strong>${price.toLocaleString("th-TH")} บาทถ้วน</strong> จาก <strong>${esc(staffName || "ขายไอโฟน.com")}</strong> เป็นค่าขายโทรศัพท์มือถือ <strong>${esc(deviceFull)}</strong> ตามสัญญาเลขที่ <strong>${esc(docNo)}</strong> เรียบร้อยแล้ว โดยสมัครใจ</div>
+      <div class="footer">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#FFD700;margin-bottom:4px">🛡️ การยืนยันเอกสารดิจิทัล</div>
+          <div style="font-size:9px;color:rgba(255,255,255,.5);margin-bottom:5px;max-width:380px">เอกสารบันทึกขึ้นในรูปแบบดิจิทัลและสามารถตรวจสอบความถูกต้องได้ผ่านระบบ ขายไอโฟน.com</div>
+          <div class="fv-row"><span class="fv-lbl">Document ID :</span><span class="fv-val">${receiptNo}</span></div>
+          <div class="fv-row"><span class="fv-lbl">ตรวจสอบเอกสารได้ที่ :</span><span class="fv-val">khaiphone.com/verify</span></div>
         </div>
-        <div style="background:#fffbeb;border:1.5px solid #fcd34d;border-radius:8px;padding:12px 14px">
-          <div style="font-size:10.5px;font-weight:700;color:#92400e;margin-bottom:6px">📝 หมายเหตุ</div>
-          <div style="font-size:10.5px;color:#78350f;line-height:1.7">ทำ ณ วันที่ <strong>${dateStr}</strong> เวลา <strong>${timeStr} น.</strong><br>ผู้ดำเนินการ: <strong>${esc(staffName || "—")}</strong><br>ใบรับเงินนี้เป็นหลักฐานการได้รับเงินครบถ้วนสมบูรณ์</div>
+        <div class="footer-logo" style="text-align:right">
+          <div class="footer-brand">ขายไอโฟน.com</div>
+          <div class="footer-info">รับซื้อ-ขาย Apple มือสอง<br>📞 095-553-5167 &nbsp;💬 LINE: @khaiphone<br>🌐 khaiphone.com</div>
         </div>
-      </div>
-      ${paymentProofSection}
-      <div class="sig2">
-        <div class="sb">
-          <div class="sa">${sigBuyerImg.current ? `<img src="${sigBuyerImg.current}" style="max-height:54px;max-width:100%;object-fit:contain">` : ""}</div>
-          <div class="sl"><strong>ลายมือชื่อผู้รับเงิน (ผู้ขาย)</strong><br>( ${esc(cName)} )<br>วันที่ ${dateShort}</div>
-        </div>
-        <div class="sb">
-          <div class="sa">${sigSellerImg.current ? `<img src="${sigSellerImg.current}" style="max-height:54px;max-width:100%;object-fit:contain">` : ""}</div>
-          <div class="sl"><strong>ลายมือชื่อผู้จ่ายเงิน (ผู้รับซื้อ)</strong><br>( ขายไอโฟน.com )<br>วันที่ ${dateShort}</div>
-        </div>
-      </div>
-      <div style="margin-top:14px;border-top:1px solid #e5e7eb;padding-top:12px">
-        <div style="display:grid;grid-template-columns:1fr auto;gap:14px;align-items:start">
-          <div>
-            <div style="font-size:10px;font-weight:700;color:#1a1a2e;margin-bottom:5px">🛡️ การยืนยันเอกสารดิจิทัล</div>
-            <div style="margin-bottom:2px"><span style="font-size:9.5px;color:#aaa">Document ID :</span>&nbsp;<span style="font-size:9.5px;font-family:monospace;color:#1a1a2e;font-weight:600">${esc(docNo)}-R</span></div>
-            <div style="margin-bottom:2px"><span style="font-size:9.5px;color:#aaa">Verification Code :</span>&nbsp;<span style="font-size:9.5px;font-family:monospace;color:#c9a84c;font-weight:600">${esc(docNo)}-R-${dateShort.replace(/ \/ /g, "")}</span></div>
-            <div><span style="font-size:9.5px;color:#aaa">ตรวจสอบที่ :</span>&nbsp;<span style="font-size:9.5px;color:#1a1a2e">khaiphone.com/verify</span></div>
-          </div>
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=64x64&data=khaiphone.com%2Fverify%3Fid%3D${esc(docNo)}-R" style="width:64px;height:64px;border-radius:5px;border:1px solid #e5e7eb" onerror="this.style.display='none'">
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px">
-          <div style="border:1px solid #e5e7eb;border-radius:6px;padding:8px;text-align:center">
-            <div style="font-size:15px;margin-bottom:2px">🔒</div>
-            <div style="font-size:9.5px;font-weight:700;color:#1a1a2e">เอกสารปลอดภัย</div>
-            <div style="font-size:8.5px;color:#aaa">มีลายเซ็นดิจิทัล</div>
-          </div>
-          <div style="border:1px solid #e5e7eb;border-radius:6px;padding:8px;text-align:center">
-            <div style="font-size:15px;margin-bottom:2px">✅</div>
-            <div style="font-size:9.5px;font-weight:700;color:#1a1a2e">ชำระครบถ้วน</div>
-            <div style="font-size:8.5px;color:#aaa">ยืนยันการรับเงิน</div>
-          </div>
-          <div style="border:1px solid #e5e7eb;border-radius:6px;padding:8px;text-align:center">
-            <div style="font-size:15px;margin-bottom:2px">📋</div>
-            <div style="font-size:9.5px;font-weight:700;color:#1a1a2e">มีผลทางกฎหมาย</div>
-            <div style="font-size:8.5px;color:#aaa">ตามกฎหมายไทย</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="footer">
-      <div>
-        <div style="font-size:11px;font-weight:700;color:#FFD700;margin-bottom:4px">🛡️ การยืนยันเอกสารดิจิทัล</div>
-        <div style="font-size:9px;color:rgba(255,255,255,.5);margin-bottom:5px;max-width:380px">เอกสารบันทึกขึ้นในรูปแบบดิจิทัลและสามารถตรวจสอบความถูกต้องได้ผ่านระบบ ขายไอโฟน.com</div>
-        <div class="fv-row"><span class="fv-lbl">Document ID :</span><span class="fv-val">${esc(docNo)}-R</span></div>
-        <div class="fv-row"><span class="fv-lbl">ตรวจสอบเอกสารได้ที่ :</span><span class="fv-val">khaiphone.com/verify</span></div>
-      </div>
-      <div class="footer-logo" style="text-align:right">
-        <div class="footer-brand">ขายไอโฟน.com</div>
-        <div class="footer-info">รับซื้อ-ขาย Apple มือสอง<br>📞 095-553-5167 &nbsp;💬 LINE: @khaiphone<br>🌐 khaiphone.com</div>
-      </div>
-    </div>`;
+      </div>`;
+      return p;
+    }
 
-    receiptHTML.current = rh;
+    // ── ASSEMBLE ───────────────────────────────────────────────────────────────
+    contractHTML.current = allDevices
+      .map((dev, i) => buildContractPage(dev, i, i === 0))
+      .map((page, i) => i === 0 ? page : `<div style="page-break-before:always">${page}</div>`)
+      .join("");
+
+    receiptHTML.current = allDevices
+      .map((dev, i) => buildReceiptPage(dev, i, i === 0))
+      .map((page, i) => i === 0 ? page : `<div style="page-break-before:always">${page}</div>`)
+      .join("");
+
     setGenerated(true);
     uploadDocs(contractHTML.current, receiptHTML.current, docNo);
   }
@@ -980,6 +892,61 @@ export default function ContractPage() {
                     />
                   </div>
                 </div>
+                <div style={{ marginTop: 10 }}>
+                  <label style={labelStyle}>อุปกรณ์ที่ให้มา</label>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+                    {["ตัวเครื่อง", "กล่อง", "สายชาร์จ", "หัวชาร์จ", "เคส", "ฟิล์ม/กระจก", "EarPods", "ที่จิ้ม SIM"].map(item => {
+                      const checked = (extraDeviceDetails[idx]?.accessories ?? []).includes(item);
+                      return (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => setExtraDeviceDetails(prev => prev.map((p, i) =>
+                            i === idx
+                              ? { ...p, accessories: checked ? p.accessories.filter(x => x !== item) : [...p.accessories, item] }
+                              : p
+                          ))}
+                          style={{
+                            padding: "6px 12px", borderRadius: 8, fontSize: 13, cursor: "pointer",
+                            fontFamily: "inherit", border: "none",
+                            background: checked ? DARK : "#F0F0F3",
+                            color: checked ? "#FFD700" : TEXT2,
+                            fontWeight: checked ? 600 : 400,
+                          }}
+                        >
+                          {checked ? "✓ " : ""}{item}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      type="text"
+                      placeholder="อื่นๆ (พิมพ์เพิ่ม)"
+                      value={extraDeviceDetails[idx]?.accessoriesOther ?? ""}
+                      onChange={e => setExtraDeviceDetails(prev => prev.map((p, i) => i === idx ? { ...p, accessoriesOther: e.target.value } : p))}
+                      onKeyDown={e => {
+                        const val = extraDeviceDetails[idx]?.accessoriesOther?.trim();
+                        if (e.key === "Enter" && val) {
+                          e.preventDefault();
+                          setExtraDeviceDetails(prev => prev.map((p, i) => i === idx ? { ...p, accessories: [...p.accessories, val], accessoriesOther: "" } : p));
+                        }
+                      }}
+                      style={{ ...inputStyle, marginBottom: 0, flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const val = extraDeviceDetails[idx]?.accessoriesOther?.trim();
+                        if (!val) return;
+                        setExtraDeviceDetails(prev => prev.map((p, i) => i === idx ? { ...p, accessories: [...p.accessories, val], accessoriesOther: "" } : p));
+                      }}
+                      style={{ padding: "9px 16px", borderRadius: 8, border: "none", background: DARK, color: "#FFD700", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}
+                    >
+                      เพิ่ม
+                    </button>
+                  </div>
+                </div>
               </div>
             ))}
 
@@ -1109,9 +1076,8 @@ export default function ContractPage() {
           </div>
         </div>
 
-        {/* Payment Slip — transfer only */}
-        {request.payment.method === "transfer" && (
-          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, overflow: "hidden", marginBottom: 12 }}>
+        {/* Payment Slip */}
+        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, overflow: "hidden", marginBottom: 12 }}>
             <div style={{ padding: "10px 14px", borderBottom: `1px solid ${BORDER}`, background: "#F9F9F9", display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 16 }}>📎</span>
               <div style={{ flex: 1 }}>
@@ -1169,7 +1135,6 @@ export default function ContractPage() {
               )}
             </div>
           </div>
-        )}
 
         {/* Signatures */}
         <SigCanvas canvasRef={sigBuyerRef} sigState={sigBuyerState} onConfirm={() => confirmSig("buyer")} onClear={() => clearSig("buyer")} label="ลายมือชื่อผู้ขาย" sub="ให้ผู้ขายเซ็นชื่อด้วยตนเอง" />
