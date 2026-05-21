@@ -83,7 +83,13 @@ export default function AccountingPage() {
           <button onClick={() => router.back()} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT2, display: "flex", padding: 4 }}>
             <ChevronLeft size={22} />
           </button>
-          <h1 style={{ color: TEXT, fontSize: 20, fontWeight: 700, margin: 0 }}>บัญชี</h1>
+          <h1 style={{ color: TEXT, fontSize: 20, fontWeight: 700, margin: 0, flex: 1 }}>บัญชี</h1>
+          <Link
+            href="/stock/finance"
+            style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 10px", border: `1px solid ${BORDER}`, borderRadius: 8, background: CARD, color: TEXT2, fontSize: 11, fontWeight: 600, textDecoration: "none" }}
+          >
+            <ExternalLink size={11} /> ดูบัญชีเต็ม
+          </Link>
         </div>
 
         {/* Period tabs */}
@@ -170,13 +176,6 @@ export default function AccountingPage() {
           </>
         )}
 
-        {/* Link to full finance system */}
-        <Link
-          href="/stock/finance"
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, marginTop: 16, padding: "10px 14px", border: `1px solid ${BORDER}`, borderRadius: 10, background: CARD, color: TEXT2, fontSize: 13, fontWeight: 600, textDecoration: "none" }}
-        >
-          <ExternalLink size={14} /> ดูบัญชีเต็ม
-        </Link>
       </div>
     </div>
   );
