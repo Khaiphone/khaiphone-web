@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Package, ShoppingCart, Users, BarChart2,
-  Settings, Bell, TrendingUp, FileText, UserCog,
+  Settings, Bell, TrendingUp, FileText, UserCog, Tag,
   ChevronRight,
 } from "lucide-react";
 import { useThemeColors } from "./ThemeContext";
@@ -18,6 +18,7 @@ const NAV_BASE = [
   { icon: Package,         label: "Stock",      href: "/stock/inventory"  },
   { icon: ShoppingCart,    label: "Sales",      href: "/stock/sales"      },
   { icon: TrendingUp,      label: "Finance",    href: "/stock/finance"    },
+  { icon: Tag,             label: "Pricing",    href: "/stock/pricing"    },
   { icon: BarChart2,       label: "Reports",    href: "/stock/reports"    },
   { icon: UserCog,         label: "Users",      href: "/stock/users"      },
   { icon: Settings,        label: "Settings",   href: "/stock/settings"   },
