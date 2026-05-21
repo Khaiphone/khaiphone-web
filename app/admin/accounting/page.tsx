@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, TrendingUp, TrendingDown } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, TrendingUp, TrendingDown, ExternalLink } from "lucide-react";
 import { fetchStockItems } from "@/app/actions/stock";
 import type { StockItem } from "@/app/actions/stock";
 
@@ -170,21 +171,12 @@ export default function AccountingPage() {
         )}
 
         {/* Link to full finance system */}
-        <button
-          onClick={() => router.push("/stock/finance")}
-          style={{
-            width: "100%", marginTop: 16,
-            padding: "13px 0", borderRadius: 12,
-            border: "1px solid rgba(184,134,11,0.3)",
-            background: "var(--admin-gold-bg)",
-            color: "var(--admin-gold-text)",
-            fontSize: 14, fontWeight: 700,
-            cursor: "pointer", fontFamily: "inherit",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-          }}
+        <Link
+          href="/stock/finance"
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, marginTop: 16, padding: "10px 14px", border: `1px solid ${BORDER}`, borderRadius: 10, background: CARD, color: TEXT2, fontSize: 13, fontWeight: 600, textDecoration: "none" }}
         >
-          ดูบัญชีเต็ม →
-        </button>
+          <ExternalLink size={14} /> ดูบัญชีเต็ม
+        </Link>
       </div>
     </div>
   );
