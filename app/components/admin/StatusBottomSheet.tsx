@@ -25,13 +25,20 @@ export default function StatusBottomSheet({ currentStatus, onSave, onClose }: Pr
   const [selected, setSelected] = useState<RequestStatus>(currentStatus);
   const [note, setNote]         = useState("");
 
+  const CARD   = "var(--admin-card)";
+  const BORDER = "var(--admin-border)";
+  const TEXT   = "var(--admin-text)";
+  const TEXT2  = "var(--admin-text2)";
+  const BG     = "var(--admin-bg)";
+  const GOLD   = "var(--admin-gold)";
+
   return (
     <>
       <div
         onClick={onClose}
         style={{
           position: "fixed", inset: 0,
-          background: "rgba(0,0,0,0.35)",
+          background: "rgba(0,0,0,0.4)",
           zIndex: 100,
           backdropFilter: "blur(4px)",
           WebkitBackdropFilter: "blur(4px)",
@@ -42,7 +49,7 @@ export default function StatusBottomSheet({ currentStatus, onSave, onClose }: Pr
         style={{
           position: "fixed",
           bottom: 0, left: 0, right: 0,
-          background: "#FFFFFF",
+          background: CARD,
           borderRadius: "24px 24px 0 0",
           zIndex: 101,
           maxHeight: "92vh",
@@ -51,11 +58,11 @@ export default function StatusBottomSheet({ currentStatus, onSave, onClose }: Pr
         }}
       >
         <div style={{ display: "flex", justifyContent: "center", paddingTop: "14px", paddingBottom: "6px" }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: "#D1D1D6" }} />
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: BORDER }} />
         </div>
 
         <div style={{ padding: "6px 20px 0" }}>
-          <h3 style={{ color: "#111111", fontSize: "18px", fontWeight: 700, margin: "0 0 16px" }}>
+          <h3 style={{ color: TEXT, fontSize: "18px", fontWeight: 700, margin: "0 0 16px" }}>
             เปลี่ยนสถานะ
           </h3>
 
@@ -72,8 +79,8 @@ export default function StatusBottomSheet({ currentStatus, onSave, onClose }: Pr
                     gap: "14px",
                     padding: "14px 16px",
                     borderRadius: "14px",
-                    background: active ? "#F9F6EE" : "#FAFAFA",
-                    border: active ? "1px solid rgba(184,134,11,0.4)" : "1px solid #EEEEEE",
+                    background: active ? "var(--admin-gold-bg)" : BG,
+                    border: active ? "1px solid rgba(184,134,11,0.4)" : `1px solid ${BORDER}`,
                     cursor: "pointer",
                     touchAction: "manipulation",
                     textAlign: "left",
@@ -81,30 +88,12 @@ export default function StatusBottomSheet({ currentStatus, onSave, onClose }: Pr
                     minHeight: "52px",
                   }}
                 >
-                  <span style={{
-                    width: 10, height: 10, borderRadius: "50%",
-                    background: s.dot, flexShrink: 0, display: "inline-block",
-                  }} />
-                  <span style={{
-                    color: active ? "#B8860B" : "#111111",
-                    flex: 1,
-                    fontSize: "15px",
-                    fontWeight: active ? 700 : 400,
-                  }}>
+                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: s.dot, flexShrink: 0, display: "inline-block" }} />
+                  <span style={{ color: active ? GOLD : TEXT, flex: 1, fontSize: "15px", fontWeight: active ? 700 : 400 }}>
                     {s.label}
                   </span>
                   {active && (
-                    <span style={{
-                      width: 22, height: 22, borderRadius: "50%",
-                      background: "#B8860B",
-                      color: "#fff",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}>
+                    <span style={{ width: 22, height: 22, borderRadius: "50%", background: GOLD, color: "#fff", fontSize: "12px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       ✓
                     </span>
                   )}
@@ -121,11 +110,11 @@ export default function StatusBottomSheet({ currentStatus, onSave, onClose }: Pr
             rows={2}
             style={{
               width: "100%",
-              background: "#F5F5F7",
-              border: "1px solid #E5E5E5",
+              background: BG,
+              border: `1px solid ${BORDER}`,
               borderRadius: "12px",
               padding: "12px 14px",
-              color: "#111111",
+              color: TEXT,
               fontSize: "14px",
               resize: "none",
               fontFamily: "inherit",
@@ -139,7 +128,7 @@ export default function StatusBottomSheet({ currentStatus, onSave, onClose }: Pr
             onClick={() => onSave(selected, note)}
             style={{
               width: "100%",
-              background: "#B8860B",
+              background: GOLD,
               border: "none",
               borderRadius: "14px",
               padding: "16px",

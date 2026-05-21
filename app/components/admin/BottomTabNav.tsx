@@ -4,9 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, ClipboardList, CalendarDays, Bell, MoreHorizontal } from "lucide-react";
 import { fetchRequests } from "@/app/actions/admin-requests";
-
-const GOLD     = "#B8860B";
-const INACTIVE = "#9CA3AF";
+import { useAdminTheme } from "@/lib/admin-theme";
 
 const TABS = [
   { label: "หน้าหลัก",  icon: Home,           href: "/admin/dashboard"     },
@@ -17,8 +15,9 @@ const TABS = [
 ] as const;
 
 export default function BottomTabNav() {
-  const pathname = usePathname();
-  const router   = useRouter();
+  const pathname  = usePathname();
+  const router    = useRouter();
+  const { dark }  = useAdminTheme();
   const [newCount, setNewCount] = useState(0);
 
   useEffect(() => {
@@ -27,7 +26,10 @@ export default function BottomTabNav() {
     });
   }, [pathname]);
 
-  const unreadCount = 0;
+  const GOLD     = dark ? "#D4A843" : "#B8860B";
+  const INACTIVE = dark ? "#636366" : "#9CA3AF";
+  const BG       = dark ? "#1C1C1E" : "#FFFFFF";
+  const BORDER   = dark ? "#2C2C2E" : "#E5E7EB";
 
   return (
     <nav
@@ -37,8 +39,8 @@ export default function BottomTabNav() {
         bottom: 0,
         left: 0,
         right: 0,
-        background: "#ffffff",
-        borderTop: "1px solid #E5E7EB",
+        background: BG,
+        borderTop: `1px solid ${BORDER}`,
         paddingBottom: "env(safe-area-inset-bottom)",
         zIndex: 50,
         WebkitTransform: "translateZ(0)",
@@ -48,8 +50,7 @@ export default function BottomTabNav() {
         {TABS.map(({ label, icon: Icon, href }) => {
           const active = pathname === href || (href !== "/admin/dashboard" && pathname.startsWith(href));
           const badge  =
-            href === "/admin/requests"      ? newCount    :
-            href === "/admin/notifications" ? unreadCount : 0;
+            href === "/admin/requests" ? newCount : 0;
 
           return (
             <button

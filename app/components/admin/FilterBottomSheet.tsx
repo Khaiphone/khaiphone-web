@@ -47,12 +47,20 @@ export default function FilterBottomSheet({ initial, totalCount, onApply, onClos
     setStatuses([]); setModel(""); setPriceMin(""); setPriceMax("");
   }
 
+  const CARD   = "var(--admin-card)";
+  const BORDER = "var(--admin-border)";
+  const TEXT   = "var(--admin-text)";
+  const TEXT2  = "var(--admin-text2)";
+  const TEXT3  = "var(--admin-text3)";
+  const GOLD   = "var(--admin-gold)";
+  const BG     = "var(--admin-bg)";
+
   const inputStyle: React.CSSProperties = {
-    background: "#F5F5F7",
-    border: "1px solid #E5E5E5",
+    background: BG,
+    border: `1px solid ${BORDER}`,
     borderRadius: "10px",
     padding: "10px 12px",
-    color: "#111111",
+    color: TEXT,
     fontSize: "14px",
     width: "100%",
     outline: "none",
@@ -62,12 +70,12 @@ export default function FilterBottomSheet({ initial, totalCount, onApply, onClos
 
   return (
     <>
-      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 100, backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)" }} />
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 100, backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)" }} />
 
       <div
         style={{
           position: "fixed", bottom: 0, left: 0, right: 0,
-          background: "#FFFFFF",
+          background: CARD,
           borderRadius: "24px 24px 0 0",
           padding: "0 20px",
           paddingBottom: "calc(env(safe-area-inset-bottom) + 20px)",
@@ -78,17 +86,17 @@ export default function FilterBottomSheet({ initial, totalCount, onApply, onClos
         }}
       >
         <div style={{ display: "flex", justifyContent: "center", padding: "14px 0 4px" }}>
-          <div style={{ width: 40, height: 4, borderRadius: 2, background: "#D1D1D6" }} />
+          <div style={{ width: 40, height: 4, borderRadius: 2, background: BORDER }} />
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-          <h3 style={{ color: "#111111", fontSize: "17px", fontWeight: 700, margin: 0 }}>ฟิลเตอร์</h3>
-          <button onClick={reset} style={{ background: "none", border: "none", color: "#B8860B", fontSize: "13px", fontWeight: 600, cursor: "pointer", padding: 0, fontFamily: "inherit" }}>
+          <h3 style={{ color: TEXT, fontSize: "17px", fontWeight: 700, margin: 0 }}>ฟิลเตอร์</h3>
+          <button onClick={reset} style={{ background: "none", border: "none", color: GOLD, fontSize: "13px", fontWeight: 600, cursor: "pointer", padding: 0, fontFamily: "inherit" }}>
             ล้างทั้งหมด
           </button>
         </div>
 
-        <p style={{ color: "#666666", fontSize: "13px", fontWeight: 600, marginBottom: "10px" }}>สถานะ</p>
+        <p style={{ color: TEXT2, fontSize: "13px", fontWeight: 600, marginBottom: "10px" }}>สถานะ</p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "20px" }}>
           {STATUS_OPTIONS.map(s => {
             const on = statuses.includes(s.value);
@@ -101,9 +109,9 @@ export default function FilterBottomSheet({ initial, totalCount, onApply, onClos
                   borderRadius: "999px",
                   fontSize: "13px",
                   fontWeight: on ? 600 : 400,
-                  border: on ? "1px solid #B8860B" : "1px solid #E5E5E5",
-                  background: on ? "#FEF3C7" : "#FAFAFA",
-                  color: on ? "#92400E" : "#666666",
+                  border: on ? `1px solid rgba(184,134,11,0.4)` : `1px solid ${BORDER}`,
+                  background: on ? "var(--admin-gold-bg)" : BG,
+                  color: on ? "var(--admin-gold-text)" : TEXT2,
                   cursor: "pointer",
                   touchAction: "manipulation",
                   fontFamily: "inherit",
@@ -115,7 +123,7 @@ export default function FilterBottomSheet({ initial, totalCount, onApply, onClos
           })}
         </div>
 
-        <p style={{ color: "#666666", fontSize: "13px", fontWeight: 600, marginBottom: "10px" }}>รุ่นเครื่อง</p>
+        <p style={{ color: TEXT2, fontSize: "13px", fontWeight: 600, marginBottom: "10px" }}>รุ่นเครื่อง</p>
         <div style={{ position: "relative", marginBottom: "20px" }}>
           <select
             value={model}
@@ -127,10 +135,10 @@ export default function FilterBottomSheet({ initial, totalCount, onApply, onClos
           </select>
         </div>
 
-        <p style={{ color: "#666666", fontSize: "13px", fontWeight: 600, marginBottom: "10px" }}>ช่วงราคาประเมิน</p>
+        <p style={{ color: TEXT2, fontSize: "13px", fontWeight: 600, marginBottom: "10px" }}>ช่วงราคาประเมิน</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "8px", alignItems: "center", marginBottom: "24px" }}>
           <input type="number" placeholder="ขั้นต่ำ" value={priceMin} onChange={e => setPriceMin(e.target.value)} style={inputStyle} />
-          <span style={{ color: "#999999", fontSize: "13px" }}>—</span>
+          <span style={{ color: TEXT3, fontSize: "13px" }}>—</span>
           <input type="number" placeholder="ขั้นสูง" value={priceMax} onChange={e => setPriceMax(e.target.value)} style={inputStyle} />
         </div>
 
@@ -138,7 +146,7 @@ export default function FilterBottomSheet({ initial, totalCount, onApply, onClos
           onClick={() => onApply({ statuses, model, priceMin, priceMax })}
           style={{
             width: "100%",
-            background: "#B8860B",
+            background: GOLD,
             border: "none",
             borderRadius: "14px",
             padding: "15px",
