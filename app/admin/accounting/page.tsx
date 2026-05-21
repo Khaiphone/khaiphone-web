@@ -168,6 +168,23 @@ export default function AccountingPage() {
             </div>
           </>
         )}
+
+        {/* Link to full finance system */}
+        <button
+          onClick={() => router.push("/stock/finance")}
+          style={{
+            width: "100%", marginTop: 16,
+            padding: "13px 0", borderRadius: 12,
+            border: "1px solid rgba(184,134,11,0.3)",
+            background: "var(--admin-gold-bg)",
+            color: "var(--admin-gold-text)",
+            fontSize: 14, fontWeight: 700,
+            cursor: "pointer", fontFamily: "inherit",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+          }}
+        >
+          ดูบัญชีเต็ม →
+        </button>
       </div>
     </div>
   );
