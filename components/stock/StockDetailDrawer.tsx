@@ -7,7 +7,7 @@ import { useThemeColors } from "./ThemeContext";
 import StockStatusBadge, { GradeBadge } from "./StatusBadge";
 import type { StockItem, StockStatus } from "@/lib/stock/types";
 import { STOCK_STATUS_COLORS } from "@/lib/stock/mockData";
-import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos } from "@/app/actions/stocks";
+import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos, updateStockDocuments } from "@/app/actions/stocks";
 import { supabase } from "@/lib/supabase";
 
 const TABS = ["รายละเอียด", "รูปภาพ", "เอกสาร", "ประวัติสถานะ"] as const;
@@ -78,7 +78,10 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadErr, setUploadErr] = useState<string | null>(null);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [uploadDocErr, setUploadDocErr] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
 
   if (!item) return null;
 
@@ -158,6 +161,32 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
     await updateStockPhotos(item!.id, urls);
     onUpdate({ ...item!, photos: urls });
     setUploading(false);
+  }
+
+  async function handleDocumentUpload(files: FileList) {
+    if (!files.length) return;
+    setUploadingDoc(true);
+    setUploadDocErr(null);
+    const urls: string[] = [...(item!.documents ?? [])];
+    for (const file of Array.from(files)) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const path = `stocks/${item!.id}/docs/${Date.now()}-${safeName}`;
+      const { data, error } = await supabase.storage.from("stock-photos").upload(path, file, { upsert: true });
+      if (error) { setUploadDocErr(error.message); continue; }
+      if (data) {
+        const { data: { publicUrl } } = supabase.storage.from("stock-photos").getPublicUrl(data.path);
+        urls.push(publicUrl);
+      }
+    }
+    await updateStockDocuments(item!.id, urls);
+    onUpdate({ ...item!, documents: urls });
+    setUploadingDoc(false);
+  }
+
+  async function handleDocumentDelete(url: string) {
+    const urls = (item!.documents ?? []).filter(u => u !== url);
+    await updateStockDocuments(item!.id, urls);
+    onUpdate({ ...item!, documents: urls });
   }
 
   const inputSt: React.CSSProperties = {
@@ -439,9 +468,59 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
               )}
 
               {tab === "เอกสาร" && (
-                <div style={{ textAlign: "center", padding: "48px 0", color: c.text3 }}>
-                  <div style={{ fontSize: 40, marginBottom: 12 }}>📄</div>
-                  <p style={{ margin: 0 }}>ยังไม่มีเอกสาร</p>
+                <div>
+                  {uploadDocErr && <p style={{ color: "#ef4444", fontSize: 12, marginBottom: 10 }}>{uploadDocErr}</p>}
+
+                  {/* Upload area */}
+                  <input
+                    ref={docInputRef} type="file" accept="image/*,application/pdf" multiple
+                    style={{ display: "none" }} disabled={uploadingDoc}
+                    onChange={e => e.target.files && handleDocumentUpload(e.target.files)}
+                  />
+                  <button
+                    onClick={() => docInputRef.current?.click()}
+                    disabled={uploadingDoc}
+                    style={{
+                      width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      border: `2px dashed ${c.border}`, borderRadius: 12, padding: "14px",
+                      background: "none", color: c.text2, fontSize: 13, fontWeight: 600,
+                      cursor: uploadingDoc ? "not-allowed" : "pointer", marginBottom: 16,
+                      opacity: uploadingDoc ? 0.5 : 1, fontFamily: "inherit",
+                    }}
+                  >
+                    <Upload size={16} />
+                    {uploadingDoc ? "กำลังอัปโหลด..." : "อัปโหลดเอกสาร (รูปภาพ / PDF)"}
+                  </button>
+
+                  {/* Document list */}
+                  {(item.documents ?? []).length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "32px 0", color: c.text3 }}>
+                      <div style={{ fontSize: 36, marginBottom: 10 }}>📄</div>
+                      <p style={{ margin: 0, fontSize: 13 }}>ยังไม่มีเอกสาร</p>
+                      <p style={{ margin: "4px 0 0", fontSize: 11 }}>อัปโหลดใบรับซื้อ หรือใบสำคัญรับเงิน</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      {(item.documents ?? []).map((url, i) => (
+                        <div key={i} style={{ position: "relative", borderRadius: 12, overflow: "hidden", border: `1px solid ${c.border}` }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt={`เอกสาร ${i + 1}`} style={{ width: "100%", display: "block", objectFit: "contain", maxHeight: 280, background: c.card2 }} />
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: c.card2, borderTop: `1px solid ${c.border}` }}>
+                            <span style={{ color: c.text2, fontSize: 12 }}>เอกสาร {i + 1}</span>
+                            <div style={{ display: "flex", gap: 6 }}>
+                              <a href={url} target="_blank" rel="noreferrer" style={{ color: c.gold, fontSize: 11, fontWeight: 600, textDecoration: "none" }}>เปิดเต็ม</a>
+                              <button
+                                onClick={() => handleDocumentDelete(url)}
+                                style={{ background: "none", border: "none", color: "#ef4444", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}
+                              >
+                                ลบ
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 

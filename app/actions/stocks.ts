@@ -31,6 +31,7 @@ function mapRow(row: any): StockItem {
     receivedAt: row.received_at ?? "",
     inspector: row.inspector ?? "",
     photos: row.photos ?? [],
+    documents: row.documents ?? [],
     notes: row.notes ?? [],
     statusLog: row.status_log ?? [],
     soldAt: row.sold_at ?? undefined,
@@ -76,7 +77,7 @@ export async function createStockItem(input: Omit<StockItem, "notes" | "statusLo
     selling_price: input.sellingPrice, status: input.status, source_channel: input.sourceChannel,
     request_ref: input.requestRef ?? null, seller_name: input.sellerName, seller_phone: input.sellerPhone,
     received_at: input.receivedAt || now, inspector: input.inspector,
-    photos: input.photos ?? [], notes: [], status_log: statusLog,
+    photos: input.photos ?? [], documents: [], notes: [], status_log: statusLog,
     created_at: now, updated_at: now,
   });
 
@@ -454,6 +455,13 @@ export async function updateStockItem(
 export async function updateStockPhotos(id: string, photos: string[]): Promise<{ success: boolean; error?: string }> {
   const supabase = createServerClient();
   const { error } = await supabase.from("stocks").update({ photos, updated_at: new Date().toISOString() }).eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function updateStockDocuments(id: string, documents: string[]): Promise<{ success: boolean; error?: string }> {
+  const supabase = createServerClient();
+  const { error } = await supabase.from("stocks").update({ documents, updated_at: new Date().toISOString() }).eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };
 }

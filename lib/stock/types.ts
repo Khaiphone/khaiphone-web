@@ -66,6 +66,7 @@ export interface StockItem {
   inspector: string;
 
   photos: string[];
+  documents?: string[];
   notes: StockNote[];
   statusLog: StatusLog[];
 
