@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Download, Printer, Search, X, Eye, Edit2, MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Download, Printer, Search, X, Eye, Edit2, MoreHorizontal, ChevronLeft, ChevronRight, Trash2, Copy, ExternalLink } from "lucide-react";
 import { Package, TrendingUp, DollarSign, CheckCircle, Clock, ShoppingBag } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import StockTopbar from "@/components/stock/Topbar";
@@ -10,7 +10,7 @@ import MetricCard from "@/components/stock/MetricCard";
 import StockStatusBadge, { GradeBadge } from "@/components/stock/StatusBadge";
 import StockDetailDrawer from "@/components/stock/StockDetailDrawer";
 import { useThemeColors } from "@/components/stock/ThemeContext";
-import { fetchStockItems } from "@/app/actions/stocks";
+import { fetchStockItems, deleteStockItem } from "@/app/actions/stocks";
 import { STOCK_STATUS_COLORS } from "@/lib/stock/mockData";
 import type { StockItem, StockStatus } from "@/lib/stock/types";
 
@@ -29,6 +29,22 @@ const PAGE_SIZE = 10;
 function fmt(n: number) { return n.toLocaleString("th-TH"); }
 function fmtDate(s: string) { return new Date(s).toLocaleDateString("th-TH", { month: "short", day: "numeric", year: "numeric" }); }
 
+function exportCSV(items: StockItem[]) {
+  const headers = ["รหัสสต็อก","รุ่น","ความจุ","สี","IMEI","Serial","เกรด","ต้นทุน","ราคาขาย","กำไร","สถานะ","ช่องทาง","ผู้ขาย","เบอร์โทร","วันรับเข้า"];
+  const rows = items.map(s => {
+    const profit = s.sellingPrice > 0 ? s.sellingPrice - s.costPrice - s.shippingCost - s.otherCost : 0;
+    return [s.id, s.model, s.storage, s.color, s.imei, s.serial, s.grade, s.costPrice, s.sellingPrice, profit, s.status, s.sourceChannel, s.sellerName, s.sellerPhone, s.receivedAt].join(",");
+  });
+  const csv = [headers.join(","), ...rows].join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `stock-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function StockInventoryPage() {
   const c = useThemeColors();
   const router = useRouter();
@@ -39,8 +55,11 @@ export default function StockInventoryPage() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<StockItem | null>(null);
   const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [moreMenuId, setMoreMenuId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [copyMsg, setCopyMsg] = useState<string | null>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
 
-  // Filters
   const [filterModel, setFilterModel] = useState("");
   const [filterGrade, setFilterGrade] = useState("");
   const [filterChannel, setFilterChannel] = useState("");
@@ -49,6 +68,17 @@ export default function StockInventoryPage() {
 
   useEffect(() => {
     fetchStockItems().then(data => { setStocks(data); setLoading(false); });
+  }, []);
+
+  // Close more menu on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setMoreMenuId(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
   const models = useMemo(() => [...new Set(stocks.map(s => s.model))].sort(), [stocks]);
@@ -103,6 +133,38 @@ export default function StockInventoryPage() {
     { icon: ShoppingBag, label: "ขายแล้ว",             value: `${sold} เครื่อง`,         iconColor: c.purple,  sub: `ลงขาย ${listed}` },
   ];
 
+  async function handleDelete(id: string) {
+    if (!confirm(`ลบรายการ ${id} ออกจากสต็อก?`)) return;
+    setDeleting(id);
+    await deleteStockItem(id);
+    setStocks(prev => prev.filter(s => s.id !== id));
+    setChecked(prev => { const next = new Set(prev); next.delete(id); return next; });
+    if (selected?.id === id) setSelected(null);
+    setDeleting(null);
+  }
+
+  async function handleBulkDelete() {
+    if (!confirm(`ลบ ${checked.size} รายการที่เลือก?`)) return;
+    for (const id of checked) {
+      await deleteStockItem(id);
+      setStocks(prev => prev.filter(s => s.id !== id));
+    }
+    setChecked(new Set());
+  }
+
+  function copyToClipboard(text: string, label: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopyMsg(`คัดลอก ${label} แล้ว`);
+      setTimeout(() => setCopyMsg(null), 2000);
+    });
+  }
+
+  const btnMenu: React.CSSProperties = {
+    width: "100%", display: "flex", alignItems: "center", gap: 8,
+    padding: "9px 14px", background: "none", border: "none",
+    color: c.text2, fontSize: 13, cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+  };
+
   return (
     <div style={{ background: c.bg, minHeight: "100vh", paddingBottom: 80 }}>
       <StockTopbar title="Stock Management" subtitle="จัดการสต็อกสินค้า">
@@ -112,10 +174,16 @@ export default function StockInventoryPage() {
         >
           <Plus size={16} /> เพิ่มสินค้าเข้าสต็อก
         </button>
-        <button style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 13, cursor: "pointer" }}>
+        <button
+          onClick={() => exportCSV(filtered)}
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 13, cursor: "pointer" }}
+        >
           <Download size={15} /> Export CSV
         </button>
-        <button style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 13, cursor: "pointer" }}>
+        <button
+          onClick={() => window.print()}
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 13, cursor: "pointer" }}
+        >
           <Printer size={15} /> พิมพ์รายงาน
         </button>
       </StockTopbar>
@@ -126,9 +194,37 @@ export default function StockInventoryPage() {
           {METRICS.map(m => <MetricCard key={m.label} {...m} />)}
         </div>
 
+        {/* Copy toast */}
+        <AnimatePresence>
+          {copyMsg && (
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              style={{ position: "fixed", top: 20, right: 280, zIndex: 100, background: "#22c55e", color: "#fff", padding: "8px 16px", borderRadius: 10, fontSize: 13, fontWeight: 600, boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }}>
+              {copyMsg}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Bulk action bar */}
+        <AnimatePresence>
+          {checked.size > 0 && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+              style={{ background: c.goldBg, border: `1px solid ${c.gold}40`, borderRadius: 12, padding: "10px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 12, overflow: "hidden" }}>
+              <span style={{ color: c.gold, fontWeight: 700, fontSize: 13 }}>เลือกแล้ว {checked.size} รายการ</span>
+              <button onClick={() => setChecked(new Set())} style={{ padding: "5px 12px", borderRadius: 8, border: `1px solid ${c.border}`, background: "none", color: c.text2, fontSize: 12, cursor: "pointer" }}>
+                ยกเลิกการเลือก
+              </button>
+              <button onClick={() => exportCSV(stocks.filter(s => checked.has(s.id)))} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 8, border: `1px solid ${c.border}`, background: "none", color: c.text2, fontSize: 12, cursor: "pointer" }}>
+                <Download size={13} /> Export ที่เลือก
+              </button>
+              <button onClick={handleBulkDelete} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 8, border: "none", background: "#ef444418", color: "#ef4444", fontSize: 12, fontWeight: 600, cursor: "pointer", marginLeft: "auto" }}>
+                <Trash2 size={13} /> ลบที่เลือก
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Filter Bar */}
         <div style={{ background: c.card, borderRadius: 16, padding: "16px 20px", marginBottom: 16, border: `1px solid ${c.border}` }}>
-          {/* Row 1 */}
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
             <div style={{ position: "relative", flex: "1 1 220px", minWidth: 180 }}>
               <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: c.text3 }} />
@@ -150,7 +246,6 @@ export default function StockInventoryPage() {
               </select>
             ))}
           </div>
-          {/* Row 2 */}
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             <input value={filterPriceMin} onChange={e => setFilterPriceMin(e.target.value)} placeholder="ราคาต่ำสุด (฿)" type="number"
               style={{ flex: "0 1 140px", background: c.card2, border: `1px solid ${c.border}`, borderRadius: 10, padding: "9px 12px", color: c.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
@@ -158,9 +253,6 @@ export default function StockInventoryPage() {
               style={{ flex: "0 1 140px", background: c.card2, border: `1px solid ${c.border}`, borderRadius: 10, padding: "9px 12px", color: c.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
             <button onClick={clearFilters} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 10, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 13, cursor: "pointer" }}>
               <X size={14} /> ล้างตัวกรอง
-            </button>
-            <button style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 10, background: c.gold, border: "none", color: "#000", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-              <Search size={14} /> ค้นหา
             </button>
           </div>
         </div>
@@ -214,12 +306,13 @@ export default function StockInventoryPage() {
                       const hasPrice = s.sellingPrice > 0;
                       const profit = hasPrice ? s.sellingPrice - s.costPrice - s.shippingCost - s.otherCost : null;
                       const isChecked = checked.has(s.id);
+                      const isDeleting = deleting === s.id;
                       return (
                         <motion.tr
                           key={s.id}
                           initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: i * 0.03 }}
+                          animate={{ opacity: isDeleting ? 0.4 : 1 }}
+                          transition={{ delay: i * 0.02 }}
                           onClick={() => setSelected(s)}
                           style={{
                             borderBottom: `1px solid ${c.border}`,
@@ -227,7 +320,6 @@ export default function StockInventoryPage() {
                             background: isChecked ? c.goldBg : "transparent",
                             transition: "background 150ms",
                           }}
-                          whileHover={{ backgroundColor: c.goldBg }}
                         >
                           <td style={{ padding: "10px 14px" }} onClick={e => e.stopPropagation()}>
                             <input type="checkbox" checked={isChecked} onChange={e => {
@@ -272,10 +364,45 @@ export default function StockInventoryPage() {
                           <td style={{ padding: "10px 14px", color: c.text2, fontSize: 12, whiteSpace: "nowrap" }}>{s.sourceChannel}</td>
                           <td style={{ padding: "10px 14px", color: c.text3, fontSize: 12, whiteSpace: "nowrap" }}>{fmtDate(s.receivedAt)}</td>
                           <td style={{ padding: "10px 14px" }} onClick={e => e.stopPropagation()}>
-                            <div style={{ display: "flex", gap: 4 }}>
-                              <button onClick={() => setSelected(s)} style={{ background: "none", border: "none", color: c.text3, cursor: "pointer", padding: 4, display: "flex" }} title="ดูรายละเอียด"><Eye size={15} /></button>
-                              <button style={{ background: "none", border: "none", color: c.text3, cursor: "pointer", padding: 4, display: "flex" }} title="แก้ไข"><Edit2 size={15} /></button>
-                              <button style={{ background: "none", border: "none", color: c.text3, cursor: "pointer", padding: 4, display: "flex" }}><MoreHorizontal size={15} /></button>
+                            <div style={{ display: "flex", gap: 2, position: "relative" }} ref={moreMenuId === s.id ? moreMenuRef : null}>
+                              <button onClick={() => setSelected(s)} style={{ background: "none", border: "none", color: c.text3, cursor: "pointer", padding: 4, display: "flex", borderRadius: 6 }} title="ดูรายละเอียด">
+                                <Eye size={15} />
+                              </button>
+                              <button onClick={() => { setSelected(s); }} style={{ background: "none", border: "none", color: c.text3, cursor: "pointer", padding: 4, display: "flex", borderRadius: 6 }} title="แก้ไข">
+                                <Edit2 size={15} />
+                              </button>
+                              <button
+                                onClick={() => setMoreMenuId(moreMenuId === s.id ? null : s.id)}
+                                style={{ background: "none", border: "none", color: c.text3, cursor: "pointer", padding: 4, display: "flex", borderRadius: 6 }}
+                              >
+                                <MoreHorizontal size={15} />
+                              </button>
+                              {moreMenuId === s.id && (
+                                <div style={{
+                                  position: "absolute", right: 0, top: "100%", zIndex: 100,
+                                  background: c.card, border: `1px solid ${c.border}`, borderRadius: 10,
+                                  boxShadow: "0 8px 24px rgba(0,0,0,0.18)", minWidth: 180, overflow: "hidden",
+                                }}>
+                                  <button onClick={() => { router.push(`/stock/inventory/${s.id}`); setMoreMenuId(null); }} style={{ ...btnMenu }}>
+                                    <ExternalLink size={13} /> ดูรายละเอียดเต็ม
+                                  </button>
+                                  <button onClick={() => { copyToClipboard(s.imei, "IMEI"); setMoreMenuId(null); }} style={{ ...btnMenu }}>
+                                    <Copy size={13} /> คัดลอก IMEI
+                                  </button>
+                                  {s.serial && (
+                                    <button onClick={() => { copyToClipboard(s.serial, "Serial"); setMoreMenuId(null); }} style={{ ...btnMenu }}>
+                                      <Copy size={13} /> คัดลอก Serial
+                                    </button>
+                                  )}
+                                  <div style={{ borderTop: `1px solid ${c.border}` }} />
+                                  <button
+                                    onClick={() => { handleDelete(s.id); setMoreMenuId(null); }}
+                                    style={{ ...btnMenu, color: "#ef4444" }}
+                                  >
+                                    <Trash2 size={13} /> ลบสินค้า
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </td>
                         </motion.tr>

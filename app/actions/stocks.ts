@@ -421,3 +421,46 @@ export async function fetchStockReportData(): Promise<StockReportData> {
     totalProfit,
   };
 }
+
+export async function updateStockItem(
+  id: string,
+  updates: {
+    model?: string; storage?: string; color?: string; grade?: string;
+    batteryHealth?: number; cycleCount?: number; icloudStatus?: string;
+    carrierLock?: string; accessories?: string;
+    costPrice?: number; shippingCost?: number; otherCost?: number; sellingPrice?: number;
+    sellerName?: string; sellerPhone?: string; sourceChannel?: string;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createServerClient();
+  const fieldMap: Record<string, string> = {
+    model: "model", storage: "storage", color: "color", grade: "grade",
+    batteryHealth: "battery_health", cycleCount: "cycle_count",
+    icloudStatus: "icloud_status", carrierLock: "carrier_lock", accessories: "accessories",
+    costPrice: "cost_price", shippingCost: "shipping_cost", otherCost: "other_cost",
+    sellingPrice: "selling_price", sellerName: "seller_name", sellerPhone: "seller_phone",
+    sourceChannel: "source_channel",
+  };
+  const mapped: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  for (const [camel, snake] of Object.entries(fieldMap)) {
+    const val = updates[camel as keyof typeof updates];
+    if (val !== undefined) mapped[snake] = val;
+  }
+  const { error } = await supabase.from("stocks").update(mapped).eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function updateStockPhotos(id: string, photos: string[]): Promise<{ success: boolean; error?: string }> {
+  const supabase = createServerClient();
+  const { error } = await supabase.from("stocks").update({ photos, updated_at: new Date().toISOString() }).eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function deleteStockItem(id: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = createServerClient();
+  const { error } = await supabase.from("stocks").delete().eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}

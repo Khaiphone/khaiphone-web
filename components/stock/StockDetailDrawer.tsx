@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Edit2, Upload, RefreshCw, Tag, Printer, CheckSquare, Battery } from "lucide-react";
+import { X, Edit2, Upload, RefreshCw, Tag, Printer, CheckSquare, Save, ChevronLeft } from "lucide-react";
 import { useThemeColors } from "./ThemeContext";
 import StockStatusBadge, { GradeBadge } from "./StatusBadge";
 import type { StockItem, StockStatus } from "@/lib/stock/types";
 import { STOCK_STATUS_COLORS } from "@/lib/stock/mockData";
-import { updateStockStatus, updateStockPrice, markStockSold } from "@/app/actions/stocks";
+import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos } from "@/app/actions/stocks";
+import { supabase } from "@/lib/supabase";
 
 const TABS = ["รายละเอียด", "รูปภาพ", "เอกสาร", "ประวัติสถานะ"] as const;
 type Tab = typeof TABS[number];
@@ -20,10 +21,50 @@ interface Props {
   onUpdate: (item: StockItem) => void;
 }
 
+interface EditDraft {
+  model: string; storage: string; color: string; grade: string;
+  batteryHealth: string; cycleCount: string; icloudStatus: string;
+  carrierLock: string; accessories: string;
+  costPrice: string; shippingCost: string; otherCost: string; sellingPrice: string;
+  sellerName: string; sellerPhone: string; sourceChannel: string;
+}
+
 function fmt(n: number) { return n.toLocaleString("th-TH"); }
 function fmtDate(s?: string) {
   if (!s) return "-";
   return new Date(s).toLocaleDateString("th-TH", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function printPriceTag(item: StockItem) {
+  const totalCost = item.costPrice + item.shippingCost + item.otherCost;
+  const profit = item.sellingPrice - totalCost;
+  const w = window.open("", "_blank", "width=420,height=320");
+  if (!w) return;
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>ป้ายราคา ${item.id}</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; margin: 24px; color: #111; }
+    .id { font-size: 11px; color: #888; letter-spacing: 0.06em; margin-bottom: 4px; }
+    .model { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+    .sub { font-size: 14px; color: #555; margin-bottom: 10px; }
+    .grade { display: inline-block; padding: 2px 10px; border: 1.5px solid #B8860B; border-radius: 4px; font-size: 12px; font-weight: 700; color: #B8860B; margin-bottom: 12px; }
+    .price { font-size: 36px; font-weight: 900; color: #B8860B; margin-bottom: 4px; }
+    hr { border: none; border-top: 1px solid #eee; margin: 12px 0; }
+    .row { display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-bottom: 4px; }
+    .profit { color: ${profit >= 0 ? "#22c55e" : "#ef4444"}; font-weight: 700; }
+  </style></head><body>
+  <div class="id">${item.id}</div>
+  <div class="model">${item.model}</div>
+  <div class="sub">${[item.storage, item.color].filter(Boolean).join(" · ")}</div>
+  <div class="grade">เกรด ${item.grade}</div>
+  <div class="price">฿${fmt(item.sellingPrice)}</div>
+  <hr/>
+  <div class="row"><span>Battery Health</span><span>${item.batteryHealth}%</span></div>
+  <div class="row"><span>iCloud</span><span>${item.icloudStatus}</span></div>
+  <div class="row"><span>ต้นทุนรวม</span><span>฿${fmt(totalCost)}</span></div>
+  <div class="row"><span>กำไร</span><span class="profit">฿${fmt(profit)}</span></div>
+  </body></html>`);
+  w.document.close();
+  setTimeout(() => w.print(), 300);
 }
 
 export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
@@ -33,12 +74,53 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
   const [editPrice, setEditPrice] = useState(false);
   const [priceDraft, setPriceDraft] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadErr, setUploadErr] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   if (!item) return null;
 
   const totalCost = item.costPrice + item.shippingCost + item.otherCost;
   const profit = item.sellingPrice - totalCost;
   const margin = totalCost > 0 ? ((profit / totalCost) * 100).toFixed(2) : "0";
+
+  function openEdit() {
+    setEditDraft({
+      model: item!.model, storage: item!.storage, color: item!.color, grade: item!.grade,
+      batteryHealth: String(item!.batteryHealth), cycleCount: String(item!.cycleCount),
+      icloudStatus: item!.icloudStatus, carrierLock: item!.carrierLock, accessories: item!.accessories,
+      costPrice: String(item!.costPrice), shippingCost: String(item!.shippingCost),
+      otherCost: String(item!.otherCost), sellingPrice: String(item!.sellingPrice),
+      sellerName: item!.sellerName, sellerPhone: item!.sellerPhone, sourceChannel: item!.sourceChannel,
+    });
+    setEditMode(true);
+  }
+
+  async function handleEditSave() {
+    if (!editDraft) return;
+    setSaving(true);
+    const updates = {
+      model: editDraft.model.trim(), storage: editDraft.storage,
+      color: editDraft.color.trim(), grade: editDraft.grade,
+      batteryHealth: parseInt(editDraft.batteryHealth) || 0,
+      cycleCount: parseInt(editDraft.cycleCount) || 0,
+      icloudStatus: editDraft.icloudStatus, carrierLock: editDraft.carrierLock,
+      accessories: editDraft.accessories.trim(),
+      costPrice: parseInt(editDraft.costPrice) || 0,
+      shippingCost: parseInt(editDraft.shippingCost) || 0,
+      otherCost: parseInt(editDraft.otherCost) || 0,
+      sellingPrice: parseInt(editDraft.sellingPrice) || 0,
+      sellerName: editDraft.sellerName.trim(), sellerPhone: editDraft.sellerPhone.trim(),
+      sourceChannel: editDraft.sourceChannel,
+    };
+    await updateStockItem(item!.id, updates);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onUpdate({ ...item!, ...updates } as any);
+    setEditMode(false);
+    setSaving(false);
+  }
 
   async function handleStatusChange(status: StockStatus) {
     setSaving(true);
@@ -58,23 +140,66 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
     setSaving(false);
   }
 
+  async function handlePhotoUpload(files: FileList) {
+    if (!files.length) return;
+    setUploading(true);
+    setUploadErr(null);
+    const urls: string[] = [...item!.photos];
+    for (const file of Array.from(files)) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const path = `stocks/${item!.id}/${Date.now()}-${safeName}`;
+      const { data, error } = await supabase.storage.from("stock-photos").upload(path, file, { upsert: true });
+      if (error) { setUploadErr(error.message); continue; }
+      if (data) {
+        const { data: { publicUrl } } = supabase.storage.from("stock-photos").getPublicUrl(data.path);
+        urls.push(publicUrl);
+      }
+    }
+    await updateStockPhotos(item!.id, urls);
+    onUpdate({ ...item!, photos: urls });
+    setUploading(false);
+  }
+
+  const inputSt: React.CSSProperties = {
+    background: c.card, border: `1px solid ${c.border}`, borderRadius: 8,
+    padding: "8px 10px", color: c.text, fontSize: 13, fontFamily: "inherit",
+    outline: "none", width: "100%", boxSizing: "border-box",
+  };
+  const labelSt: React.CSSProperties = { color: c.text2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 };
+
+  function edSet(field: keyof EditDraft, value: string) {
+    setEditDraft(d => d ? { ...d, [field]: value } : d);
+  }
+
   return (
     <AnimatePresence>
       <motion.div
         initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         style={{
-          position: "fixed", right: 0, top: 0, bottom: 0, width: 380, zIndex: 50,
+          position: "fixed", right: 0, top: 0, bottom: 0, width: 400, zIndex: 50,
           background: c.card, borderLeft: `1px solid ${c.border}`,
           display: "flex", flexDirection: "column", overflow: "hidden",
         }}
       >
+        {/* Hidden photo input */}
+        <input
+          ref={photoInputRef} type="file" accept="image/*" multiple style={{ display: "none" }}
+          onChange={e => e.target.files && handlePhotoUpload(e.target.files)}
+        />
+
         {/* Header */}
-        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${c.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${c.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
           <div>
+            {editMode && (
+              <button onClick={() => setEditMode(false)} style={{ background: "none", border: "none", cursor: "pointer", color: c.text3, display: "flex", alignItems: "center", gap: 4, padding: "0 0 6px", fontSize: 12 }}>
+                <ChevronLeft size={14} /> กลับ
+              </button>
+            )}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
               <span style={{ color: c.gold, fontSize: 13, fontWeight: 700, fontFamily: "monospace" }}>{item.id}</span>
-              <StockStatusBadge status={item.status} />
+              {!editMode && <StockStatusBadge status={item.status} />}
+              {editMode && <span style={{ color: c.gold, fontSize: 11, fontWeight: 600 }}>โหมดแก้ไข</span>}
             </div>
             <p style={{ color: c.text2, fontSize: 12, margin: 0 }}>{item.model} · {item.storage} · {item.color}</p>
           </div>
@@ -83,221 +208,333 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
           </button>
         </div>
 
-        {/* Tabs */}
-        <div style={{ display: "flex", borderBottom: `1px solid ${c.border}`, background: c.card }}>
-          {TABS.map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{
-              flex: 1, padding: "12px 4px", background: "none", border: "none",
-              borderBottom: tab === t ? `2px solid ${c.gold}` : "2px solid transparent",
-              color: tab === t ? c.gold : c.text3, fontSize: 12, fontWeight: tab === t ? 700 : 400,
-              cursor: "pointer", fontFamily: "inherit", transition: "all 150ms",
-            }}>
-              {t}
-            </button>
-          ))}
-        </div>
+        {/* Tabs — hidden in edit mode */}
+        {!editMode && (
+          <div style={{ display: "flex", borderBottom: `1px solid ${c.border}`, background: c.card, flexShrink: 0 }}>
+            {TABS.map(t => (
+              <button key={t} onClick={() => setTab(t)} style={{
+                flex: 1, padding: "12px 4px", background: "none", border: "none",
+                borderBottom: tab === t ? `2px solid ${c.gold}` : "2px solid transparent",
+                color: tab === t ? c.gold : c.text3, fontSize: 12, fontWeight: tab === t ? 700 : 400,
+                cursor: "pointer", fontFamily: "inherit", transition: "all 150ms",
+              }}>
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Content */}
         <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
 
-          {tab === "รายละเอียด" && (
-            <div>
-              {/* Device image */}
-              <div style={{ background: c.card2, borderRadius: 16, padding: 16, marginBottom: 16, textAlign: "center" }}>
-                {item.photos[0] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.photos[0]} alt={item.model} style={{ height: 120, objectFit: "contain", borderRadius: 8 }} />
-                ) : (
-                  <div style={{ height: 100, display: "flex", alignItems: "center", justifyContent: "center", color: c.text3, fontSize: 40 }}>📱</div>
-                )}
-              </div>
-
-              {/* Device Info */}
+          {/* ─── Edit Mode ─── */}
+          {editMode && editDraft && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {/* Device info */}
               <Section label="ข้อมูลเครื่อง" c={c}>
-                <Row label="รุ่น" value={item.model} c={c} />
-                <Row label="ความจุ" value={item.storage} c={c} />
-                <Row label="สี" value={item.color} c={c} />
-                <Row label="IMEI" value={item.imei} mono c={c} />
-                <Row label="Serial Number" value={item.serial} mono c={c} />
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: `1px solid ${c.border}` }}>
-                  <span style={{ color: c.text2, fontSize: 13 }}>Battery Health</span>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ width: 60, height: 8, borderRadius: 4, background: c.border, overflow: "hidden" }}>
-                      <div style={{ height: "100%", width: `${item.batteryHealth}%`, background: item.batteryHealth >= 85 ? "#22c55e" : item.batteryHealth >= 70 ? "#facc15" : "#ef4444", borderRadius: 4 }} />
-                    </div>
-                    <span style={{ color: c.text, fontSize: 13, fontWeight: 600 }}>{item.batteryHealth}%</span>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "10px 0" }}>
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={labelSt}>รุ่น</label>
+                    <input value={editDraft.model} onChange={e => edSet("model", e.target.value)} style={inputSt} />
                   </div>
-                </div>
-                <Row label="Cycle Count" value={String(item.cycleCount)} c={c} />
-                <Row label="iCloud Status" value={item.icloudStatus} c={c} />
-                <Row label="Carrier Lock" value={item.carrierLock} c={c} />
-                <Row label="อุปกรณ์ที่มี" value={item.accessories} c={c} />
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0" }}>
-                  <span style={{ color: c.text2, fontSize: 13 }}>เกรด</span>
-                  <GradeBadge grade={item.grade} />
+                  <div>
+                    <label style={labelSt}>ความจุ</label>
+                    <select value={editDraft.storage} onChange={e => edSet("storage", e.target.value)} style={{ ...inputSt, cursor: "pointer" }}>
+                      {["64GB","128GB","256GB","512GB","1TB"].map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={labelSt}>สี</label>
+                    <input value={editDraft.color} onChange={e => edSet("color", e.target.value)} style={inputSt} />
+                  </div>
+                  <div>
+                    <label style={labelSt}>เกรด</label>
+                    <select value={editDraft.grade} onChange={e => edSet("grade", e.target.value)} style={{ ...inputSt, cursor: "pointer" }}>
+                      {["A","A-","B+","B","B-","C"].map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={labelSt}>Battery Health (%)</label>
+                    <input type="number" value={editDraft.batteryHealth} onChange={e => edSet("batteryHealth", e.target.value)} min="0" max="100" style={inputSt} />
+                  </div>
+                  <div>
+                    <label style={labelSt}>Cycle Count</label>
+                    <input type="number" value={editDraft.cycleCount} onChange={e => edSet("cycleCount", e.target.value)} min="0" style={inputSt} />
+                  </div>
+                  <div>
+                    <label style={labelSt}>iCloud Status</label>
+                    <select value={editDraft.icloudStatus} onChange={e => edSet("icloudStatus", e.target.value)} style={{ ...inputSt, cursor: "pointer" }}>
+                      {["ปลอดล็อกแล้ว","ยังไม่ออก iCloud","ไม่ทราบ"].map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={labelSt}>Carrier Lock</label>
+                    <select value={editDraft.carrierLock} onChange={e => edSet("carrierLock", e.target.value)} style={{ ...inputSt, cursor: "pointer" }}>
+                      {["ไม่มี (Unlocked)","AIS","DTAC","TRUE","มี (Locked)"].map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={labelSt}>อุปกรณ์ที่มี</label>
+                    <input value={editDraft.accessories} onChange={e => edSet("accessories", e.target.value)} style={inputSt} />
+                  </div>
                 </div>
               </Section>
 
-              {/* Purchase Info */}
+              {/* Seller info */}
               <Section label="ข้อมูลรับซื้อ" c={c}>
-                {item.requestRef && <Row label="เลขคำขอ" value={item.requestRef} c={c} mono />}
-                <Row label="ผู้ขาย" value={item.sellerName} c={c} />
-                <Row label="เบอร์โทร" value={item.sellerPhone} c={c} />
-                <Row label="ราคาประเมิน" value={`฿${fmt(item.costPrice)}`} c={c} />
-                <Row label="ช่องทาง" value={item.sourceChannel} c={c} />
-                <Row label="วันที่รับเข้า" value={fmtDate(item.receivedAt)} c={c} />
-                {item.inspector && <Row label="ผู้ตรวจ" value={item.inspector} c={c} />}
-              </Section>
-
-              {/* Cost / Profit */}
-              <Section label="ต้นทุน / กำไร" c={c}>
-                <div style={{ background: c.card2, borderRadius: 12, padding: 14, marginBottom: 4 }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
-                    {[
-                      { label: "ต้นทุนสินค้า", value: `฿${fmt(item.costPrice)}` },
-                      { label: "ค่าส่ง", value: `฿${fmt(item.shippingCost)}` },
-                      { label: "ค่าใช้จ่ายอื่น", value: `฿${fmt(item.otherCost)}` },
-                      { label: "ต้นทุนรวม", value: `฿${fmt(totalCost)}` },
-                    ].map(({ label, value }) => (
-                      <div key={label}>
-                        <p style={{ color: c.text3, fontSize: 11, margin: "0 0 2px" }}>{label}</p>
-                        <p style={{ color: c.text, fontSize: 14, fontWeight: 600, margin: 0 }}>{value}</p>
-                      </div>
-                    ))}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "10px 0" }}>
+                  <div>
+                    <label style={labelSt}>ชื่อผู้ขาย</label>
+                    <input value={editDraft.sellerName} onChange={e => edSet("sellerName", e.target.value)} style={inputSt} />
                   </div>
-                  <div style={{ borderTop: `1px solid ${c.border}`, paddingTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      <p style={{ color: c.text3, fontSize: 11, margin: "0 0 2px" }}>ราคาขาย</p>
-                      {editPrice ? (
-                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                          <input
-                            value={priceDraft} onChange={e => setPriceDraft(e.target.value)}
-                            style={{ background: c.card, border: `1px solid ${c.gold}`, borderRadius: 8, padding: "4px 10px", color: c.text, fontSize: 14, width: 100, fontFamily: "inherit", outline: "none" }}
-                          />
-                          <button onClick={handlePriceSave} disabled={saving} style={{ background: c.gold, border: "none", borderRadius: 8, padding: "4px 10px", color: "#000", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>บันทึก</button>
-                          <button onClick={() => setEditPrice(false)} style={{ background: "none", border: "none", color: c.text3, cursor: "pointer", fontSize: 12 }}>ยกเลิก</button>
-                        </div>
-                      ) : (
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <p style={{ color: c.gold, fontSize: 18, fontWeight: 800, margin: 0 }}>฿{fmt(item.sellingPrice)}</p>
-                          <button onClick={() => { setPriceDraft(String(item.sellingPrice)); setEditPrice(true); }} style={{ background: "none", border: "none", cursor: "pointer", color: c.text3, display: "flex", padding: 0 }}>
-                            <Edit2 size={14} />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <p style={{ color: c.text3, fontSize: 11, margin: "0 0 2px" }}>กำไร / มาร์จิ้น</p>
-                      <p style={{ color: profit >= 0 ? "#22c55e" : "#ef4444", fontSize: 16, fontWeight: 700, margin: 0 }}>฿{fmt(profit)}</p>
-                      <p style={{ color: c.text3, fontSize: 11, margin: 0 }}>{margin}%</p>
-                    </div>
+                  <div>
+                    <label style={labelSt}>เบอร์โทร</label>
+                    <input value={editDraft.sellerPhone} onChange={e => edSet("sellerPhone", e.target.value)} style={inputSt} />
+                  </div>
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={labelSt}>ช่องทาง</label>
+                    <select value={editDraft.sourceChannel} onChange={e => edSet("sourceChannel", e.target.value)} style={{ ...inputSt, cursor: "pointer" }}>
+                      {["หน้าร้าน","เว็บไซต์","LINE OA","Facebook","Shopee","โทรศัพท์"].map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
                   </div>
                 </div>
               </Section>
-            </div>
-          )}
 
-          {tab === "รูปภาพ" && (
-            <div>
-              {item.photos.length > 0 ? (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  {item.photos.map((url, i) => (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img key={i} src={url} alt="" style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: 12, border: `1px solid ${c.border}` }} />
+              {/* Pricing */}
+              <Section label="ราคา" c={c}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "10px 0" }}>
+                  {([["ราคารับซื้อ (฿)", "costPrice"], ["ค่าส่ง (฿)", "shippingCost"], ["ค่าอื่นๆ (฿)", "otherCost"], ["ราคาขาย (฿)", "sellingPrice"]] as [string, keyof EditDraft][]).map(([lbl, field]) => (
+                    <div key={field}>
+                      <label style={labelSt}>{lbl}</label>
+                      <input type="number" value={editDraft[field]} onChange={e => edSet(field, e.target.value)} style={inputSt} />
+                    </div>
                   ))}
                 </div>
-              ) : (
-                <div style={{ textAlign: "center", padding: "48px 0", color: c.text3 }}>
-                  <div style={{ fontSize: 40, marginBottom: 12 }}>📷</div>
-                  <p style={{ margin: 0 }}>ยังไม่มีรูปภาพ</p>
+              </Section>
+            </div>
+          )}
+
+          {/* ─── Normal tabs ─── */}
+          {!editMode && (
+            <>
+              {tab === "รายละเอียด" && (
+                <div>
+                  <div style={{ background: c.card2, borderRadius: 16, padding: 16, marginBottom: 16, textAlign: "center" }}>
+                    {item.photos[0] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.photos[0]} alt={item.model} style={{ height: 120, objectFit: "contain", borderRadius: 8 }} />
+                    ) : (
+                      <div style={{ height: 100, display: "flex", alignItems: "center", justifyContent: "center", color: c.text3, fontSize: 40 }}>📱</div>
+                    )}
+                  </div>
+
+                  <Section label="ข้อมูลเครื่อง" c={c}>
+                    <Row label="รุ่น" value={item.model} c={c} />
+                    <Row label="ความจุ" value={item.storage} c={c} />
+                    <Row label="สี" value={item.color} c={c} />
+                    <Row label="IMEI" value={item.imei} mono c={c} />
+                    <Row label="Serial Number" value={item.serial} mono c={c} />
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: `1px solid ${c.border}` }}>
+                      <span style={{ color: c.text2, fontSize: 13 }}>Battery Health</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ width: 60, height: 8, borderRadius: 4, background: c.border, overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${item.batteryHealth}%`, background: item.batteryHealth >= 85 ? "#22c55e" : item.batteryHealth >= 70 ? "#facc15" : "#ef4444", borderRadius: 4 }} />
+                        </div>
+                        <span style={{ color: c.text, fontSize: 13, fontWeight: 600 }}>{item.batteryHealth}%</span>
+                      </div>
+                    </div>
+                    <Row label="Cycle Count" value={String(item.cycleCount)} c={c} />
+                    <Row label="iCloud Status" value={item.icloudStatus} c={c} />
+                    <Row label="Carrier Lock" value={item.carrierLock} c={c} />
+                    <Row label="อุปกรณ์ที่มี" value={item.accessories} c={c} />
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0" }}>
+                      <span style={{ color: c.text2, fontSize: 13 }}>เกรด</span>
+                      <GradeBadge grade={item.grade} />
+                    </div>
+                  </Section>
+
+                  <Section label="ข้อมูลรับซื้อ" c={c}>
+                    {item.requestRef && <Row label="เลขคำขอ" value={item.requestRef} c={c} mono />}
+                    <Row label="ผู้ขาย" value={item.sellerName} c={c} />
+                    <Row label="เบอร์โทร" value={item.sellerPhone} c={c} />
+                    <Row label="ราคาประเมิน" value={`฿${fmt(item.costPrice)}`} c={c} />
+                    <Row label="ช่องทาง" value={item.sourceChannel} c={c} />
+                    <Row label="วันที่รับเข้า" value={fmtDate(item.receivedAt)} c={c} />
+                    {item.inspector && <Row label="ผู้ตรวจ" value={item.inspector} c={c} />}
+                  </Section>
+
+                  <Section label="ต้นทุน / กำไร" c={c}>
+                    <div style={{ background: c.card2, borderRadius: 12, padding: 14, marginBottom: 4 }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+                        {[
+                          { label: "ต้นทุนสินค้า", value: `฿${fmt(item.costPrice)}` },
+                          { label: "ค่าส่ง", value: `฿${fmt(item.shippingCost)}` },
+                          { label: "ค่าใช้จ่ายอื่น", value: `฿${fmt(item.otherCost)}` },
+                          { label: "ต้นทุนรวม", value: `฿${fmt(totalCost)}` },
+                        ].map(({ label, value }) => (
+                          <div key={label}>
+                            <p style={{ color: c.text3, fontSize: 11, margin: "0 0 2px" }}>{label}</p>
+                            <p style={{ color: c.text, fontSize: 14, fontWeight: 600, margin: 0 }}>{value}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ borderTop: `1px solid ${c.border}`, paddingTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                          <p style={{ color: c.text3, fontSize: 11, margin: "0 0 2px" }}>ราคาขาย</p>
+                          {editPrice ? (
+                            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                              <input
+                                value={priceDraft} onChange={e => setPriceDraft(e.target.value)}
+                                style={{ background: c.card, border: `1px solid ${c.gold}`, borderRadius: 8, padding: "4px 10px", color: c.text, fontSize: 14, width: 100, fontFamily: "inherit", outline: "none" }}
+                              />
+                              <button onClick={handlePriceSave} disabled={saving} style={{ background: c.gold, border: "none", borderRadius: 8, padding: "4px 10px", color: "#000", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>บันทึก</button>
+                              <button onClick={() => setEditPrice(false)} style={{ background: "none", border: "none", color: c.text3, cursor: "pointer", fontSize: 12 }}>ยกเลิก</button>
+                            </div>
+                          ) : (
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <p style={{ color: c.gold, fontSize: 18, fontWeight: 800, margin: 0 }}>฿{fmt(item.sellingPrice)}</p>
+                              <button onClick={() => { setPriceDraft(String(item.sellingPrice)); setEditPrice(true); }} style={{ background: "none", border: "none", cursor: "pointer", color: c.text3, display: "flex", padding: 0 }}>
+                                <Edit2 size={14} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <p style={{ color: c.text3, fontSize: 11, margin: "0 0 2px" }}>กำไร / มาร์จิ้น</p>
+                          <p style={{ color: profit >= 0 ? "#22c55e" : "#ef4444", fontSize: 16, fontWeight: 700, margin: 0 }}>฿{fmt(profit)}</p>
+                          <p style={{ color: c.text3, fontSize: 11, margin: 0 }}>{margin}%</p>
+                        </div>
+                      </div>
+                    </div>
+                  </Section>
                 </div>
               )}
-            </div>
-          )}
 
-          {tab === "เอกสาร" && (
-            <div style={{ textAlign: "center", padding: "48px 0", color: c.text3 }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>📄</div>
-              <p style={{ margin: 0 }}>ยังไม่มีเอกสาร</p>
-            </div>
-          )}
-
-          {tab === "ประวัติสถานะ" && (
-            <div>
-              {item.statusLog.map((log, i) => {
-                const color = STOCK_STATUS_COLORS[log.status] ?? "#6b7280";
-                return (
-                  <div key={i} style={{ display: "flex", gap: 12, marginBottom: 16, position: "relative" }}>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                      <div style={{ width: 10, height: 10, borderRadius: "50%", background: color, flexShrink: 0, marginTop: 4 }} />
-                      {i < item.statusLog.length - 1 && <div style={{ width: 2, flex: 1, background: c.border, marginTop: 4 }} />}
+              {tab === "รูปภาพ" && (
+                <div>
+                  {uploadErr && <p style={{ color: "#ef4444", fontSize: 12, marginBottom: 12 }}>{uploadErr}</p>}
+                  <label style={{
+                    display: "block", border: `2px dashed ${c.border}`, borderRadius: 12, padding: "16px",
+                    textAlign: "center", cursor: uploading ? "not-allowed" : "pointer", marginBottom: 14, opacity: uploading ? 0.5 : 1,
+                  }}>
+                    <input type="file" accept="image/*" multiple style={{ display: "none" }} disabled={uploading}
+                      onChange={e => e.target.files && handlePhotoUpload(e.target.files)} />
+                    <Upload size={20} color={c.text3} style={{ margin: "0 auto 6px" }} />
+                    <p style={{ color: c.text2, fontSize: 13, margin: 0 }}>{uploading ? "กำลังอัปโหลด..." : "คลิกเพื่ออัปโหลดรูปภาพ"}</p>
+                  </label>
+                  {item.photos.length > 0 ? (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      {item.photos.map((url, i) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={i} src={url} alt="" style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: 12, border: `1px solid ${c.border}` }} />
+                      ))}
                     </div>
-                    <div style={{ flex: 1, paddingBottom: 8 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                        <StockStatusBadge status={log.status as StockStatus} />
-                        <span style={{ color: c.text3, fontSize: 11 }}>{log.by}</span>
+                  ) : (
+                    <div style={{ textAlign: "center", padding: "32px 0", color: c.text3 }}>
+                      <div style={{ fontSize: 36, marginBottom: 10 }}>📷</div>
+                      <p style={{ margin: 0 }}>ยังไม่มีรูปภาพ</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {tab === "เอกสาร" && (
+                <div style={{ textAlign: "center", padding: "48px 0", color: c.text3 }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>📄</div>
+                  <p style={{ margin: 0 }}>ยังไม่มีเอกสาร</p>
+                </div>
+              )}
+
+              {tab === "ประวัติสถานะ" && (
+                <div>
+                  {item.statusLog.map((log, i) => {
+                    const color = STOCK_STATUS_COLORS[log.status] ?? "#6b7280";
+                    return (
+                      <div key={i} style={{ display: "flex", gap: 12, marginBottom: 16, position: "relative" }}>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                          <div style={{ width: 10, height: 10, borderRadius: "50%", background: color, flexShrink: 0, marginTop: 4 }} />
+                          {i < item.statusLog.length - 1 && <div style={{ width: 2, flex: 1, background: c.border, marginTop: 4 }} />}
+                        </div>
+                        <div style={{ flex: 1, paddingBottom: 8 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                            <StockStatusBadge status={log.status as StockStatus} />
+                            <span style={{ color: c.text3, fontSize: 11 }}>{log.by}</span>
+                          </div>
+                          {log.note && <p style={{ color: c.text2, fontSize: 12, margin: "4px 0 0" }}>{log.note}</p>}
+                          <p style={{ color: c.text3, fontSize: 11, margin: "4px 0 0" }}>{fmtDate(log.timestamp)}</p>
+                        </div>
                       </div>
-                      {log.note && <p style={{ color: c.text2, fontSize: 12, margin: "4px 0 0" }}>{log.note}</p>}
-                      <p style={{ color: c.text3, fontSize: 11, margin: "4px 0 0" }}>{fmtDate(log.timestamp)}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
         </div>
 
         {/* Action Buttons */}
-        <div style={{ padding: "16px 20px", borderTop: `1px solid ${c.border}` }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-            {[
-              { icon: Edit2, label: "แก้ไขข้อมูล", action: () => {} },
-              { icon: Upload, label: "อัปโหลดรูป", action: () => {} },
-              { icon: RefreshCw, label: "เปลี่ยนสถานะ", action: () => setShowStatusMenu(v => !v) },
-              { icon: Tag, label: "ตั้งราคาขาย", action: () => { setPriceDraft(String(item.sellingPrice)); setEditPrice(true); setTab("รายละเอียด"); } },
-            ].map(({ icon: Icon, label, action }) => (
-              <button key={label} onClick={action} style={{
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                padding: "10px 8px", borderRadius: 10, border: `1px solid ${c.border}`,
-                background: c.card2, color: c.text2, fontSize: 12, fontWeight: 600,
-                cursor: "pointer", fontFamily: "inherit",
-              }}>
-                <Icon size={14} />
-                {label}
+        <div style={{ padding: "16px 20px", borderTop: `1px solid ${c.border}`, flexShrink: 0 }}>
+          {editMode ? (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <button onClick={() => setEditMode(false)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "11px 8px", borderRadius: 10, border: `1px solid ${c.border}`, background: "none", color: c.text2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                ยกเลิก
               </button>
-            ))}
-          </div>
-
-          {/* Status dropdown */}
-          {showStatusMenu && (
-            <div style={{ marginBottom: 8, background: c.card2, borderRadius: 12, border: `1px solid ${c.border}`, overflow: "hidden" }}>
-              {ALL_STATUSES.map(s => (
-                <button key={s} onClick={() => handleStatusChange(s)} style={{
-                  width: "100%", display: "flex", alignItems: "center", gap: 10,
-                  padding: "10px 14px", background: item.status === s ? c.goldBg : "transparent",
-                  border: "none", cursor: "pointer", fontFamily: "inherit",
-                  borderBottom: `1px solid ${c.border}`,
-                }}>
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: STOCK_STATUS_COLORS[s] ?? "#6b7280" }} />
-                  <span style={{ color: item.status === s ? c.gold : c.text2, fontSize: 13 }}>{s}</span>
-                </button>
-              ))}
+              <button onClick={handleEditSave} disabled={saving} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "11px 8px", borderRadius: 10, border: "none", background: c.gold, color: "#000", fontSize: 13, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: saving ? 0.6 : 1 }}>
+                <Save size={14} /> {saving ? "กำลังบันทึก..." : "บันทึก"}
+              </button>
             </div>
-          )}
+          ) : (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                {[
+                  { icon: Edit2,    label: "แก้ไขข้อมูล",   action: openEdit },
+                  { icon: Upload,   label: uploading ? "กำลังอัปโหลด..." : "อัปโหลดรูป", action: () => photoInputRef.current?.click() },
+                  { icon: RefreshCw, label: "เปลี่ยนสถานะ", action: () => setShowStatusMenu(v => !v) },
+                  { icon: Tag,      label: "ตั้งราคาขาย",  action: () => { setPriceDraft(String(item.sellingPrice)); setEditPrice(true); setTab("รายละเอียด"); } },
+                ].map(({ icon: Icon, label, action }) => (
+                  <button key={label} onClick={action} disabled={uploading} style={{
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                    padding: "10px 8px", borderRadius: 10, border: `1px solid ${c.border}`,
+                    background: c.card2, color: c.text2, fontSize: 12, fontWeight: 600,
+                    cursor: uploading ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: uploading ? 0.5 : 1,
+                  }}>
+                    <Icon size={14} />
+                    {label}
+                  </button>
+                ))}
+              </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            <button style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "11px 8px", borderRadius: 10, border: `1px solid ${c.border}`, background: "none", color: c.text2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-              <Printer size={14} />
-              พิมพ์หน้าราคา
-            </button>
-            <button
-              onClick={() => handleStatusChange("ขายแล้ว")}
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "11px 8px", borderRadius: 10, border: "none", background: "#ef444418", color: "#ef4444", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
-            >
-              <CheckSquare size={14} />
-              กำหนดว่าขายแล้ว
-            </button>
-          </div>
+              {showStatusMenu && (
+                <div style={{ marginBottom: 8, background: c.card2, borderRadius: 12, border: `1px solid ${c.border}`, overflow: "hidden" }}>
+                  {ALL_STATUSES.map(s => (
+                    <button key={s} onClick={() => handleStatusChange(s)} style={{
+                      width: "100%", display: "flex", alignItems: "center", gap: 10,
+                      padding: "10px 14px", background: item.status === s ? c.goldBg : "transparent",
+                      border: "none", cursor: "pointer", fontFamily: "inherit",
+                      borderBottom: `1px solid ${c.border}`,
+                    }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: STOCK_STATUS_COLORS[s] ?? "#6b7280" }} />
+                      <span style={{ color: item.status === s ? c.gold : c.text2, fontSize: 13 }}>{s}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <button onClick={() => printPriceTag(item)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "11px 8px", borderRadius: 10, border: `1px solid ${c.border}`, background: "none", color: c.text2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                  <Printer size={14} />
+                  พิมพ์หน้าราคา
+                </button>
+                <button
+                  onClick={() => handleStatusChange("ขายแล้ว")}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "11px 8px", borderRadius: 10, border: "none", background: "#ef444418", color: "#ef4444", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                >
+                  <CheckSquare size={14} />
+                  กำหนดว่าขายแล้ว
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </motion.div>
     </AnimatePresence>
@@ -321,6 +558,3 @@ function Row({ label, value, mono, c }: { label: string; value: string; mono?: b
     </div>
   );
 }
-
-// suppress unused import warning
-const _Battery = Battery;
