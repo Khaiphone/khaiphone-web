@@ -660,21 +660,21 @@ function Row({ label, value, mono, c }: { label: string; value: string; mono?: b
 
 function DocCard({ label, url, c }: { label: string; url: string; c: ReturnType<typeof useThemeColors> }) {
   return (
-    <div style={{ borderRadius: 12, overflow: "hidden", border: `1px solid ${c.border}` }}>
-      <iframe
-        src={url}
-        title={label}
-        style={{ width: "100%", height: 220, border: "none", display: "block", background: "#fff" }}
-      />
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: c.card2, borderTop: `1px solid ${c.border}` }}>
-        <span style={{ color: c.text2, fontSize: 12, fontWeight: 600 }}>{label}</span>
-        <a
-          href={url} target="_blank" rel="noreferrer"
-          style={{ display: "flex", alignItems: "center", gap: 4, color: c.gold, fontSize: 11, fontWeight: 600, textDecoration: "none" }}
-        >
-          <ExternalLink size={12} /> เปิดเต็ม
-        </a>
+    <a
+      href={url} target="_blank" rel="noreferrer"
+      style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "12px 14px", borderRadius: 10, border: `1px solid ${c.border}`,
+        background: c.card2, textDecoration: "none", cursor: "pointer",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ fontSize: 20 }}>📄</span>
+        <span style={{ color: c.text, fontSize: 13, fontWeight: 600 }}>{label}</span>
       </div>
-    </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 4, color: c.gold, fontSize: 12, fontWeight: 600 }}>
+        เปิด <ExternalLink size={12} />
+      </div>
+    </a>
   );
 }
