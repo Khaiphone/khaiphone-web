@@ -2,36 +2,30 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Search, Edit2, Trash2, X } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, X, RefreshCw } from 'lucide-react'
+import {
+  fetchExpenses,
+  createExpense,
+  updateExpense,
+  deleteExpense,
+} from '@/app/actions/finance'
+import type { Expense, ExpenseStatus } from '@/app/actions/finance'
 
 const CARD = '#0D0D0D'
 const BORDER = 'rgba(255,255,255,0.08)'
 const GOLD = '#B8860B'
 const TEXT2 = 'rgba(255,255,255,0.65)'
 const TEXT3 = 'rgba(255,255,255,0.35)'
-const LS_KEY = 'khaiphone_expenses'
 
 const fadeUp = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.25 } }
 
 const CATEGORIES = ['Ads', 'ขนส่ง', 'สำนักงาน', 'ซอฟต์แวร์', 'บุคคล', 'สื่อสาร', 'ซ่อมบำรุง', 'อื่นๆ']
-const STATUSES = ['pending', 'approved', 'rejected'] as const
-type ExpenseStatus = typeof STATUSES[number]
+const STATUSES: ExpenseStatus[] = ['pending', 'approved', 'rejected']
 const STATUS_LABELS: Record<ExpenseStatus, string> = { pending: 'รออนุมัติ', approved: 'อนุมัติแล้ว', rejected: 'ปฏิเสธ' }
 const STATUS_COLORS: Record<ExpenseStatus, { bg: string; text: string }> = {
   pending:  { bg: 'rgba(250,204,21,0.15)',  text: '#facc15' },
   approved: { bg: 'rgba(34,197,94,0.15)',   text: '#22c55e' },
   rejected: { bg: 'rgba(239,68,68,0.15)',   text: '#ef4444' },
-}
-
-type Expense = {
-  id: string
-  date: string
-  refNumber: string
-  product: string
-  category: string
-  amount: number
-  status: ExpenseStatus
-  notes: string
 }
 
 const TABS = ['ทั้งหมด', 'อนุมัติแล้ว', 'รออนุมัติ', 'ปฏิเสธ']
@@ -50,10 +44,19 @@ function genRef() {
   return `EXP-${y}${m}${d}-${n}`
 }
 
-const EMPTY_FORM = { product: '', category: 'Ads', amount: '', status: 'pending' as ExpenseStatus, notes: '', date: new Date().toISOString().slice(0, 10) }
+const EMPTY_FORM = {
+  product: '',
+  category: 'Ads',
+  amount: '',
+  status: 'pending' as ExpenseStatus,
+  notes: '',
+  date: new Date().toISOString().slice(0, 10),
+}
 
 export default function ExpensesPage() {
   const [items, setItems] = useState<Expense[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState(0)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -62,44 +65,54 @@ export default function ExpensesPage() {
   const [editing, setEditing] = useState<Expense | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [errorMsg, setErrorMsg] = useState('')
 
-  useEffect(() => {
-    try { setItems(JSON.parse(localStorage.getItem(LS_KEY) ?? '[]')) } catch { setItems([]) }
+  const load = useCallback(async () => {
+    setLoading(true)
+    setItems(await fetchExpenses())
+    setLoading(false)
   }, [])
 
-  const save = useCallback((next: Expense[]) => {
-    setItems(next)
-    localStorage.setItem(LS_KEY, JSON.stringify(next))
-  }, [])
+  useEffect(() => { load() }, [load])
 
   function openAdd() {
     setForm(EMPTY_FORM)
     setEditing(null)
+    setErrorMsg('')
     setModal('add')
   }
 
   function openEdit(item: Expense) {
     setForm({ product: item.product, category: item.category, amount: String(item.amount), status: item.status, notes: item.notes, date: item.date })
     setEditing(item)
+    setErrorMsg('')
     setModal('edit')
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!form.product.trim() || !form.amount) return
     const amount = Number(form.amount)
     if (isNaN(amount) || amount <= 0) return
+    setSaving(true)
+    setErrorMsg('')
     if (modal === 'add') {
-      const newItem: Expense = { id: crypto.randomUUID(), date: form.date, refNumber: genRef(), product: form.product.trim(), category: form.category, amount, status: form.status, notes: form.notes.trim() }
-      save([newItem, ...items])
+      const res = await createExpense({ date: form.date, refNumber: genRef(), product: form.product.trim(), category: form.category, amount, status: form.status, notes: form.notes.trim() })
+      if (!res.success) { setErrorMsg(res.error); setSaving(false); return }
     } else if (editing) {
-      save(items.map(x => x.id === editing.id ? { ...x, date: form.date, product: form.product.trim(), category: form.category, amount, status: form.status, notes: form.notes.trim() } : x))
+      const res = await updateExpense(editing.id, { date: form.date, product: form.product.trim(), category: form.category, amount, status: form.status, notes: form.notes.trim() })
+      if (!res.success) { setErrorMsg(res.error); setSaving(false); return }
     }
+    setSaving(false)
     setModal(null)
+    await load()
   }
 
-  function handleDelete(id: string) {
-    save(items.filter(x => x.id !== id))
+  async function handleDelete(id: string) {
+    setSaving(true)
+    await deleteExpense(id)
+    setSaving(false)
     setDeleteId(null)
+    await load()
   }
 
   const filtered = items.filter(r => {
@@ -125,6 +138,9 @@ export default function ExpensesPage() {
           <input type="text" placeholder="ค้นหา รายการ / หมวดหมู่..." value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
             style={{ background: 'none', border: 'none', outline: 'none', color: '#FFF', fontSize: 13, width: '100%', fontFamily: 'inherit' }} />
         </div>
+        <button onClick={load} title="รีเฟรช" style={{ display: 'flex', alignItems: 'center', padding: '9px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT2, cursor: 'pointer' }}>
+          <RefreshCw size={15} />
+        </button>
         <button onClick={openAdd} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, background: GOLD, border: 'none', color: '#FFF', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
           <Plus size={16} /> เพิ่มรายจ่าย
         </button>
@@ -155,7 +171,9 @@ export default function ExpensesPage() {
               </tr>
             </thead>
             <tbody>
-              {paged.length === 0 ? (
+              {loading ? (
+                <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: TEXT3, fontSize: 14 }}>กำลังโหลด...</td></tr>
+              ) : paged.length === 0 ? (
                 <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: TEXT3, fontSize: 14 }}>
                   {items.length === 0 ? 'ยังไม่มีรายจ่าย กด "+ เพิ่มรายจ่าย" เพื่อเริ่มต้น' : 'ไม่พบรายการ'}
                 </td></tr>
@@ -238,11 +256,12 @@ export default function ExpensesPage() {
                   <label style={labelStyle}>หมายเหตุ</label>
                   <input type="text" placeholder="รายละเอียดเพิ่มเติม" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} style={inputStyle} />
                 </div>
+                {errorMsg && <p style={{ color: '#ef4444', fontSize: 13, margin: 0 }}>{errorMsg}</p>}
               </div>
               <div style={{ display: 'flex', gap: 10, marginTop: 24, justifyContent: 'flex-end' }}>
-                <button onClick={() => setModal(null)} style={{ padding: '10px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT2, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>ยกเลิก</button>
-                <button onClick={handleSubmit} style={{ padding: '10px 24px', borderRadius: 8, background: GOLD, border: 'none', color: '#FFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  {modal === 'add' ? 'เพิ่มรายการ' : 'บันทึก'}
+                <button onClick={() => setModal(null)} disabled={saving} style={{ padding: '10px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT2, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>ยกเลิก</button>
+                <button onClick={handleSubmit} disabled={saving} style={{ padding: '10px 24px', borderRadius: 8, background: GOLD, border: 'none', color: '#FFF', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: saving ? 0.7 : 1 }}>
+                  {saving ? 'กำลังบันทึก...' : modal === 'add' ? 'เพิ่มรายการ' : 'บันทึก'}
                 </button>
               </div>
             </motion.div>
@@ -260,8 +279,10 @@ export default function ExpensesPage() {
               <p style={{ margin: '0 0 8px', color: '#FFF', fontWeight: 700, fontSize: 16 }}>ลบรายการ?</p>
               <p style={{ margin: '0 0 24px', color: TEXT2, fontSize: 14 }}>การกระทำนี้ไม่สามารถย้อนกลับได้</p>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-                <button onClick={() => setDeleteId(null)} style={{ padding: '10px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT2, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>ยกเลิก</button>
-                <button onClick={() => handleDelete(deleteId)} style={{ padding: '10px 20px', borderRadius: 8, background: '#ef4444', border: 'none', color: '#FFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>ลบ</button>
+                <button onClick={() => setDeleteId(null)} disabled={saving} style={{ padding: '10px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT2, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>ยกเลิก</button>
+                <button onClick={() => handleDelete(deleteId)} disabled={saving} style={{ padding: '10px 20px', borderRadius: 8, background: '#ef4444', border: 'none', color: '#FFF', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: saving ? 0.7 : 1 }}>
+                  {saving ? 'กำลังลบ...' : 'ลบ'}
+                </button>
               </div>
             </motion.div>
           </motion.div>

@@ -372,3 +372,87 @@ export async function fetchFinanceAudit(): Promise<FinanceAuditEntry[]> {
   entries.sort((a, b) => b.datetime.localeCompare(a.datetime));
   return entries;
 }
+
+// ─── Expenses (Supabase) ──────────────────────────────────────────────────────
+
+export type ExpenseStatus = "pending" | "approved" | "rejected";
+
+export type Expense = {
+  id: string;
+  date: string;
+  refNumber: string;
+  product: string;
+  category: string;
+  amount: number;
+  status: ExpenseStatus;
+  notes: string;
+  createdAt: string;
+};
+
+export async function fetchExpenses(): Promise<Expense[]> {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from("expenses")
+    .select("*")
+    .order("date", { ascending: false });
+  if (error) return [];
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    date: r.date,
+    refNumber: r.ref_number,
+    product: r.product,
+    category: r.category,
+    amount: r.amount,
+    status: r.status as ExpenseStatus,
+    notes: r.notes ?? "",
+    createdAt: r.created_at,
+  }));
+}
+
+export async function createExpense(data: {
+  date: string;
+  refNumber: string;
+  product: string;
+  category: string;
+  amount: number;
+  status: ExpenseStatus;
+  notes: string;
+}): Promise<{ success: true; id: string } | { success: false; error: string }> {
+  const supabase = createServerClient();
+  const { data: row, error } = await supabase
+    .from("expenses")
+    .insert({
+      date: data.date,
+      ref_number: data.refNumber,
+      product: data.product,
+      category: data.category,
+      amount: data.amount,
+      status: data.status,
+      notes: data.notes,
+      updated_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+  if (error) return { success: false, error: error.message };
+  return { success: true, id: row.id };
+}
+
+export async function updateExpense(
+  id: string,
+  data: { date: string; product: string; category: string; amount: number; status: ExpenseStatus; notes: string },
+): Promise<{ success: true } | { success: false; error: string }> {
+  const supabase = createServerClient();
+  const { error } = await supabase
+    .from("expenses")
+    .update({ ...data, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function deleteExpense(id: string): Promise<{ success: true } | { success: false; error: string }> {
+  const supabase = createServerClient();
+  const { error } = await supabase.from("expenses").delete().eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
