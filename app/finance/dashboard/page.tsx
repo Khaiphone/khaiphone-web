@@ -19,6 +19,7 @@ import {
 import KpiCard from '@/app/components/finance/KpiCard'
 import { fetchFinanceDashboard } from '@/app/actions/finance'
 import type { FinanceDashboard } from '@/app/actions/finance'
+import { useFinanceDate } from '@/app/components/finance/FinanceDateContext'
 
 const CARD = '#0D0D0D'
 const BORDER = 'rgba(255,255,255,0.08)'
@@ -41,10 +42,12 @@ function fmt(v: number) {
 export default function DashboardPage() {
   const [data, setData] = useState<FinanceDashboard | null>(null)
   const [loading, setLoading] = useState(true)
+  const { dateFrom, dateTo } = useFinanceDate()
 
   useEffect(() => {
-    fetchFinanceDashboard().then((d) => { setData(d); setLoading(false) })
-  }, [])
+    setLoading(true)
+    fetchFinanceDashboard(dateFrom, dateTo).then((d) => { setData(d); setLoading(false) })
+  }, [dateFrom, dateTo])
 
   if (loading || !data) {
     return (

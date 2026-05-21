@@ -96,7 +96,7 @@ function monthLabel(key: string) {
   return THAI_MONTHS[month];
 }
 
-export async function fetchFinanceDashboard(): Promise<FinanceDashboard> {
+export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string): Promise<FinanceDashboard> {
   const supabase = createServerClient();
   const [{ data }, { data: expenseData }] = await Promise.all([
     supabase
@@ -105,11 +105,16 @@ export async function fetchFinanceDashboard(): Promise<FinanceDashboard> {
       .eq("status", "completed"),
     supabase
       .from("expenses")
-      .select("amount, category, status"),
+      .select("amount, category, status, date"),
   ]);
 
   const rows = data ?? [];
-  const soldItems = rows.filter((r) => r.stock_status === "sold" && r.sell_price != null && r.sell_date != null);
+  const allSoldItems = rows.filter((r) => r.stock_status === "sold" && r.sell_price != null && r.sell_date != null);
+  const soldItems = allSoldItems.filter((r) => {
+    if (dateFrom && r.sell_date < dateFrom) return false;
+    if (dateTo && r.sell_date > dateTo) return false;
+    return true;
+  });
   const unsoldItems = rows.filter((r) => r.stock_status !== "sold");
 
   const totalRevenue = soldItems.reduce((s, r) => s + (r.sell_price ?? 0), 0);
@@ -117,9 +122,15 @@ export async function fetchFinanceDashboard(): Promise<FinanceDashboard> {
   const netProfit = totalRevenue - totalCost;
   const stockValue = unsoldItems.reduce((s, r) => s + (r.actual_price ?? r.estimated_price ?? 0), 0);
 
-  const approvedExpenses = (expenseData ?? []).filter((e) => e.status === "approved");
+  const allExpenses = expenseData ?? [];
+  const approvedExpenses = allExpenses.filter((e) => {
+    if (e.status !== "approved") return false;
+    if (dateFrom && e.date < dateFrom) return false;
+    if (dateTo && e.date > dateTo) return false;
+    return true;
+  });
   const totalExpenses = approvedExpenses.reduce((s, e) => s + (e.amount ?? 0), 0);
-  const pendingExpensesCount = (expenseData ?? []).filter((e) => e.status === "pending").length;
+  const pendingExpensesCount = allExpenses.filter((e) => e.status === "pending").length;
   const trueNetProfit = netProfit - totalExpenses;
 
   const categoryMap = new Map<string, number>();
@@ -607,4 +618,75 @@ export async function saveFinanceSettings(
     category: "system",
   }).catch(() => {});
   return { success: true };
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+export type FinanceNotification = {
+  id: string;
+  label: string;
+  sub: string;
+  href: string;
+};
+
+export async function fetchFinanceNotifications(): Promise<FinanceNotification[]> {
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("expenses")
+    .select("id, ref_number, product, amount, date")
+    .eq("status", "pending")
+    .order("date", { ascending: false })
+    .limit(8);
+  return (data ?? []).map((e) => ({
+    id: e.id,
+    label: `รออนุมัติ: ${e.product}`,
+    sub: `${e.ref_number} · ฿${(e.amount ?? 0).toLocaleString("th-TH")}`,
+    href: "/finance/expenses",
+  }));
+}
+
+// ─── Search ───────────────────────────────────────────────────────────────────
+
+export type FinanceSearchResult = {
+  id: string;
+  type: "income" | "expense";
+  label: string;
+  sub: string;
+  href: string;
+};
+
+export async function searchFinance(query: string): Promise<FinanceSearchResult[]> {
+  if (!query || query.trim().length < 2) return [];
+  const supabase = createServerClient();
+  const q = query.trim();
+  const [{ data: incomes }, { data: expenses }] = await Promise.all([
+    supabase
+      .from("requests")
+      .select("id, order_number, device_model, sell_price, sell_date")
+      .eq("status", "completed")
+      .eq("stock_status", "sold")
+      .or(`order_number.ilike.%${q}%,device_model.ilike.%${q}%`)
+      .limit(5),
+    supabase
+      .from("expenses")
+      .select("id, ref_number, product, amount, date")
+      .or(`ref_number.ilike.%${q}%,product.ilike.%${q}%`)
+      .limit(5),
+  ]);
+  return [
+    ...(incomes ?? []).map((r) => ({
+      id: r.id,
+      type: "income" as const,
+      label: r.device_model ?? "",
+      sub: `${r.order_number ?? ""} · ฿${(r.sell_price ?? 0).toLocaleString("th-TH")}`,
+      href: "/finance/income",
+    })),
+    ...(expenses ?? []).map((e) => ({
+      id: e.id,
+      type: "expense" as const,
+      label: e.product,
+      sub: `${e.ref_number} · ฿${(e.amount ?? 0).toLocaleString("th-TH")}`,
+      href: "/finance/expenses",
+    })),
+  ];
 }
