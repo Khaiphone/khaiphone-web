@@ -121,7 +121,7 @@ export default function RequestsPage() {
             </div>
             <button
               onClick={() => setShowFilter(true)}
-              style={{ position: "relative", background: "#F5F5F7", border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "8px 10px", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", color: TEXT2, fontFamily: "inherit", fontSize: "13px" }}
+              style={{ position: "relative", background: "var(--admin-bg)", border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "8px 10px", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", color: TEXT2, fontFamily: "inherit", fontSize: "13px" }}
             >
               <SlidersHorizontal size={16} />
               {activeFilters > 0 && (
@@ -138,7 +138,7 @@ export default function RequestsPage() {
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="ค้นหาเลขคำขอ ชื่อ เบอร์โทร"
-              style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "9px 36px", color: TEXT, fontSize: "16px", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+              style={{ width: "100%", background: "var(--admin-bg)", border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "9px 36px", color: TEXT, fontSize: "16px", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
             />
             {query && (
               <button onClick={() => setQuery("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: TEXT2, cursor: "pointer", padding: 0, display: "flex" }}>
@@ -155,7 +155,7 @@ export default function RequestsPage() {
                 <button
                   key={value}
                   onClick={() => setTab(value)}
-                  style={{ flexShrink: 0, padding: "6px 11px", borderRadius: "999px", border: active ? "1px solid rgba(184,134,11,0.3)" : `1px solid ${BORDER}`, cursor: "pointer", fontSize: "12px", fontWeight: active ? 700 : 500, background: active ? "#FEF3C7" : "#FAFAFA", color: active ? "#92400E" : TEXT2, touchAction: "manipulation", fontFamily: "inherit", whiteSpace: "nowrap", minHeight: "34px" }}
+                  style={{ flexShrink: 0, padding: "6px 11px", borderRadius: "999px", border: active ? "1px solid rgba(184,134,11,0.3)" : `1px solid ${BORDER}`, cursor: "pointer", fontSize: "12px", fontWeight: active ? 700 : 500, background: active ? "var(--admin-gold-bg)" : "var(--admin-bg)", color: active ? "var(--admin-gold-text)" : TEXT2, touchAction: "manipulation", fontFamily: "inherit", whiteSpace: "nowrap", minHeight: "34px" }}
                 >
                   {label} {count > 0 && <span style={{ opacity: 0.7 }}>{count}</span>}
                 </button>
