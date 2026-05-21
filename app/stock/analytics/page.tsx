@@ -243,11 +243,31 @@ const PERIODS: Period[] = [
   { label: "90 วัน",  days: 90 },
 ];
 
+function StatCard({ label, value, color, icon: Icon, c }: {
+  label: string; value: number | string; color: string;
+  icon: React.ElementType; c: ReturnType<typeof useThemeColors>;
+}) {
+  return (
+    <div style={{ background: c.card, border: `1px solid ${c.border}`, borderRadius: 16, padding: "14px 16px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+        <div style={{ width: 26, height: 26, borderRadius: 7, background: `${color}20`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Icon size={13} color={color} />
+        </div>
+        <p style={{ color: c.text3, fontSize: 10, fontWeight: 700, margin: 0, textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: 1.3 }}>{label}</p>
+      </div>
+      <p style={{ color, fontSize: 24, fontWeight: 700, margin: 0, fontVariantNumeric: "tabular-nums" }}>
+        {typeof value === "number" ? value.toLocaleString("th-TH") : value}
+      </p>
+    </div>
+  );
+}
+
 export default function EstimateAnalyticsPage() {
   const c = useThemeColors();
-  const [data,    setData]    = useState<EstimateAnalytics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [period,  setPeriod]  = useState<Period>(PERIODS[2]);
+  const [data,          setData]          = useState<EstimateAnalytics | null>(null);
+  const [loading,       setLoading]       = useState(true);
+  const [period,        setPeriod]        = useState<Period>(PERIODS[2]);
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
 
   async function load(p: Period) {
     setLoading(true);
@@ -263,16 +283,28 @@ export default function EstimateAnalyticsPage() {
     load(p);
   }
 
-  const periodLabel = period.days === 1 ? "วันนี้" : `${period.days} วัน`;
+  // Model-specific funnel when selected, else overall
+  const activeFunnel = selectedModel && data
+    ? (data.modelFunnels.find(m => m.model === selectedModel)?.funnel ?? data.funnel)
+    : data?.funnel ?? [];
 
-  const statCards = data ? [
-    { label: "เริ่ม" + (period.days === 1 ? "วันนี้" : `${period.days}ว.`),    value: data.totalStarts,           color: "#3b82f6", icon: Users      },
-    { label: "เห็นราคา",                                                        value: data.funnel[9]?.count ?? 0, color: "#f59e0b", icon: BarChart2  },
-    { label: "นัดหมาย",                                                         value: data.funnel[10]?.count ?? 0,color: "#22c55e", icon: TrendingUp },
-    { label: "อัตราสำเร็จ",                                                     value: `${data.completionRate}%`,  color: "#a855f7", icon: Award      },
-    { label: "เริ่มวันนี้",                                                      value: data.todayStarts,           color: c.gold,    icon: Users      },
-    { label: "นัดหมายวันนี้",                                                   value: data.todaySubmits,          color: "#22c55e", icon: TrendingUp },
-  ] : [];
+  const activeStarts    = activeFunnel[0]?.count  ?? 0;
+  const activePriceSeen = activeFunnel[9]?.count  ?? 0;
+  const activeSubmits   = activeFunnel[10]?.count ?? 0;
+  const activeRate      = activeStarts > 0 ? Math.round((activeSubmits / activeStarts) * 100) : 0;
+  const activeDropStep  = selectedModel && data
+    ? (data.modelFunnels.find(m => m.model === selectedModel)
+        ? (() => {
+            const f = data.modelFunnels.find(m => m.model === selectedModel)!.funnel;
+            let top = "ไม่มีข้อมูล"; let max = 0;
+            for (let i = 1; i < f.length; i++) {
+              const drop = f[i-1].count - f[i].count;
+              if (drop > max) { max = drop; top = f[i].stepName; }
+            }
+            return top;
+          })()
+        : data.topDropStep)
+    : data?.topDropStep ?? "ไม่มีข้อมูล";
 
   return (
     <div style={{ minHeight: "100vh", background: c.bg }}>
@@ -286,22 +318,17 @@ export default function EstimateAnalyticsPage() {
             {PERIODS.map(p => {
               const active = p.days === period.days;
               return (
-                <button
-                  key={p.days}
-                  onClick={() => changePeriod(p)}
-                  style={{
-                    padding: "8px 18px", borderRadius: 10, fontFamily: "inherit", fontSize: 13,
-                    fontWeight: active ? 700 : 500, cursor: "pointer",
-                    border: active ? "1px solid rgba(184,134,11,0.35)" : `1px solid ${c.border}`,
-                    background: active ? "var(--admin-gold-bg, #FEF3C7)" : c.card,
-                    color: active ? c.gold : c.text2,
-                  }}
-                >{p.label}</button>
+                <button key={p.days} onClick={() => changePeriod(p)} style={{
+                  padding: "8px 18px", borderRadius: 10, fontFamily: "inherit", fontSize: 13,
+                  fontWeight: active ? 700 : 500, cursor: "pointer",
+                  border: active ? "1px solid transparent" : `1px solid ${c.border}`,
+                  background: active ? c.gold : c.card,
+                  color: active ? "#1a1a1a" : c.text2,
+                }}>{p.label}</button>
               );
             })}
           </div>
-          <button
-            onClick={() => load(period)} disabled={loading}
+          <button onClick={() => load(period)} disabled={loading}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${c.border}`, background: c.card, color: c.text2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
           >
             <RefreshCw size={14} style={{ animation: loading ? "spin 1s linear infinite" : "none" }} />
@@ -317,47 +344,68 @@ export default function EstimateAnalyticsPage() {
         ) : data ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
-            {/* Stat cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 12 }}>
-              {statCards.map(({ label, value, color, icon: Icon }) => (
-                <div key={label} style={{ background: c.card, border: `1px solid ${c.border}`, borderRadius: 16, padding: "14px 16px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                    <div style={{ width: 26, height: 26, borderRadius: 7, background: `${color}20`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <Icon size={13} color={color} />
-                    </div>
-                    <p style={{ color: c.text3, fontSize: 10, fontWeight: 700, margin: 0, textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: 1.3 }}>{label}</p>
-                  </div>
-                  <p style={{ color, fontSize: 24, fontWeight: 700, margin: 0, fontVariantNumeric: "tabular-nums" }}>
-                    {typeof value === "number" ? value.toLocaleString("th-TH") : value}
-                  </p>
+            {/* Model filter */}
+            {data.modelFunnels.length > 0 && (
+              <div style={{ background: c.card, border: `1px solid ${c.border}`, borderRadius: 14, padding: "12px 16px" }}>
+                <p style={{ color: c.text3, fontSize: 10, fontWeight: 700, margin: "0 0 10px", textTransform: "uppercase", letterSpacing: "0.05em" }}>กรองตามรุ่น</p>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <button
+                    onClick={() => setSelectedModel(null)}
+                    style={{
+                      padding: "5px 14px", borderRadius: 20, fontFamily: "inherit", fontSize: 12,
+                      fontWeight: !selectedModel ? 700 : 400, cursor: "pointer",
+                      border: !selectedModel ? "1px solid transparent" : `1px solid ${c.border}`,
+                      background: !selectedModel ? c.gold : "transparent",
+                      color: !selectedModel ? "#1a1a1a" : c.text2,
+                    }}
+                  >ทั้งหมด</button>
+                  {data.modelFunnels.map(m => {
+                    const active = selectedModel === m.model;
+                    return (
+                      <button key={m.model} onClick={() => setSelectedModel(active ? null : m.model)} style={{
+                        padding: "5px 14px", borderRadius: 20, fontFamily: "inherit", fontSize: 12,
+                        fontWeight: active ? 700 : 400, cursor: "pointer",
+                        border: active ? "1px solid transparent" : `1px solid ${c.border}`,
+                        background: active ? c.gold : "transparent",
+                        color: active ? "#1a1a1a" : c.text2,
+                      }}>
+                        {m.model} <span style={{ opacity: 0.6 }}>({m.funnel[0]?.count ?? 0})</span>
+                      </button>
+                    );
+                  })}
                 </div>
-              ))}
+              </div>
+            )}
+
+            {/* Stat cards — 4 cards based on selected model or overall */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+              <StatCard label={`ประเมิน (${period.label})`}  value={activeStarts}    color="#3b82f6" icon={Users}      c={c} />
+              <StatCard label="เห็นราคา"                      value={activePriceSeen} color="#f59e0b" icon={BarChart2}  c={c} />
+              <StatCard label="นัดหมาย"                       value={activeSubmits}   color="#22c55e" icon={TrendingUp} c={c} />
+              <StatCard label="อัตราสำเร็จ"                   value={`${activeRate}%`} color="#a855f7" icon={Award}     c={c} />
             </div>
 
             {/* Drop-off banner */}
-            {data.totalStarts > 0 && (
+            {activeStarts > 0 && (
               <div style={{ background: "#ef444415", border: "1px solid #ef444430", borderRadius: 14, padding: "12px 20px", display: "flex", alignItems: "center", gap: 12 }}>
                 <span style={{ fontSize: 20 }}>⚠️</span>
                 <div>
-                  <p style={{ color: "#ef4444", fontSize: 13, fontWeight: 700, margin: 0 }}>จุดที่คนออกมากสุด ({periodLabel}): {data.topDropStep}</p>
+                  <p style={{ color: "#ef4444", fontSize: 13, fontWeight: 700, margin: 0 }}>
+                    จุดที่คนออกมากสุด{selectedModel ? ` (${selectedModel})` : ""}: {activeDropStep}
+                  </p>
                   <p style={{ color: c.text3, fontSize: 11, margin: "2px 0 0" }}>ควรปรับปรุง UX หรือคำอธิบายที่ขั้นตอนนี้</p>
                 </div>
               </div>
             )}
 
-            {/* Daily chart */}
+            {/* Daily chart (full width, always overall) */}
             <DailyChart daily={data.daily} c={c} />
 
-            {/* Two column: Funnel + Model bar */}
+            {/* Two column: Funnel (filtered) + Model bar */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-              <FunnelChart funnel={data.funnel} c={c} />
+              <FunnelChart funnel={activeFunnel} c={c} />
               <ModelBarChart models={data.models} total={data.totalStarts} c={c} />
             </div>
-
-            {/* Per-model funnel */}
-            {data.modelFunnels.length > 0 && (
-              <ModelFunnelSection modelFunnels={data.modelFunnels} c={c} />
-            )}
 
           </div>
         ) : null}
