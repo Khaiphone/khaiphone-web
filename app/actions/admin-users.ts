@@ -68,25 +68,61 @@ export async function updateAdminPermissions(id: string, permissions: Permission
   return { success: true as const };
 }
 
-export async function inviteStaff(email: string, name: string, role: AdminRole) {
-  const supabase = createServerClient();
+function generateTempPassword(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#";
+  let pw = "";
+  for (let i = 0; i < 12; i++) pw += chars[Math.floor(Math.random() * chars.length)];
+  return pw;
+}
 
-  // Create/invite via Supabase Auth admin
+export async function inviteStaff(
+  email: string,
+  name: string,
+  role: AdminRole,
+): Promise<{ success: true; tempPassword?: string } | { success: false; error: string }> {
+  const supabase = createServerClient();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+  let userId: string;
+  let tempPassword: string | undefined;
+
+  // Try email invite first
   const { data: authData, error: authError } = await supabase.auth.admin.inviteUserByEmail(email, {
     redirectTo: `${siteUrl}/admin/set-password`,
   });
-  if (authError) return { success: false as const, error: authError.message };
+
+  if (authError) {
+    const isRateLimit =
+      authError.message.toLowerCase().includes("rate limit") ||
+      authError.message.toLowerCase().includes("email rate") ||
+      authError.status === 429;
+
+    if (isRateLimit) {
+      // Fallback: create user directly with a temp password (no email sent)
+      tempPassword = generateTempPassword();
+      const { data: createData, error: createError } = await supabase.auth.admin.createUser({
+        email,
+        password: tempPassword,
+        email_confirm: true,
+      });
+      if (createError) return { success: false, error: createError.message };
+      userId = createData.user.id;
+    } else {
+      return { success: false, error: authError.message };
+    }
+  } else {
+    userId = authData.user.id;
+  }
 
   const { error } = await supabase.from("admin_users").insert({
-    user_id: authData.user.id,
+    user_id: userId,
     email,
     name,
     role,
     active: true,
   });
-  if (error) return { success: false as const, error: error.message };
-  return { success: true as const };
+  if (error) return { success: false, error: error.message };
+  return { success: true, tempPassword };
 }
 
 export async function updateAdminUser(

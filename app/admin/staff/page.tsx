@@ -34,7 +34,7 @@ export default function StaffPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm]       = useState({ email: "", name: "", role: "staff" as AdminRole });
   const [inviting, setInviting] = useState(false);
-  const [inviteMsg, setInviteMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [inviteMsg, setInviteMsg] = useState<{ ok: boolean; text: string; tempPassword?: string } | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [deleting, setDeleting]           = useState<string | null>(null);
@@ -60,7 +60,11 @@ export default function StaffPage() {
     const res = await inviteStaff(form.email.trim(), form.name.trim(), form.role);
     setInviting(false);
     if (res.success) {
-      setInviteMsg({ ok: true, text: `ส่งอีเมลเชิญไปที่ ${form.email} แล้ว` });
+      if (res.tempPassword) {
+        setInviteMsg({ ok: true, text: `สร้างบัญชีสำเร็จ (ไม่ได้ส่งอีเมล — email rate limit)`, tempPassword: res.tempPassword });
+      } else {
+        setInviteMsg({ ok: true, text: `ส่งอีเมลเชิญไปที่ ${form.email} แล้ว` });
+      }
       setForm({ email: "", name: "", role: "staff" });
       setShowForm(false);
       await load();
@@ -136,6 +140,28 @@ export default function StaffPage() {
             </button>
           )}
         </div>
+
+        {/* Temp password notice (shown after form closes when rate-limited) */}
+        {!showForm && inviteMsg?.ok && inviteMsg.tempPassword && (
+          <div style={{ background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.3)", borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}>
+            <p style={{ color: "#f97316", fontSize: 13, fontWeight: 700, margin: "0 0 6px" }}>⚠️ ส่งอีเมลไม่ได้ (rate limit) — บัญชีถูกสร้างแล้ว</p>
+            <p style={{ color: TEXT2, fontSize: 12, margin: "0 0 8px" }}>
+              แจ้งรหัสผ่านชั่วคราวนี้ให้พนักงานใช้ login ครั้งแรก แล้วเปลี่ยนรหัสผ่านเอง:
+            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <code style={{ background: "rgba(249,115,22,0.12)", color: "#f97316", padding: "6px 12px", borderRadius: 8, fontSize: 15, fontWeight: 700, letterSpacing: "0.05em", fontFamily: "monospace" }}>
+                {inviteMsg.tempPassword}
+              </code>
+              <button
+                onClick={() => { navigator.clipboard.writeText(inviteMsg.tempPassword!); }}
+                style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid rgba(249,115,22,0.3)", background: "none", color: "#f97316", fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                คัดลอก
+              </button>
+            </div>
+            <p style={{ color: TEXT3, fontSize: 11, margin: "8px 0 0" }}>URL สำหรับ login: /admin/login</p>
+          </div>
+        )}
 
         {/* Invite form */}
         {showForm && (
