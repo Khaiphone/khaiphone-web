@@ -16,7 +16,7 @@ const DARK   = "#1a1a2e";
 
 const FONT_LINK = '<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">';
 
-const DOC_CSS = '*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Sarabun",sans-serif;max-width:780px;margin:0 auto;font-size:11px;color:#1a1a1a;line-height:1.6;background:#fff}.header{background:linear-gradient(135deg,#1a1a2e,#2a2a4e);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}.logo-area{display:flex;align-items:center;gap:10px;min-width:160px}.logo-circle{width:44px;height:44px;background:#c9a84c;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}.logo-inner{font-size:7.5px;font-weight:800;color:#1a1a2e;text-align:center;line-height:1.3}.logo-name{color:#FFD700;font-size:14px;font-weight:800}.logo-sub{color:rgba(255,255,255,.6);font-size:9px;margin-top:1px}.title-center{text-align:center;flex:1}.title-center h1{color:#FFD700;font-size:15px;font-weight:800}.title-center .between{color:rgba(255,255,255,.8);font-size:11px;margin-top:3px}.cno-box{background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.35);border-radius:8px;padding:9px 13px;text-align:right;min-width:160px}.cno-label{color:rgba(255,255,255,.5);font-size:8.5px;text-transform:uppercase;letter-spacing:.5px}.cno-value{color:#FFD700;font-size:15px;font-weight:800;font-family:monospace;letter-spacing:.5px;margin:2px 0}.cno-date{color:rgba(255,255,255,.65);font-size:10px}.content{padding:14px 20px}.top3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}.icard{border:1px solid #e5e7eb;border-radius:8px;overflow:hidden}.icard-hd{background:#f5f4f0;padding:7px 11px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:7px;font-size:10.5px;font-weight:700;color:#333}.hd-num{width:18px;height:18px;border-radius:5px;background:#1a1a2e;color:#FFD700;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0}.icard-body{padding:9px 11px;font-size:10.5px}.f{display:flex;flex-direction:column;margin-bottom:4px}.fl{font-size:9px;color:#aaa;text-transform:uppercase;letter-spacing:.4px}.fv{font-size:11px;font-weight:500;color:#1a1a1a;border-bottom:1px solid #f0f0f0;padding-bottom:2px;min-height:16px}.shop-row{display:flex;align-items:flex-start;gap:5px;font-size:10px;color:#555;margin-bottom:3px}.price-big{font-size:28px;font-weight:800;color:#c9a84c;font-family:monospace;text-align:center;padding:5px 0;line-height:1}.price-label{font-size:9px;color:#aaa;text-align:center;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}.price-words{font-size:10px;color:#666;text-align:center;margin-bottom:7px;line-height:1.4}.pay-badge{display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:3px 8px;font-size:10px;font-weight:600;color:#15803d;margin-bottom:6px}.sec{font-size:10px;font-weight:700;color:#1a1a2e;border-left:3px solid #c9a84c;padding-left:8px;margin:12px 0 7px;text-transform:uppercase;letter-spacing:.5px}.dtable{width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:10px}.dtable th{background:#1a1a2e;color:#FFD700;padding:6px 9px;text-align:left;font-weight:600;font-size:9.5px}.dtable td{padding:5px 9px;border-bottom:1px solid #f0f0f0;vertical-align:top}.dtable tr:nth-child(even) td{background:#fafafa}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:10px}.terms-ol{counter-reset:tc;list-style:none;padding:0;margin:0 0 8px}.terms-ol li{counter-increment:tc;padding:4px 0 4px 22px;position:relative;font-size:10.5px;border-bottom:1px solid #f8f8f8;line-height:1.5}.terms-ol li::before{content:counter(tc)".";position:absolute;left:0;top:4px;font-weight:700;color:#c9a84c}.check-list{list-style:none;padding:0;margin:0}.check-list li{padding:2px 0 2px 14px;position:relative;font-size:10.5px}.check-list li::before{content:"•";position:absolute;left:0;color:#c9a84c;font-weight:700}.pdpa-box{background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:10px 13px;font-size:10.5px}.pdpa-title{font-weight:700;color:#92400e;margin-bottom:5px}.pdpa-list{list-style:none;padding:0;margin:0}.pdpa-list li{padding:2px 0 2px 16px;position:relative;color:#78350f}.pdpa-list li::before{content:"✓";position:absolute;left:0;color:#c9a84c;font-weight:700}.id-photo-wrap{border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:10px 0}.id-photo-hd{background:#f5f4f0;padding:7px 11px;border-bottom:1px solid #e5e7eb;font-size:10.5px;font-weight:700;color:#333}.id-photo-wrap img{width:100%;max-height:200px;object-fit:contain;display:block;background:#f9f9f9}.sig2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:14px;padding-top:10px;border-top:1px solid #e5e7eb;page-break-inside:avoid}.sb{text-align:center}.sa{height:64px;border-bottom:1px solid #bbb;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;margin-bottom:4px}.sl{font-size:10px;color:#555;line-height:1.5}.footer{background:#1a1a2e;color:rgba(255,255,255,.65);padding:10px 20px;display:flex;align-items:flex-start;justify-content:space-between;font-size:9.5px;margin-top:14px}.fv-row{display:flex;gap:6px;margin-bottom:1px}.fv-lbl{color:rgba(255,255,255,.45)}.fv-val{color:#FFD700;font-family:monospace}.footer-brand{color:#FFD700;font-size:14px;font-weight:800;margin-bottom:3px}.footer-info{color:rgba(255,255,255,.5);font-size:9px;line-height:1.7}.note-green{background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:6px 10px;font-size:10px;color:#15803d;margin-top:8px}.rejected-box{background:#fef2f2;border:1px solid #fecaca;border-radius:5px;padding:7px 9px;font-size:10px;color:#991b1b;margin-top:8px;line-height:1.7}@media print{.header,.footer{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{max-width:none}}';
+const DOC_CSS = '*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Sarabun",sans-serif;max-width:780px;margin:0 auto;font-size:11px;color:#1a1a1a;line-height:1.6;background:#fff}.header{background:linear-gradient(135deg,#1a1a2e,#2a2a4e);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}.logo-area{display:flex;align-items:center;gap:10px;min-width:160px}.logo-circle{width:44px;height:44px;background:#c9a84c;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}.logo-inner{font-size:7.5px;font-weight:800;color:#1a1a2e;text-align:center;line-height:1.3}.logo-name{color:#FFD700;font-size:14px;font-weight:800}.logo-sub{color:rgba(255,255,255,.6);font-size:9px;margin-top:1px}.title-center{text-align:center;flex:1}.title-center h1{color:#FFD700;font-size:15px;font-weight:800}.title-center .between{color:rgba(255,255,255,.8);font-size:11px;margin-top:3px}.cno-box{background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.35);border-radius:8px;padding:9px 13px;text-align:right;min-width:160px}.cno-label{color:rgba(255,255,255,.5);font-size:8.5px;text-transform:uppercase;letter-spacing:.5px}.cno-value{color:#FFD700;font-size:15px;font-weight:800;font-family:monospace;letter-spacing:.5px;margin:2px 0}.cno-date{color:rgba(255,255,255,.65);font-size:10px}.content{padding:14px 20px}.top3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}.icard{border:1px solid #e5e7eb;border-radius:8px;overflow:hidden}.icard-hd{background:#f5f4f0;padding:7px 11px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:7px;font-size:10.5px;font-weight:700;color:#333}.hd-num{width:18px;height:18px;border-radius:5px;background:#1a1a2e;color:#FFD700;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0}.icard-body{padding:9px 11px;font-size:10.5px}.f{display:flex;flex-direction:column;margin-bottom:4px}.fl{font-size:9px;color:#aaa;text-transform:uppercase;letter-spacing:.4px}.fv{font-size:11px;font-weight:500;color:#1a1a1a;border-bottom:1px solid #f0f0f0;padding-bottom:2px;min-height:16px}.shop-row{display:flex;align-items:flex-start;gap:5px;font-size:10px;color:#555;margin-bottom:3px}.price-big{font-size:28px;font-weight:800;color:#c9a84c;font-family:monospace;text-align:center;padding:5px 0;line-height:1}.price-label{font-size:9px;color:#aaa;text-align:center;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}.price-words{font-size:10px;color:#666;text-align:center;margin-bottom:7px;line-height:1.4}.pay-badge{display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:3px 8px;font-size:10px;font-weight:600;color:#15803d;margin-bottom:6px}.sec{font-size:10px;font-weight:700;color:#1a1a2e;border-left:3px solid #c9a84c;padding-left:8px;margin:12px 0 7px;text-transform:uppercase;letter-spacing:.5px}.dtable{width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:10px}.dtable th{background:#1a1a2e;color:#FFD700;padding:6px 9px;text-align:left;font-weight:600;font-size:9.5px}.dtable td{padding:5px 9px;border-bottom:1px solid #f0f0f0;vertical-align:top}.dtable tr:nth-child(even) td{background:#fafafa}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:10px}.terms-ol{counter-reset:tc;list-style:none;padding:0;margin:0 0 8px}.terms-ol li{counter-increment:tc;padding:4px 0 4px 22px;position:relative;font-size:10.5px;border-bottom:1px solid #f8f8f8;line-height:1.5}.terms-ol li::before{content:counter(tc)".";position:absolute;left:0;top:4px;font-weight:700;color:#c9a84c}.check-list{list-style:none;padding:0;margin:0}.check-list li{padding:2px 0 2px 14px;position:relative;font-size:10.5px}.check-list li::before{content:"•";position:absolute;left:0;color:#c9a84c;font-weight:700}.pdpa-box{background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:10px 13px;font-size:10.5px}.pdpa-title{font-weight:700;color:#92400e;margin-bottom:5px}.pdpa-list{list-style:none;padding:0;margin:0}.pdpa-list li{padding:2px 0 2px 16px;position:relative;color:#78350f}.pdpa-list li::before{content:"✓";position:absolute;left:0;color:#c9a84c;font-weight:700}.id-photo-wrap{border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:10px 0}.id-photo-hd{background:#f5f4f0;padding:7px 11px;border-bottom:1px solid #e5e7eb;font-size:10.5px;font-weight:700;color:#333}.id-photo-wrap img{width:100%;max-height:200px;object-fit:contain;display:block;background:#f9f9f9}.sig2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:14px;padding-top:10px;border-top:1px solid #e5e7eb;page-break-inside:avoid}.sb{text-align:center}.sa{height:64px;border-bottom:1px solid #bbb;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;margin-bottom:4px}.sl{font-size:10px;color:#555;line-height:1.5}.footer{background:#1a1a2e;color:rgba(255,255,255,.65);padding:10px 20px;display:flex;align-items:flex-start;justify-content:space-between;font-size:9.5px;margin-top:14px}.fv-row{display:flex;gap:6px;margin-bottom:1px}.fv-lbl{color:rgba(255,255,255,.45)}.fv-val{color:#FFD700;font-family:monospace}.footer-brand{color:#FFD700;font-size:14px;font-weight:800;margin-bottom:3px}.footer-info{color:rgba(255,255,255,.5);font-size:9px;line-height:1.7}.note-green{background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:6px 10px;font-size:10px;color:#15803d;margin-top:8px}.rejected-box{background:#fef2f2;border:1px solid #fecaca;border-radius:5px;padding:7px 9px;font-size:10px;color:#991b1b;margin-top:8px;line-height:1.7}@media print{.header,.footer{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{max-width:none}.device-page-break{page-break-before:always!important}}';
 
 // Receipt uses same CSS
 
@@ -180,6 +180,7 @@ export default function ContractPage() {
   const [accessories, setAccessories] = useState<string[]>(["ตัวเครื่อง"]);
   const [accessoriesOther, setAccessoriesOther] = useState("");
   const [txDate, setTxDate] = useState(new Date().toISOString().slice(0, 10));
+  const [extraDeviceDetails, setExtraDeviceDetails] = useState<Array<{serial: string; imei: string}>>([]);
 
   // ID card photo
   const [idPhotoDataUrl, setIdPhotoDataUrl] = useState<string | null>(null);
@@ -206,7 +207,16 @@ export default function ContractPage() {
   useEffect(() => {
     fetchRequest(id).then(r => {
       setRequest(r);
-      if (r) setAddress(r.customer.address ?? "");
+      if (r) {
+        setAddress(r.customer.address ?? "");
+        setSerial((r.inspection?.serial ?? "").toUpperCase());
+        setImei(r.inspection?.imei ?? "");
+        const extras = (r.extraDevices ?? []).map((_, i) => ({
+          serial: (r.inspection?.extraInspections?.[i]?.serial ?? "").toUpperCase(),
+          imei:   r.inspection?.extraInspections?.[i]?.imei ?? "",
+        }));
+        setExtraDeviceDetails(extras);
+      }
       setLoading(false);
     });
   }, [id]);
@@ -413,31 +423,45 @@ export default function ContractPage() {
         <td>${esc(r.device.color ?? "—")}</td>
         <td>${accStr}</td>
       </tr>
-      ${(r.extraDevices ?? []).map((d, i) => {
-        const ei = extraInspArr[i];
-        return `
-      <tr><th colspan="4" style="background:#2a2a4e">เครื่องที่ ${i + 2}: ${esc(d.model)}</th></tr>
-      <tr><th>ประเภทอุปกรณ์</th><th>IMEI</th><th>ยี่ห้อ / รุ่น</th><th>Serial Number</th></tr>
-      <tr>
-        <td>โทรศัพท์มือถือ</td>
-        <td style="font-family:monospace">${esc(ei?.imei || "—")}</td>
-        <td style="font-weight:600">${esc(d.model)}</td>
-        <td style="font-family:monospace">${esc(ei?.serial || "—")}</td>
-      </tr>
-      <tr><th>ความจุ</th><th>สภาพสินค้า</th><th>สี</th><th>ราคา</th></tr>
-      <tr>
-        <td>${esc(d.storage)}</td>
-        <td>—</td>
-        <td>${esc(ei?.color || "—")}</td>
-        <td style="font-weight:600;color:#c9a84c">฿${(ei?.actualPrice ?? d.estimatedPrice).toLocaleString("th-TH")}</td>
-      </tr>`;
-      }).join("")}
-      ${(r.extraDevices ?? []).length > 0 ? `
-      <tr>
-        <td colspan="3" style="font-weight:700;text-align:right">ราคารวมทั้งหมด (${(r.extraDevices ?? []).length + 1} เครื่อง)</td>
-        <td style="font-weight:800;color:#c9a84c;font-size:13px">฿${price.toLocaleString("th-TH")}</td>
-      </tr>` : ""}
-    </table>`;
+      ${(r.extraDevices ?? []).length > 0 ? `<tr><td colspan="3" style="font-weight:700;text-align:right;background:#f5f4f0">ราคาเครื่องที่ 1</td><td style="font-weight:700;color:#c9a84c">฿${mainPrice.toLocaleString("th-TH")}</td></tr>` : ""}
+    </table>
+    ${(r.extraDevices ?? []).map((d, i) => {
+      const ei = extraInspArr[i];
+      const ed = extraDeviceDetails[i];
+      const xImei   = ed?.imei   || ei?.imei   || "—";
+      const xSerial = ed?.serial || ei?.serial || "—";
+      const xPrice  = ei?.actualPrice ?? d.estimatedPrice;
+      return `
+    <div class="device-page-break" style="margin-top:24px;padding-top:18px;border-top:3px solid #c9a84c">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="background:#1a1a2e;color:#FFD700;font-size:11px;font-weight:700;padding:4px 12px;border-radius:6px">เครื่องที่ ${i + 2}</div>
+        <div style="font-size:14px;font-weight:700;color:#1a1a2e">${esc(d.model)} ${esc(d.storage)}</div>
+        <div style="margin-left:auto;font-size:14px;font-weight:800;color:#c9a84c">฿${xPrice.toLocaleString("th-TH")}</div>
+      </div>
+      <div class="sec">📱 รายละเอียดทรัพย์สินเครื่องที่ ${i + 2}</div>
+      <table class="dtable">
+        <tr><th>ประเภทอุปกรณ์</th><th>IMEI</th><th>ยี่ห้อ / รุ่น</th><th>Serial Number</th></tr>
+        <tr>
+          <td>โทรศัพท์มือถือ</td>
+          <td style="font-family:monospace">${esc(xImei)}</td>
+          <td style="font-weight:600">${esc(d.model)}</td>
+          <td style="font-family:monospace">${esc(xSerial)}</td>
+        </tr>
+        <tr><th>ความจุ</th><th>สภาพสินค้า</th><th>สี</th><th>ราคาที่รับซื้อ</th></tr>
+        <tr>
+          <td>${esc(d.storage)}</td>
+          <td>—</td>
+          <td>${esc(ei?.color || "—")}</td>
+          <td style="font-weight:700;color:#c9a84c;font-size:13px">฿${xPrice.toLocaleString("th-TH")}</td>
+        </tr>
+      </table>
+    </div>`;
+    }).join("")}
+    ${(r.extraDevices ?? []).length > 0 ? `
+    <div style="margin-top:12px;padding:10px 14px;background:#1a1a2e;border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+      <span style="color:rgba(255,255,255,.8);font-size:12px;font-weight:600">ราคารวมทั้งหมด (${(r.extraDevices ?? []).length + 1} เครื่อง)</span>
+      <span style="color:#FFD700;font-size:18px;font-weight:800;font-family:monospace">฿${price.toLocaleString("th-TH")}</span>
+    </div>` : ""}`;
 
     // Inspection criteria table (if available)
     if (r.inspection?.criteria?.length) {
@@ -650,9 +674,12 @@ export default function ContractPage() {
             <tr><td>อุปกรณ์ที่ให้มา</td><td>${accStr}</td></tr>
             ${(r.extraDevices ?? []).map((d, i) => {
               const ei = extraInspArr[i];
-              return `<tr><td colspan="2" style="background:#f5f4f0;font-weight:700;color:#1a1a2e">เครื่องที่ ${i + 2}: ${esc(d.model)} ${esc(d.storage)}</td></tr>
-              <tr><td>IMEI</td><td style="font-family:monospace;font-size:10px">${esc(ei?.imei || "—")}</td></tr>
-              <tr><td>Serial Number</td><td style="font-family:monospace;font-size:10px">${esc(ei?.serial || "—")}</td></tr>
+              const ed = extraDeviceDetails[i];
+              const xImei   = ed?.imei   || ei?.imei   || "—";
+              const xSerial = ed?.serial || ei?.serial || "—";
+              return `<tr><td colspan="2" style="background:#2a2a4e;color:#FFD700;font-weight:700;font-size:11px;letter-spacing:.5px">เครื่องที่ ${i + 2}: ${esc(d.model)} ${esc(d.storage)}</td></tr>
+              <tr><td>IMEI</td><td style="font-family:monospace;font-size:10px">${esc(xImei)}</td></tr>
+              <tr><td>Serial Number</td><td style="font-family:monospace;font-size:10px">${esc(xSerial)}</td></tr>
               <tr><td>สี / Color</td><td>${esc(ei?.color || "—")}</td></tr>
               <tr><td>ราคา</td><td style="font-weight:600;color:#c9a84c">฿${(ei?.actualPrice ?? d.estimatedPrice).toLocaleString("th-TH")}</td></tr>`;
             }).join("")}
@@ -915,14 +942,46 @@ export default function ContractPage() {
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
-                <label style={labelStyle}>Serial Number</label>
-                <input type="text" placeholder="xxxxxxxxxx" value={serial} onChange={e => setSerial(e.target.value)} style={{ ...inputStyle, fontFamily: "monospace" }} />
+                <label style={labelStyle}>Serial Number (เครื่องที่ 1)</label>
+                <input type="text" placeholder="XXXXXXXXXX" value={serial} onChange={e => setSerial(e.target.value.toUpperCase())} style={{ ...inputStyle, fontFamily: "monospace", textTransform: "uppercase" }} />
               </div>
               <div>
-                <label style={labelStyle}>IMEI</label>
+                <label style={labelStyle}>IMEI (เครื่องที่ 1)</label>
                 <input type="text" inputMode="numeric" placeholder="000000000000000" value={imei} onChange={e => setImei(e.target.value.replace(/\D/g, "").slice(0, 15))} style={{ ...inputStyle, fontFamily: "monospace" }} />
               </div>
             </div>
+
+            {/* Extra device S/N + IMEI */}
+            {(request.extraDevices ?? []).map((d, idx) => (
+              <div key={idx} style={{ paddingTop: 10, borderTop: `1px solid ${BORDER}` }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#B8860B", marginBottom: 8 }}>
+                  📱 เครื่องที่ {idx + 2}: {d.model} {d.storage}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div>
+                    <label style={labelStyle}>Serial Number</label>
+                    <input
+                      type="text"
+                      placeholder="XXXXXXXXXX"
+                      value={extraDeviceDetails[idx]?.serial ?? ""}
+                      onChange={e => setExtraDeviceDetails(prev => prev.map((p, i) => i === idx ? { ...p, serial: e.target.value.toUpperCase() } : p))}
+                      style={{ ...inputStyle, fontFamily: "monospace", textTransform: "uppercase" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>IMEI</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="000000000000000"
+                      value={extraDeviceDetails[idx]?.imei ?? ""}
+                      onChange={e => setExtraDeviceDetails(prev => prev.map((p, i) => i === idx ? { ...p, imei: e.target.value.replace(/\D/g, "").slice(0, 15) } : p))}
+                      style={{ ...inputStyle, fontFamily: "monospace" }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
 
             <div>
               <label style={labelStyle}>อุปกรณ์ที่ให้มา</label>
