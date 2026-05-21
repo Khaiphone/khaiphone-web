@@ -1056,7 +1056,7 @@ function SellModelPageContent() {
     try { localStorage.setItem("khaiphone_submission", JSON.stringify({ ...submission, submittedAt: new Date().toISOString() })); } catch {}
     try { localStorage.removeItem(WIZARD_KEY); } catch {}
     try { localStorage.removeItem(BUNDLE_KEY); localStorage.removeItem(BUNDLE_RETURN_KEY); } catch {}
-    router.push("/sell/success");
+    router.push(`/sell/success?order=${encodeURIComponent(submission.orderNumber)}&phone=${encodeURIComponent(submission.customer.phone)}`);
   }
 
   const effectiveGroupOptions: PricingOption[][] = product

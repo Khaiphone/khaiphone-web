@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Check, Copy, ChevronDown, ChevronUp, Bell, Phone,
   Calendar, MapPin, Banknote, ShieldCheck, Truck, Clock, ExternalLink,
@@ -125,6 +125,7 @@ const TRUST_ITEMS = [
 
 export default function SellSuccessPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [data, setData] = useState<SubmissionData | null>(null);
   const [doneUpTo, setDoneUpTo] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -137,7 +138,7 @@ export default function SellSuccessPage() {
 
   const loadFromDb = useCallback(async (orderNumber: string, phone: string) => {
     const req = await fetchRequestByOrderNumber(orderNumber, phone);
-    if (!req) return;
+    if (!req) return req;
     setDoneUpTo(statusToDoneUpTo(req.status));
     setData(prev => prev ? {
       ...prev,
@@ -156,22 +157,51 @@ export default function SellSuccessPage() {
         accountNumber: req.payment.accountNumber,
       },
     } : prev);
+    return req;
   }, []);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("khaiphone_submission");
-      if (!raw) { router.replace("/sell"); return; }
-      const parsed = JSON.parse(raw) as SubmissionData;
-      setData(parsed);
-      const phone = parsed.customer?.phone ?? "";
-      if (parsed.orderNumber && phone) {
-        loadFromDb(parsed.orderNumber, phone);
+    async function init() {
+      // Primary: localStorage
+      try {
+        const raw = localStorage.getItem("khaiphone_submission");
+        if (raw) {
+          const parsed = JSON.parse(raw) as SubmissionData;
+          setData(parsed);
+          const phone = parsed.customer?.phone ?? "";
+          if (parsed.orderNumber && phone) loadFromDb(parsed.orderNumber, phone);
+          return;
+        }
+      } catch {}
+
+      // Fallback: URL params (order + phone) → load from DB
+      const orderParam = searchParams.get("order");
+      const phoneParam = searchParams.get("phone");
+      if (orderParam && phoneParam) {
+        const req = await loadFromDb(orderParam, phoneParam);
+        if (req) {
+          setData({
+            orderNumber:    req.orderNumber,
+            submittedAt:    req.createdAt,
+            model:          req.device.model,
+            storage:        req.device.storage,
+            condition:      req.device.condition ?? "",
+            selections:     req.device.selections ?? {},
+            estimatedPrice: req.device.actualPrice ?? req.device.estimatedPrice,
+            priceMin:       req.device.estimatedPrice,
+            priceMax:       req.device.estimatedPrice,
+            customer:       { name: req.customer.name, phone: req.customer.phone, email: req.customer.email ?? "" },
+            appointment:    { method: req.appointment.method as SubmissionData["appointment"]["method"], date: req.appointment.date, time: req.appointment.time, location: req.appointment.location },
+            payment:        { method: req.payment.method as SubmissionData["payment"]["method"], bankName: req.payment.bankName, accountName: req.payment.accountName, accountNumber: req.payment.accountNumber },
+          });
+          return;
+        }
       }
-    } catch {
+
       router.replace("/sell");
     }
-  }, [router, loadFromDb]);
+    init();
+  }, [router, loadFromDb, searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Realtime subscription
   useEffect(() => {
