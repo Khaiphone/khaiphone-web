@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, ArrowRight, Phone, CalendarPlus, ClipboardList, Tag, SlidersHorizontal, PlusCircle } from "lucide-react";
-import { fetchRequests } from "@/app/actions/admin-requests";
-import { fetchMyRole, fetchMyProfile } from "@/app/actions/admin-users";
+import { fetchDashboardData, fetchRequests } from "@/app/actions/admin-requests";
 import { supabase } from "@/lib/supabase";
 import type { AdminRequest } from "@/lib/types/admin";
 import type { AdminRole } from "@/app/actions/admin-users";
@@ -44,29 +43,13 @@ export default function DashboardPage() {
   const lastRefetchRef  = useRef(0);
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) { setLoading(false); return; }
-      const uid = data.user.id;
-
-      // ดึง role + profile + requests พร้อมกัน ลด 1 round-trip
-      const [r, profile, allRequests] = await Promise.all([
-        fetchMyRole(uid),
-        fetchMyProfile(uid),
-        fetchRequests(undefined),
-      ]);
-      setRole(r);
-      setPermissions(profile?.permissions ?? []);
-
-      const isStaff = r === "staff";
-      staffUserIdRef.current = isStaff ? uid : undefined;
-
-      if (isStaff) {
-        // staff ต้องการ requests ที่ filter ด้วย uid
-        fetchRequests(uid).then(d => { setRequests(d); setLoading(false); });
-      } else {
-        setRequests(allRequests);
-        setLoading(false);
-      }
+    fetchDashboardData().then(data => {
+      if (!data) { setLoading(false); return; }
+      setRole(data.role);
+      setPermissions(data.permissions);
+      staffUserIdRef.current = data.staffUserId;
+      setRequests(data.requests);
+      setLoading(false);
     });
   }, []);
 
