@@ -24,7 +24,7 @@ function isRateLimited(ip: string): boolean {
 // Only rate-limit public-facing submit and estimate event paths
 const RATE_LIMITED_PATHS = ["/api/", "/_next/"];
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Rate limit only POST to server action routes (Next.js App Router uses POST for actions)

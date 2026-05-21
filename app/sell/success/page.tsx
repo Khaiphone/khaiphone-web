@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState, useEffect, useCallback } from "react";
+import { Fragment, useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Check, Copy, ChevronDown, ChevronUp, Bell, Phone,
@@ -123,7 +123,7 @@ const TRUST_ITEMS = [
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export default function SellSuccessPage() {
+function SellSuccessInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [data, setData] = useState<SubmissionData | null>(null);
@@ -854,5 +854,13 @@ export default function SellSuccessPage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function SellSuccessPage() {
+  return (
+    <Suspense>
+      <SellSuccessInner />
+    </Suspense>
   );
 }
