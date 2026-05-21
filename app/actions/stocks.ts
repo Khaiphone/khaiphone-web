@@ -472,3 +472,14 @@ export async function deleteStockItem(id: string): Promise<{ success: boolean; e
   if (error) return { success: false, error: error.message };
   return { success: true };
 }
+
+export async function fetchRequestDocuments(requestRef: string): Promise<{ contractUrl?: string; receiptUrl?: string } | null> {
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("requests")
+    .select("contract_url, receipt_url")
+    .eq("id", requestRef)
+    .single();
+  if (!data) return null;
+  return { contractUrl: data.contract_url ?? undefined, receiptUrl: data.receipt_url ?? undefined };
+}
