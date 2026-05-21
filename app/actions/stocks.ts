@@ -509,6 +509,17 @@ export async function updateStockPhotos(id: string, photos: string[]): Promise<{
   return { success: true };
 }
 
+export async function logDocumentView(id: string, docLabel: string): Promise<void> {
+  const supabase = createServerClient();
+  const now = new Date().toISOString();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: current } = await supabase.from("stocks").select("audit_log").eq("id", id).single() as { data: any };
+  const newAuditLog: AuditEntry[] = [...(current?.audit_log ?? []), {
+    action: "เปิดดูเอกสาร", detail: docLabel, timestamp: now, by: "admin",
+  }];
+  await supabase.from("stocks").update({ audit_log: newAuditLog, updated_at: now }).eq("id", id);
+}
+
 export async function updateStockDocuments(id: string, documents: string[]): Promise<{ success: boolean; error?: string }> {
   const supabase = createServerClient();
   const { error } = await supabase.from("stocks").update({ documents, updated_at: new Date().toISOString() }).eq("id", id);

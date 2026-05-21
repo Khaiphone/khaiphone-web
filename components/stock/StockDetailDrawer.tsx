@@ -7,7 +7,7 @@ import { useThemeColors } from "./ThemeContext";
 import StockStatusBadge, { GradeBadge } from "./StatusBadge";
 import type { StockItem, StockStatus } from "@/lib/stock/types";
 import { STOCK_STATUS_COLORS } from "@/lib/stock/mockData";
-import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos, updateStockDocuments } from "@/app/actions/stocks";
+import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos, updateStockDocuments, logDocumentView } from "@/app/actions/stocks";
 import { supabase } from "@/lib/supabase";
 
 const TABS = ["รายละเอียด", "รูปภาพ", "เอกสาร", "ประวัติ"] as const;
@@ -479,12 +479,12 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                         <DocCard
                           label="สัญญาซื้อขาย"
                           url={`/api/contract?order=${encodeURIComponent(item.requestRef)}&phone=${encodeURIComponent(item.sellerPhone)}&type=contract`}
-                          c={c}
+                          itemId={item.id} c={c}
                         />
                         <DocCard
                           label="ใบสำคัญรับเงิน"
                           url={`/api/contract?order=${encodeURIComponent(item.requestRef)}&phone=${encodeURIComponent(item.sellerPhone)}&type=receipt`}
-                          c={c}
+                          itemId={item.id} c={c}
                         />
                       </div>
                     </div>
@@ -672,14 +672,18 @@ function Row({ label, value, mono, c }: { label: string; value: string; mono?: b
   );
 }
 
-function DocCard({ label, url, c }: { label: string; url: string; c: ReturnType<typeof useThemeColors> }) {
+function DocCard({ label, url, itemId, c }: { label: string; url: string; itemId: string; c: ReturnType<typeof useThemeColors> }) {
+  async function handleOpen() {
+    window.open(url, "_blank", "noreferrer");
+    await logDocumentView(itemId, label);
+  }
   return (
-    <a
-      href={url} target="_blank" rel="noreferrer"
+    <button
+      onClick={handleOpen}
       style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
+        width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "12px 14px", borderRadius: 10, border: `1px solid ${c.border}`,
-        background: c.card2, textDecoration: "none", cursor: "pointer",
+        background: c.card2, cursor: "pointer", fontFamily: "inherit",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -689,6 +693,6 @@ function DocCard({ label, url, c }: { label: string; url: string; c: ReturnType<
       <div style={{ display: "flex", alignItems: "center", gap: 4, color: c.gold, fontSize: 12, fontWeight: 600 }}>
         เปิด <ExternalLink size={12} />
       </div>
-    </a>
+    </button>
   );
 }
