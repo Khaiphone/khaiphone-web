@@ -306,3 +306,69 @@ function fmtCF(iso: string) {
   const d = new Date(iso.length === 10 ? iso + "T00:00:00" : iso);
   return d.toLocaleString("th-TH", { day: "2-digit", month: "short", year: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
+
+export type FinanceAuditEntry = {
+  id: string;
+  datetime: string;
+  user: string;
+  action: string;
+  refNumber: string;
+  before?: string;
+  after?: string;
+  category: "finance" | "stock" | "system";
+};
+
+const STATUS_LABELS_TH: Record<string, string> = {
+  new: "คำขอใหม่",
+  pending: "รอตรวจสอบ",
+  inspecting: "ติดต่อกลับแล้ว",
+  confirmed: "ยืนยันนัดหมาย",
+  pickup_scheduled: "นัดรับเครื่อง",
+  price_negotiation: "รอยืนยันราคา",
+  contracting: "กำลังทำสัญญา",
+  completed: "เสร็จสิ้น",
+  cancelled: "ยกเลิก",
+  rejected: "ไม่เข้าเงื่อนไข",
+};
+
+export async function fetchFinanceAudit(): Promise<FinanceAuditEntry[]> {
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("requests")
+    .select("id, order_number, device_model, status_log, stock_status, sell_date, sell_price, created_at")
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  const entries: FinanceAuditEntry[] = [];
+
+  for (const row of data ?? []) {
+    const logs: Array<{ status: string; timestamp: string; note?: string; by?: string }> = row.status_log ?? [];
+    for (const log of logs) {
+      const statusTh = STATUS_LABELS_TH[log.status] ?? log.status;
+      entries.push({
+        id: `${row.id}-${log.timestamp}`,
+        datetime: log.timestamp,
+        user: log.by ?? "แอดมิน",
+        action: `เปลี่ยนสถานะ → ${statusTh}`,
+        refNumber: row.order_number ?? "",
+        after: statusTh,
+        category: log.status === "completed" ? "stock" : "system",
+      });
+    }
+    if (row.stock_status === "sold" && row.sell_date) {
+      entries.push({
+        id: `sold-${row.id}`,
+        datetime: row.sell_date + "T12:00:00",
+        user: "แอดมิน",
+        action: `บันทึกการขาย ${row.device_model ?? ""}`,
+        refNumber: row.order_number ?? "",
+        before: "in_stock",
+        after: `sold · ฿${(row.sell_price ?? 0).toLocaleString("th-TH")}`,
+        category: "finance",
+      });
+    }
+  }
+
+  entries.sort((a, b) => b.datetime.localeCompare(a.datetime));
+  return entries;
+}
