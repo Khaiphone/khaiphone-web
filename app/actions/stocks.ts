@@ -547,11 +547,11 @@ export async function fetchAllAuditLog(): Promise<AuditRow[]> {
   const supabase = createServerClient();
   const { data } = await supabase
     .from("stocks")
-    .select("id, model, audit_log")
-    .order("updated_at", { ascending: false });
+    .select("id, model, audit_log, status_log");
 
   const rows: AuditRow[] = [];
   for (const item of data ?? []) {
+    // audit_log entries (new system)
     for (const entry of (item.audit_log ?? [])) {
       rows.push({
         stockId: item.id,
@@ -560,6 +560,19 @@ export async function fetchAllAuditLog(): Promise<AuditRow[]> {
         detail: entry.detail,
         timestamp: entry.timestamp,
         by: entry.by,
+      });
+    }
+    // status_log entries — include only if not already covered by audit_log
+    const auditTimestamps = new Set((item.audit_log ?? []).map((e: AuditEntry) => e.timestamp));
+    for (const log of (item.status_log ?? [])) {
+      if (auditTimestamps.has(log.timestamp)) continue;
+      rows.push({
+        stockId: item.id,
+        model: item.model,
+        action: "เปลี่ยนสถานะ",
+        detail: log.note ? `${log.status} (${log.note})` : log.status,
+        timestamp: log.timestamp,
+        by: log.by,
       });
     }
   }
