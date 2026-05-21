@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Plus, UserCircle, X, Check, Trash2, ChevronDown } from "lucide-react";
+import { ChevronLeft, Plus, UserCircle, X, Check, Trash2, ChevronDown, Mail } from "lucide-react";
 import {
-  fetchAdminUsers, inviteStaff, updateAdminUser, deleteAdminUser, updateAdminPermissions,
+  fetchAdminUsers, inviteStaff, updateAdminUser, deleteAdminUser, updateAdminPermissions, sendPasswordReset,
 } from "@/app/actions/admin-users";
 import { PERMISSION_LABELS } from "@/lib/admin-permissions";
 import { supabase } from "@/lib/supabase";
@@ -38,6 +38,8 @@ export default function StaffPage() {
   const [updating, setUpdating] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [deleting, setDeleting]           = useState<string | null>(null);
+  const [resetting, setResetting]         = useState<string | null>(null);
+  const [resetMsg, setResetMsg]           = useState<Record<string, string>>({});
   const [myUserId, setMyUserId]           = useState<string | null>(null);
   const [expandedPerms, setExpandedPerms] = useState<Set<string>>(new Set());
 
@@ -85,6 +87,17 @@ export default function StaffPage() {
     await updateAdminUser(u.id, { role });
     setUsers(prev => prev.map(x => x.id === u.id ? { ...x, role } : x));
     setUpdating(null);
+  }
+
+  async function handlePasswordReset(u: AdminUserRow) {
+    setResetting(u.id);
+    const res = await sendPasswordReset(u.email);
+    setResetting(null);
+    setResetMsg(prev => ({
+      ...prev,
+      [u.id]: res.success ? `ส่ง reset email ไปที่ ${u.email} แล้ว ✓` : (res.error ?? "เกิดข้อผิดพลาด"),
+    }));
+    setTimeout(() => setResetMsg(prev => { const n = { ...prev }; delete n[u.id]; return n; }), 5000);
   }
 
   async function handleDelete(u: AdminUserRow) {
@@ -278,6 +291,23 @@ export default function StaffPage() {
                         <option value="owner">เจ้าของ / ผู้จัดการ</option>
                       </select>
 
+                      {/* Reset password */}
+                      <button
+                        onClick={() => handlePasswordReset(u)}
+                        disabled={resetting === u.id}
+                        title="ส่ง Reset Password Email"
+                        style={{
+                          display: "flex", alignItems: "center", gap: 5,
+                          padding: "5px 10px", borderRadius: 7,
+                          border: `1px solid ${BORDER}`,
+                          background: BG, fontSize: 12, color: TEXT2,
+                          cursor: resetting === u.id ? "wait" : "pointer",
+                          fontFamily: "inherit", opacity: resetting === u.id ? 0.5 : 1,
+                        }}
+                      >
+                        <Mail size={11} /> {resetting === u.id ? "กำลังส่ง..." : "Reset Password"}
+                      </button>
+
                       {/* Active toggle */}
                       {u.user_id !== myUserId && (
                         <button
@@ -355,6 +385,11 @@ export default function StaffPage() {
                       )}
                     </div>
                   </div>
+                  {resetMsg[u.id] && (
+                    <p style={{ color: resetMsg[u.id].includes("✓") ? "#10B981" : "#EF4444", fontSize: 12, margin: "8px 0 0" }}>
+                      {resetMsg[u.id]}
+                    </p>
+                  )}
                 </div>
               </div>
 

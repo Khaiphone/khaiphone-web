@@ -138,6 +138,16 @@ export async function updateAdminUser(
   return { success: true as const };
 }
 
+export async function sendPasswordReset(email: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = createServerClient();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${siteUrl}/admin/set-password`,
+  });
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
 export async function deleteAdminUser(id: string, userId: string) {
   const supabase = createServerClient();
   // Delete from admin_users first
