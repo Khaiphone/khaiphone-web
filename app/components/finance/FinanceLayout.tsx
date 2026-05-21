@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -22,6 +22,8 @@ import {
   Download,
   MoreHorizontal,
 } from 'lucide-react'
+
+import { supabase } from '@/lib/supabase'
 
 const GOLD = '#B8860B'
 const BG = '#060606'
@@ -63,7 +65,7 @@ const MOBILE_TABS = [
   { label: 'เพิ่มเติม', icon: MoreHorizontal, href: '/finance/cashflow' },
 ]
 
-function SidebarContent({ onClose }: { onClose?: () => void }) {
+function SidebarContent({ onClose, userName, avatarLetter }: { onClose?: () => void; userName?: string; avatarLetter?: string }) {
   const pathname = usePathname()
 
   return (
@@ -121,10 +123,10 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
             flexShrink: 0,
           }}
         >
-          ส
+          {avatarLetter ?? 'A'}
         </div>
         <div>
-          <p style={{ color: '#FFFFFF', fontSize: 13, fontWeight: 700, margin: 0 }}>สุนัก</p>
+          <p style={{ color: '#FFFFFF', fontSize: 13, fontWeight: 700, margin: 0 }}>{userName ?? '...'}</p>
           <p style={{ color: TEXT2, fontSize: 11, margin: '1px 0 0' }}>Administrator</p>
         </div>
       </div>
@@ -166,6 +168,16 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 export default function FinanceLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [userEmail, setUserEmail] = useState('')
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.email) setUserEmail(session.user.email)
+    })
+  }, [])
+
+  const userName = userEmail ? userEmail.split('@')[0] : '...'
+  const avatarLetter = userName.charAt(0).toUpperCase()
 
   const pageTitle = PAGE_TITLES[pathname] ?? 'Finance'
 
@@ -187,7 +199,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
           zIndex: 20,
         }}
       >
-        <SidebarContent />
+        <SidebarContent userName={userName} avatarLetter={avatarLetter} />
       </aside>
 
       {/* Mobile overlay */}
@@ -219,7 +231,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
           transition: 'transform 0.25s ease',
         }}
       >
-        <SidebarContent onClose={() => setSidebarOpen(false)} />
+        <SidebarContent onClose={() => setSidebarOpen(false)} userName={userName} avatarLetter={avatarLetter} />
       </aside>
 
       {/* Main area */}

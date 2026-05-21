@@ -333,11 +333,18 @@ const STATUS_LABELS_TH: Record<string, string> = {
 
 export async function fetchFinanceAudit(): Promise<FinanceAuditEntry[]> {
   const supabase = createServerClient();
-  const { data } = await supabase
-    .from("requests")
-    .select("id, order_number, device_model, status_log, stock_status, sell_date, sell_price, created_at")
-    .order("created_at", { ascending: false })
-    .limit(200);
+  const [{ data }, { data: expenseLogs }] = await Promise.all([
+    supabase
+      .from("requests")
+      .select("id, order_number, device_model, status_log, stock_status, sell_date, sell_price, created_at")
+      .order("created_at", { ascending: false })
+      .limit(200),
+    supabase
+      .from("finance_audit_logs")
+      .select("*")
+      .order("datetime", { ascending: false })
+      .limit(200),
+  ]);
 
   const entries: FinanceAuditEntry[] = [];
 
@@ -369,11 +376,43 @@ export async function fetchFinanceAudit(): Promise<FinanceAuditEntry[]> {
     }
   }
 
+  for (const log of expenseLogs ?? []) {
+    entries.push({
+      id: log.id,
+      datetime: log.datetime,
+      user: log.actor ?? "แอดมิน",
+      action: log.action,
+      refNumber: log.ref_number ?? "",
+      before: log.before_val ?? undefined,
+      after: log.after_val ?? undefined,
+      category: (log.category as "finance" | "stock" | "system") ?? "finance",
+    });
+  }
+
   entries.sort((a, b) => b.datetime.localeCompare(a.datetime));
   return entries;
 }
 
 // ─── Expenses (Supabase) ──────────────────────────────────────────────────────
+
+async function insertAuditLog(data: {
+  action: string;
+  refNumber?: string;
+  beforeVal?: string;
+  afterVal?: string;
+  category?: string;
+}) {
+  try {
+    const supabase = createServerClient();
+    await supabase.from("finance_audit_logs").insert({
+      action: data.action,
+      ref_number: data.refNumber ?? "",
+      before_val: data.beforeVal ?? null,
+      after_val: data.afterVal ?? null,
+      category: data.category ?? "finance",
+    });
+  } catch { /* audit failure must not block main operation */ }
+}
 
 export type ExpenseStatus = "pending" | "approved" | "rejected";
 
@@ -434,6 +473,11 @@ export async function createExpense(data: {
     .select("id")
     .single();
   if (error) return { success: false, error: error.message };
+  insertAuditLog({
+    action: `เพิ่มรายจ่าย: ${data.product}`,
+    refNumber: data.refNumber,
+    afterVal: `฿${data.amount.toLocaleString("th-TH")} · ${data.category} · ${data.status}`,
+  }).catch(() => {});
   return { success: true, id: row.id };
 }
 
@@ -442,18 +486,29 @@ export async function updateExpense(
   data: { date: string; product: string; category: string; amount: number; status: ExpenseStatus; notes: string },
 ): Promise<{ success: true } | { success: false; error: string }> {
   const supabase = createServerClient();
+  const { data: existing } = await supabase.from("expenses").select("ref_number").eq("id", id).single();
   const { error } = await supabase
     .from("expenses")
     .update({ ...data, updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) return { success: false, error: error.message };
+  insertAuditLog({
+    action: `แก้ไขรายจ่าย: ${data.product}`,
+    refNumber: existing?.ref_number ?? id,
+    afterVal: `฿${data.amount.toLocaleString("th-TH")} · ${data.status}`,
+  }).catch(() => {});
   return { success: true };
 }
 
 export async function deleteExpense(id: string): Promise<{ success: true } | { success: false; error: string }> {
   const supabase = createServerClient();
+  const { data: existing } = await supabase.from("expenses").select("ref_number, product").eq("id", id).single();
   const { error } = await supabase.from("expenses").delete().eq("id", id);
   if (error) return { success: false, error: error.message };
+  insertAuditLog({
+    action: `ลบรายจ่าย: ${existing?.product ?? ""}`,
+    refNumber: existing?.ref_number ?? id,
+  }).catch(() => {});
   return { success: true };
 }
 
