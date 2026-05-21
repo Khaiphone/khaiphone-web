@@ -10,6 +10,7 @@ import { STOCK_STATUS_COLORS } from "@/lib/stock/mockData";
 import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos, updateStockDocuments, logDocumentView } from "@/app/actions/stocks";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
+import { validateImageFiles, validateImageFile } from "@/lib/validate-file";
 
 const TABS = ["รายละเอียด", "รูปภาพ", "เอกสาร", "ประวัติ"] as const;
 type Tab = typeof TABS[number];
@@ -146,6 +147,8 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
 
   async function handlePhotoUpload(files: FileList) {
     if (!files.length) return;
+    const check = validateImageFiles(Array.from(files));
+    if (!check.valid) { setUploadErr(check.error); return; }
     setUploading(true);
     setUploadErr(null);
     const urls: string[] = [...item!.photos];
@@ -167,6 +170,8 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
 
   async function handleDocumentUpload(files: FileList) {
     if (!files.length) return;
+    const check = validateImageFiles(Array.from(files));
+    if (!check.valid) { setUploadDocErr(check.error); return; }
     setUploadingDoc(true);
     setUploadDocErr(null);
     const urls: string[] = [...(item!.documents ?? [])];

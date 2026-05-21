@@ -18,6 +18,7 @@ import type { AdminUserRow } from "@/app/actions/admin-users";
 import { saveInspection, recordArrival, respondToNegotiation } from "@/app/actions/inspection";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
+import { validateImageFile } from "@/lib/validate-file";
 import InspectionForm from "../../../components/admin/InspectionForm";
 import { STATUS_LABELS } from "@/lib/types/admin";
 import type { AdminRequest, RequestStatus, SellMethod, PayMethod } from "@/lib/types/admin";
@@ -361,6 +362,8 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   async function handleSlipUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = e.target.files?.[0];
     if (!raw || !request) return;
+    const check = validateImageFile(raw);
+    if (!check.valid) { setSaveError(check.error); return; }
     setSlipUploading(true);
     const file = await compressImage(raw);
     const path = `slips/${id}/${Date.now()}-${file.name.replace(/\s/g, "_")}`;

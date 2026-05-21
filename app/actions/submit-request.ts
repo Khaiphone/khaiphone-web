@@ -33,6 +33,18 @@ interface SubmissionData {
 export async function submitRequest(data: SubmissionData) {
   const supabase = createServerClient();
 
+  // Fraud: block same phone + model within 30 minutes
+  const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+  const { count: dupCount } = await supabase
+    .from("requests")
+    .select("*", { count: "exact", head: true })
+    .eq("customer_phone", data.customer.phone)
+    .eq("device_model", data.model)
+    .gte("created_at", since);
+  if ((dupCount ?? 0) > 0) {
+    return { success: false, error: "มีคำขอของเบอร์นี้สำหรับรุ่นนี้อยู่แล้ว กรุณารอ 30 นาทีก่อนส่งใหม่" };
+  }
+
   const conditionDetails = Object.values(data.selections).filter(Boolean);
 
   const { error } = await supabase.from("requests").insert({

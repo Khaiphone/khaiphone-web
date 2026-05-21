@@ -6,6 +6,7 @@ import { ArrowLeft, FileText, RotateCcw, Check, ExternalLink, Camera } from "luc
 import { fetchRequest, saveContractUrls, updateStatus, markContractSigned, savePaymentSlip } from "@/app/actions/admin-requests";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
+import { validateImageFile } from "@/lib/validate-file";
 import type { AdminRequest } from "@/lib/types/admin";
 
 const BG     = "#F5F5F7";
@@ -257,6 +258,8 @@ export default function ContractPage() {
   async function handleSlipUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = e.target.files?.[0];
     if (!raw) return;
+    const check = validateImageFile(raw);
+    if (!check.valid) { alert(check.error); return; }
     setSlipSaving(true);
     const file = await compressImage(raw);
     const dataUrl = await applyWatermark(file);

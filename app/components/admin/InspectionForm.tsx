@@ -5,6 +5,7 @@ import { Plus, X, Camera, Check, AlertCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { saveInspectionPhotos } from "@/app/actions/inspection";
 import { compressImage } from "@/lib/compress-image";
+import { validateImageFiles } from "@/lib/validate-file";
 import type { InspectionData, InspectionCriterion, FunctionalTest, ExtraDeviceInspection } from "@/lib/types/admin";
 
 const GOLD   = "#B8860B";
@@ -230,6 +231,8 @@ export default function InspectionForm({
   async function handleExtraFiles(idx: number, e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
+    const check = validateImageFiles(files);
+    if (!check.valid) { alert(check.error); return; }
     patchExtra(idx, { uploading: true, photoSaved: false });
     const urls: string[] = [];
     for (const raw of files) {
@@ -305,6 +308,8 @@ export default function InspectionForm({
   async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
+    const check = validateImageFiles(files);
+    if (!check.valid) { setUploadErr(check.error); return; }
     setUploading(true);
     setUploadErr(null);
     const urls: string[] = [];
