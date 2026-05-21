@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 
 import { supabase } from '@/lib/supabase'
+import { fetchFinanceDashboard } from '@/app/actions/finance'
 
 const GOLD = '#B8860B'
 const BG = '#060606'
@@ -169,6 +170,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [userEmail, setUserEmail] = useState('')
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -178,6 +180,67 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
 
   const userName = userEmail ? userEmail.split('@')[0] : '...'
   const avatarLetter = userName.charAt(0).toUpperCase()
+
+  async function handleExport() {
+    setExporting(true)
+    try {
+      const d = await fetchFinanceDashboard()
+      const BOM = '﻿'
+      const lines: string[] = []
+
+      lines.push('สรุปการเงิน KHAIPHONE')
+      lines.push(`ส่งออกเมื่อ,${new Date().toLocaleString('th-TH')}`)
+      lines.push('')
+
+      lines.push('=== KPI หลัก ===')
+      lines.push('รายการ,จำนวน (บาท)')
+      lines.push(`รายได้รวม,${d.totalRevenue}`)
+      lines.push(`ต้นทุนเครื่อง,${d.totalCost}`)
+      lines.push(`ค่าใช้จ่าย (approved),${d.totalExpenses}`)
+      lines.push(`กำไรสุทธิแท้จริง,${d.trueNetProfit}`)
+      lines.push(`มูลค่าสต็อก,${d.stockValue}`)
+      lines.push('')
+
+      lines.push('=== จำนวนเครื่อง ===')
+      lines.push('รายการ,จำนวน')
+      lines.push(`รับซื้อทั้งหมด,${d.purchaseCount}`)
+      lines.push(`ขายแล้ว,${d.soldCount}`)
+      lines.push(`ในมือ,${d.purchaseCount - d.soldCount}`)
+      lines.push(`รออนุมัติค่าใช้จ่าย,${d.pendingExpensesCount}`)
+      lines.push('')
+
+      lines.push('=== รายรับ / ต้นทุน รายเดือน ===')
+      lines.push('เดือน,รายรับ,ต้นทุน,กำไร')
+      for (const m of d.revenueByMonth) {
+        lines.push(`${m.date},${m.revenue},${m.cost},${m.revenue - m.cost}`)
+      }
+      lines.push('')
+
+      lines.push('=== ค่าใช้จ่ายแยกประเภท ===')
+      lines.push('ประเภท,จำนวน (บาท)')
+      for (const e of d.expenseByCategory) {
+        lines.push(`${e.category},${e.amount}`)
+      }
+      lines.push('')
+
+      lines.push('=== Top รุ่นกำไรสูงสุด ===')
+      lines.push('รุ่น,กำไรรวม (บาท)')
+      for (const m of d.topModels) {
+        lines.push(`${m.model},${m.profit}`)
+      }
+
+      const csv = BOM + lines.join('\n')
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `finance-summary-${new Date().toISOString().slice(0, 10)}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const pageTitle = PAGE_TITLES[pathname] ?? 'Finance'
 
@@ -353,6 +416,8 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
               </span>
             </button>
             <button
+              onClick={handleExport}
+              disabled={exporting}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -364,11 +429,13 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
                 color: '#FFFFFF',
                 fontSize: 13,
                 fontWeight: 600,
-                cursor: 'pointer',
+                cursor: exporting ? 'not-allowed' : 'pointer',
+                opacity: exporting ? 0.7 : 1,
+                transition: 'opacity 0.2s',
               }}
             >
               <Download size={14} />
-              Export
+              {exporting ? 'กำลัง...' : 'Export'}
             </button>
           </div>
         </header>
