@@ -90,10 +90,10 @@ function buildFunnel(sessions: Session[], total: number): FunnelStep[] {
   }));
 }
 
-export async function fetchEstimateAnalytics(): Promise<EstimateAnalytics> {
+export async function fetchEstimateAnalytics(days = 30): Promise<EstimateAnalytics> {
   const supabase = createServerClient();
   const since = new Date();
-  since.setDate(since.getDate() - 29);
+  since.setDate(since.getDate() - (days - 1));
   since.setHours(0, 0, 0, 0);
 
   const { data } = await supabase
@@ -122,9 +122,9 @@ export async function fetchEstimateAnalytics(): Promise<EstimateAnalytics> {
   const sessions = Array.from(sessionMap.values());
   const totalStarts = sessions.length;
 
-  // Daily counts — last 30 days
+  // Daily counts
   const dailyMap = new Map<string, DailyCount>();
-  for (let i = 29; i >= 0; i--) {
+  for (let i = days - 1; i >= 0; i--) {
     const d = new Date(); d.setDate(d.getDate() - i);
     const key = d.toISOString().slice(0, 10);
     dailyMap.set(key, { date: key, starts: 0, priceSeen: 0, submits: 0 });

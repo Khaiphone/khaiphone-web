@@ -116,13 +116,15 @@ function FunnelChart({ funnel, c }: { funnel: FunnelStep[]; c: ReturnType<typeof
   );
 }
 
-// ─── Model Table ─────────────────────────────────────────────────────────────
+// ─── Model Bar Chart ─────────────────────────────────────────────────────────
 
-function ModelTable({ models, c }: { models: ModelCount[]; c: ReturnType<typeof useThemeColors> }) {
+function ModelBarChart({ models, total, c }: { models: ModelCount[]; total: number; c: ReturnType<typeof useThemeColors> }) {
+  const maxStarts = Math.max(...models.map(m => m.starts), 1);
+
   return (
     <div style={{ background: c.card, border: `1px solid ${c.border}`, borderRadius: 16, overflow: "hidden" }}>
       <div style={{ padding: "16px 20px", borderBottom: `1px solid ${c.border}` }}>
-        <p style={{ color: c.text, fontSize: 14, fontWeight: 700, margin: 0 }}>รุ่นที่ประเมินมากสุด</p>
+        <p style={{ color: c.text, fontSize: 14, fontWeight: 700, margin: 0 }}>รุ่นยอดนิยม</p>
       </div>
 
       {models.length === 0 ? (
@@ -130,29 +132,34 @@ function ModelTable({ models, c }: { models: ModelCount[]; c: ReturnType<typeof 
           <p style={{ color: c.text3, fontSize: 13, margin: 0 }}>ยังไม่มีข้อมูล</p>
         </div>
       ) : (
-        <>
-          {/* Header */}
-          <div style={{ display: "grid", gridTemplateColumns: "28px 1fr 70px 70px 60px", gap: 8, padding: "8px 20px", borderBottom: `1px solid ${c.border}`, background: c.card2 ?? c.border }}>
-            {["#", "รุ่น", "เริ่ม", "นัดหมาย", "อัตรา"].map(h => (
-              <span key={h} style={{ color: c.text3, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>{h}</span>
-            ))}
-          </div>
-
+        <div style={{ padding: "12px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
           {models.map((m, i) => {
-            const rate     = m.starts > 0 ? Math.round((m.submits / m.starts) * 100) : 0;
-            const rateColor = rate >= 20 ? "#059669" : rate >= 10 ? "#d97706" : c.text3;
-            const rateBg    = rate >= 20 ? "#05966915" : rate >= 10 ? "#d9770615" : "transparent";
+            const barPct    = (m.starts / maxStarts) * 100;
+            const sharePct  = total > 0 ? Math.round((m.starts / total) * 100) : 0;
+            const isTop     = i === 0;
+            const isLow     = m.starts <= Math.floor(maxStarts * 0.2);
+            const barColor  = isTop ? c.gold : isLow ? c.text3 : "#3b82f6";
             return (
-              <div key={m.model} style={{ display: "grid", gridTemplateColumns: "28px 1fr 70px 70px 60px", gap: 8, padding: "11px 20px", borderBottom: i < models.length - 1 ? `1px solid ${c.border}` : "none", alignItems: "center" }}>
-                <span style={{ color: c.text3, fontSize: 12, fontWeight: 700 }}>#{i + 1}</span>
-                <span style={{ color: c.text, fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.model}</span>
-                <span style={{ color: c.text2, fontSize: 13, fontVariantNumeric: "tabular-nums" }}>{m.starts.toLocaleString("th-TH")}</span>
-                <span style={{ color: c.text2, fontSize: 13, fontVariantNumeric: "tabular-nums" }}>{m.submits.toLocaleString("th-TH")}</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: rateColor, background: rateBg, padding: "2px 7px", borderRadius: 6, textAlign: "center", fontVariantNumeric: "tabular-nums" }}>{rate}%</span>
+              <div key={m.model}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    {isTop && <span style={{ fontSize: 11 }}>🔥</span>}
+                    {isLow && <span style={{ fontSize: 11 }}>📉</span>}
+                    {!isTop && !isLow && <span style={{ color: c.text3, fontSize: 11, minWidth: 14 }}>#{i + 1}</span>}
+                    <span style={{ color: isTop ? c.text : c.text2, fontSize: 13, fontWeight: isTop ? 700 : 400 }}>{m.model}</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    <span style={{ color: c.text3, fontSize: 11 }}>{sharePct}% ของทั้งหมด</span>
+                    <span style={{ color: c.text2, fontSize: 12, fontWeight: 600, fontVariantNumeric: "tabular-nums", minWidth: 24, textAlign: "right" }}>{m.starts}</span>
+                  </div>
+                </div>
+                <div style={{ height: 8, background: c.border, borderRadius: 4, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${barPct}%`, background: barColor, borderRadius: 4, transition: "width 0.5s ease" }} />
+                </div>
               </div>
             );
           })}
-        </>
+        </div>
       )}
     </div>
   );
@@ -228,27 +235,43 @@ function ModelFunnelSection({ modelFunnels, c }: { modelFunnels: ModelFunnel[]; 
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+type Period = { label: string; days: number };
+const PERIODS: Period[] = [
+  { label: "วันนี้",   days: 1  },
+  { label: "7 วัน",   days: 7  },
+  { label: "30 วัน",  days: 30 },
+  { label: "90 วัน",  days: 90 },
+];
+
 export default function EstimateAnalyticsPage() {
   const c = useThemeColors();
   const [data,    setData]    = useState<EstimateAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [period,  setPeriod]  = useState<Period>(PERIODS[2]);
 
-  async function load() {
+  async function load(p: Period) {
     setLoading(true);
-    const d = await fetchEstimateAnalytics();
+    const d = await fetchEstimateAnalytics(p.days);
     setData(d);
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(period); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function changePeriod(p: Period) {
+    setPeriod(p);
+    load(p);
+  }
+
+  const periodLabel = period.days === 1 ? "วันนี้" : `${period.days} วัน`;
 
   const statCards = data ? [
-    { label: "เริ่มวันนี้",    value: data.todayStarts,              color: "#3b82f6", icon: Users      },
-    { label: "เห็นราคาวันนี้", value: data.todayPriceSeen,           color: "#f59e0b", icon: BarChart2  },
-    { label: "นัดหมายวันนี้",  value: data.todaySubmits,             color: "#22c55e", icon: TrendingUp },
-    { label: "สำเร็จ 30 วัน", value: `${data.completionRate}%`,      color: "#a855f7", icon: Award      },
-    { label: "ทั้งหมด 30 วัน", value: data.totalStarts,              color: c.gold,    icon: BarChart2  },
-    { label: "เจอราคา 30 วัน", value: data.funnel[9]?.count ?? 0,    color: "#f59e0b", icon: Minus      },
+    { label: "เริ่ม" + (period.days === 1 ? "วันนี้" : `${period.days}ว.`),    value: data.totalStarts,           color: "#3b82f6", icon: Users      },
+    { label: "เห็นราคา",                                                        value: data.funnel[9]?.count ?? 0, color: "#f59e0b", icon: BarChart2  },
+    { label: "นัดหมาย",                                                         value: data.funnel[10]?.count ?? 0,color: "#22c55e", icon: TrendingUp },
+    { label: "อัตราสำเร็จ",                                                     value: `${data.completionRate}%`,  color: "#a855f7", icon: Award      },
+    { label: "เริ่มวันนี้",                                                      value: data.todayStarts,           color: c.gold,    icon: Users      },
+    { label: "นัดหมายวันนี้",                                                   value: data.todaySubmits,          color: "#22c55e", icon: TrendingUp },
   ] : [];
 
   return (
@@ -257,10 +280,28 @@ export default function EstimateAnalyticsPage() {
 
       <div style={{ padding: "24px 28px" }}>
 
-        {/* Header row */}
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 20 }}>
+        {/* Period tabs + refresh */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div style={{ display: "flex", gap: 6 }}>
+            {PERIODS.map(p => {
+              const active = p.days === period.days;
+              return (
+                <button
+                  key={p.days}
+                  onClick={() => changePeriod(p)}
+                  style={{
+                    padding: "8px 18px", borderRadius: 10, fontFamily: "inherit", fontSize: 13,
+                    fontWeight: active ? 700 : 500, cursor: "pointer",
+                    border: active ? "1px solid rgba(184,134,11,0.35)" : `1px solid ${c.border}`,
+                    background: active ? "var(--admin-gold-bg, #FEF3C7)" : c.card,
+                    color: active ? c.gold : c.text2,
+                  }}
+                >{p.label}</button>
+              );
+            })}
+          </div>
           <button
-            onClick={load} disabled={loading}
+            onClick={() => load(period)} disabled={loading}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${c.border}`, background: c.card, color: c.text2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
           >
             <RefreshCw size={14} style={{ animation: loading ? "spin 1s linear infinite" : "none" }} />
@@ -276,7 +317,7 @@ export default function EstimateAnalyticsPage() {
         ) : data ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
-            {/* Stat cards — 6 across */}
+            {/* Stat cards */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 12 }}>
               {statCards.map(({ label, value, color, icon: Icon }) => (
                 <div key={label} style={{ background: c.card, border: `1px solid ${c.border}`, borderRadius: 16, padding: "14px 16px" }}>
@@ -293,24 +334,24 @@ export default function EstimateAnalyticsPage() {
               ))}
             </div>
 
-            {/* Drop-off highlight */}
+            {/* Drop-off banner */}
             {data.totalStarts > 0 && (
               <div style={{ background: "#ef444415", border: "1px solid #ef444430", borderRadius: 14, padding: "12px 20px", display: "flex", alignItems: "center", gap: 12 }}>
                 <span style={{ fontSize: 20 }}>⚠️</span>
                 <div>
-                  <p style={{ color: "#ef4444", fontSize: 13, fontWeight: 700, margin: 0 }}>จุดที่คนออกมากสุด: {data.topDropStep}</p>
+                  <p style={{ color: "#ef4444", fontSize: 13, fontWeight: 700, margin: 0 }}>จุดที่คนออกมากสุด ({periodLabel}): {data.topDropStep}</p>
                   <p style={{ color: c.text3, fontSize: 11, margin: "2px 0 0" }}>ควรปรับปรุง UX หรือคำอธิบายที่ขั้นตอนนี้</p>
                 </div>
               </div>
             )}
 
-            {/* Daily chart (full width) */}
+            {/* Daily chart */}
             <DailyChart daily={data.daily} c={c} />
 
-            {/* Two column: Funnel + Models */}
+            {/* Two column: Funnel + Model bar */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
               <FunnelChart funnel={data.funnel} c={c} />
-              <ModelTable  models={data.models}  c={c} />
+              <ModelBarChart models={data.models} total={data.totalStarts} c={c} />
             </div>
 
             {/* Per-model funnel */}
