@@ -761,7 +761,13 @@ function RequestDetailInner() {
             )}
 
             {/* Price negotiation banner */}
-            {dbStatus === "price_negotiation" && inspection && !inspection.negotiationResponse && (
+            {dbStatus === "price_negotiation" && inspection && !inspection.negotiationResponse && (() => {
+              const extraOrigTotal = (inspection.extraInspections ?? []).reduce((s, e) => s + e.originalPrice, 0);
+              const extraActualTotal = (inspection.extraInspections ?? []).reduce((s, e) => s + e.actualPrice, 0);
+              const totalOrig   = inspection.originalPrice + extraOrigTotal;
+              const totalActual = inspection.actualPrice   + extraActualTotal;
+              const deviceCount = 1 + (inspection.extraInspections?.length ?? 0);
+              return (
               <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid #FDE68A", background: "#FFFBEB" }}>
                 <div className="px-5 py-4" style={{ borderBottom: "1px solid #FDE68A" }}>
                   <p className="font-bold text-sm mb-0.5" style={{ color: "#92400E" }}>⚠️ เจ้าหน้าที่เสนอราคาใหม่</p>
@@ -769,12 +775,12 @@ function RequestDetailInner() {
                 </div>
                 <div className="p-5">
                   <div className="flex items-center justify-between py-2 mb-1">
-                    <span className="text-sm" style={{ color: "#9CA3AF" }}>ราคาเดิม</span>
-                    <span className="text-sm line-through" style={{ color: "#9CA3AF" }}>฿{inspection.originalPrice.toLocaleString("th-TH")}</span>
+                    <span className="text-sm" style={{ color: "#9CA3AF" }}>{deviceCount > 1 ? `ราคาเดิมรวม ${deviceCount} เครื่อง` : "ราคาเดิม"}</span>
+                    <span className="text-sm line-through" style={{ color: "#9CA3AF" }}>฿{totalOrig.toLocaleString("th-TH")}</span>
                   </div>
                   <div className="flex items-center justify-between py-2 mb-2" style={{ borderTop: "1px solid #FDE68A" }}>
-                    <span className="text-sm font-semibold" style={{ color: "#92400E" }}>ราคาใหม่ที่เสนอ</span>
-                    <span className="text-xl font-bold" style={{ color: "#B8860B" }}>฿{inspection.actualPrice.toLocaleString("th-TH")}</span>
+                    <span className="text-sm font-semibold" style={{ color: "#92400E" }}>{deviceCount > 1 ? `ราคาใหม่รวม ${deviceCount} เครื่อง` : "ราคาใหม่ที่เสนอ"}</span>
+                    <span className="text-xl font-bold" style={{ color: "#B8860B" }}>฿{totalActual.toLocaleString("th-TH")}</span>
                   </div>
                   {inspection.priceReason && (
                     <p className="text-xs mb-4 px-3 py-2 rounded-lg" style={{ color: "#78350F", background: "#FEF3C7" }}>
@@ -804,7 +810,8 @@ function RequestDetailInner() {
                   </div>
                 </div>
               </div>
-            )}
+              );
+            })()}
 
             {/* Inspection results — only when full inspection saved (result field exists) */}
             {inspection?.result && (dbStatus === "completed" || dbStatus === "contracting" || dbStatus === "price_negotiation" || dbStatus === "confirmed" || dbStatus === "rejected" || dbStatus === "cancelled") && (
@@ -887,21 +894,29 @@ function RequestDetailInner() {
                   )}
 
                   {/* Price summary */}
-                  <div className="rounded-xl p-3" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}>
-                    {inspection.result !== "matched" && (
-                      <div className="flex justify-between mb-1.5">
-                        <span className="text-xs" style={{ color: "#9CA3AF" }}>ราคาเดิม</span>
-                        <span className="text-xs line-through" style={{ color: "#9CA3AF" }}>฿{inspection.originalPrice.toLocaleString("th-TH")}</span>
+                  {(() => {
+                    const extraOrigTotal   = (inspection.extraInspections ?? []).reduce((s, e) => s + e.originalPrice, 0);
+                    const extraActualTotal = (inspection.extraInspections ?? []).reduce((s, e) => s + e.actualPrice,   0);
+                    const totalOrig   = inspection.originalPrice + extraOrigTotal;
+                    const totalActual = inspection.actualPrice   + extraActualTotal;
+                    return (
+                    <div className="rounded-xl p-3" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}>
+                      {inspection.result !== "matched" && (
+                        <div className="flex justify-between mb-1.5">
+                          <span className="text-xs" style={{ color: "#9CA3AF" }}>ราคาเดิม</span>
+                          <span className="text-xs line-through" style={{ color: "#9CA3AF" }}>฿{totalOrig.toLocaleString("th-TH")}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-sm font-semibold" style={{ color: "#374151" }}>ราคาที่ตกลง</span>
+                        <span className="text-lg font-bold" style={{ color: "#B8860B" }}>฿{totalActual.toLocaleString("th-TH")}</span>
                       </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span className="text-sm font-semibold" style={{ color: "#374151" }}>ราคาที่ตกลง</span>
-                      <span className="text-lg font-bold" style={{ color: "#B8860B" }}>฿{inspection.actualPrice.toLocaleString("th-TH")}</span>
+                      {inspection.priceReason && (
+                        <p className="text-xs mt-1.5" style={{ color: "#9CA3AF" }}>{inspection.priceReason}</p>
+                      )}
                     </div>
-                    {inspection.priceReason && (
-                      <p className="text-xs mt-1.5" style={{ color: "#9CA3AF" }}>{inspection.priceReason}</p>
-                    )}
-                  </div>
+                    );
+                  })()}
 
                   {/* Negotiation result */}
                   {inspection.negotiationResponse && (

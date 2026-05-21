@@ -153,17 +153,103 @@ export default function InspectionForm({
   const [photoSaved,   setPhotoSaved]  = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [extraInspections, setExtraInspections] = useState<ExtraDeviceInspection[]>(() => {
-    if (existing?.extraInspections?.length) return existing.extraInspections;
-    return (extraDevices ?? []).map(d => ({
-      model: d.model,
-      storage: d.storage,
-      originalPrice: d.estimatedPrice,
-      actualPrice: d.estimatedPrice,
-      result: "matched" as const,
-      issues: [],
+  // ── Extra device inspection state ───────────────────────────────────────────
+
+  interface ExtraInspState {
+    model: string;
+    storage: string;
+    originalPrice: number;
+    actualPrice: string;
+    color: string;
+    imei: string;
+    serial: string;
+    criteria: CriterionRow[];
+    functionalTests: FunctionalTest[];
+    issues: string[];
+    customIssue: string;
+    photos: string[];
+    uploading: boolean;
+    photoSaving: boolean;
+    photoSaved: boolean;
+  }
+
+  function buildExtraInit(d: ExtraDeviceRow, saved?: ExtraDeviceInspection): ExtraInspState {
+    const savedCriteria: CriterionRow[] = saved?.criteria?.length
+      ? saved.criteria.map((c, i) => ({ _key: String(i), ...c }))
+      : d.details.map(det => ({
+          _key: det.title,
+          label: det.title,
+          stated: det.value,
+          actual: det.value,
+          pass: true,
+        }));
+    return {
+      model:          d.model,
+      storage:        d.storage,
+      originalPrice:  d.estimatedPrice,
+      actualPrice:    String(saved?.actualPrice ?? d.estimatedPrice),
+      color:          saved?.color ?? "",
+      imei:           saved?.imei ?? "",
+      serial:         saved?.serial ?? "",
+      criteria:       savedCriteria,
+      functionalTests: saved?.functionalTests?.length
+        ? saved.functionalTests
+        : FUNCTIONAL_TEST_DEFAULTS.map(t => ({ ...t })),
+      issues:         saved?.issues ?? [],
+      customIssue:    "",
+      photos:         saved?.photos ?? [],
+      uploading:      false,
+      photoSaving:    false,
+      photoSaved:     false,
+    };
+  }
+
+  const [extraStates, setExtraStates] = useState<ExtraInspState[]>(() =>
+    (extraDevices ?? []).map((d, i) => buildExtraInit(d, existing?.extraInspections?.[i]))
+  );
+
+  function patchExtra(idx: number, patch: Partial<ExtraInspState>) {
+    setExtraStates(prev => prev.map((s, i) => i === idx ? { ...s, ...patch } : s));
+  }
+
+  function updateExtraCriteria(idx: number, key: string, patch: Partial<CriterionRow>) {
+    setExtraStates(prev => prev.map((s, i) => {
+      if (i !== idx) return s;
+      return { ...s, criteria: s.criteria.map(r => {
+        if (r._key !== key) return r;
+        const updated = { ...r, ...patch };
+        if ("actual" in patch) updated.pass = updated.actual.trim().toLowerCase() === updated.stated.trim().toLowerCase();
+        return updated;
+      })};
     }));
-  });
+  }
+
+  const extraFileRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  async function handleExtraFiles(idx: number, e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    patchExtra(idx, { uploading: true, photoSaved: false });
+    const urls: string[] = [];
+    for (const file of files) {
+      const path = `${requestId}/extra-${idx}/${Date.now()}-${file.name.replace(/\s/g, "_")}`;
+      const { data, error } = await supabase.storage
+        .from("inspection-photos")
+        .upload(path, file, { upsert: true });
+      if (error) continue;
+      const { data: pub } = supabase.storage.from("inspection-photos").getPublicUrl(data.path);
+      urls.push(pub.publicUrl);
+    }
+    setExtraStates(prev => prev.map((s, i) => i === idx ? { ...s, photos: [...s.photos, ...urls], uploading: false } : s));
+    if (extraFileRefs.current[idx]) extraFileRefs.current[idx]!.value = "";
+  }
+
+  async function removeExtraPhoto(idx: number, url: string) {
+    const newPhotos = extraStates[idx].photos.filter(p => p !== url);
+    patchExtra(idx, { photos: newPhotos, photoSaved: false, photoSaving: true });
+    await saveInspectionPhotos(requestId, newPhotos);
+    patchExtra(idx, { photoSaving: false, photoSaved: true });
+  }
 
   const allPass      = criteria.every(c => c.pass) && issues.length === 0;
   const priceChanged = Number(actualPrice) !== estimatedPrice;
@@ -258,9 +344,19 @@ export default function InspectionForm({
       functionalTests,
       imei:   imei.trim() || undefined,
       serial: serial.trim() || undefined,
-      extraInspections: extraInspections.length > 0 ? extraInspections.map(e => ({
-        ...e,
-        result: e.actualPrice === e.originalPrice ? "matched" as const : "adjusted" as const,
+      extraInspections: extraStates.length > 0 ? extraStates.map(e => ({
+        model:          e.model,
+        storage:        e.storage,
+        originalPrice:  e.originalPrice,
+        actualPrice:    Number(e.actualPrice) || e.originalPrice,
+        result:         (Number(e.actualPrice) === e.originalPrice && e.issues.length === 0) ? "matched" as const : "adjusted" as const,
+        criteria:       e.criteria.map(({ _key: _, ...rest }) => rest),
+        issues:         e.issues,
+        photos:         e.photos,
+        functionalTests: e.functionalTests,
+        imei:           e.imei || undefined,
+        serial:         e.serial || undefined,
+        color:          e.color || undefined,
       })) : undefined,
     };
     await onSave(data, action, colorDraft.trim());
@@ -565,79 +661,146 @@ export default function InspectionForm({
       </div>
 
       {/* ── Extra device inspections ─────────────────────────────────────────── */}
-      {extraInspections.length > 0 && (
-        <div style={{ marginBottom: 20 }}>
-          {sectionLabel(`ตรวจสภาพเครื่องเพิ่มเติม (${extraInspections.length} เครื่อง)`)}
-          {extraInspections.map((e, idx) => (
-            <div key={idx} style={{ background: "#F5F5F7", borderRadius: 14, padding: 14, marginBottom: 10, border: `1px solid ${BORDER}` }}>
-              <p style={{ color: TEXT, fontSize: 13, fontWeight: 700, margin: "0 0 12px" }}>
-                เครื่องที่ {idx + 2}: {e.model} {e.storage}
-              </p>
+      {extraStates.map((e, idx) => (
+        <div key={idx} style={{ marginBottom: 24, borderTop: `2px solid ${GOLD}`, paddingTop: 20 }}>
+          {sectionLabel(`เครื่องที่ ${idx + 2}: ${e.model} ${e.storage}`)}
 
-              {/* Color */}
-              <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>สีตัวเครื่อง</label>
-              <input
-                value={e.color ?? ""}
-                onChange={ev => setExtraInspections(prev => prev.map((x, i) => i === idx ? { ...x, color: ev.target.value } : x))}
-                placeholder="เช่น Midnight, Natural Titanium"
-                style={{ width: "100%", background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "8px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, marginBottom: 10, fontFamily: "inherit" }}
-              />
+          {/* Color */}
+          {sectionLabel("สีตัวเครื่อง (ตรวจจริง)")}
+          <input
+            value={e.color}
+            onChange={ev => patchExtra(idx, { color: ev.target.value })}
+            placeholder="เช่น Midnight, Natural Titanium"
+            style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, marginBottom: 20, fontFamily: "inherit" }}
+          />
 
-              {/* IMEI + Serial */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+          {/* IMEI + Serial */}
+          {sectionLabel("IMEI / Serial (ตรวจจริงหน้างาน)")}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
+            <div>
+              <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>IMEI</label>
+              <input value={e.imei} onChange={ev => patchExtra(idx, { imei: ev.target.value })} placeholder="เช่น 356789123456789" maxLength={20}
+                style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" }} />
+            </div>
+            <div>
+              <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>Serial Number</label>
+              <input value={e.serial} onChange={ev => patchExtra(idx, { serial: ev.target.value })} placeholder="เช่น F2LJH0X7XY" maxLength={20}
+                style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" }} />
+            </div>
+          </div>
+
+          {/* Criteria */}
+          {sectionLabel("เปรียบเทียบสภาพเครื่อง")}
+          {e.criteria.map(row => (
+            <div key={row._key} style={{ background: "#F5F5F7", borderRadius: 12, padding: 12, marginBottom: 8, border: `1px solid ${row.pass ? BORDER : "#FECACA"}`, position: "relative" }}>
+              <button onClick={() => setExtraStates(prev => prev.map((s, i) => i === idx ? { ...s, criteria: s.criteria.filter(r => r._key !== row._key) } : s))}
+                style={{ position: "absolute", top: 8, right: 8, background: "none", border: "none", color: TEXT3, cursor: "pointer", padding: 0, display: "flex" }}>
+                <X size={14} />
+              </button>
+              <input value={row.label} onChange={ev => updateExtraCriteria(idx, row._key, { label: ev.target.value })} placeholder="รายการ"
+                style={{ width: "100%", background: "transparent", border: "none", borderBottom: `1px solid ${BORDER}`, padding: "2px 24px 6px 0", color: TEXT, fontSize: 13, fontWeight: 600, outline: "none", marginBottom: 8, boxSizing: "border-box" as const }} />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
                 <div>
-                  <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>IMEI</label>
-                  <input
-                    value={e.imei ?? ""}
-                    onChange={ev => setExtraInspections(prev => prev.map((x, i) => i === idx ? { ...x, imei: ev.target.value } : x))}
-                    placeholder="เช่น 356789123456789"
-                    maxLength={20}
-                    style={{ width: "100%", background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "8px 10px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" }}
-                  />
+                  <p style={{ color: TEXT3, fontSize: 10, margin: "0 0 3px", fontWeight: 600 }}>ลูกค้าแจ้ง</p>
+                  <input value={row.stated} onChange={ev => updateExtraCriteria(idx, row._key, { stated: ev.target.value })} placeholder="—"
+                    style={{ width: "100%", background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "4px 8px", color: TEXT2, fontSize: 13, outline: "none", boxSizing: "border-box" as const }} />
                 </div>
                 <div>
-                  <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>Serial</label>
-                  <input
-                    value={e.serial ?? ""}
-                    onChange={ev => setExtraInspections(prev => prev.map((x, i) => i === idx ? { ...x, serial: ev.target.value } : x))}
-                    placeholder="เช่น F2LJH0X7XY"
-                    maxLength={20}
-                    style={{ width: "100%", background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "8px 10px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" }}
-                  />
+                  <p style={{ color: TEXT3, fontSize: 10, margin: "0 0 3px", fontWeight: 600 }}>ตรวจจริง</p>
+                  <input value={row.actual} onChange={ev => updateExtraCriteria(idx, row._key, { actual: ev.target.value })} placeholder="กรอกผล"
+                    style={{ width: "100%", background: "#fff", border: `1px solid ${row.pass ? BORDER : "#FECACA"}`, borderRadius: 6, padding: "4px 8px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const }} />
                 </div>
               </div>
-
-              {/* Price */}
-              <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>ราคาที่รับซื้อจริง (บาท)</label>
-              <input
-                type="number"
-                value={e.actualPrice}
-                onChange={ev => setExtraInspections(prev => prev.map((x, i) => i === idx ? { ...x, actualPrice: Number(ev.target.value) || x.originalPrice } : x))}
-                style={{ width: "100%", background: "#fff", border: `1px solid ${e.actualPrice !== e.originalPrice ? "rgba(184,134,11,0.6)" : BORDER}`, borderRadius: 10, padding: "8px 12px", color: e.actualPrice !== e.originalPrice ? GOLD : TEXT, fontSize: 14, fontWeight: e.actualPrice !== e.originalPrice ? 700 : 400, outline: "none", boxSizing: "border-box" as const, marginBottom: 10, fontFamily: "inherit" }}
-              />
-              <p style={{ color: TEXT3, fontSize: 11, margin: "-6px 0 10px" }}>ราคาที่แจ้ง: ฿{e.originalPrice.toLocaleString("th-TH")}</p>
-
-              {/* Issues */}
-              <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 6 }}>ปัญหาที่พบ</label>
-              <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6, marginBottom: 4 }}>
-                {ISSUE_LIST.slice(0, 5).map(issue => {
-                  const checked = e.issues.includes(issue);
-                  return (
-                    <button
-                      key={issue}
-                      type="button"
-                      onClick={() => setExtraInspections(prev => prev.map((x, i) => i === idx ? { ...x, issues: checked ? x.issues.filter(s => s !== issue) : [...x.issues, issue] } : x))}
-                      style={{ padding: "4px 10px", borderRadius: 8, fontSize: 11, cursor: "pointer", fontFamily: "inherit", background: checked ? "#FEF3C7" : "#fff", color: checked ? "#92400E" : TEXT2, border: `1px solid ${checked ? "rgba(184,134,11,0.3)" : BORDER}` }}
-                    >
-                      {issue}
-                    </button>
-                  );
-                })}
-              </div>
+              <button onClick={() => updateExtraCriteria(idx, row._key, { pass: !row.pass })}
+                style={{ display: "inline-flex", alignItems: "center", gap: 5, background: row.pass ? "#D1FAE5" : "#FEE2E2", border: "none", borderRadius: 8, padding: "4px 10px", cursor: "pointer", color: row.pass ? "#065F46" : "#991B1B", fontSize: 12, fontWeight: 600, touchAction: "manipulation" }}>
+                {row.pass ? <><Check size={12} />ผ่าน</> : <><AlertCircle size={12} />ไม่ผ่าน</>}
+              </button>
             </div>
           ))}
+          <button onClick={() => setExtraStates(prev => prev.map((s, i) => i === idx ? { ...s, criteria: [...s.criteria, { _key: String(Date.now()), label: "", stated: "", actual: "", pass: true }] } : s))}
+            style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: `1px dashed ${BORDER}`, borderRadius: 10, padding: "8px 14px", color: TEXT2, fontSize: 13, cursor: "pointer", width: "100%", justifyContent: "center", marginBottom: 20, touchAction: "manipulation", fontFamily: "inherit" }}>
+            <Plus size={14} /> เพิ่มรายการ
+          </button>
+
+          {/* Functional tests */}
+          {sectionLabel("ทดสอบการใช้งานภายใน")}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 20 }}>
+            {e.functionalTests.map((t, ti) => (
+              <button key={t.label} onClick={() => setExtraStates(prev => prev.map((s, i) => i === idx ? { ...s, functionalTests: s.functionalTests.map((f, fi) => fi === ti ? { ...f, pass: !f.pass } : f) } : s))}
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, background: t.pass ? "#F0FFF4" : "#FEF2F2", border: `1px solid ${t.pass ? "#BBF7D0" : "#FECACA"}`, borderRadius: 10, padding: "8px 10px", color: t.pass ? "#065F46" : "#991B1B", fontSize: 12, fontWeight: 500, cursor: "pointer", textAlign: "left", touchAction: "manipulation", fontFamily: "inherit" }}>
+                <span style={{ flex: 1, lineHeight: 1.3 }}>{t.label}</span>
+                <span style={{ flexShrink: 0 }}>{t.pass ? <Check size={14} /> : <AlertCircle size={14} />}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Issues */}
+          {sectionLabel("ปัญหาเพิ่มเติม")}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+            {ISSUE_LIST.map(issue => {
+              const checked = e.issues.includes(issue);
+              return (
+                <label key={issue} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px 12px", background: checked ? "#FEF3C7" : "#F5F5F7", borderRadius: 10, border: `1px solid ${checked ? "rgba(184,134,11,0.3)" : BORDER}`, touchAction: "manipulation" }}>
+                  <input type="checkbox" checked={checked} onChange={() => patchExtra(idx, { issues: checked ? e.issues.filter(s => s !== issue) : [...e.issues, issue] })} style={{ accentColor: GOLD, width: 16, height: 16, flexShrink: 0 }} />
+                  <span style={{ color: TEXT, fontSize: 13 }}>{issue}</span>
+                </label>
+              );
+            })}
+          </div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+            <input value={e.customIssue} onChange={ev => patchExtra(idx, { customIssue: ev.target.value })}
+              onKeyDown={ev => { if (ev.key === "Enter") { ev.preventDefault(); if (e.customIssue.trim()) { patchExtra(idx, { issues: [...e.issues, e.customIssue.trim()], customIssue: "" }); } } }}
+              placeholder="ปัญหาอื่นๆ (กด Enter เพื่อเพิ่ม)"
+              style={{ flex: 1, background: "#F5F5F7", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "8px 12px", color: TEXT, fontSize: 13, outline: "none", fontFamily: "inherit" }} />
+            <button onClick={() => { if (e.customIssue.trim()) patchExtra(idx, { issues: [...e.issues, e.customIssue.trim()], customIssue: "" }); }}
+              style={{ background: GOLD, border: "none", borderRadius: 10, padding: "8px 14px", color: "#fff", fontSize: 13, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit" }}>เพิ่ม</button>
+          </div>
+
+          {/* Photos */}
+          {sectionLabel("รูปภาพหลักฐาน")}
+          {e.photos.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 12 }}>
+              {e.photos.map(url => (
+                <div key={url} style={{ position: "relative", aspectRatio: "1", borderRadius: 10, overflow: "hidden", border: `1px solid ${BORDER}` }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <button onClick={() => removeExtraPhoto(idx, url)}
+                    style={{ position: "absolute", top: 4, right: 4, background: "rgba(0,0,0,0.55)", border: "none", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", padding: 0 }}>
+                    <X size={10} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <input ref={el => { extraFileRefs.current[idx] = el; }} type="file" accept="image/*" multiple onChange={ev => handleExtraFiles(idx, ev)} style={{ display: "none" }} />
+          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+            <button onClick={() => extraFileRefs.current[idx]?.click()} disabled={e.uploading}
+              style={{ flex: 1, display: "flex", alignItems: "center", gap: 6, background: "#F5F5F7", border: `1px dashed ${BORDER}`, borderRadius: 10, padding: "10px 14px", color: TEXT2, fontSize: 13, cursor: "pointer", justifyContent: "center", touchAction: "manipulation", fontFamily: "inherit", opacity: e.uploading ? 0.6 : 1 }}>
+              <Camera size={16} />{e.uploading ? "กำลังอัพโหลด..." : "อัพโหลดรูปภาพ"}
+            </button>
+            {e.photos.length > 0 && (
+              <button onClick={async () => { patchExtra(idx, { photoSaving: true }); await saveInspectionPhotos(requestId, e.photos); patchExtra(idx, { photoSaving: false, photoSaved: true }); }}
+                disabled={e.photoSaving}
+                style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, background: e.photoSaved ? "#D1FAE5" : GOLD, border: "none", borderRadius: 10, padding: "10px 16px", color: e.photoSaved ? "#065F46" : "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit" }}>
+                {e.photoSaving ? "บันทึก..." : e.photoSaved ? "✓ บันทึกแล้ว" : "บันทึกรูป"}
+              </button>
+            )}
+          </div>
+
+          {/* Price */}
+          {sectionLabel("ราคา")}
+          <div style={{ background: "#F5F5F7", borderRadius: 12, padding: 14, marginBottom: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+              <span style={{ color: TEXT2, fontSize: 13 }}>ราคาประเมินเดิม</span>
+              <span style={{ color: TEXT, fontSize: 14, fontWeight: 600 }}>฿{e.originalPrice.toLocaleString("th-TH")}</span>
+            </div>
+            <label style={{ color: TEXT2, fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>ราคาที่รับซื้อจริง (บาท)</label>
+            <input type="number" value={e.actualPrice}
+              onChange={ev => patchExtra(idx, { actualPrice: ev.target.value })}
+              style={{ width: "100%", background: "#fff", border: `1px solid ${Number(e.actualPrice) !== e.originalPrice ? "rgba(184,134,11,0.6)" : BORDER}`, borderRadius: 10, padding: "9px 12px", color: Number(e.actualPrice) !== e.originalPrice ? GOLD : TEXT, fontSize: 15, fontWeight: Number(e.actualPrice) !== e.originalPrice ? 700 : 400, outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit" }} />
+          </div>
         </div>
-      )}
+      ))}
 
       {/* ── Action buttons ────────────────────────────────────────────────────── */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>

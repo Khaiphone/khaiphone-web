@@ -60,7 +60,10 @@ export interface ExtraDeviceInspection {
   originalPrice: number;
   actualPrice: number;
   result: InspectionResult;
+  criteria: InspectionCriterion[];
   issues: string[];
+  photos: string[];
+  functionalTests?: FunctionalTest[];
   imei?: string;
   serial?: string;
   color?: string;
