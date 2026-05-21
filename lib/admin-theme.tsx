@@ -1,9 +1,12 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 const LS_KEY = "khaiphone_admin_dark";
 
-export function useAdminTheme() {
+interface ThemeCtx { dark: boolean; toggle: () => void; }
+const AdminThemeContext = createContext<ThemeCtx>({ dark: false, toggle: () => {} });
+
+export function AdminThemeProvider({ children }: { children: React.ReactNode }) {
   const [dark, setDark] = useState(false);
 
   useEffect(() => {
@@ -18,7 +21,15 @@ export function useAdminTheme() {
     setDark(d => { localStorage.setItem(LS_KEY, d ? "0" : "1"); return !d; });
   }, []);
 
-  return { dark, toggle };
+  return (
+    <AdminThemeContext.Provider value={{ dark, toggle }}>
+      {children}
+    </AdminThemeContext.Provider>
+  );
+}
+
+export function useAdminTheme() {
+  return useContext(AdminThemeContext);
 }
 
 export function adminCssVars(dark: boolean): React.CSSProperties {

@@ -10,7 +10,7 @@ import BottomTabNav from "../components/admin/BottomTabNav";
 import { supabase } from "@/lib/supabase";
 import { fetchMyRole, fetchMyProfile } from "@/app/actions/admin-users";
 import { AdminRoleProvider } from "./role-context";
-import { useAdminTheme, adminCssVars } from "@/lib/admin-theme";
+import { AdminThemeProvider, useAdminTheme, adminCssVars } from "@/lib/admin-theme";
 import type { AdminRole } from "@/app/actions/admin-users";
 
 const NAV_ITEMS = [
@@ -21,7 +21,6 @@ const NAV_ITEMS = [
   { label: "เพิ่มเติม", icon: MoreHorizontal,  href: "/admin/more"         },
 ] as const;
 
-// Routes accessible by staff only — everything else is owner-only
 const STAFF_ALLOWED_PREFIXES = [
   "/admin/dashboard",
   "/admin/requests",
@@ -34,7 +33,7 @@ const STAFF_ALLOWED_PREFIXES = [
 
 const GOLD = "#B8860B";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
   const isLogin  = pathname === "/admin/login" || pathname === "/admin/set-password";
@@ -199,5 +198,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {!hideBottomNav && <BottomTabNav />}
       </div>
     </AdminRoleProvider>
+  );
+}
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <AdminThemeProvider>
+      <AdminLayoutContent>{children}</AdminLayoutContent>
+    </AdminThemeProvider>
   );
 }
