@@ -141,7 +141,7 @@ export async function updateAdminUser(
 export async function resetPasswordDirect(userId: string): Promise<{ success: true; tempPassword: string } | { success: false; error: string }> {
   const supabase = createServerClient();
   const tempPassword = generateTempPassword();
-  const { error } = await supabase.auth.admin.updateUser(userId, { password: tempPassword });
+  const { error } = await supabase.auth.admin.updateUserById(userId, { password: tempPassword });
   if (error) return { success: false, error: error.message };
   return { success: true, tempPassword };
 }
