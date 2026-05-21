@@ -10,7 +10,7 @@ import { STOCK_STATUS_COLORS } from "@/lib/stock/mockData";
 import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos, updateStockDocuments } from "@/app/actions/stocks";
 import { supabase } from "@/lib/supabase";
 
-const TABS = ["รายละเอียด", "รูปภาพ", "เอกสาร", "ประวัติสถานะ"] as const;
+const TABS = ["รายละเอียด", "รูปภาพ", "เอกสาร", "ประวัติ"] as const;
 type Tab = typeof TABS[number];
 
 const ALL_STATUSES: StockStatus[] = ["รอตรวจ", "พร้อมขาย", "ลงขายแล้ว", "จองแล้ว", "ขายแล้ว", "ส่งคืน", "ตีกลับ/ไม่รับซื้อ"];
@@ -544,27 +544,41 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                 </div>
               )}
 
-              {tab === "ประวัติสถานะ" && (
+              {tab === "ประวัติ" && (
                 <div>
-                  {item.statusLog.map((log, i) => {
-                    const color = STOCK_STATUS_COLORS[log.status] ?? "#6b7280";
-                    return (
-                      <div key={i} style={{ display: "flex", gap: 12, marginBottom: 16, position: "relative" }}>
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                          <div style={{ width: 10, height: 10, borderRadius: "50%", background: color, flexShrink: 0, marginTop: 4 }} />
-                          {i < item.statusLog.length - 1 && <div style={{ width: 2, flex: 1, background: c.border, marginTop: 4 }} />}
-                        </div>
-                        <div style={{ flex: 1, paddingBottom: 8 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                            <StockStatusBadge status={log.status as StockStatus} />
-                            <span style={{ color: c.text3, fontSize: 11 }}>{log.by}</span>
+                  {(item.auditLog && item.auditLog.length > 0) ? (
+                    [...item.auditLog].reverse().map((entry, i, arr) => {
+                      const actionColor: Record<string, string> = {
+                        "บันทึกเข้าสต็อก": "#22c55e",
+                        "เปลี่ยนสถานะ": "#3b82f6",
+                        "เปลี่ยนราคาขาย": "#f59e0b",
+                        "แก้ไขข้อมูล": "#a855f7",
+                        "อัปโหลดรูปภาพ": "#06b6d4",
+                      };
+                      const color = actionColor[entry.action] ?? "#6b7280";
+                      return (
+                        <div key={i} style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                            <div style={{ width: 10, height: 10, borderRadius: "50%", background: color, flexShrink: 0, marginTop: 3 }} />
+                            {i < arr.length - 1 && <div style={{ width: 2, flex: 1, background: c.border, marginTop: 4 }} />}
                           </div>
-                          {log.note && <p style={{ color: c.text2, fontSize: 12, margin: "4px 0 0" }}>{log.note}</p>}
-                          <p style={{ color: c.text3, fontSize: 11, margin: "4px 0 0" }}>{fmtDate(log.timestamp)}</p>
+                          <div style={{ flex: 1, paddingBottom: 8 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, color, background: `${color}18`, padding: "2px 8px", borderRadius: 6 }}>{entry.action}</span>
+                              <span style={{ color: c.text3, fontSize: 11 }}>{entry.by}</span>
+                            </div>
+                            {entry.detail && <p style={{ color: c.text2, fontSize: 12, margin: "4px 0 0", lineHeight: 1.5 }}>{entry.detail}</p>}
+                            <p style={{ color: c.text3, fontSize: 11, margin: "4px 0 0" }}>{fmtDate(entry.timestamp)}</p>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  ) : (
+                    <div style={{ textAlign: "center", padding: "40px 0", color: c.text3 }}>
+                      <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
+                      <p style={{ margin: 0, fontSize: 13 }}>ยังไม่มีประวัติการแก้ไข</p>
+                    </div>
+                  )}
                 </div>
               )}
             </>

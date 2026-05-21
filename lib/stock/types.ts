@@ -37,6 +37,13 @@ export interface StockNote {
   by: string;
 }
 
+export interface AuditEntry {
+  action: string;
+  detail: string;
+  timestamp: string;
+  by: string;
+}
+
 export interface StockItem {
   id: string;
   model: string;
@@ -69,6 +76,7 @@ export interface StockItem {
   documents?: string[];
   notes: StockNote[];
   statusLog: StatusLog[];
+  auditLog?: AuditEntry[];
 
   soldAt?: string;
   soldPrice?: number;

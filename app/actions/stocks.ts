@@ -1,7 +1,16 @@
 "use server";
 
 import { createServerClient } from "@/lib/supabase-server";
-import type { StockItem, StockStatus } from "@/lib/stock/types";
+import type { StockItem, StockStatus, AuditEntry } from "@/lib/stock/types";
+
+const FIELD_LABELS: Record<string, string> = {
+  model: "รุ่น", storage: "ความจุ", color: "สี", grade: "เกรด",
+  battery_health: "Battery Health", cycle_count: "Cycle Count",
+  icloud_status: "iCloud", carrier_lock: "Carrier Lock", accessories: "อุปกรณ์",
+  cost_price: "ราคารับซื้อ", shipping_cost: "ค่าส่ง", other_cost: "ค่าอื่นๆ",
+  selling_price: "ราคาขาย", seller_name: "ชื่อผู้ขาย", seller_phone: "เบอร์โทร",
+  source_channel: "ช่องทาง",
+};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapRow(row: any): StockItem {
@@ -34,6 +43,7 @@ function mapRow(row: any): StockItem {
     documents: row.documents ?? [],
     notes: row.notes ?? [],
     statusLog: row.status_log ?? [],
+    auditLog: row.audit_log ?? [],
     soldAt: row.sold_at ?? undefined,
     soldPrice: row.sold_price ?? undefined,
     buyerName: row.buyer_name ?? undefined,
@@ -78,6 +88,7 @@ export async function createStockItem(input: Omit<StockItem, "notes" | "statusLo
     request_ref: input.requestRef ?? null, seller_name: input.sellerName, seller_phone: input.sellerPhone,
     received_at: input.receivedAt || now, inspector: input.inspector,
     photos: input.photos ?? [], documents: [], notes: [], status_log: statusLog,
+    audit_log: [{ action: "บันทึกเข้าสต็อก", detail: `รับซื้อจาก ${input.sellerName}`, timestamp: now, by: "admin" }],
     created_at: now, updated_at: now,
   });
 
@@ -89,18 +100,29 @@ export async function updateStockStatus(
   id: string, status: StockStatus, note: string, by = "admin",
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createServerClient();
-  const { data: current } = await supabase.from("stocks").select("status_log").eq("id", id).single();
-  const newLog = [...(current?.status_log ?? []), { status, timestamp: new Date().toISOString(), note, by }];
+  const now = new Date().toISOString();
+  const { data: current } = await supabase.from("stocks").select("status, status_log, audit_log").eq("id", id).single();
+  const newStatusLog = [...(current?.status_log ?? []), { status, timestamp: now, note, by }];
+  const detail = current?.status ? `${current.status} → ${status}${note ? ` (${note})` : ""}` : status;
+  const newAuditLog: AuditEntry[] = [...(current?.audit_log ?? []), { action: "เปลี่ยนสถานะ", detail, timestamp: now, by }];
   const { error } = await supabase.from("stocks")
-    .update({ status, status_log: newLog, updated_at: new Date().toISOString() }).eq("id", id);
+    .update({ status, status_log: newStatusLog, audit_log: newAuditLog, updated_at: now }).eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };
 }
 
 export async function updateStockPrice(id: string, sellingPrice: number): Promise<{ success: boolean; error?: string }> {
   const supabase = createServerClient();
+  const now = new Date().toISOString();
+  const { data: current } = await supabase.from("stocks").select("selling_price, audit_log").eq("id", id).single();
+  const oldPrice = current?.selling_price ?? 0;
+  const newAuditLog: AuditEntry[] = [...(current?.audit_log ?? []), {
+    action: "เปลี่ยนราคาขาย",
+    detail: `฿${oldPrice.toLocaleString("th-TH")} → ฿${sellingPrice.toLocaleString("th-TH")}`,
+    timestamp: now, by: "admin",
+  }];
   const { error } = await supabase.from("stocks")
-    .update({ selling_price: sellingPrice, updated_at: new Date().toISOString() }).eq("id", id);
+    .update({ selling_price: sellingPrice, audit_log: newAuditLog, updated_at: now }).eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };
 }
@@ -434,6 +456,7 @@ export async function updateStockItem(
   }
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createServerClient();
+  const now = new Date().toISOString();
   const fieldMap: Record<string, string> = {
     model: "model", storage: "storage", color: "color", grade: "grade",
     batteryHealth: "battery_health", cycleCount: "cycle_count",
@@ -442,11 +465,30 @@ export async function updateStockItem(
     sellingPrice: "selling_price", sellerName: "seller_name", sellerPhone: "seller_phone",
     sourceChannel: "source_channel",
   };
-  const mapped: Record<string, unknown> = { updated_at: new Date().toISOString() };
+
+  // Fetch current values to diff
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: current } = await supabase.from("stocks").select("*").eq("id", id).single() as { data: any };
+
+  const mapped: Record<string, unknown> = { updated_at: now };
+  const changes: string[] = [];
   for (const [camel, snake] of Object.entries(fieldMap)) {
     const val = updates[camel as keyof typeof updates];
-    if (val !== undefined) mapped[snake] = val;
+    if (val === undefined) continue;
+    mapped[snake] = val;
+    const oldVal = current?.[snake];
+    if (oldVal !== undefined && String(oldVal) !== String(val)) {
+      changes.push(`${FIELD_LABELS[snake] ?? snake}: ${oldVal} → ${val}`);
+    }
   }
+
+  if (changes.length > 0) {
+    const newAuditLog: AuditEntry[] = [...(current?.audit_log ?? []), {
+      action: "แก้ไขข้อมูล", detail: changes.join(", "), timestamp: now, by: "admin",
+    }];
+    mapped["audit_log"] = newAuditLog;
+  }
+
   const { error } = await supabase.from("stocks").update(mapped).eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };
@@ -454,7 +496,15 @@ export async function updateStockItem(
 
 export async function updateStockPhotos(id: string, photos: string[]): Promise<{ success: boolean; error?: string }> {
   const supabase = createServerClient();
-  const { error } = await supabase.from("stocks").update({ photos, updated_at: new Date().toISOString() }).eq("id", id);
+  const now = new Date().toISOString();
+  const { data: current } = await supabase.from("stocks").select("photos, audit_log").eq("id", id).single();
+  const oldCount = (current?.photos ?? []).length;
+  const newAuditLog: AuditEntry[] = [...(current?.audit_log ?? []), {
+    action: "อัปโหลดรูปภาพ",
+    detail: `${oldCount} → ${photos.length} รูป`,
+    timestamp: now, by: "admin",
+  }];
+  const { error } = await supabase.from("stocks").update({ photos, audit_log: newAuditLog, updated_at: now }).eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };
 }
