@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Search, SlidersHorizontal, X } from "lucide-react";
-import { fetchRequests } from "@/app/actions/admin-requests";
-import { fetchMyRole } from "@/app/actions/admin-users";
+import { fetchDashboardData, fetchRequests } from "@/app/actions/admin-requests";
 import { supabase } from "@/lib/supabase";
 import type { AdminRequest, RequestStatus } from "@/lib/types/admin";
 import RequestCard from "../../components/admin/RequestCard";
@@ -40,24 +39,26 @@ export default function RequestsPage() {
   const [filter,        setFilter]        = useState<FilterState>(INIT_FILTER);
   const [showFilter,    setShowFilter]    = useState(false);
   const [assignedOnly,  setAssignedOnly]  = useState(false);
+  const staffUserIdRef = useRef<string | undefined>(undefined);
+  const lastRefetchRef = useRef(0);
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) { setLoading(false); return; }
-      const role = await fetchMyRole(data.user.id);
-      const isStaff = role === "staff";
-      if (isStaff) setAssignedOnly(true);
-      fetchRequests(isStaff ? data.user.id : undefined).then(d => { setRequests(d); setLoading(false); });
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) { setLoading(false); return; }
+      const data = await fetchDashboardData(session.user.id);
+      staffUserIdRef.current = data.staffUserId;
+      if (data.staffUserId) setAssignedOnly(true);
+      setRequests(data.requests);
+      setLoading(false);
     });
   }, []);
 
   useEffect(() => {
     const refetch = () => {
-      supabase.auth.getUser().then(async ({ data }) => {
-        if (!data.user) return;
-        const role = await fetchMyRole(data.user.id);
-        fetchRequests(role === "staff" ? data.user.id : undefined).then(d => setRequests(d));
-      });
+      const now = Date.now();
+      if (now - lastRefetchRef.current < 30_000) return;
+      lastRefetchRef.current = now;
+      fetchRequests(staffUserIdRef.current).then(d => setRequests(d));
     };
 
     // Realtime — รับคำขอใหม่ + สถานะเปลี่ยนทันที

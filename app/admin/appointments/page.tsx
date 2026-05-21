@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Clock, Loader2 } from "lucide-react";
-import { fetchRequests } from "@/app/actions/admin-requests";
-import { fetchMyRole } from "@/app/actions/admin-users";
+import { fetchDashboardData } from "@/app/actions/admin-requests";
 import { supabase } from "@/lib/supabase";
 import type { AdminRequest } from "@/lib/types/admin";
 import StatusBadge from "../../components/admin/StatusBadge";
@@ -48,14 +47,11 @@ export default function AppointmentsPage() {
   const [loading,      setLoading]      = useState(true);
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) { setLoading(false); return; }
-      const role = await fetchMyRole(data.user.id);
-      const isStaff = role === "staff";
-      fetchRequests(isStaff ? data.user.id : undefined).then(d => {
-        setRequests(d);
-        setLoading(false);
-      });
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) { setLoading(false); return; }
+      const data = await fetchDashboardData(session.user.id);
+      setRequests(data.requests);
+      setLoading(false);
     });
   }, []);
 
