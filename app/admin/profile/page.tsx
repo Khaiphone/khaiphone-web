@@ -25,8 +25,11 @@ export default function ProfilePage() {
   const [name, setName]           = useState("");
   const [email, setEmail]         = useState("");
   const [role, setRole]           = useState<AdminRole | null>(null);
-  const [resetSent, setResetSent] = useState(false);
-  const [resetting, setResetting] = useState(false);
+  const [showChangePw, setShowChangePw] = useState(false);
+  const [newPw, setNewPw]               = useState("");
+  const [confirmPw, setConfirmPw]       = useState("");
+  const [pwMsg, setPwMsg]               = useState<{ ok: boolean; text: string } | null>(null);
+  const [savingPw, setSavingPw]         = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -40,19 +43,21 @@ export default function ProfilePage() {
     });
   }, []);
 
+  async function handleChangePassword() {
+    if (newPw.length < 8) { setPwMsg({ ok: false, text: "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร" }); return; }
+    if (newPw !== confirmPw) { setPwMsg({ ok: false, text: "รหัสผ่านทั้งสองช่องไม่ตรงกัน" }); return; }
+    setSavingPw(true); setPwMsg(null);
+    const { error } = await supabase.auth.updateUser({ password: newPw });
+    setSavingPw(false);
+    if (error) { setPwMsg({ ok: false, text: error.message }); return; }
+    setPwMsg({ ok: true, text: "เปลี่ยนรหัสผ่านสำเร็จ" });
+    setNewPw(""); setConfirmPw("");
+    setTimeout(() => { setShowChangePw(false); setPwMsg(null); }, 2000);
+  }
+
   async function handleLogout() {
     await supabase.auth.signOut();
     router.push("/admin/login");
-  }
-
-  async function handleResetPassword() {
-    if (!email || resetting) return;
-    setResetting(true);
-    await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/admin/set-password`,
-    });
-    setResetSent(true);
-    setResetting(false);
   }
 
   return (
@@ -111,28 +116,54 @@ export default function ProfilePage() {
           ))}
         </div>
 
-        {/* Reset password */}
-        <button
-          onClick={handleResetPassword}
-          disabled={resetting || resetSent}
-          style={{
-            width: "100%", display: "flex", alignItems: "center", gap: 14,
-            padding: "14px 16px", marginBottom: 10,
-            background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16,
-            cursor: resetSent ? "default" : "pointer", fontFamily: "inherit",
-            opacity: resetting ? 0.6 : 1,
-          }}
-        >
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: "#EEF2FF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Key size={16} color="#4F46E5" />
-          </div>
-          <div style={{ textAlign: "left" }}>
-            <p style={{ color: TEXT, fontSize: 14, fontWeight: 600, margin: "0 0 2px" }}>เปลี่ยนรหัสผ่าน</p>
-            <p style={{ color: resetSent ? "#10B981" : TEXT3, fontSize: 12, margin: 0 }}>
-              {resetSent ? "ส่งอีเมลเปลี่ยนรหัสแล้ว ตรวจสอบกล่องจดหมาย" : "รับลิงก์เปลี่ยนรหัสผ่านทางอีเมล"}
-            </p>
-          </div>
-        </button>
+        {/* Change password */}
+        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, marginBottom: 10, overflow: "hidden" }}>
+          <button
+            onClick={() => { setShowChangePw(v => !v); setPwMsg(null); setNewPw(""); setConfirmPw(""); }}
+            style={{
+              width: "100%", display: "flex", alignItems: "center", gap: 14,
+              padding: "14px 16px", background: "none", border: "none",
+              cursor: "pointer", fontFamily: "inherit",
+            }}
+          >
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#EEF2FF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Key size={16} color="#4F46E5" />
+            </div>
+            <div style={{ textAlign: "left", flex: 1 }}>
+              <p style={{ color: TEXT, fontSize: 14, fontWeight: 600, margin: "0 0 2px" }}>เปลี่ยนรหัสผ่าน</p>
+              <p style={{ color: TEXT3, fontSize: 12, margin: 0 }}>ตั้งรหัสผ่านใหม่ได้ทันที</p>
+            </div>
+            <span style={{ color: TEXT3, fontSize: 18, lineHeight: 1 }}>{showChangePw ? "−" : "+"}</span>
+          </button>
+
+          {showChangePw && (
+            <div style={{ padding: "0 16px 16px", borderTop: `1px solid ${BORDER}`, display: "flex", flexDirection: "column", gap: 10 }}>
+              {[
+                { label: "รหัสผ่านใหม่", value: newPw, onChange: setNewPw, placeholder: "อย่างน้อย 8 ตัวอักษร" },
+                { label: "ยืนยันรหัสผ่านใหม่", value: confirmPw, onChange: setConfirmPw, placeholder: "พิมพ์ซ้ำอีกครั้ง" },
+              ].map(({ label, value, onChange, placeholder }) => (
+                <div key={label} style={{ marginTop: 10 }}>
+                  <label style={{ fontSize: 11, color: TEXT2, fontWeight: 600, display: "block", marginBottom: 4 }}>{label}</label>
+                  <input
+                    type="password" value={value} onChange={e => onChange(e.target.value)}
+                    placeholder={placeholder}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "9px 12px", border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 14, color: TEXT, fontFamily: "inherit", outline: "none" }}
+                  />
+                </div>
+              ))}
+              {pwMsg && (
+                <p style={{ color: pwMsg.ok ? "#10B981" : "#EF4444", fontSize: 12, margin: "4px 0 0" }}>{pwMsg.text}</p>
+              )}
+              <button
+                onClick={handleChangePassword}
+                disabled={savingPw}
+                style={{ marginTop: 4, padding: "10px 0", borderRadius: 10, border: "none", background: GOLD, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", opacity: savingPw ? 0.6 : 1 }}
+              >
+                {savingPw ? "กำลังบันทึก..." : "บันทึกรหัสผ่านใหม่"}
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Logout */}
         <button
