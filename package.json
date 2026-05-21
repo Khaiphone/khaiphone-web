@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.53.1",
     "@supabase/supabase-js": "^2.106.0",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.16.0",
