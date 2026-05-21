@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Edit2, Upload, RefreshCw, Tag, Printer, CheckSquare, Save, ChevronLeft, ExternalLink } from "lucide-react";
 import { useThemeColors } from "./ThemeContext";
 import StockStatusBadge, { GradeBadge } from "./StatusBadge";
 import type { StockItem, StockStatus } from "@/lib/stock/types";
 import { STOCK_STATUS_COLORS } from "@/lib/stock/mockData";
-import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos, updateStockDocuments, fetchRequestDocuments } from "@/app/actions/stocks";
+import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos, updateStockDocuments } from "@/app/actions/stocks";
 import { supabase } from "@/lib/supabase";
 
 const TABS = ["รายละเอียด", "รูปภาพ", "เอกสาร", "ประวัติสถานะ"] as const;
@@ -80,22 +80,8 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
   const [uploadErr, setUploadErr] = useState<string | null>(null);
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [uploadDocErr, setUploadDocErr] = useState<string | null>(null);
-  const [requestDocs, setRequestDocs] = useState<{ contractUrl?: string; receiptUrl?: string } | null>(null);
-  const [loadingDocs, setLoadingDocs] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (tab !== "เอกสาร" || !item?.requestRef) {
-      setRequestDocs(null);
-      return;
-    }
-    setLoadingDocs(true);
-    fetchRequestDocuments(item.requestRef).then(docs => {
-      setRequestDocs(docs);
-      setLoadingDocs(false);
-    });
-  }, [tab, item?.id, item?.requestRef]);
 
   if (!item) return null;
 
@@ -483,36 +469,24 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
 
               {tab === "เอกสาร" && (
                 <div>
-                  {/* ─── Auto-fetched documents from request ─── */}
+                  {/* ─── Auto-linked documents from request API ─── */}
                   {item.requestRef && (
                     <div style={{ marginBottom: 20 }}>
                       <p style={{ color: c.text3, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 10px" }}>
                         เอกสารจากการรับซื้อ
                       </p>
-                      {loadingDocs ? (
-                        <div style={{ textAlign: "center", padding: "24px 0", color: c.text3, fontSize: 13 }}>
-                          <RefreshCw size={18} style={{ margin: "0 auto 8px", display: "block", animation: "spin 1s linear infinite" }} />
-                          กำลังโหลดเอกสาร...
-                        </div>
-                      ) : requestDocs ? (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                          {requestDocs.contractUrl && (
-                            <DocCard label="สัญญาซื้อขาย" url={requestDocs.contractUrl} c={c} />
-                          )}
-                          {requestDocs.receiptUrl && (
-                            <DocCard label="ใบสำคัญรับเงิน" url={requestDocs.receiptUrl} c={c} />
-                          )}
-                          {!requestDocs.contractUrl && !requestDocs.receiptUrl && (
-                            <div style={{ textAlign: "center", padding: "16px 0", color: c.text3, fontSize: 12 }}>
-                              ไม่พบเอกสารในคำขอนี้
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div style={{ textAlign: "center", padding: "16px 0", color: c.text3, fontSize: 12 }}>
-                          ไม่พบข้อมูลคำขอ
-                        </div>
-                      )}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        <DocCard
+                          label="สัญญาซื้อขาย"
+                          url={`/api/contract?order=${encodeURIComponent(item.requestRef)}&phone=${encodeURIComponent(item.sellerPhone)}&type=contract`}
+                          c={c}
+                        />
+                        <DocCard
+                          label="ใบสำคัญรับเงิน"
+                          url={`/api/contract?order=${encodeURIComponent(item.requestRef)}&phone=${encodeURIComponent(item.sellerPhone)}&type=receipt`}
+                          c={c}
+                        />
+                      </div>
                     </div>
                   )}
 
