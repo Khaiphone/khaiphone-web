@@ -50,7 +50,7 @@ export default function AuditLogPage() {
   }, [rows, search, filterAction]);
 
   return (
-    <div style={{ marginLeft: 240, minHeight: "100vh", background: c.bg }}>
+    <div style={{ minHeight: "100vh", background: c.bg }}>
       <StockTopbar title="Audit Log" subtitle="ประวัติการเปลี่ยนแปลงทุกรายการ" />
 
       <div style={{ padding: "24px 28px" }}>
