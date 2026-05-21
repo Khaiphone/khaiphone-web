@@ -12,6 +12,9 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
+  BarChart,
+  Bar,
+  Cell,
 } from 'recharts'
 import KpiCard from '@/app/components/finance/KpiCard'
 import { fetchFinanceDashboard } from '@/app/actions/finance'
@@ -23,10 +26,16 @@ const GOLD = '#B8860B'
 const TEXT2 = 'rgba(255,255,255,0.65)'
 const TEXT3 = 'rgba(255,255,255,0.35)'
 
+const CATEGORY_COLORS = ['#B8860B', '#3b82f6', '#a855f7', '#22c55e', '#ef4444', '#f59e0b', '#06b6d4']
+
 const fadeUp = {
   initial: { opacity: 0, y: 12 },
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.25 },
+}
+
+function fmt(v: number) {
+  return `฿${v.toLocaleString('th-TH')}`
 }
 
 export default function DashboardPage() {
@@ -46,24 +55,29 @@ export default function DashboardPage() {
   }
 
   const kpiMain = [
-    { label: 'รายได้รวม', value: data.totalRevenue, delta: 0, deltaType: 'positive' as const, format: 'currency' as const },
-    { label: 'ต้นทุนรวม', value: data.totalCost, delta: 0, deltaType: 'negative' as const, format: 'currency' as const },
-    { label: 'กำไรสุทธิ', value: data.netProfit, delta: 0, deltaType: data.netProfit >= 0 ? 'positive' as const : 'negative' as const, format: 'currency' as const },
-    { label: 'มูลค่าสต็อก', value: data.stockValue, delta: 0, deltaType: 'positive' as const, format: 'currency' as const },
+    { label: 'รายได้รวม',       value: data.totalRevenue,   deltaType: 'positive' as const },
+    { label: 'ต้นทุนเครื่อง',   value: data.totalCost,      deltaType: 'negative' as const },
+    { label: 'ค่าใช้จ่าย',      value: data.totalExpenses,  deltaType: 'negative' as const },
+    { label: 'กำไรสุทธิแท้จริง', value: data.trueNetProfit, deltaType: data.trueNetProfit >= 0 ? 'positive' as const : 'negative' as const },
   ]
 
   const kpiSecondary = [
+    { label: 'กำไรจากเครื่อง (ก่อนหักค่าใช้จ่าย)', value: data.netProfit, format: 'currency' as const },
+    { label: 'มูลค่าสต็อก',     value: data.stockValue,   format: 'currency' as const },
     { label: 'เครื่องที่รับซื้อ', value: data.purchaseCount, format: 'number' as const },
-    { label: 'เครื่องที่ขายแล้ว', value: data.soldCount, format: 'number' as const },
-    { label: 'เครื่องในมือ', value: data.purchaseCount - data.soldCount, format: 'number' as const },
+    { label: 'เครื่องที่ขายแล้ว', value: data.soldCount,    format: 'number' as const },
+    { label: 'เครื่องในมือ',      value: data.purchaseCount - data.soldCount, format: 'number' as const },
+    { label: 'รออนุมัติค่าใช้จ่าย', value: data.pendingExpensesCount, format: 'number' as const },
   ]
+
+  const maxExpense = Math.max(...data.expenseByCategory.map((e) => e.amount), 1)
 
   return (
     <motion.div {...fadeUp} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Main KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
         {kpiMain.map((k) => (
-          <KpiCard key={k.label} label={k.label} value={k.value} delta={k.delta} deltaType={k.deltaType} format={k.format} size="lg" />
+          <KpiCard key={k.label} label={k.label} value={k.value} delta={0} deltaType={k.deltaType} format="currency" size="lg" />
         ))}
       </div>
 
@@ -74,7 +88,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Charts Row */}
+      {/* Charts Row 1 */}
       <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
         {/* Revenue vs Cost Line Chart */}
         <div style={{ flex: '2 1 340px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '20px 24px' }}>
@@ -91,7 +105,7 @@ export default function DashboardPage() {
                 <YAxis tick={{ fill: TEXT3, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `฿${(v / 1000).toFixed(0)}K`} width={52} />
                 <Tooltip
                   contentStyle={{ background: '#1A1A1A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff' }}
-                  formatter={(value) => `฿${Number(value).toLocaleString('th-TH')}`}
+                  formatter={(value) => fmt(Number(value))}
                 />
                 <Line type="monotone" dataKey="revenue" stroke="#22c55e" strokeWidth={2} dot={false} name="รายรับ" />
                 <Line type="monotone" dataKey="cost" stroke="#ef4444" strokeWidth={2} dot={false} name="ต้นทุน" />
@@ -100,12 +114,10 @@ export default function DashboardPage() {
           )}
           <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: TEXT2 }}>
-              <span style={{ width: 12, height: 3, borderRadius: 2, background: '#22c55e', display: 'inline-block' }} />
-              รายรับ
+              <span style={{ width: 12, height: 3, borderRadius: 2, background: '#22c55e', display: 'inline-block' }} /> รายรับ
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: TEXT2 }}>
-              <span style={{ width: 12, height: 3, borderRadius: 2, background: '#ef4444', display: 'inline-block' }} />
-              ต้นทุน
+              <span style={{ width: 12, height: 3, borderRadius: 2, background: '#ef4444', display: 'inline-block' }} /> ต้นทุน
             </span>
           </div>
         </div>
@@ -131,11 +143,57 @@ export default function DashboardPage() {
                 <YAxis tick={{ fill: TEXT3, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `฿${(v / 1000).toFixed(0)}K`} width={52} />
                 <Tooltip
                   contentStyle={{ background: '#1A1A1A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff' }}
-                  formatter={(value) => `฿${Number(value).toLocaleString('th-TH')}`}
+                  formatter={(value) => fmt(Number(value))}
                 />
                 <Area type="monotone" dataKey="profit" stroke={GOLD} strokeWidth={2} fill="url(#profitGrad)" name="กำไร" />
               </AreaChart>
             </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+
+      {/* Charts Row 2 */}
+      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+        {/* Expense by Category */}
+        <div style={{ flex: '1 1 280px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '20px 24px' }}>
+          <p style={{ color: '#FFFFFF', fontWeight: 700, fontSize: 15, margin: '0 0 16px' }}>
+            ค่าใช้จ่ายแยกตามประเภท
+          </p>
+          {data.expenseByCategory.length === 0 ? (
+            <p style={{ color: TEXT3, fontSize: 13, textAlign: 'center', padding: '40px 0' }}>ยังไม่มีข้อมูล</p>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={data.expenseByCategory} layout="vertical" margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
+                  <XAxis type="number" tick={{ fill: TEXT3, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `฿${(v / 1000).toFixed(0)}K`} />
+                  <YAxis type="category" dataKey="category" tick={{ fill: TEXT2, fontSize: 12 }} axisLine={false} tickLine={false} width={80} />
+                  <Tooltip
+                    contentStyle={{ background: '#1A1A1A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff' }}
+                    formatter={(value) => fmt(Number(value))}
+                  />
+                  <Bar dataKey="amount" radius={[0, 4, 4, 0]} name="จำนวน">
+                    {data.expenseByCategory.map((_, i) => (
+                      <Cell key={i} fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              {/* Summary list */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+                {data.expenseByCategory.map((e, i) => (
+                  <div key={e.category} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ width: 10, height: 10, borderRadius: 2, background: CATEGORY_COLORS[i % CATEGORY_COLORS.length], flexShrink: 0 }} />
+                      <span style={{ color: TEXT2, fontSize: 13 }}>{e.category}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ color: '#FFF', fontSize: 13, fontWeight: 600 }}>{fmt(e.amount)}</span>
+                      <span style={{ color: TEXT3, fontSize: 12 }}>{Math.round((e.amount / maxExpense) * 100)}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
 
@@ -164,7 +222,7 @@ export default function DashboardPage() {
                       {m.model}
                     </p>
                     <p style={{ margin: 0, color: '#22c55e', fontSize: 12, fontWeight: 600 }}>
-                      ฿{m.profit.toLocaleString('th-TH')}
+                      {fmt(m.profit)}
                     </p>
                   </div>
                 </div>

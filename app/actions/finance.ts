@@ -20,12 +20,16 @@ export type FinanceDashboard = {
   totalRevenue: number;
   totalCost: number;
   netProfit: number;
+  trueNetProfit: number;
+  totalExpenses: number;
+  pendingExpensesCount: number;
   stockValue: number;
   soldCount: number;
   purchaseCount: number;
   revenueByMonth: { date: string; revenue: number; cost: number }[];
   profitByMonth: { date: string; profit: number }[];
   topModels: { model: string; profit: number }[];
+  expenseByCategory: { category: string; amount: number }[];
 };
 
 export type FinanceIncome = {
@@ -94,10 +98,15 @@ function monthLabel(key: string) {
 
 export async function fetchFinanceDashboard(): Promise<FinanceDashboard> {
   const supabase = createServerClient();
-  const { data } = await supabase
-    .from("requests")
-    .select("id, device_model, actual_price, estimated_price, sell_price, sell_date, stock_status, created_at")
-    .eq("status", "completed");
+  const [{ data }, { data: expenseData }] = await Promise.all([
+    supabase
+      .from("requests")
+      .select("id, device_model, actual_price, estimated_price, sell_price, sell_date, stock_status, created_at")
+      .eq("status", "completed"),
+    supabase
+      .from("expenses")
+      .select("amount, category, status"),
+  ]);
 
   const rows = data ?? [];
   const soldItems = rows.filter((r) => r.stock_status === "sold" && r.sell_price != null && r.sell_date != null);
@@ -107,6 +116,19 @@ export async function fetchFinanceDashboard(): Promise<FinanceDashboard> {
   const totalCost = soldItems.reduce((s, r) => s + (r.actual_price ?? r.estimated_price ?? 0), 0);
   const netProfit = totalRevenue - totalCost;
   const stockValue = unsoldItems.reduce((s, r) => s + (r.actual_price ?? r.estimated_price ?? 0), 0);
+
+  const approvedExpenses = (expenseData ?? []).filter((e) => e.status === "approved");
+  const totalExpenses = approvedExpenses.reduce((s, e) => s + (e.amount ?? 0), 0);
+  const pendingExpensesCount = (expenseData ?? []).filter((e) => e.status === "pending").length;
+  const trueNetProfit = netProfit - totalExpenses;
+
+  const categoryMap = new Map<string, number>();
+  for (const e of approvedExpenses) {
+    categoryMap.set(e.category, (categoryMap.get(e.category) ?? 0) + (e.amount ?? 0));
+  }
+  const expenseByCategory = Array.from(categoryMap.entries())
+    .map(([category, amount]) => ({ category, amount }))
+    .sort((a, b) => b.amount - a.amount);
 
   const monthMap = new Map<string, { revenue: number; cost: number }>();
   for (const r of soldItems) {
@@ -136,12 +158,16 @@ export async function fetchFinanceDashboard(): Promise<FinanceDashboard> {
     totalRevenue,
     totalCost,
     netProfit,
+    trueNetProfit,
+    totalExpenses,
+    pendingExpensesCount,
     stockValue,
     soldCount: soldItems.length,
     purchaseCount: rows.length,
     revenueByMonth,
     profitByMonth,
     topModels,
+    expenseByCategory,
   };
 }
 
