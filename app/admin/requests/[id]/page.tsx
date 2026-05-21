@@ -23,13 +23,13 @@ import type { AdminRequest, RequestStatus, SellMethod, PayMethod } from "@/lib/t
 import StatusBadge from "../../../components/admin/StatusBadge";
 import StatusBottomSheet from "../../../components/admin/StatusBottomSheet";
 
-const GOLD   = "#B8860B";
-const BG     = "#F5F5F7";
-const CARD   = "#FFFFFF";
-const BORDER = "#E5E5E5";
-const TEXT   = "#111111";
-const TEXT2  = "#666666";
-const TEXT3  = "#AAAAAA";
+const GOLD   = "var(--admin-gold)";
+const BG     = "var(--admin-bg)";
+const CARD   = "var(--admin-card)";
+const BORDER = "var(--admin-border)";
+const TEXT   = "var(--admin-text)";
+const TEXT2  = "var(--admin-text2)";
+const TEXT3  = "var(--admin-text3)";
 
 const SELL_LABELS: Record<SellMethod, string> = {
   branch: "รับที่สาขา", rider: "ไรเดอร์รับถึงบ้าน", parcel: "ส่งพัสดุ",

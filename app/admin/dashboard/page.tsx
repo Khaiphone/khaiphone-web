@@ -2,21 +2,22 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, ArrowRight, Phone, CalendarPlus, ClipboardList, Tag, SlidersHorizontal, PlusCircle } from "lucide-react";
+import { Bell, ArrowRight, Phone, CalendarPlus, ClipboardList, Tag, SlidersHorizontal, PlusCircle, Moon, Sun } from "lucide-react";
 import { fetchDashboardData, fetchRequests } from "@/app/actions/admin-requests";
 import { supabase } from "@/lib/supabase";
+import { useAdminTheme } from "@/lib/admin-theme";
 import type { AdminRequest } from "@/lib/types/admin";
 import type { AdminRole } from "@/app/actions/admin-users";
 import type { Permission } from "@/lib/admin-permissions";
 import RequestCard from "../../components/admin/RequestCard";
 
-const GOLD   = "#B8860B";
-const BG     = "#F5F5F7";
-const CARD   = "#FFFFFF";
-const BORDER = "#E5E5E5";
-const TEXT   = "#111111";
-const TEXT2  = "#666666";
-const TEXT3  = "#AAAAAA";
+const GOLD   = "var(--admin-gold)";
+const BG     = "var(--admin-bg)";
+const CARD   = "var(--admin-card)";
+const BORDER = "var(--admin-border)";
+const TEXT   = "var(--admin-text)";
+const TEXT2  = "var(--admin-text2)";
+const TEXT3  = "var(--admin-text3)";
 
 function StatCard({ label, value, color, href }: { label: string; value: number; color: string; href?: string }) {
   const router = useRouter();
@@ -42,6 +43,7 @@ export default function DashboardPage() {
   const [unreadCount, setUnreadCount] = useState(0);
   const staffUserIdRef  = useRef<string | undefined>(undefined);
   const lastRefetchRef  = useRef(0);
+  const { dark, toggle } = useAdminTheme();
 
   useEffect(() => {
     // getSession() reads from localStorage — no network call
@@ -92,8 +94,9 @@ export default function DashboardPage() {
     r.statusLog.some(l => l.status === "completed" && l.timestamp.startsWith(today))
   ).length;
 
+  const getLastActivity = (r: AdminRequest) => r.statusLog.at(-1)?.timestamp ?? r.createdAt;
   const recent = [...requests]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .sort((a, b) => getLastActivity(b).localeCompare(getLastActivity(a)))
     .slice(0, 5);
 
   const canManagePrices = role === "owner" || permissions.includes("manage_prices");
@@ -130,19 +133,45 @@ export default function DashboardPage() {
               <PlusCircle size={16} /> สร้างคิว
             </button>
             <button
+              onClick={toggle}
+              style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "9px 11px", cursor: "pointer", display: "flex", color: TEXT2, touchAction: "manipulation" }}
+            >
+              {dark ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <button
               onClick={() => router.push("/admin/notifications")}
               style={{ position: "relative", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "9px 11px", cursor: "pointer", display: "flex", color: TEXT2, touchAction: "manipulation" }}
             >
               <Bell size={20} />
               {unreadCount > 0 && (
-                <span style={{ position: "absolute", top: 7, right: 7, width: 8, height: 8, background: "#EF4444", borderRadius: "50%", border: `2px solid ${CARD}` }} />
+                <span style={{
+                  position: "absolute", top: -5, right: -5,
+                  background: "#EF4444", color: "#fff",
+                  fontSize: "10px", fontWeight: 700, lineHeight: 1,
+                  padding: "2px 5px", borderRadius: 999,
+                  border: `2px solid ${CARD}`,
+                }}>
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
               )}
             </button>
           </div>
         </div>
 
         {loading ? (
-          <p style={{ color: TEXT3, fontSize: "14px", textAlign: "center", padding: "40px 0" }}>กำลังโหลด...</p>
+          <div className="animate-pulse">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 28 }}>
+              {[...Array(4)].map((_, i) => (
+                <div key={i} style={{ background: CARD, borderRadius: 16, padding: 16, border: `1px solid ${BORDER}` }}>
+                  <div style={{ height: 10, background: BORDER, borderRadius: 6, width: "55%", marginBottom: 14 }} />
+                  <div style={{ height: 28, background: BORDER, borderRadius: 6, width: "35%" }} />
+                </div>
+              ))}
+            </div>
+            {[...Array(3)].map((_, i) => (
+              <div key={i} style={{ background: CARD, borderRadius: 16, height: 72, marginBottom: 10, border: `1px solid ${BORDER}` }} />
+            ))}
+          </div>
         ) : (
           <>
             {/* Stats 2×2 */}
@@ -150,7 +179,7 @@ export default function DashboardPage() {
               <StatCard label={role === "staff" ? "งานใหม่" : "คำขอใหม่"} value={newCount} color="#F59E0B" href="/admin/requests" />
               <StatCard label="รอดำเนินการ"    value={pendingCount}   color="#3B82F6" href="/admin/requests" />
               <StatCard label="นัดหมายวันนี้"  value={todayAppt}      color="#8B5CF6" href="/admin/appointments" />
-              <StatCard label="เสร็จสิ้นวันนี้" value={completedToday} color="#10B981" />
+              <StatCard label="เสร็จสิ้นวันนี้" value={completedToday} color="#10B981" href="/admin/requests" />
             </div>
 
             {/* Recent */}

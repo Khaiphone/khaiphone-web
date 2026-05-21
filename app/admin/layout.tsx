@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
-  LayoutDashboard, ClipboardList, CalendarDays, Bell, MoreHorizontal,
+  LayoutDashboard, ClipboardList, CalendarDays, Bell, MoreHorizontal, Moon, Sun,
 } from "lucide-react";
 import BottomTabNav from "../components/admin/BottomTabNav";
 import { supabase } from "@/lib/supabase";
 import { fetchMyRole, fetchMyProfile } from "@/app/actions/admin-users";
 import { AdminRoleProvider } from "./role-context";
+import { useAdminTheme, adminCssVars } from "@/lib/admin-theme";
 import type { AdminRole } from "@/app/actions/admin-users";
 
 const NAV_ITEMS = [
@@ -39,6 +40,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isLogin  = pathname === "/admin/login" || pathname === "/admin/set-password";
   const [ready, setReady] = useState(false);
   const [role, setRole]   = useState<AdminRole | null>(null);
+  const { dark, toggle }  = useAdminTheme();
 
   useEffect(() => {
     if (isLogin) { setReady(true); return; }
@@ -65,22 +67,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     });
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!ready) return <div style={{ minHeight: "100vh", background: "#F5F5F7" }} />;
+  if (!ready) return <div style={{ minHeight: "100vh", background: dark ? "#0F0F11" : "#F5F5F7" }} />;
   if (isLogin) return <AdminRoleProvider>{children}</AdminRoleProvider>;
 
   const hideBottomNav = /^\/admin\/(requests|prices)\/[^/]+$/.test(pathname);
+  const sidebarBg     = dark ? "#1C1C1E" : "#FFFFFF";
+  const sidebarBorder = dark ? "#2C2C2E" : "#E5E5E5";
+  const sidebarText   = dark ? "#F2F2F7" : "#111111";
+  const sidebarText2  = dark ? "#AEAEB2" : "#999999";
+  const activeBg      = dark ? "rgba(212,168,67,0.15)" : "#FEF3C7";
+  const activeColor   = dark ? "#D4A843" : GOLD;
 
   return (
     <AdminRoleProvider>
-      <div style={{ minHeight: "100vh", background: "#F5F5F7", display: "flex" }}>
+      <div style={{ minHeight: "100vh", background: dark ? "#0F0F11" : "#F5F5F7", display: "flex", ...adminCssVars(dark) } as React.CSSProperties}>
 
         {/* ── Desktop Sidebar (md+) ── */}
         <aside
           className="hidden md:flex"
           style={{
             width: 220,
-            background: "#FFFFFF",
-            borderRight: "1px solid #E5E5E5",
+            background: sidebarBg,
+            borderRight: `1px solid ${sidebarBorder}`,
             flexDirection: "column",
             flexShrink: 0,
             position: "fixed",
@@ -89,9 +97,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             padding: "24px 0",
           }}
         >
-          <div style={{ padding: "0 20px 24px", borderBottom: "1px solid #F0F0F0" }}>
-            <p style={{ color: "#111111", fontWeight: 700, fontSize: "15px", margin: 0 }}>ขายไอโฟน.com</p>
-            <p style={{ color: "#999999", fontSize: "12px", margin: "2px 0 0" }}>
+          <div style={{ padding: "0 20px 24px", borderBottom: `1px solid ${sidebarBorder}` }}>
+            <p style={{ color: sidebarText, fontWeight: 700, fontSize: "15px", margin: 0 }}>ขายไอโฟน.com</p>
+            <p style={{ color: sidebarText2, fontSize: "12px", margin: "2px 0 0" }}>
               Admin · {role === "owner" ? "เจ้าของ" : "พนักงาน"}
             </p>
           </div>
@@ -106,8 +114,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   style={{
                     display: "flex", alignItems: "center", gap: "10px",
                     padding: "10px 12px", borderRadius: "10px",
-                    color: active ? GOLD : "#666666",
-                    background: active ? "#FEF3C7" : "transparent",
+                    color: active ? activeColor : sidebarText2,
+                    background: active ? activeBg : "transparent",
                     textDecoration: "none", fontSize: "14px",
                     fontWeight: active ? 600 : 400,
                   }}
@@ -121,7 +129,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Owner-only sidebar links */}
             {role === "owner" && (
               <>
-                <div style={{ height: 1, background: "#F0F0F0", margin: "8px 4px" }} />
+                <div style={{ height: 1, background: sidebarBorder, margin: "8px 4px" }} />
                 {[
                   { href: "/admin/price-settings", label: "ตั้งค่าราคา"  },
                   { href: "/admin/stock",          label: "สต็อคเครื่อง" },
@@ -137,8 +145,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       style={{
                         display: "flex", alignItems: "center", gap: "10px",
                         padding: "10px 12px", borderRadius: "10px",
-                        color: active ? GOLD : "#666666",
-                        background: active ? "#FEF3C7" : "transparent",
+                        color: active ? activeColor : sidebarText2,
+                        background: active ? activeBg : "transparent",
                         textDecoration: "none", fontSize: "14px",
                         fontWeight: active ? 600 : 400,
                       }}
@@ -151,13 +159,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             )}
           </nav>
 
-          <div style={{ padding: "16px 12px", borderTop: "1px solid #F0F0F0" }}>
+          <div style={{ padding: "16px 12px", borderTop: `1px solid ${sidebarBorder}`, display: "flex", flexDirection: "column", gap: 8 }}>
+            <button
+              onClick={toggle}
+              style={{
+                width: "100%", padding: "9px 12px", borderRadius: "10px",
+                background: "transparent", border: `1px solid ${sidebarBorder}`,
+                color: sidebarText2, fontSize: "13px", cursor: "pointer",
+                textAlign: "left", fontFamily: "inherit",
+                display: "flex", alignItems: "center", gap: 8,
+              }}
+            >
+              {dark ? <Sun size={14} /> : <Moon size={14} />}
+              {dark ? "Light Mode" : "Dark Mode"}
+            </button>
             <button
               onClick={() => { supabase.auth.signOut().then(() => router.push("/admin/login")); }}
               style={{
                 width: "100%", padding: "9px 12px", borderRadius: "10px",
-                background: "transparent", border: "1px solid #E5E5E5",
-                color: "#999999", fontSize: "13px", cursor: "pointer",
+                background: "transparent", border: `1px solid ${sidebarBorder}`,
+                color: sidebarText2, fontSize: "13px", cursor: "pointer",
                 textAlign: "left", fontFamily: "inherit",
               }}
             >

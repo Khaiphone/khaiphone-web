@@ -9,12 +9,12 @@ import type { AdminRequest, RequestStatus } from "@/lib/types/admin";
 import RequestCard from "../../components/admin/RequestCard";
 import FilterBottomSheet, { type FilterState } from "../../components/admin/FilterBottomSheet";
 
-const BG    = "#F5F5F7";
-const CARD  = "#FFFFFF";
-const BORDER = "#E5E5E5";
-const TEXT  = "#111111";
-const TEXT2 = "#666666";
-const GOLD  = "#B8860B";
+const BG     = "var(--admin-bg)";
+const CARD   = "var(--admin-card)";
+const BORDER = "var(--admin-border)";
+const TEXT   = "var(--admin-text)";
+const TEXT2  = "var(--admin-text2)";
+const GOLD   = "var(--admin-gold)";
 
 const STATUS_TABS: Array<{ value: RequestStatus | "all"; label: string }> = [
   { value: "all",               label: "ทั้งหมด"          },

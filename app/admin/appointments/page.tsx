@@ -8,13 +8,13 @@ import { supabase } from "@/lib/supabase";
 import type { AdminRequest } from "@/lib/types/admin";
 import StatusBadge from "../../components/admin/StatusBadge";
 
-const BG     = "#F5F5F7";
-const CARD   = "#FFFFFF";
-const BORDER = "#E5E5E5";
-const GOLD   = "#B8860B";
-const TEXT   = "#111111";
-const TEXT2  = "#666666";
-const TEXT3  = "#AAAAAA";
+const BG     = "var(--admin-bg)";
+const CARD   = "var(--admin-card)";
+const BORDER = "var(--admin-border)";
+const GOLD   = "var(--admin-gold)";
+const TEXT   = "var(--admin-text)";
+const TEXT2  = "var(--admin-text2)";
+const TEXT3  = "var(--admin-text3)";
 
 function addDays(base: Date, n: number) {
   const d = new Date(base);
