@@ -46,20 +46,27 @@ export default function DashboardPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) { setLoading(false); return; }
+      const uid = data.user.id;
 
-      const [r, profile] = await Promise.all([
-        fetchMyRole(data.user.id),
-        fetchMyProfile(data.user.id),
+      // ดึง role + profile + requests พร้อมกัน ลด 1 round-trip
+      const [r, profile, allRequests] = await Promise.all([
+        fetchMyRole(uid),
+        fetchMyProfile(uid),
+        fetchRequests(undefined),
       ]);
       setRole(r);
       setPermissions(profile?.permissions ?? []);
 
       const isStaff = r === "staff";
-      staffUserIdRef.current = isStaff ? data.user.id : undefined;
-      fetchRequests(staffUserIdRef.current).then(d => {
-        setRequests(d);
+      staffUserIdRef.current = isStaff ? uid : undefined;
+
+      if (isStaff) {
+        // staff ต้องการ requests ที่ filter ด้วย uid
+        fetchRequests(uid).then(d => { setRequests(d); setLoading(false); });
+      } else {
+        setRequests(allRequests);
         setLoading(false);
-      });
+      }
     });
   }, []);
 
