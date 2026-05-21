@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, ArrowRight, Phone, CalendarPlus, ClipboardList, Tag, SlidersHorizontal, PlusCircle } from "lucide-react";
 import { fetchDashboardData, fetchRequests } from "@/app/actions/admin-requests";
+import { supabase } from "@/lib/supabase";
 import type { AdminRequest } from "@/lib/types/admin";
 import type { AdminRole } from "@/app/actions/admin-users";
 import type { Permission } from "@/lib/admin-permissions";
@@ -43,8 +44,10 @@ export default function DashboardPage() {
   const lastRefetchRef  = useRef(0);
 
   useEffect(() => {
-    fetchDashboardData().then(data => {
-      if (!data) { setLoading(false); return; }
+    // getSession() reads from localStorage — no network call
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) { setLoading(false); return; }
+      const data = await fetchDashboardData(session.user.id);
       setRole(data.role);
       setPermissions(data.permissions);
       staffUserIdRef.current = data.staffUserId;

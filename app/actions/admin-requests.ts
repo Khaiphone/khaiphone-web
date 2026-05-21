@@ -72,19 +72,16 @@ export async function fetchRequests(assignedToUserId?: string): Promise<AdminReq
 }
 
 // ─── Fetch everything the dashboard needs in one server-side call ─────────────
-export async function fetchDashboardData(): Promise<{
-  userId: string;
+export async function fetchDashboardData(userId: string): Promise<{
   role: AdminRole;
   permissions: Permission[];
   requests: AdminRequest[];
   staffUserId: string | undefined;
-} | null> {
+}> {
   const supabase = createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
 
   const [profileRes, reqRes] = await Promise.all([
-    supabase.from("admin_users").select("role, permissions").eq("user_id", user.id).single(),
+    supabase.from("admin_users").select("role, permissions").eq("user_id", userId).single(),
     supabase.from("requests").select("*").neq("source", "manual").order("created_at", { ascending: false }),
   ]);
 
@@ -92,9 +89,9 @@ export async function fetchDashboardData(): Promise<{
   const permissions = (profileRes.data?.permissions ?? []) as Permission[];
   const isStaff = role === "staff";
   const all = (reqRes.data ?? []).map(mapRow);
-  const requests = isStaff ? all.filter(r => r.assignedTo === user.id) : all;
+  const requests = isStaff ? all.filter(r => r.assignedTo === userId) : all;
 
-  return { userId: user.id, role, permissions, requests, staffUserId: isStaff ? user.id : undefined };
+  return { role, permissions, requests, staffUserId: isStaff ? userId : undefined };
 }
 
 // ─── Create request (admin-initiated, e.g. from LINE/phone inquiry) ──────────
