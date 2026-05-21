@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Plus, UserCircle, X, Check, Trash2, ChevronDown, Mail } from "lucide-react";
 import {
-  fetchAdminUsers, inviteStaff, updateAdminUser, deleteAdminUser, updateAdminPermissions, sendPasswordReset,
+  fetchAdminUsers, inviteStaff, updateAdminUser, deleteAdminUser, updateAdminPermissions, sendPasswordReset, resetPasswordDirect,
 } from "@/app/actions/admin-users";
 import { PERMISSION_LABELS } from "@/lib/admin-permissions";
 import { supabase } from "@/lib/supabase";
@@ -40,6 +40,7 @@ export default function StaffPage() {
   const [deleting, setDeleting]           = useState<string | null>(null);
   const [resetting, setResetting]         = useState<string | null>(null);
   const [resetMsg, setResetMsg]           = useState<Record<string, string>>({});
+  const [directReset, setDirectReset]     = useState<{ id: string; tempPassword: string } | null>(null);
   const [myUserId, setMyUserId]           = useState<string | null>(null);
   const [expandedPerms, setExpandedPerms] = useState<Set<string>>(new Set());
 
@@ -93,11 +94,23 @@ export default function StaffPage() {
     setResetting(u.id);
     const res = await sendPasswordReset(u.email);
     setResetting(null);
-    setResetMsg(prev => ({
-      ...prev,
-      [u.id]: res.success ? `ส่ง reset email ไปที่ ${u.email} แล้ว ✓` : (res.error ?? "เกิดข้อผิดพลาด"),
-    }));
-    setTimeout(() => setResetMsg(prev => { const n = { ...prev }; delete n[u.id]; return n; }), 5000);
+    if (res.success) {
+      setResetMsg(prev => ({ ...prev, [u.id]: `ส่ง reset email ไปที่ ${u.email} แล้ว ✓` }));
+      setTimeout(() => setResetMsg(prev => { const n = { ...prev }; delete n[u.id]; return n; }), 5000);
+    } else {
+      setResetMsg(prev => ({ ...prev, [u.id]: res.error ?? "เกิดข้อผิดพลาด" }));
+    }
+  }
+
+  async function handleDirectReset(u: AdminUserRow) {
+    setResetting(u.id + "-direct");
+    const res = await resetPasswordDirect(u.user_id);
+    setResetting(null);
+    if (res.success) {
+      setDirectReset({ id: u.id, tempPassword: res.tempPassword });
+    } else {
+      setResetMsg(prev => ({ ...prev, [u.id]: res.error ?? "เกิดข้อผิดพลาด" }));
+    }
   }
 
   async function handleDelete(u: AdminUserRow) {
@@ -291,10 +304,10 @@ export default function StaffPage() {
                         <option value="owner">เจ้าของ / ผู้จัดการ</option>
                       </select>
 
-                      {/* Reset password */}
+                      {/* Reset password via email */}
                       <button
                         onClick={() => handlePasswordReset(u)}
-                        disabled={resetting === u.id}
+                        disabled={!!resetting}
                         title="ส่ง Reset Password Email"
                         style={{
                           display: "flex", alignItems: "center", gap: 5,
@@ -305,7 +318,24 @@ export default function StaffPage() {
                           fontFamily: "inherit", opacity: resetting === u.id ? 0.5 : 1,
                         }}
                       >
-                        <Mail size={11} /> {resetting === u.id ? "กำลังส่ง..." : "Reset Password"}
+                        <Mail size={11} /> {resetting === u.id ? "กำลังส่ง..." : "Reset Email"}
+                      </button>
+
+                      {/* Direct temp password (no email) */}
+                      <button
+                        onClick={() => handleDirectReset(u)}
+                        disabled={!!resetting}
+                        title="สร้าง Temp Password โดยไม่ส่ง email"
+                        style={{
+                          display: "flex", alignItems: "center", gap: 5,
+                          padding: "5px 10px", borderRadius: 7,
+                          border: "1px solid rgba(249,115,22,0.35)",
+                          background: "rgba(249,115,22,0.08)", fontSize: 12, color: "#f97316",
+                          cursor: resetting === u.id + "-direct" ? "wait" : "pointer",
+                          fontFamily: "inherit", opacity: resetting === u.id + "-direct" ? 0.5 : 1,
+                        }}
+                      >
+                        <Mail size={11} /> {resetting === u.id + "-direct" ? "กำลังสร้าง..." : "Temp Password"}
                       </button>
 
                       {/* Active toggle */}
@@ -389,6 +419,29 @@ export default function StaffPage() {
                     <p style={{ color: resetMsg[u.id].includes("✓") ? "#10B981" : "#EF4444", fontSize: 12, margin: "8px 0 0" }}>
                       {resetMsg[u.id]}
                     </p>
+                  )}
+                  {directReset?.id === u.id && (
+                    <div style={{ marginTop: 10, background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.3)", borderRadius: 10, padding: "10px 14px" }}>
+                      <p style={{ color: "#f97316", fontSize: 12, fontWeight: 700, margin: "0 0 6px" }}>รหัสผ่านชั่วคราว (แจ้งให้พนักงานด้วยตนเอง)</p>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <code style={{ background: "rgba(249,115,22,0.12)", color: "#f97316", padding: "5px 12px", borderRadius: 7, fontSize: 15, fontWeight: 700, fontFamily: "monospace", letterSpacing: "0.05em" }}>
+                          {directReset.tempPassword}
+                        </code>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(directReset.tempPassword)}
+                          style={{ padding: "4px 10px", borderRadius: 7, border: "1px solid rgba(249,115,22,0.3)", background: "none", color: "#f97316", fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
+                        >
+                          คัดลอก
+                        </button>
+                        <button
+                          onClick={() => setDirectReset(null)}
+                          style={{ padding: "4px 8px", borderRadius: 7, border: `1px solid ${BORDER}`, background: "none", color: TEXT3, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
+                        >
+                          ปิด
+                        </button>
+                      </div>
+                      <p style={{ color: TEXT3, fontSize: 11, margin: "6px 0 0" }}>Login ที่ /admin/login · แนะนำให้เปลี่ยนรหัสทันทีหลัง login</p>
+                    </div>
                   )}
                 </div>
               </div>

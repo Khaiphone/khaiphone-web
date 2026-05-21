@@ -138,6 +138,14 @@ export async function updateAdminUser(
   return { success: true as const };
 }
 
+export async function resetPasswordDirect(userId: string): Promise<{ success: true; tempPassword: string } | { success: false; error: string }> {
+  const supabase = createServerClient();
+  const tempPassword = generateTempPassword();
+  const { error } = await supabase.auth.admin.updateUser(userId, { password: tempPassword });
+  if (error) return { success: false, error: error.message };
+  return { success: true, tempPassword };
+}
+
 export async function sendPasswordReset(email: string): Promise<{ success: boolean; error?: string }> {
   const supabase = createServerClient();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
