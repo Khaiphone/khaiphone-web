@@ -11,8 +11,8 @@ const ACTION_COLORS: Record<string, string> = {
   "เปลี่ยนสถานะ":    "#3b82f6",
   "เปลี่ยนราคาขาย":  "#f59e0b",
   "แก้ไขข้อมูล":     "#a855f7",
-  "อัปโหลดรูปภาพ":   "#06b6d4",
-  "เปิดดูเอกสาร":    "#ec4899",
+  "อัปโหลดรูปภาพ":   "#0ea5e9",
+  "เปิดดูเอกสาร":    "#8b5cf6",
 };
 
 const ALL_ACTIONS = Object.keys(ACTION_COLORS);

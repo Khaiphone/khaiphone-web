@@ -556,7 +556,8 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                         "เปลี่ยนสถานะ": "#3b82f6",
                         "เปลี่ยนราคาขาย": "#f59e0b",
                         "แก้ไขข้อมูล": "#a855f7",
-                        "อัปโหลดรูปภาพ": "#06b6d4",
+                        "อัปโหลดรูปภาพ": "#0ea5e9",
+                        "เปิดดูเอกสาร":  "#8b5cf6",
                       };
                       const color = actionColor[entry.action] ?? "#6b7280";
                       return (

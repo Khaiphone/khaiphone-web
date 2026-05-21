@@ -187,9 +187,9 @@ function ModelFunnelSection({ modelFunnels, c }: { modelFunnels: ModelFunnel[]; 
                 onClick={() => setSelected(m.model)}
                 style={{
                   padding: "5px 12px", borderRadius: 20, fontFamily: "inherit", fontSize: 12, fontWeight: active ? 700 : 400,
-                  border: active ? "1px solid rgba(184,134,11,0.4)" : `1px solid ${c.border}`,
-                  background: active ? "var(--admin-gold-bg, #FEF3C7)" : "transparent",
-                  color: active ? c.gold : c.text2, cursor: "pointer",
+                  border: active ? "1px solid transparent" : `1px solid ${c.border}`,
+                  background: active ? c.gold : "transparent",
+                  color: active ? "#1a1a1a" : c.text2, cursor: "pointer",
                 }}
               >
                 {m.model}
