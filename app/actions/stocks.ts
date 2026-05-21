@@ -534,6 +534,39 @@ export async function deleteStockItem(id: string): Promise<{ success: boolean; e
   return { success: true };
 }
 
+export interface AuditRow {
+  stockId: string;
+  model: string;
+  action: string;
+  detail: string;
+  timestamp: string;
+  by: string;
+}
+
+export async function fetchAllAuditLog(): Promise<AuditRow[]> {
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("stocks")
+    .select("id, model, audit_log")
+    .order("updated_at", { ascending: false });
+
+  const rows: AuditRow[] = [];
+  for (const item of data ?? []) {
+    for (const entry of (item.audit_log ?? [])) {
+      rows.push({
+        stockId: item.id,
+        model: item.model,
+        action: entry.action,
+        detail: entry.detail,
+        timestamp: entry.timestamp,
+        by: entry.by,
+      });
+    }
+  }
+  rows.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  return rows;
+}
+
 export async function fetchRequestDocuments(requestRef: string): Promise<{ contractUrl?: string; receiptUrl?: string } | null> {
   const supabase = createServerClient();
   const { data } = await supabase

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Package, ShoppingCart, Users, BarChart2,
   Settings, Bell, TrendingUp, FileText, UserCog, Tag,
-  ChevronRight,
+  ChevronRight, ClipboardList,
 } from "lucide-react";
 import { useThemeColors } from "./ThemeContext";
 import { fetchRequestStats, fetchStockSummary } from "@/app/actions/stock-requests";
@@ -20,6 +20,7 @@ const NAV_BASE = [
   { icon: TrendingUp,      label: "Finance",    href: "/stock/finance"    },
   { icon: Tag,             label: "Pricing",    href: "/stock/pricing"    },
   { icon: BarChart2,       label: "Reports",    href: "/stock/reports"    },
+  { icon: ClipboardList,   label: "Audit Log",  href: "/stock/audit"      },
   { icon: UserCog,         label: "Users",      href: "/stock/users"      },
   { icon: Settings,        label: "Settings",   href: "/stock/settings"   },
 ];
