@@ -184,8 +184,8 @@ export default function NotificationsPage() {
                     flexShrink: 0, padding: "6px 12px", borderRadius: "999px", fontFamily: "inherit",
                     border: active ? "1px solid rgba(184,134,11,0.3)" : `1px solid ${BORDER}`,
                     cursor: "pointer", fontSize: "12px", fontWeight: active ? 700 : 400,
-                    background: active ? "#FEF3C7" : "#FAFAFA",
-                    color: active ? "#92400E" : TEXT2,
+                    background: active ? "var(--admin-gold-bg)" : CARD,
+                    color: active ? "var(--admin-gold-text)" : TEXT2,
                     touchAction: "manipulation", whiteSpace: "nowrap",
                   }}
                 >
@@ -224,7 +224,7 @@ export default function NotificationsPage() {
                 style={{
                   display: "flex", gap: "12px", padding: "14px", borderRadius: "14px",
                   marginBottom: "6px", cursor: "pointer", touchAction: "manipulation", position: "relative",
-                  background: n.read ? CARD : "#FFFBF0",
+                  background: n.read ? CARD : "var(--admin-gold-bg)",
                   border: n.read ? `1px solid ${BORDER}` : "1px solid rgba(184,134,11,0.25)",
                 }}
               >
