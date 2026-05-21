@@ -10,19 +10,22 @@ import { PERMISSION_LABELS } from "@/lib/admin-permissions";
 import { supabase } from "@/lib/supabase";
 import type { AdminUserRow, AdminRole, Permission } from "@/app/actions/admin-users";
 
-const BG     = "#F5F5F7";
-const CARD   = "#FFFFFF";
-const BORDER = "#E5E5E5";
-const TEXT   = "#111111";
-const TEXT2  = "#666666";
-const TEXT3  = "#AAAAAA";
-const GOLD   = "#B8860B";
+const BG = "var(--admin-bg)";
+const CARD = "var(--admin-card)";
+const BORDER = "var(--admin-border)";
+const TEXT = "var(--admin-text)";
+const TEXT2 = "var(--admin-text2)";
+const TEXT3 = "var(--admin-text3)";
+const GOLD = "var(--admin-gold)";
 
 const ROLE_LABEL: Record<AdminRole, string> = {
   owner: "เจ้าของ / ผู้จัดการ",
   staff: "พนักงาน",
 };
-const ROLE_COLOR: Record<AdminRole, string> = { owner: GOLD, staff: "#3B82F6" };
+const ROLE_COLOR: Record<AdminRole, { icon: string; bg: string }> = {
+  owner: { icon: "var(--admin-gold)", bg: "var(--admin-gold-bg)" },
+  staff: { icon: "#3B82F6",           bg: "rgba(59,130,246,0.1)" },
+};
 
 export default function StaffPage() {
   const router = useRouter();
@@ -169,7 +172,7 @@ export default function StaffPage() {
                         flex: 1, display: "flex", alignItems: "center", gap: 8,
                         padding: "8px 12px", borderRadius: 8, cursor: "pointer",
                         border: `1px solid ${form.role === r ? GOLD : BORDER}`,
-                        background: form.role === r ? `${GOLD}10` : BG,
+                        background: form.role === r ? 'var(--admin-gold-bg)' : BG,
                       }}
                     >
                       <input type="radio" checked={form.role === r} onChange={() => setForm(p => ({ ...p, role: r }))} style={{ accentColor: GOLD }} />
@@ -219,15 +222,15 @@ export default function StaffPage() {
               {/* User row */}
               <div style={{ padding: "14px 16px" }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: `${ROLE_COLOR[u.role]}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <UserCircle size={22} color={ROLE_COLOR[u.role]} />
+                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: ROLE_COLOR[u.role].bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <UserCircle size={22} color={ROLE_COLOR[u.role].icon} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       <p style={{ color: TEXT, fontSize: 14, fontWeight: 600, margin: 0 }}>{u.name}</p>
                       <span style={{
                         fontSize: 10, padding: "1px 8px", borderRadius: 99, fontWeight: 600,
-                        background: `${ROLE_COLOR[u.role]}18`, color: ROLE_COLOR[u.role],
+                        background: ROLE_COLOR[u.role].bg, color: ROLE_COLOR[u.role].icon,
                       }}>{ROLE_LABEL[u.role]}</span>
                       {!u.active && <span style={{ fontSize: 10, padding: "1px 8px", borderRadius: 99, background: "#F3F4F6", color: TEXT3 }}>ปิดใช้งาน</span>}
                     </div>
@@ -316,7 +319,7 @@ export default function StaffPage() {
                               display: "flex", alignItems: "center", gap: 4,
                               padding: "5px 10px", borderRadius: 7,
                               border: "1px solid rgba(239,68,68,0.3)",
-                              background: "#FEF2F2", fontSize: 12, color: "#EF4444",
+                              background: 'rgba(239,68,68,0.1)', fontSize: 12, color: "#EF4444",
                               cursor: "pointer", fontFamily: "inherit",
                             }}
                           >
@@ -331,7 +334,7 @@ export default function StaffPage() {
 
               {/* Permissions panel (staff only, expanded) */}
               {u.role === "staff" && expandedPerms.has(u.id) && (
-                <div style={{ background: "#FAFAFA", borderTop: `1px solid ${BORDER}`, padding: "12px 16px 14px" }}>
+                <div style={{ background: BG, borderTop: `1px solid ${BORDER}`, padding: "12px 16px 14px" }}>
                   <p style={{ color: TEXT3, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 10px" }}>
                     สิทธิ์เพิ่มเติม
                   </p>
@@ -345,8 +348,8 @@ export default function StaffPage() {
                           style={{
                             display: "flex", alignItems: "flex-start", gap: 10,
                             cursor: "pointer", padding: "8px 10px", borderRadius: 10,
-                            background: checked ? `${GOLD}08` : CARD,
-                            border: `1px solid ${checked ? `${GOLD}30` : BORDER}`,
+                            background: checked ? 'var(--admin-gold-bg)' : CARD,
+                            border: checked ? '1px solid rgba(184,134,11,0.3)' : `1px solid ${BORDER}`,
                           }}
                         >
                           <input

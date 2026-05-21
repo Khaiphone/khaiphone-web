@@ -7,13 +7,13 @@ import { ChevronLeft, ChevronDown, ChevronUp, Check, Plus, X, ExternalLink } fro
 import { fetchStockItems, updateStockItem, createManualStock } from "@/app/actions/stock";
 import type { StockItem, StockStatus } from "@/app/actions/stock";
 
-const BG     = "#F5F5F7";
-const CARD   = "#FFFFFF";
-const BORDER = "#E5E5E5";
-const TEXT   = "#111111";
-const TEXT2  = "#666666";
-const TEXT3  = "#AAAAAA";
-const GOLD   = "#B8860B";
+const BG = "var(--admin-bg)";
+const CARD = "var(--admin-card)";
+const BORDER = "var(--admin-border)";
+const TEXT = "var(--admin-text)";
+const TEXT2 = "var(--admin-text2)";
+const TEXT3 = "var(--admin-text3)";
+const GOLD = "var(--admin-gold)";
 
 const STATUS_CONFIG: Record<StockStatus, { label: string; bg: string; text: string }> = {
   in_stock:  { label: "รอขาย",      bg: "#EFF6FF", text: "#3B82F6" },
@@ -218,7 +218,7 @@ export default function StockPage() {
                   {["สภาพดีมาก", "สภาพดี", "สภาพพอใช้", "สภาพปานกลาง"].map(c => (
                     <label
                       key={c}
-                      style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 8, cursor: "pointer", border: `1px solid ${form.condition === c ? GOLD : BORDER}`, background: form.condition === c ? `${GOLD}10` : BG, fontSize: 12, color: form.condition === c ? GOLD : TEXT2 }}
+                      style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 8, cursor: "pointer", border: `1px solid ${form.condition === c ? GOLD : BORDER}`, background: form.condition === c ? 'var(--admin-gold-bg)' : BG, fontSize: 12, color: form.condition === c ? GOLD : TEXT2 }}
                     >
                       <input type="radio" checked={form.condition === c} onChange={() => setForm(p => ({ ...p, condition: c }))} style={{ display: "none" }} />
                       {c}
@@ -284,7 +284,7 @@ export default function StockPage() {
               <button
                 key={value}
                 onClick={() => setTab(value)}
-                style={{ flexShrink: 0, padding: "6px 14px", borderRadius: 999, fontFamily: "inherit", fontSize: 13, fontWeight: active ? 700 : 500, border: active ? "1px solid rgba(184,134,11,0.3)" : `1px solid ${BORDER}`, background: active ? "#FEF3C7" : CARD, color: active ? "#92400E" : TEXT2, cursor: "pointer", whiteSpace: "nowrap" }}
+                style={{ flexShrink: 0, padding: "6px 14px", borderRadius: 999, fontFamily: "inherit", fontSize: 13, fontWeight: active ? 700 : 500, border: active ? "1px solid rgba(184,134,11,0.3)" : `1px solid ${BORDER}`, background: active ? 'var(--admin-gold-bg)' : CARD, color: active ? 'var(--admin-gold-text)' : TEXT2, cursor: "pointer", whiteSpace: "nowrap" }}
               >
                 {label} {count > 0 && <span style={{ opacity: 0.7 }}>{count}</span>}
               </button>
@@ -342,7 +342,7 @@ export default function StockPage() {
 
                   {/* Expanded edit */}
                   {isExpanded && (
-                    <div style={{ borderTop: `1px solid ${BORDER}`, padding: "14px 16px", background: "#FAFAFA" }}>
+                    <div style={{ borderTop: `1px solid ${BORDER}`, padding: "14px 16px", background: BG }}>
                       <p style={{ color: TEXT3, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 12px" }}>อัปเดตสถานะ</p>
 
                       <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>

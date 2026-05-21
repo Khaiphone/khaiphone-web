@@ -6,13 +6,13 @@ import { ChevronLeft, TrendingUp, TrendingDown } from "lucide-react";
 import { fetchStockItems } from "@/app/actions/stock";
 import type { StockItem } from "@/app/actions/stock";
 
-const BG     = "#F5F5F7";
-const CARD   = "#FFFFFF";
-const BORDER = "#E5E5E5";
-const TEXT   = "#111111";
-const TEXT2  = "#666666";
-const TEXT3  = "#AAAAAA";
-const GOLD   = "#B8860B";
+const BG = "var(--admin-bg)";
+const CARD = "var(--admin-card)";
+const BORDER = "var(--admin-border)";
+const TEXT = "var(--admin-text)";
+const TEXT2 = "var(--admin-text2)";
+const TEXT3 = "var(--admin-text3)";
+const GOLD = "var(--admin-gold)";
 
 type Period = "month" | "3months" | "year" | "all";
 const PERIOD_TABS: Array<{ value: Period; label: string }> = [
@@ -93,7 +93,7 @@ export default function AccountingPage() {
               <button
                 key={value}
                 onClick={() => setPeriod(value)}
-                style={{ flex: 1, padding: "8px 0", borderRadius: 10, fontFamily: "inherit", fontSize: 13, fontWeight: active ? 700 : 500, border: active ? "1px solid rgba(184,134,11,0.3)" : `1px solid ${BORDER}`, background: active ? "#FEF3C7" : CARD, color: active ? "#92400E" : TEXT2, cursor: "pointer" }}
+                style={{ flex: 1, padding: "8px 0", borderRadius: 10, fontFamily: "inherit", fontSize: 13, fontWeight: active ? 700 : 500, border: active ? "1px solid rgba(184,134,11,0.3)" : `1px solid ${BORDER}`, background: active ? 'var(--admin-gold-bg)' : CARD, color: active ? 'var(--admin-gold-text)' : TEXT2, cursor: "pointer" }}
               >
                 {label}
               </button>
@@ -158,7 +158,7 @@ export default function AccountingPage() {
 
               {/* Footer total */}
               {soldInPeriod.length > 0 && (
-                <div style={{ padding: "12px 16px", borderTop: `1px solid ${BORDER}`, background: "#FAFAFA", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ padding: "12px 16px", borderTop: `1px solid ${BORDER}`, background: BG, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <p style={{ color: TEXT2, fontSize: 13, fontWeight: 600, margin: 0 }}>กำไรรวม {soldInPeriod.length} เครื่อง</p>
                   <p style={{ color: netProfit >= 0 ? "#059669" : "#DC2626", fontSize: 15, fontWeight: 700, margin: 0, fontVariantNumeric: "tabular-nums" }}>
                     {netProfit >= 0 ? "+" : ""}฿{netProfit.toLocaleString("th-TH")}

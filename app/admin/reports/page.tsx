@@ -7,13 +7,13 @@ import { fetchRequests } from "@/app/actions/admin-requests";
 import { STATUS_LABELS } from "@/lib/types/admin";
 import type { AdminRequest, RequestStatus } from "@/lib/types/admin";
 
-const BG     = "#F5F5F7";
-const CARD   = "#FFFFFF";
-const BORDER = "#E5E5E5";
-const TEXT   = "#111111";
-const TEXT2  = "#666666";
-const TEXT3  = "#AAAAAA";
-const GOLD   = "#B8860B";
+const BG = "var(--admin-bg)";
+const CARD = "var(--admin-card)";
+const BORDER = "var(--admin-border)";
+const TEXT = "var(--admin-text)";
+const TEXT2 = "var(--admin-text2)";
+const TEXT3 = "var(--admin-text3)";
+const GOLD = "var(--admin-gold)";
 
 function startOf(days: number) {
   const d = new Date();
@@ -78,7 +78,7 @@ export default function ReportsPage() {
               style={{
                 padding: "7px 16px", borderRadius: 99, fontSize: 12, fontWeight: period === p ? 700 : 400,
                 border: `1px solid ${period === p ? GOLD : BORDER}`,
-                background: period === p ? `${GOLD}18` : CARD,
+                background: period === p ? 'var(--admin-gold-bg)' : CARD,
                 color: period === p ? GOLD : TEXT2,
                 cursor: "pointer", fontFamily: "inherit",
               }}
@@ -108,7 +108,7 @@ export default function ReportsPage() {
 
             {/* By status */}
             <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, overflow: "hidden", marginBottom: 16 }}>
-              <div style={{ padding: "12px 16px", borderBottom: `1px solid ${BORDER}`, background: "#FAFAFA" }}>
+              <div style={{ padding: "12px 16px", borderBottom: `1px solid ${BORDER}`, background: BG }}>
                 <p style={{ color: TEXT, fontSize: 13, fontWeight: 700, margin: 0 }}>คำขอตามสถานะ</p>
               </div>
               {Object.entries(byStatus).sort((a, b) => b[1] - a[1]).map(([status, count], i, arr) => (
@@ -122,7 +122,7 @@ export default function ReportsPage() {
             {/* Top models */}
             {topModels.length > 0 && (
               <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, overflow: "hidden" }}>
-                <div style={{ padding: "12px 16px", borderBottom: `1px solid ${BORDER}`, background: "#FAFAFA" }}>
+                <div style={{ padding: "12px 16px", borderBottom: `1px solid ${BORDER}`, background: BG }}>
                   <p style={{ color: TEXT, fontSize: 13, fontWeight: 700, margin: 0 }}>รุ่นยอดนิยม</p>
                 </div>
                 {topModels.map(([model, count], i) => (
