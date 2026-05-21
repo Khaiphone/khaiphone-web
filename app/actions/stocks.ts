@@ -478,7 +478,7 @@ export async function fetchRequestDocuments(requestRef: string): Promise<{ contr
   const { data } = await supabase
     .from("requests")
     .select("contract_url, receipt_url")
-    .eq("id", requestRef)
+    .eq("order_number", requestRef)
     .single();
   if (!data) return null;
   return { contractUrl: data.contract_url ?? undefined, receiptUrl: data.receipt_url ?? undefined };
