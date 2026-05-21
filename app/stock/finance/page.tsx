@@ -1,4 +1,20 @@
 "use client";
-import StockTopbar from "@/components/stock/Topbar";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useThemeColors } from "@/components/stock/ThemeContext";
-export default function Page() { const c = useThemeColors(); return (<div style={{background:c.bg,minHeight:'100vh'}}><StockTopbar title="finance" /><div style={{padding:40,textAlign:'center',paddingTop:80}}><p style={{fontSize:40}}>🚧</p><p style={{color:c.text2,fontSize:18,fontWeight:600,marginTop:16}}>Coming Soon</p><p style={{color:c.text3}}>หน้า finance กำลังพัฒนา</p></div></div>); }
+
+export default function StockFinancePage() {
+  const c = useThemeColors();
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/finance/dashboard");
+  }, [router]);
+
+  return (
+    <div style={{ background: c.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <p style={{ color: c.text3, fontSize: 14 }}>กำลังไปยังหน้า Finance...</p>
+    </div>
+  );
+}

@@ -42,12 +42,12 @@ export default function StockDashboard() {
   const recentActivity = stocks.slice(0, 5);
 
   const METRICS = [
-    { icon: DollarSign, label: "มูลค่าสต็อกรวม",        value: `฿${fmt(totalValue)}`,         iconColor: c.gold,     trend: 12, sub: `เฉพาะเครื่องที่กำหนดราคาแล้ว` },
-    { icon: Package,    label: "จำนวนเครื่องในสต็อก",    value: `${stocks.length} เครื่อง`,    iconColor: c.info,     trend: 5,  sub: noPricedCount > 0 ? `ยังไม่กำหนดราคา ${noPricedCount} เครื่อง` : "รวมทุกสถานะ" },
-    { icon: TrendingUp, label: "กำไรคาดการณ์",           value: `฿${fmt(totalCostProfit)}`,    iconColor: "#22c55e",  trend: 8,  sub: "เฉพาะเครื่องที่กำหนดราคาแล้ว" },
-    { icon: CheckCircle,label: "เครื่องพร้อมขาย",        value: `${readyToSell} เครื่อง`,     iconColor: "#22c55e",  trend: 3,  sub: "สถานะ: พร้อมขาย" },
-    { icon: Clock,      label: "เครื่องรอตรวจ",           value: `${inspecting} เครื่อง`,     iconColor: c.orange,   trend: -2, sub: "สถานะ: รอตรวจ" },
-    { icon: ShoppingBag,label: "เครื่องขายแล้ววันนี้",   value: `${soldToday} เครื่อง`,       iconColor: c.info,     trend: 20, sub: "เฉพาะวันนี้" },
+    { icon: DollarSign, label: "มูลค่าสต็อกรวม",        value: `฿${fmt(totalValue)}`,         iconColor: c.gold,    sub: `เฉพาะเครื่องที่กำหนดราคาแล้ว` },
+    { icon: Package,    label: "จำนวนเครื่องในสต็อก",    value: `${stocks.length} เครื่อง`,    iconColor: c.info,    sub: noPricedCount > 0 ? `ยังไม่กำหนดราคา ${noPricedCount} เครื่อง` : "รวมทุกสถานะ" },
+    { icon: TrendingUp, label: "กำไรคาดการณ์",           value: `฿${fmt(totalCostProfit)}`,    iconColor: "#22c55e", sub: "เฉพาะเครื่องที่กำหนดราคาแล้ว" },
+    { icon: CheckCircle,label: "เครื่องพร้อมขาย",        value: `${readyToSell} เครื่อง`,     iconColor: "#22c55e", sub: "สถานะ: พร้อมขาย" },
+    { icon: Clock,      label: "เครื่องรอตรวจ",           value: `${inspecting} เครื่อง`,     iconColor: c.orange,  sub: "สถานะ: รอตรวจ" },
+    { icon: ShoppingBag,label: "เครื่องขายแล้ววันนี้",   value: `${soldToday} เครื่อง`,       iconColor: c.info,    sub: "เฉพาะวันนี้" },
   ];
 
   return (

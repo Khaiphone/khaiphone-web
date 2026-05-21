@@ -4,11 +4,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Package, ShoppingCart, Users, BarChart2,
-  Settings, Bell, TrendingUp, FileText, UserCog, Megaphone,
+  Settings, Bell, TrendingUp, FileText, UserCog,
   ChevronRight,
 } from "lucide-react";
 import { useThemeColors } from "./ThemeContext";
 import { fetchRequestStats, fetchStockSummary } from "@/app/actions/stock-requests";
+import { supabase } from "@/lib/supabase";
 
 const NAV_BASE = [
   { icon: LayoutDashboard, label: "Dashboard",  href: "/stock/dashboard"  },
@@ -19,7 +20,6 @@ const NAV_BASE = [
   { icon: TrendingUp,      label: "Finance",    href: "/stock/finance"    },
   { icon: BarChart2,       label: "Reports",    href: "/stock/reports"    },
   { icon: UserCog,         label: "Users",      href: "/stock/users"      },
-  { icon: Megaphone,       label: "Marketing",  href: "/stock/marketing"  },
   { icon: Settings,        label: "Settings",   href: "/stock/settings"   },
 ];
 
@@ -31,11 +31,22 @@ export default function StockSidebar() {
   const router = useRouter();
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [summary, setSummary] = useState<{ todayRevenue: number; todayProfit: number } | null>(null);
+  const [userInfo, setUserInfo] = useState<{ name: string; email: string } | null>(null);
 
   useEffect(() => {
     fetchRequestStats().then(s => setPendingCount(s.pending));
     fetchStockSummary().then(setSummary);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const email = session.user.email ?? "";
+        const name = email.split("@")[0] || "Admin";
+        setUserInfo({ email, name });
+      }
+    });
   }, [pathname]);
+
+  const displayName = userInfo?.name ?? "—";
+  const initials = displayName.charAt(0).toUpperCase();
 
   return (
     <div style={{
@@ -61,10 +72,10 @@ export default function StockSidebar() {
       <div style={{ padding: "14px 16px", borderBottom: `1px solid ${c.border}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 36, height: 36, borderRadius: "50%", background: `linear-gradient(135deg, ${c.gold}, ${c.goldHov})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <span style={{ color: "#000", fontSize: 14, fontWeight: 700 }}>P</span>
+            <span style={{ color: "#000", fontSize: 14, fontWeight: 700 }}>{initials}</span>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ color: c.text, fontSize: 13, fontWeight: 600, margin: 0 }}>Panupan</p>
+            <p style={{ color: c.text, fontSize: 13, fontWeight: 600, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName}</p>
             <p style={{ color: c.text3, fontSize: 11, margin: 0 }}>Administrator</p>
           </div>
           <Bell size={16} color={c.text3} />
@@ -103,25 +114,13 @@ export default function StockSidebar() {
         })}
       </nav>
 
-      {/* Quick Summary — real data */}
+      {/* Quick Summary */}
       <div style={{ padding: "16px", borderTop: `1px solid ${c.border}` }}>
         <p style={{ color: c.text3, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 10px" }}>Quick Summary</p>
         {[
-          {
-            label: "ยอดวันนี้",
-            value: summary ? `฿${fmt(summary.todayRevenue)}` : "—",
-            color: c.gold,
-          },
-          {
-            label: "กำไรวันนี้",
-            value: summary ? `฿${fmt(summary.todayProfit)}` : "—",
-            color: summary && summary.todayProfit >= 0 ? "#22c55e" : "#ef4444",
-          },
-          {
-            label: "รอดำเนินการ",
-            value: pendingCount !== null ? `${pendingCount} คำขอ` : "—",
-            color: pendingCount ? "#f97316" : c.text3,
-          },
+          { label: "ยอดวันนี้",   value: summary ? `฿${fmt(summary.todayRevenue)}` : "—", color: c.gold },
+          { label: "กำไรวันนี้",  value: summary ? `฿${fmt(summary.todayProfit)}` : "—", color: summary && summary.todayProfit >= 0 ? "#22c55e" : "#ef4444" },
+          { label: "รอดำเนินการ", value: pendingCount !== null ? `${pendingCount} คำขอ` : "—", color: pendingCount ? "#f97316" : c.text3 },
         ].map(({ label, value, color }) => (
           <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <span style={{ color: c.text2, fontSize: 12 }}>{label}</span>

@@ -208,3 +208,216 @@ export async function fetchCategoryData(): Promise<CategoryPoint[]> {
     .sort((a, b) => b.count - a.count)
     .slice(0, 8);
 }
+
+// ─── Sales page ──────────────────────────────────────────────────────────────
+
+export interface SoldItem {
+  id: string;
+  model: string;
+  storage: string;
+  color: string;
+  grade: string;
+  costPrice: number;
+  shippingCost: number;
+  otherCost: number;
+  soldPrice: number;
+  profit: number;
+  soldAt: string;
+  buyerName: string;
+  buyerPhone: string;
+  sourceChannel: string;
+  requestRef: string | null;
+}
+
+export async function fetchSoldItems(): Promise<SoldItem[]> {
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("stocks")
+    .select("id, model, storage, color, grade, cost_price, shipping_cost, other_cost, sold_price, sold_at, buyer_name, buyer_phone, source_channel, request_ref")
+    .eq("status", "ขายแล้ว")
+    .order("sold_at", { ascending: false });
+
+  return (data ?? []).map(row => {
+    const cost = (row.cost_price ?? 0) + (row.shipping_cost ?? 0) + (row.other_cost ?? 0);
+    return {
+      id: row.id,
+      model: row.model ?? "",
+      storage: row.storage ?? "",
+      color: row.color ?? "",
+      grade: row.grade ?? "",
+      costPrice: row.cost_price ?? 0,
+      shippingCost: row.shipping_cost ?? 0,
+      otherCost: row.other_cost ?? 0,
+      soldPrice: row.sold_price ?? 0,
+      profit: (row.sold_price ?? 0) - cost,
+      soldAt: row.sold_at ?? "",
+      buyerName: row.buyer_name ?? "",
+      buyerPhone: row.buyer_phone ?? "",
+      sourceChannel: row.source_channel ?? "",
+      requestRef: row.request_ref ?? null,
+    };
+  });
+}
+
+// ─── Customers page ───────────────────────────────────────────────────────────
+
+export interface StockCustomer {
+  name: string;
+  phone: string;
+  totalItems: number;
+  totalPaid: number;
+  avgPrice: number;
+  lastSeen: string;
+  channel: string;
+}
+
+export async function fetchStockCustomers(): Promise<StockCustomer[]> {
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("stocks")
+    .select("seller_name, seller_phone, cost_price, source_channel, received_at")
+    .not("seller_phone", "is", null)
+    .neq("seller_phone", "");
+
+  const map = new Map<string, { name: string; channel: string; totalPaid: number; count: number; lastSeen: string }>();
+  for (const row of data ?? []) {
+    const phone = row.seller_phone ?? "";
+    if (!phone) continue;
+    if (!map.has(phone)) {
+      map.set(phone, { name: row.seller_name ?? "", channel: row.source_channel ?? "", totalPaid: 0, count: 0, lastSeen: row.received_at ?? "" });
+    }
+    const cur = map.get(phone)!;
+    cur.totalPaid += row.cost_price ?? 0;
+    cur.count += 1;
+    if ((row.received_at ?? "") > cur.lastSeen) cur.lastSeen = row.received_at ?? "";
+    if (!cur.name && row.seller_name) cur.name = row.seller_name;
+  }
+
+  return Array.from(map.entries())
+    .map(([phone, { name, channel, totalPaid, count, lastSeen }]) => ({
+      name: name || "ไม่ระบุชื่อ",
+      phone,
+      totalItems: count,
+      totalPaid,
+      avgPrice: count > 0 ? Math.round(totalPaid / count) : 0,
+      lastSeen,
+      channel,
+    }))
+    .sort((a, b) => b.totalItems - a.totalItems);
+}
+
+// ─── Reports page ─────────────────────────────────────────────────────────────
+
+export interface MonthlyReport {
+  month: string;
+  revenue: number;
+  cost: number;
+  profit: number;
+  count: number;
+}
+
+export interface ModelReport {
+  model: string;
+  count: number;
+  totalRevenue: number;
+  totalProfit: number;
+  avgProfit: number;
+}
+
+export interface StockReportData {
+  monthly: MonthlyReport[];
+  byModel: ModelReport[];
+  byGrade: { grade: string; count: number; avgProfit: number }[];
+  byChannel: { channel: string; count: number; revenue: number }[];
+  totalSold: number;
+  totalRevenue: number;
+  totalProfit: number;
+}
+
+export async function fetchStockReportData(): Promise<StockReportData> {
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("stocks")
+    .select("model, grade, source_channel, cost_price, shipping_cost, other_cost, sold_price, sold_at, status");
+
+  const sold = (data ?? []).filter(r => r.status === "ขายแล้ว" && r.sold_at);
+
+  // Monthly (last 12 months)
+  const monthMap = new Map<string, MonthlyReport>();
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = d.toLocaleDateString("th-TH", { month: "short", year: "2-digit" });
+    monthMap.set(key, { month: label, revenue: 0, cost: 0, profit: 0, count: 0 });
+  }
+  for (const row of sold) {
+    const d = new Date(row.sold_at);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (monthMap.has(key)) {
+      const m = monthMap.get(key)!;
+      const cost = (row.cost_price ?? 0) + (row.shipping_cost ?? 0) + (row.other_cost ?? 0);
+      m.revenue += row.sold_price ?? 0;
+      m.cost += cost;
+      m.profit += (row.sold_price ?? 0) - cost;
+      m.count += 1;
+    }
+  }
+
+  // By model
+  const modelMap = new Map<string, { count: number; totalRevenue: number; totalProfit: number }>();
+  for (const row of sold) {
+    const model = row.model ?? "ไม่ระบุ";
+    if (!modelMap.has(model)) modelMap.set(model, { count: 0, totalRevenue: 0, totalProfit: 0 });
+    const m = modelMap.get(model)!;
+    const cost = (row.cost_price ?? 0) + (row.shipping_cost ?? 0) + (row.other_cost ?? 0);
+    m.count += 1;
+    m.totalRevenue += row.sold_price ?? 0;
+    m.totalProfit += (row.sold_price ?? 0) - cost;
+  }
+
+  // By grade
+  const gradeMap = new Map<string, { count: number; totalProfit: number }>();
+  for (const row of sold) {
+    const grade = row.grade ?? "A";
+    if (!gradeMap.has(grade)) gradeMap.set(grade, { count: 0, totalProfit: 0 });
+    const m = gradeMap.get(grade)!;
+    const cost = (row.cost_price ?? 0) + (row.shipping_cost ?? 0) + (row.other_cost ?? 0);
+    m.count += 1;
+    m.totalProfit += (row.sold_price ?? 0) - cost;
+  }
+
+  // By channel
+  const channelMap = new Map<string, { count: number; revenue: number }>();
+  for (const row of sold) {
+    const ch = row.source_channel ?? "ไม่ระบุ";
+    if (!channelMap.has(ch)) channelMap.set(ch, { count: 0, revenue: 0 });
+    const m = channelMap.get(ch)!;
+    m.count += 1;
+    m.revenue += row.sold_price ?? 0;
+  }
+
+  const totalRevenue = sold.reduce((a, r) => a + (r.sold_price ?? 0), 0);
+  const totalProfit = sold.reduce((a, r) => {
+    const cost = (r.cost_price ?? 0) + (r.shipping_cost ?? 0) + (r.other_cost ?? 0);
+    return a + (r.sold_price ?? 0) - cost;
+  }, 0);
+
+  return {
+    monthly: Array.from(monthMap.values()),
+    byModel: Array.from(modelMap.entries())
+      .map(([model, { count, totalRevenue: tr, totalProfit: tp }]) => ({ model, count, totalRevenue: tr, totalProfit: tp, avgProfit: count > 0 ? Math.round(tp / count) : 0 }))
+      .sort((a, b) => b.totalProfit - a.totalProfit)
+      .slice(0, 10),
+    byGrade: Array.from(gradeMap.entries())
+      .map(([grade, { count, totalProfit: tp }]) => ({ grade, count, avgProfit: count > 0 ? Math.round(tp / count) : 0 }))
+      .sort((a, b) => b.count - a.count),
+    byChannel: Array.from(channelMap.entries())
+      .map(([channel, { count, revenue }]) => ({ channel, count, revenue }))
+      .sort((a, b) => b.count - a.count),
+    totalSold: sold.length,
+    totalRevenue,
+    totalProfit,
+  };
+}
