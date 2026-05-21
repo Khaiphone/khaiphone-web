@@ -8,14 +8,18 @@ export async function trackEstimateEvent(params: {
   model?: string;
   stepIndex?: number;
   stepName?: string;
+  storage?: string;
+  price?: number;
 }): Promise<void> {
   const supabase = createServerClient();
   await supabase.from("estimate_events").insert({
     session_id: params.sessionId,
     event:      params.event,
-    model:      params.model ?? null,
+    model:      params.model   ?? null,
     step_index: params.stepIndex ?? null,
-    step_name:  params.stepName ?? null,
+    step_name:  params.stepName  ?? null,
+    storage:    params.storage   ?? null,
+    price:      params.price     ?? null,
   });
 }
 
@@ -44,11 +48,40 @@ export interface ModelFunnel {
   funnel: FunnelStep[];
 }
 
+export interface HourlyCount {
+  hour: number;
+  count: number;
+}
+
+export interface WeekdayCount {
+  day: number;
+  label: string;
+  count: number;
+}
+
+export interface StorageCount {
+  model: string;
+  storage: string;
+  count: number;
+}
+
+export interface AvgPrice {
+  model: string;
+  avgPrice: number;
+  minPrice: number;
+  maxPrice: number;
+  count: number;
+}
+
 export interface EstimateAnalytics {
   daily: DailyCount[];
   funnel: FunnelStep[];
   models: ModelCount[];
   modelFunnels: ModelFunnel[];
+  hourly: HourlyCount[];
+  weekday: WeekdayCount[];
+  storages: StorageCount[];
+  avgPrices: AvgPrice[];
   todayStarts: number;
   todayPriceSeen: number;
   todaySubmits: number;
@@ -57,22 +90,21 @@ export interface EstimateAnalytics {
   topDropStep: string;
 }
 
-// 11 steps: started → 8 wizard steps → price seen → submitted
-// step_reached fires at stepIndex 1-8 (step 0 = storage = fires "start" event)
-// so maxStep 1 = passed storage+model, maxStep 8 = passed iCloud
 const FUNNEL_STEP_NAMES = [
-  "เริ่มต้น",      // 0 — start event (at storage step)
-  "Model",         // 1 — maxStep >= 1
-  "ประกัน",        // 2 — maxStep >= 2
-  "ตัวเครื่อง",   // 3 — maxStep >= 3
-  "หน้าจอ",        // 4 — maxStep >= 4
-  "การแสดงภาพ",   // 5 — maxStep >= 5
-  "แบตเตอรี่",    // 6 — maxStep >= 6
-  "อุปกรณ์เสริม", // 7 — maxStep >= 7
-  "iCloud",        // 8 — maxStep >= 8
-  "เห็นราคา",     // 9 — price_seen event
-  "นัดหมายสำเร็จ", // 10 — submit event
+  "เริ่มต้น",
+  "Model",
+  "ประกัน",
+  "ตัวเครื่อง",
+  "หน้าจอ",
+  "การแสดงภาพ",
+  "แบตเตอรี่",
+  "อุปกรณ์เสริม",
+  "iCloud",
+  "เห็นราคา",
+  "นัดหมายสำเร็จ",
 ];
+
+const WEEKDAY_LABELS = ["จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์", "อาทิตย์"];
 
 type Session = { maxStep: number; submitted: boolean; priceSeen: boolean; model: string; date: string };
 
@@ -98,7 +130,7 @@ export async function fetchEstimateAnalytics(days = 30): Promise<EstimateAnalyti
 
   const { data } = await supabase
     .from("estimate_events")
-    .select("session_id, event, model, step_index, created_at")
+    .select("session_id, event, model, step_index, created_at, storage, price")
     .gte("created_at", since.toISOString())
     .order("created_at", { ascending: true });
 
@@ -169,11 +201,60 @@ export async function fetchEstimateAnalytics(days = 30): Promise<EstimateAnalyti
     return { model: m.model, funnel: buildFunnel(mSessions, mSessions.length) };
   });
 
+  // Hourly distribution (Bangkok UTC+7) — from start events
+  const hourlyCounts = Array.from({ length: 24 }, (_, h) => ({ hour: h, count: 0 }));
+  for (const row of rows) {
+    if (row.event !== "start") continue;
+    const bkkHour = (new Date(row.created_at).getUTCHours() + 7) % 24;
+    hourlyCounts[bkkHour].count++;
+  }
+  const hourly = hourlyCounts;
+
+  // Day of week (0=Mon … 6=Sun) — from start events
+  const weekdayCounts = Array.from({ length: 7 }, (_, d) => ({ day: d, label: WEEKDAY_LABELS[d], count: 0 }));
+  for (const row of rows) {
+    if (row.event !== "start") continue;
+    // JS getDay: 0=Sun,1=Mon…6=Sat → convert to 0=Mon…6=Sun
+    const jsDay = new Date(row.created_at).getDay();
+    const idx = jsDay === 0 ? 6 : jsDay - 1;
+    weekdayCounts[idx].count++;
+  }
+  const weekday = weekdayCounts;
+
+  // Storage breakdown — from price_seen events with storage column
+  const storageMap = new Map<string, number>();
+  for (const row of rows) {
+    if (row.event !== "price_seen" || !row.storage || !row.model) continue;
+    const key = `${row.model}||${row.storage}`;
+    storageMap.set(key, (storageMap.get(key) ?? 0) + 1);
+  }
+  const storages: StorageCount[] = Array.from(storageMap.entries())
+    .map(([k, count]) => { const [model, storage] = k.split("||"); return { model, storage, count }; })
+    .sort((a, b) => b.count - a.count);
+
+  // Average price per model — from price_seen events with price column
+  const priceMap = new Map<string, number[]>();
+  for (const row of rows) {
+    if (row.event !== "price_seen" || !row.price || !row.model) continue;
+    if (!priceMap.has(row.model)) priceMap.set(row.model, []);
+    priceMap.get(row.model)!.push(row.price);
+  }
+  const avgPrices: AvgPrice[] = Array.from(priceMap.entries())
+    .map(([model, prices]) => ({
+      model,
+      avgPrice: Math.round(prices.reduce((s, p) => s + p, 0) / prices.length),
+      minPrice: Math.min(...prices),
+      maxPrice: Math.max(...prices),
+      count: prices.length,
+    }))
+    .sort((a, b) => b.count - a.count);
+
   const today = new Date().toISOString().slice(0, 10);
   const todayData = dailyMap.get(today) ?? { starts: 0, priceSeen: 0, submits: 0, date: today };
 
   return {
     daily, funnel, models, modelFunnels,
+    hourly, weekday, storages, avgPrices,
     todayStarts:    todayData.starts,
     todayPriceSeen: todayData.priceSeen,
     todaySubmits:   todayData.submits,

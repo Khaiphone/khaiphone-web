@@ -820,7 +820,9 @@ function SellModelPageContent() {
       trackEstimateEvent({ sessionId: sid, event: "step_reached", model: product.model, stepIndex: step, stepName: STEP_TITLES[step] });
     } else if (step >= TOTAL_STEPS && !trackedStepsRef.current.has(TOTAL_STEPS)) {
       trackedStepsRef.current.add(TOTAL_STEPS);
-      trackEstimateEvent({ sessionId: sid, event: "price_seen", model: product.model });
+      const selectedStorage = picks[0] !== null ? storages[picks[0]] : undefined;
+      const estPrice = product ? calcPrice(product, picks, effectiveGroupOptions, storageMultiplier, storagePrices) : undefined;
+      trackEstimateEvent({ sessionId: sid, event: "price_seen", model: product.model, storage: selectedStorage, price: estPrice });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, product?.model]);

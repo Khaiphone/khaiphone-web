@@ -5,7 +5,7 @@ import { BarChart2, Users, TrendingUp, Award, RefreshCw, ChevronDown, ChevronUp,
 import { useThemeColors } from "@/components/stock/ThemeContext";
 import StockTopbar from "@/components/stock/Topbar";
 import { fetchEstimateAnalytics } from "@/app/actions/analytics";
-import type { EstimateAnalytics, DailyCount, FunnelStep, ModelCount, ModelFunnel } from "@/app/actions/analytics";
+import type { EstimateAnalytics, DailyCount, FunnelStep, ModelCount, ModelFunnel, HourlyCount, WeekdayCount, StorageCount, AvgPrice } from "@/app/actions/analytics";
 
 // ─── Daily Bar Chart ────────────────────────────────────────────────────────
 
@@ -110,6 +110,149 @@ function FunnelChart({ funnel, c }: { funnel: FunnelStep[]; c: ReturnType<typeof
           >
             {expanded ? <><ChevronUp size={14} /> ย่อ</> : <><ChevronDown size={14} /> ดูทั้งหมด ({funnel.length} ขั้น)</>}
           </button>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── Hour of Day Chart ───────────────────────────────────────────────────────
+
+function HourlyChart({ hourly, c }: { hourly: HourlyCount[]; c: ReturnType<typeof useThemeColors> }) {
+  const max = Math.max(...hourly.map(h => h.count), 1);
+  const hasData = hourly.some(h => h.count > 0);
+  return (
+    <div style={{ background: c.card, border: `1px solid ${c.border}`, borderRadius: 16, padding: "16px 20px" }}>
+      <p style={{ color: c.text, fontSize: 14, fontWeight: 700, margin: "0 0 14px" }}>ช่วงเวลาที่ประเมิน (เวลาไทย)</p>
+      {!hasData ? (
+        <p style={{ color: c.text3, fontSize: 13, margin: 0, textAlign: "center", padding: "20px 0" }}>ยังไม่มีข้อมูล</p>
+      ) : (
+        <>
+          <div style={{ display: "flex", gap: 3, height: 64, alignItems: "flex-end" }}>
+            {hourly.map(h => {
+              const pct = Math.round((h.count / max) * 100);
+              const isMorning   = h.hour >= 6  && h.hour < 12;
+              const isAfternoon = h.hour >= 12 && h.hour < 18;
+              const isEvening   = h.hour >= 18 && h.hour < 24;
+              const barColor    = isEvening ? c.gold : isAfternoon ? "#3b82f6" : isMorning ? "#22c55e" : c.text3;
+              return (
+                <div key={h.hour} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                  <div style={{ width: "100%", height: `${Math.max(pct, pct > 0 ? 6 : 0)}%`, background: pct > 0 ? barColor : c.border, borderRadius: "3px 3px 0 0", transition: "height 0.4s ease" }} />
+                  <span style={{ fontSize: 7, color: c.text3, transform: h.hour % 3 === 0 ? "none" : "scale(0)", display: "block" }}>{h.hour}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: "flex", gap: 12, marginTop: 8, flexWrap: "wrap" }}>
+            {[{ label: "เช้า 6–12", color: "#22c55e" }, { label: "บ่าย 12–18", color: "#3b82f6" }, { label: "เย็น–ดึก 18–24", color: c.gold }].map(({ label, color }) => (
+              <div key={label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
+                <span style={{ color: c.text3, fontSize: 10 }}>{label}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── Day of Week Chart ───────────────────────────────────────────────────────
+
+function WeekdayChart({ weekday, c }: { weekday: WeekdayCount[]; c: ReturnType<typeof useThemeColors> }) {
+  const max = Math.max(...weekday.map(d => d.count), 1);
+  const hasData = weekday.some(d => d.count > 0);
+  return (
+    <div style={{ background: c.card, border: `1px solid ${c.border}`, borderRadius: 16, padding: "16px 20px" }}>
+      <p style={{ color: c.text, fontSize: 14, fontWeight: 700, margin: "0 0 14px" }}>วันในสัปดาห์</p>
+      {!hasData ? (
+        <p style={{ color: c.text3, fontSize: 13, margin: 0, textAlign: "center", padding: "20px 0" }}>ยังไม่มีข้อมูล</p>
+      ) : (
+        <div style={{ display: "flex", gap: 8, height: 80, alignItems: "flex-end" }}>
+          {weekday.map(d => {
+            const pct = Math.round((d.count / max) * 100);
+            const isWeekend = d.day >= 5;
+            return (
+              <div key={d.day} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                {d.count > 0 && <span style={{ color: c.text3, fontSize: 10 }}>{d.count}</span>}
+                <div style={{ width: "100%", height: `${Math.max(pct, pct > 0 ? 8 : 4)}%`, background: pct > 0 ? (isWeekend ? c.gold : "#3b82f6") : c.border, borderRadius: "4px 4px 0 0", transition: "height 0.4s ease" }} />
+                <span style={{ fontSize: 11, color: isWeekend ? c.gold : c.text2, fontWeight: isWeekend ? 700 : 400 }}>{d.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Storage Breakdown ───────────────────────────────────────────────────────
+
+function StorageChart({ storages, selectedModel, c }: { storages: StorageCount[]; selectedModel: string | null; c: ReturnType<typeof useThemeColors> }) {
+  const filtered = selectedModel ? storages.filter(s => s.model === selectedModel) : storages;
+  const max = Math.max(...filtered.map(s => s.count), 1);
+  const COLORS = ["#3b82f6", "#f59e0b", "#22c55e", "#a855f7", "#ef4444", "#06b6d4"];
+
+  return (
+    <div style={{ background: c.card, border: `1px solid ${c.border}`, borderRadius: 16, overflow: "hidden" }}>
+      <div style={{ padding: "16px 20px", borderBottom: `1px solid ${c.border}` }}>
+        <p style={{ color: c.text, fontSize: 14, fontWeight: 700, margin: 0 }}>
+          ความจุที่ประเมิน{selectedModel ? ` — ${selectedModel}` : ""}
+        </p>
+      </div>
+      {filtered.length === 0 ? (
+        <p style={{ color: c.text3, fontSize: 13, margin: 0, textAlign: "center", padding: "28px 0" }}>ยังไม่มีข้อมูล</p>
+      ) : (
+        <div style={{ padding: "12px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
+          {filtered.slice(0, 10).map((s, i) => {
+            const pct = Math.round((s.count / max) * 100);
+            const color = COLORS[i % COLORS.length];
+            return (
+              <div key={`${s.model}-${s.storage}`}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ color: c.text2, fontSize: 12 }}>{selectedModel ? s.storage : `${s.model} ${s.storage}`}</span>
+                  <span style={{ color: c.text3, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{s.count} ครั้ง</span>
+                </div>
+                <div style={{ height: 8, background: c.border, borderRadius: 4, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 4, transition: "width 0.5s ease" }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Average Price Table ─────────────────────────────────────────────────────
+
+function AvgPriceTable({ avgPrices, selectedModel, c }: { avgPrices: AvgPrice[]; selectedModel: string | null; c: ReturnType<typeof useThemeColors> }) {
+  const filtered = selectedModel ? avgPrices.filter(p => p.model === selectedModel) : avgPrices;
+  const fmt = (n: number) => "฿" + n.toLocaleString("th-TH");
+  return (
+    <div style={{ background: c.card, border: `1px solid ${c.border}`, borderRadius: 16, overflow: "hidden" }}>
+      <div style={{ padding: "16px 20px", borderBottom: `1px solid ${c.border}` }}>
+        <p style={{ color: c.text, fontSize: 14, fontWeight: 700, margin: 0 }}>ราคาที่ระบบเสนอ</p>
+      </div>
+      {filtered.length === 0 ? (
+        <p style={{ color: c.text3, fontSize: 13, margin: 0, textAlign: "center", padding: "28px 0" }}>ยังไม่มีข้อมูล</p>
+      ) : (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 90px 90px 90px 50px", gap: 8, padding: "8px 20px", borderBottom: `1px solid ${c.border}`, background: c.card2 ?? c.border }}>
+            {["รุ่น", "เฉลี่ย", "ต่ำสุด", "สูงสุด", "n"].map(h => (
+              <span key={h} style={{ color: c.text3, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>{h}</span>
+            ))}
+          </div>
+          {filtered.map((p, i) => (
+            <div key={p.model} style={{ display: "grid", gridTemplateColumns: "1fr 90px 90px 90px 50px", gap: 8, padding: "11px 20px", borderBottom: i < filtered.length - 1 ? `1px solid ${c.border}` : "none", alignItems: "center" }}>
+              <span style={{ color: c.text, fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.model}</span>
+              <span style={{ color: c.gold, fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{fmt(p.avgPrice)}</span>
+              <span style={{ color: c.text3, fontSize: 12, fontVariantNumeric: "tabular-nums" }}>{fmt(p.minPrice)}</span>
+              <span style={{ color: c.text3, fontSize: 12, fontVariantNumeric: "tabular-nums" }}>{fmt(p.maxPrice)}</span>
+              <span style={{ color: c.text3, fontSize: 12, fontVariantNumeric: "tabular-nums" }}>{p.count}</span>
+            </div>
+          ))}
         </>
       )}
     </div>
@@ -405,6 +548,18 @@ export default function EstimateAnalyticsPage() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
               <FunnelChart funnel={activeFunnel} c={c} />
               <ModelBarChart models={data.models} total={data.totalStarts} c={c} />
+            </div>
+
+            {/* Hour + Weekday side by side */}
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20 }}>
+              <HourlyChart  hourly={data.hourly}   c={c} />
+              <WeekdayChart weekday={data.weekday} c={c} />
+            </div>
+
+            {/* Storage + Avg price side by side */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+              <StorageChart  storages={data.storages}   selectedModel={selectedModel} c={c} />
+              <AvgPriceTable avgPrices={data.avgPrices} selectedModel={selectedModel} c={c} />
             </div>
 
           </div>
