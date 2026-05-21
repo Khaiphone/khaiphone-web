@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, FileText, RotateCcw, Check, ExternalLink, Camera } from "lucide-react";
 import { fetchRequest, saveContractUrls, updateStatus, markContractSigned, savePaymentSlip } from "@/app/actions/admin-requests";
 import { supabase } from "@/lib/supabase";
+import { compressImage } from "@/lib/compress-image";
 import type { AdminRequest } from "@/lib/types/admin";
 
 const BG     = "#F5F5F7";
@@ -254,9 +255,10 @@ export default function ContractPage() {
   }
 
   async function handleSlipUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const raw = e.target.files?.[0];
+    if (!raw) return;
     setSlipSaving(true);
+    const file = await compressImage(raw);
     const dataUrl = await applyWatermark(file);
     setSlipDataUrl(dataUrl);
     // Also upload to Supabase so it's visible from request detail page

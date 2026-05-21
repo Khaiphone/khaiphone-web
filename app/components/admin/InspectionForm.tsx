@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Plus, X, Camera, Check, AlertCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { saveInspectionPhotos } from "@/app/actions/inspection";
+import { compressImage } from "@/lib/compress-image";
 import type { InspectionData, InspectionCriterion, FunctionalTest, ExtraDeviceInspection } from "@/lib/types/admin";
 
 const GOLD   = "#B8860B";
@@ -231,7 +232,8 @@ export default function InspectionForm({
     if (!files.length) return;
     patchExtra(idx, { uploading: true, photoSaved: false });
     const urls: string[] = [];
-    for (const file of files) {
+    for (const raw of files) {
+      const file = await compressImage(raw);
       const path = `${requestId}/extra-${idx}/${Date.now()}-${file.name.replace(/\s/g, "_")}`;
       const { data, error } = await supabase.storage
         .from("inspection-photos")
@@ -306,7 +308,8 @@ export default function InspectionForm({
     setUploading(true);
     setUploadErr(null);
     const urls: string[] = [];
-    for (const file of files) {
+    for (const raw of files) {
+      const file = await compressImage(raw);
       const path = `${requestId}/${Date.now()}-${file.name.replace(/\s/g, "_")}`;
       const { data, error } = await supabase.storage
         .from("inspection-photos")

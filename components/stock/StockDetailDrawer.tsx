@@ -9,6 +9,7 @@ import type { StockItem, StockStatus } from "@/lib/stock/types";
 import { STOCK_STATUS_COLORS } from "@/lib/stock/mockData";
 import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos, updateStockDocuments, logDocumentView } from "@/app/actions/stocks";
 import { supabase } from "@/lib/supabase";
+import { compressImage } from "@/lib/compress-image";
 
 const TABS = ["รายละเอียด", "รูปภาพ", "เอกสาร", "ประวัติ"] as const;
 type Tab = typeof TABS[number];
@@ -148,7 +149,8 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
     setUploading(true);
     setUploadErr(null);
     const urls: string[] = [...item!.photos];
-    for (const file of Array.from(files)) {
+    for (const raw of Array.from(files)) {
+      const file = await compressImage(raw);
       const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
       const path = `stocks/${item!.id}/${Date.now()}-${safeName}`;
       const { data, error } = await supabase.storage.from("stock-photos").upload(path, file, { upsert: true });
@@ -168,7 +170,8 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
     setUploadingDoc(true);
     setUploadDocErr(null);
     const urls: string[] = [...(item!.documents ?? [])];
-    for (const file of Array.from(files)) {
+    for (const raw of Array.from(files)) {
+      const file = await compressImage(raw);
       const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
       const path = `stocks/${item!.id}/docs/${Date.now()}-${safeName}`;
       const { data, error } = await supabase.storage.from("stock-photos").upload(path, file, { upsert: true });
