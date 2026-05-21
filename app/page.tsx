@@ -8,8 +8,13 @@ import { blogPosts } from "@/lib/blogData";
 
 export const metadata: Metadata = {
   title: "ขายไอโฟน.com — รับซื้อ iPhone iPad MacBook ให้ราคาสูง",
-  description:
-    "รับซื้อ iPhone, iPad, MacBook, Apple Watch ทุกรุ่น ให้ราคาสูง จ่ายเงินสดทันที ประเมินราคาฟรี ไม่ผูกมัด รับถึงที่ทั่ว กทม.",
+  description: "รับซื้อ iPhone, iPad, MacBook, Apple Watch ทุกรุ่น ให้ราคาสูง จ่ายเงินสดทันที ประเมินราคาฟรี ไม่ผูกมัด รับถึงที่ทั่ว กทม.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "ขายไอโฟน.com — รับซื้อ iPhone iPad MacBook ให้ราคาสูง",
+    description: "รับซื้อ iPhone, iPad, MacBook, Apple Watch ทุกรุ่น ให้ราคาสูง จ่ายเงินสดทันที ประเมินราคาฟรี ไม่ผูกมัด",
+    url: "/",
+  },
 };
 
 type IconProps = { className?: string; style?: React.CSSProperties };

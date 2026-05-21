@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { Phone, ChevronDown } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "คำถามที่พบบ่อย (FAQ)",
+  description: "รวมคำถามที่พบบ่อยเกี่ยวกับการขาย iPhone iPad MacBook กับขายไอโฟน.com ขั้นตอนการขาย ราคา การนัดหมาย และการจ่ายเงิน",
+  alternates: { canonical: "/faq" },
+  openGraph: { title: "คำถามที่พบบ่อย | ขายไอโฟน.com", description: "รวมคำถามที่พบบ่อยเกี่ยวกับการขาย iPhone iPad MacBook", url: "/faq" },
+};
 
 const faqGroups = [
   {
