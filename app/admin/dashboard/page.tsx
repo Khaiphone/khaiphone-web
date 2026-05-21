@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, ArrowRight, Phone, CalendarPlus, ClipboardList, Tag, SlidersHorizontal, PlusCircle } from "lucide-react";
 import { fetchRequests } from "@/app/actions/admin-requests";
@@ -40,6 +40,8 @@ export default function DashboardPage() {
   const [loading,     setLoading]     = useState(true);
   const [role,        setRole]        = useState<AdminRole | null>(null);
   const [permissions, setPermissions] = useState<Permission[]>([]);
+  const staffUserIdRef  = useRef<string | undefined>(undefined);
+  const lastRefetchRef  = useRef(0);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -53,7 +55,8 @@ export default function DashboardPage() {
       setPermissions(profile?.permissions ?? []);
 
       const isStaff = r === "staff";
-      fetchRequests(isStaff ? data.user.id : undefined).then(d => {
+      staffUserIdRef.current = isStaff ? data.user.id : undefined;
+      fetchRequests(staffUserIdRef.current).then(d => {
         setRequests(d);
         setLoading(false);
       });
@@ -62,11 +65,10 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const refetch = () => {
-      supabase.auth.getUser().then(async ({ data }) => {
-        if (!data.user) return;
-        const r = await fetchMyRole(data.user.id);
-        fetchRequests(r === "staff" ? data.user.id : undefined).then(d => setRequests(d));
-      });
+      const now = Date.now();
+      if (now - lastRefetchRef.current < 30_000) return;
+      lastRefetchRef.current = now;
+      fetchRequests(staffUserIdRef.current).then(d => setRequests(d));
     };
     window.addEventListener("focus", refetch);
     return () => window.removeEventListener("focus", refetch);

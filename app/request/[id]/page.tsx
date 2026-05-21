@@ -997,8 +997,8 @@ function RequestDetailInner() {
               </div>
             )}
 
-            {/* Completed: document links — always show when documents are ready */}
-            {dbStatus === "completed" && (sub.contractUrl || sub.receiptUrl) && (
+            {/* Document links — show whenever documents are ready */}
+            {(sub.contractUrl || sub.receiptUrl) && (
               <div className="rounded-2xl overflow-hidden" style={{ border: "1.5px solid rgba(201,168,76,0.4)", background: "linear-gradient(135deg,#1a1a2e 0%,#2a2a4e 100%)" }}>
                 <div className="px-5 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
                   <div className="flex items-center gap-3">
@@ -1068,8 +1068,8 @@ function RequestDetailInner() {
               </div>
             )}
 
-            {/* Completed: contract signed date + payment slip */}
-            {dbStatus === "completed" && (sub.payment.contractSignedAt || sub.payment.slipUrl) && (
+            {/* Contract signed date + payment slip */}
+            {(sub.payment.contractSignedAt || sub.payment.slipUrl) && (
               <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid #E5E7EB" }}>
                 <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
                   <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(184,134,11,0.1)" }}>
