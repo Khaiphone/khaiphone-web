@@ -39,10 +39,16 @@ export interface ModelCount {
   submits: number;
 }
 
+export interface ModelFunnel {
+  model: string;
+  funnel: FunnelStep[];
+}
+
 export interface EstimateAnalytics {
   daily: DailyCount[];
   funnel: FunnelStep[];
   models: ModelCount[];
+  modelFunnels: ModelFunnel[];
   todayStarts: number;
   todayPriceSeen: number;
   todaySubmits: number;
@@ -51,11 +57,38 @@ export interface EstimateAnalytics {
   topDropStep: string;
 }
 
+// 11 steps: started → 8 wizard steps → price seen → submitted
+// step_reached fires at stepIndex 1-8 (step 0 = storage = fires "start" event)
+// so maxStep 1 = passed storage+model, maxStep 8 = passed iCloud
 const FUNNEL_STEP_NAMES = [
-  "เริ่มต้น", "ความจุ", "Model", "ประกัน", "ตัวเครื่อง",
-  "หน้าจอ", "การแสดงภาพ", "แบตเตอรี่", "อุปกรณ์", "iCloud",
-  "เห็นราคา", "นัดหมายสำเร็จ",
+  "เริ่มต้น",      // 0 — start event (at storage step)
+  "Model",         // 1 — maxStep >= 1
+  "ประกัน",        // 2 — maxStep >= 2
+  "ตัวเครื่อง",   // 3 — maxStep >= 3
+  "หน้าจอ",        // 4 — maxStep >= 4
+  "การแสดงภาพ",   // 5 — maxStep >= 5
+  "แบตเตอรี่",    // 6 — maxStep >= 6
+  "อุปกรณ์เสริม", // 7 — maxStep >= 7
+  "iCloud",        // 8 — maxStep >= 8
+  "เห็นราคา",     // 9 — price_seen event
+  "นัดหมายสำเร็จ", // 10 — submit event
 ];
+
+type Session = { maxStep: number; submitted: boolean; priceSeen: boolean; model: string; date: string };
+
+function buildFunnel(sessions: Session[], total: number): FunnelStep[] {
+  const counts = Array.from({ length: 11 }, (_, i) => {
+    if (i === 0)  return total;
+    if (i === 9)  return sessions.filter(s => s.priceSeen).length;
+    if (i === 10) return sessions.filter(s => s.submitted).length;
+    return sessions.filter(s => s.maxStep >= i).length;
+  });
+  return FUNNEL_STEP_NAMES.map((name, i) => ({
+    stepIndex: i, stepName: name,
+    count: counts[i],
+    pct: total > 0 ? Math.round((counts[i] / total) * 100) : 0,
+  }));
+}
 
 export async function fetchEstimateAnalytics(): Promise<EstimateAnalytics> {
   const supabase = createServerClient();
@@ -72,7 +105,6 @@ export async function fetchEstimateAnalytics(): Promise<EstimateAnalytics> {
   const rows = data ?? [];
 
   // Build per-session summary
-  type Session = { maxStep: number; submitted: boolean; priceSeen: boolean; model: string; date: string };
   const sessionMap = new Map<string, Session>();
   for (const row of rows) {
     if (!sessionMap.has(row.session_id)) {
@@ -106,24 +138,14 @@ export async function fetchEstimateAnalytics(): Promise<EstimateAnalytics> {
   }
   const daily = Array.from(dailyMap.values());
 
-  // Funnel: index 0=started, 1-9=reached wizard step, 10=price_seen, 11=submitted
-  const funnelCounts = Array.from({ length: 12 }, (_, i) => {
-    if (i === 0)  return totalStarts;
-    if (i === 10) return sessions.filter(s => s.priceSeen).length;
-    if (i === 11) return sessions.filter(s => s.submitted).length;
-    return sessions.filter(s => s.maxStep >= i).length;
-  });
-  const funnel: FunnelStep[] = FUNNEL_STEP_NAMES.map((name, i) => ({
-    stepIndex: i, stepName: name,
-    count: funnelCounts[i],
-    pct: totalStarts > 0 ? Math.round((funnelCounts[i] / totalStarts) * 100) : 0,
-  }));
+  // Overall funnel
+  const funnel = buildFunnel(sessions, totalStarts);
 
   // Top drop-off step
   let topDropStep = "ไม่มีข้อมูล";
   let maxDrop = 0;
-  for (let i = 1; i < funnelCounts.length; i++) {
-    const drop = funnelCounts[i - 1] - funnelCounts[i];
+  for (let i = 1; i < funnel.length; i++) {
+    const drop = funnel[i - 1].count - funnel[i].count;
     if (drop > maxDrop) { maxDrop = drop; topDropStep = FUNNEL_STEP_NAMES[i]; }
   }
 
@@ -141,14 +163,20 @@ export async function fetchEstimateAnalytics(): Promise<EstimateAnalytics> {
     .sort((a, b) => b.starts - a.starts)
     .slice(0, 10);
 
+  // Per-model funnel (top 10)
+  const modelFunnels: ModelFunnel[] = models.map(m => {
+    const mSessions = sessions.filter(s => s.model === m.model);
+    return { model: m.model, funnel: buildFunnel(mSessions, mSessions.length) };
+  });
+
   const today = new Date().toISOString().slice(0, 10);
   const todayData = dailyMap.get(today) ?? { starts: 0, priceSeen: 0, submits: 0, date: today };
 
   return {
-    daily, funnel, models,
-    todayStarts: todayData.starts,
+    daily, funnel, models, modelFunnels,
+    todayStarts:    todayData.starts,
     todayPriceSeen: todayData.priceSeen,
-    todaySubmits: todayData.submits,
+    todaySubmits:   todayData.submits,
     totalStarts,
     completionRate: totalStarts > 0 ? Math.round((sessions.filter(s => s.submitted).length / totalStarts) * 100) : 0,
     topDropStep,

@@ -5,7 +5,7 @@ import { BarChart2, Users, TrendingUp, Award, RefreshCw, ChevronDown, ChevronUp,
 import { useThemeColors } from "@/components/stock/ThemeContext";
 import StockTopbar from "@/components/stock/Topbar";
 import { fetchEstimateAnalytics } from "@/app/actions/analytics";
-import type { EstimateAnalytics, DailyCount, FunnelStep, ModelCount } from "@/app/actions/analytics";
+import type { EstimateAnalytics, DailyCount, FunnelStep, ModelCount, ModelFunnel } from "@/app/actions/analytics";
 
 // ─── Daily Bar Chart ────────────────────────────────────────────────────────
 
@@ -158,6 +158,74 @@ function ModelTable({ models, c }: { models: ModelCount[]; c: ReturnType<typeof 
   );
 }
 
+// ─── Per-model Funnel ────────────────────────────────────────────────────────
+
+function ModelFunnelSection({ modelFunnels, c }: { modelFunnels: ModelFunnel[]; c: ReturnType<typeof useThemeColors> }) {
+  const [selected, setSelected] = useState<string>(modelFunnels[0]?.model ?? "");
+  const mf = modelFunnels.find(m => m.model === selected);
+
+  if (modelFunnels.length === 0) return null;
+
+  return (
+    <div style={{ background: c.card, border: `1px solid ${c.border}`, borderRadius: 16, overflow: "hidden" }}>
+      <div style={{ padding: "16px 20px", borderBottom: `1px solid ${c.border}` }}>
+        <p style={{ color: c.text, fontSize: 14, fontWeight: 700, margin: "0 0 12px" }}>Funnel แยกตามรุ่น</p>
+        {/* Model pills */}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {modelFunnels.map(m => {
+            const active = m.model === selected;
+            return (
+              <button
+                key={m.model}
+                onClick={() => setSelected(m.model)}
+                style={{
+                  padding: "5px 12px", borderRadius: 20, fontFamily: "inherit", fontSize: 12, fontWeight: active ? 700 : 400,
+                  border: active ? "1px solid rgba(184,134,11,0.4)" : `1px solid ${c.border}`,
+                  background: active ? "var(--admin-gold-bg, #FEF3C7)" : "transparent",
+                  color: active ? c.gold : c.text2, cursor: "pointer",
+                }}
+              >
+                {m.model}
+                <span style={{ marginLeft: 4, opacity: 0.6 }}>({m.funnel[0]?.count ?? 0})</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {mf && (
+        <div>
+          {mf.funnel.map((step, i) => {
+            const pct      = step.pct;
+            const barColor = pct >= 70 ? "#22c55e" : pct >= 40 ? "#f59e0b" : "#ef4444";
+            const emoji    = step.stepIndex === 0 ? "🚀" : step.stepIndex === 9 ? "💰" : step.stepIndex === 10 ? "✅" : null;
+            const dropFromPrev = i > 0 ? (mf.funnel[i - 1].count - step.count) : 0;
+            return (
+              <div key={step.stepIndex} style={{ padding: "10px 20px", borderBottom: i < mf.funnel.length - 1 ? `1px solid ${c.border}` : "none" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                  <span style={{ color: i === 0 ? c.text : c.text2, fontSize: 13, fontWeight: i === 0 ? 700 : 400 }}>
+                    {emoji ? `${emoji} ` : `${step.stepIndex}. `}{step.stepName}
+                  </span>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    {dropFromPrev > 0 && (
+                      <span style={{ fontSize: 11, color: "#ef4444", fontVariantNumeric: "tabular-nums" }}>-{dropFromPrev} คน</span>
+                    )}
+                    <span style={{ color: c.text3, fontSize: 11, fontVariantNumeric: "tabular-nums" }}>{step.count} คน</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: barColor, minWidth: 40, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{pct}%</span>
+                  </div>
+                </div>
+                <div style={{ height: 6, background: c.border, borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${pct}%`, background: barColor, borderRadius: 3, transition: "width 0.4s ease" }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function EstimateAnalyticsPage() {
@@ -180,7 +248,7 @@ export default function EstimateAnalyticsPage() {
     { label: "นัดหมายวันนี้",  value: data.todaySubmits,             color: "#22c55e", icon: TrendingUp },
     { label: "สำเร็จ 30 วัน", value: `${data.completionRate}%`,      color: "#a855f7", icon: Award      },
     { label: "ทั้งหมด 30 วัน", value: data.totalStarts,              color: c.gold,    icon: BarChart2  },
-    { label: "เจอราคา 30 วัน", value: data.funnel[10]?.count ?? 0,   color: "#f59e0b", icon: Minus      },
+    { label: "เจอราคา 30 วัน", value: data.funnel[9]?.count ?? 0,    color: "#f59e0b", icon: Minus      },
   ] : [];
 
   return (
@@ -244,6 +312,11 @@ export default function EstimateAnalyticsPage() {
               <FunnelChart funnel={data.funnel} c={c} />
               <ModelTable  models={data.models}  c={c} />
             </div>
+
+            {/* Per-model funnel */}
+            {data.modelFunnels.length > 0 && (
+              <ModelFunnelSection modelFunnels={data.modelFunnels} c={c} />
+            )}
 
           </div>
         ) : null}
