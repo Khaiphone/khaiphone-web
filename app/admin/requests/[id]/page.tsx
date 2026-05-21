@@ -400,6 +400,13 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const deviceImg = getDeviceImage(request.device.model);
   const condColor = CONDITION_COLORS[request.device.condition] ?? TEXT2;
 
+  const hasExtras     = (request.extraDevices ?? []).length > 0;
+  const extraEstTotal = (request.extraDevices ?? []).reduce((s, d) => s + d.estimatedPrice, 0);
+  const bundleEst     = request.device.estimatedPrice + extraEstTotal;
+  const extraActTotal = (request.inspection?.extraInspections ?? []).reduce((s, e) => s + e.actualPrice, 0);
+  const inspActual    = request.inspection?.actualPrice;
+  const totalActual   = inspActual !== undefined ? inspActual + extraActTotal : request.device.actualPrice;
+
   async function copyTrackingLink() {
     if (!request) return;
     const phone = request.customer.phone.replace(/\D/g, "");
@@ -616,14 +623,19 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
             {!editPrice ? (
               <>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                  <span style={{ color: TEXT2, fontSize: "13px" }}>ราคาประเมิน</span>
-                  <span style={{ color: GOLD, fontSize: "24px", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>฿{request.device.estimatedPrice.toLocaleString("th-TH")}</span>
+                  <span style={{ color: TEXT2, fontSize: "13px" }}>{hasExtras ? `ราคาประเมินรวม ${(request.extraDevices ?? []).length + 1} เครื่อง` : "ราคาประเมิน"}</span>
+                  <span style={{ color: GOLD, fontSize: "24px", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>฿{bundleEst.toLocaleString("th-TH")}</span>
                 </div>
-                <p style={{ color: TEXT3, fontSize: "12px", margin: "0 0 8px" }}>{request.device.priceRange}</p>
-                {request.device.actualPrice !== undefined && (
+                {!hasExtras && <p style={{ color: TEXT3, fontSize: "12px", margin: "0 0 8px" }}>{request.device.priceRange}</p>}
+                {hasExtras && (
+                  <p style={{ color: TEXT3, fontSize: "12px", margin: "0 0 8px" }}>
+                    {request.device.model} ฿{request.device.estimatedPrice.toLocaleString("th-TH")} + {(request.extraDevices ?? []).map(d => `${d.model} ฿${d.estimatedPrice.toLocaleString("th-TH")}`).join(" + ")}
+                  </p>
+                )}
+                {totalActual !== undefined && (
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "8px", borderTop: `1px solid ${BORDER}` }}>
-                    <span style={{ color: TEXT2, fontSize: "13px" }}>ราคาที่รับจริง</span>
-                    <span style={{ color: "#065F46", fontSize: "22px", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>฿{request.device.actualPrice.toLocaleString("th-TH")}</span>
+                    <span style={{ color: TEXT2, fontSize: "13px" }}>{hasExtras ? "ราคาที่รับจริงรวม" : "ราคาที่รับจริง"}</span>
+                    <span style={{ color: "#065F46", fontSize: "22px", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>฿{totalActual.toLocaleString("th-TH")}</span>
                   </div>
                 )}
               </>
@@ -807,7 +819,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
               {request.status === "price_negotiation" && !request.inspection?.negotiationResponse && (
                 <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
                   <p style={{ color: "#92400E", fontSize: 13, fontWeight: 700, margin: "0 0 4px" }}>
-                    ⏳ รอลูกค้ายืนยัน — ราคาใหม่ ฿{request.inspection?.actualPrice?.toLocaleString("th-TH")}
+                    ⏳ รอลูกค้ายืนยัน — ราคาใหม่รวม ฿{((request.inspection?.actualPrice ?? 0) + (request.inspection?.extraInspections ?? []).reduce((s, e) => s + e.actualPrice, 0)).toLocaleString("th-TH")}
                   </p>
                   {request.inspection?.priceReason && (
                     <p style={{ color: "#92400E", fontSize: 12, margin: "0 0 10px" }}>{request.inspection.priceReason}</p>

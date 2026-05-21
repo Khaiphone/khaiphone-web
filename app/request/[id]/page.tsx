@@ -928,6 +928,71 @@ function RequestDetailInner() {
                       {inspection.negotiationResponse === "accepted" ? "✅ ยืนยันราคาใหม่แล้ว" : "❌ ปฏิเสธราคา — ธุรกรรมถูกยกเลิก"}
                     </div>
                   )}
+
+                  {/* Extra device inspection results */}
+                  {(inspection.extraInspections ?? []).map((ext, ei) => (
+                    <div key={ei} className="mt-4 pt-4" style={{ borderTop: "2px solid #F0C040" }}>
+                      <p className="text-xs font-bold mb-3" style={{ color: "#92400E" }}>
+                        เครื่องที่ {ei + 2}: {ext.model} {ext.storage}
+                      </p>
+
+                      {(ext.criteria ?? []).length > 0 && (
+                        <div className="mb-3">
+                          <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #E5E7EB" }}>
+                            <div className="grid grid-cols-3 px-3 py-2" style={{ background: "#F9FAFB", borderBottom: "1px solid #E5E7EB" }}>
+                              <span className="text-xs font-semibold" style={{ color: "#6B7280" }}>รายการ</span>
+                              <span className="text-xs font-semibold" style={{ color: "#6B7280" }}>ที่แจ้ง</span>
+                              <span className="text-xs font-semibold" style={{ color: "#6B7280" }}>ตรวจจริง</span>
+                            </div>
+                            {ext.criteria.map((c, ci) => {
+                              const mismatch = !c.pass || c.stated.trim().toLowerCase() !== c.actual.trim().toLowerCase();
+                              return (
+                                <div key={ci} className="grid grid-cols-3 px-3 py-2.5 items-center" style={{ borderBottom: ci < ext.criteria.length - 1 ? "1px solid #F3F4F6" : "none", background: mismatch ? "#FFF8F8" : "transparent" }}>
+                                  <span className="text-xs font-semibold text-black">{c.label}</span>
+                                  <span className="text-xs" style={{ color: mismatch ? "#9CA3AF" : "#6B7280", textDecoration: mismatch ? "line-through" : "none" }}>{c.stated || "—"}</span>
+                                  <span className="text-xs font-bold flex items-center gap-1" style={{ color: mismatch ? "#DC2626" : "#059669" }}>
+                                    {mismatch && <span style={{ fontSize: 10 }}>⚠</span>}{c.actual || "—"}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {(ext.issues ?? []).length > 0 && (
+                        <div className="mb-3">
+                          <p className="text-xs font-semibold mb-2" style={{ color: "#374151" }}>ปัญหาที่พบ</p>
+                          <div className="flex flex-col gap-1.5">
+                            {ext.issues.map((issue, ii) => (
+                              <div key={ii} className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg" style={{ background: "#FEF2F2", color: "#991B1B" }}>
+                                <span>⚠️</span> {issue}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {(ext.photos ?? []).length > 0 && (
+                        <div className="mb-3">
+                          <p className="text-xs font-semibold mb-2" style={{ color: "#374151" }}>รูปภาพหลักฐาน</p>
+                          <div className="grid grid-cols-3 gap-2">
+                            {ext.photos.map((url, pi) => (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img key={pi} src={url} alt="" className="w-full rounded-lg object-cover" style={{ aspectRatio: "1", border: "1px solid #E5E7EB" }} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="rounded-xl p-3" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}>
+                        <div className="flex justify-between">
+                          <span className="text-sm font-semibold" style={{ color: "#374151" }}>ราคาที่ตกลง</span>
+                          <span className="text-base font-bold" style={{ color: "#B8860B" }}>฿{ext.actualPrice.toLocaleString("th-TH")}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
