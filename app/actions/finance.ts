@@ -318,18 +318,6 @@ export type FinanceAuditEntry = {
   category: "finance" | "stock" | "system";
 };
 
-const STATUS_LABELS_TH: Record<string, string> = {
-  new: "คำขอใหม่",
-  pending: "รอตรวจสอบ",
-  inspecting: "ติดต่อกลับแล้ว",
-  confirmed: "ยืนยันนัดหมาย",
-  pickup_scheduled: "นัดรับเครื่อง",
-  price_negotiation: "รอยืนยันราคา",
-  contracting: "กำลังทำสัญญา",
-  completed: "เสร็จสิ้น",
-  cancelled: "ยกเลิก",
-  rejected: "ไม่เข้าเงื่อนไข",
-};
 
 export async function fetchFinanceAudit(): Promise<FinanceAuditEntry[]> {
   const supabase = createServerClient();
@@ -349,19 +337,6 @@ export async function fetchFinanceAudit(): Promise<FinanceAuditEntry[]> {
   const entries: FinanceAuditEntry[] = [];
 
   for (const row of data ?? []) {
-    const logs: Array<{ status: string; timestamp: string; note?: string; by?: string }> = row.status_log ?? [];
-    for (const log of logs) {
-      const statusTh = STATUS_LABELS_TH[log.status] ?? log.status;
-      entries.push({
-        id: `${row.id}-${log.timestamp}`,
-        datetime: log.timestamp,
-        user: log.by ?? "แอดมิน",
-        action: `เปลี่ยนสถานะ → ${statusTh}`,
-        refNumber: row.order_number ?? "",
-        after: statusTh,
-        category: log.status === "completed" ? "stock" : "system",
-      });
-    }
     if (row.stock_status === "sold" && row.sell_date) {
       entries.push({
         id: `sold-${row.id}`,
