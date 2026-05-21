@@ -600,5 +600,10 @@ export async function saveFinanceSettings(
     updated_at:          new Date().toISOString(),
   }).eq("id", 1);
   if (error) return { success: false, error: error.message };
+  insertAuditLog({
+    action: "บันทึกการตั้งค่าการเงิน",
+    afterVal: `VAT ${s.vatEnabled ? `${s.vatRate}%` : "ปิด"} · ภาษีหัก ณ ที่จ่าย ${s.withholdingTax}% · ธนาคาร ${s.bankName || "—"}`,
+    category: "system",
+  }).catch(() => {});
   return { success: true };
 }
