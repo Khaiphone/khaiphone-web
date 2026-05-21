@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, ArrowRight, Phone, CalendarPlus, ClipboardList, Tag, SlidersHorizontal, PlusCircle } from "lucide-react";
 import { fetchDashboardData, fetchRequests } from "@/app/actions/admin-requests";
-import { supabase } from "@/lib/supabase";
 import type { AdminRequest } from "@/lib/types/admin";
 import type { AdminRole } from "@/app/actions/admin-users";
 import type { Permission } from "@/lib/admin-permissions";
@@ -39,6 +38,7 @@ export default function DashboardPage() {
   const [loading,     setLoading]     = useState(true);
   const [role,        setRole]        = useState<AdminRole | null>(null);
   const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const staffUserIdRef  = useRef<string | undefined>(undefined);
   const lastRefetchRef  = useRef(0);
 
@@ -64,12 +64,30 @@ export default function DashboardPage() {
     return () => window.removeEventListener("focus", refetch);
   }, []);
 
+  useEffect(() => {
+    if (!requests.length) return;
+    try {
+      const readIds = new Set<string>(JSON.parse(localStorage.getItem("khaiphone_admin_read_notifs") ?? "[]"));
+      const t = new Date().toISOString().slice(0, 10);
+      let count = 0;
+      for (const r of requests) {
+        if (!readIds.has(`nr-${r.id}`)) count++;
+        r.statusLog.filter(l => l.status !== "new").forEach((_, i) => {
+          if (!readIds.has(`sc-${r.id}-${i}`)) count++;
+        });
+        if (r.appointment.date === t && !readIds.has(`appt-${r.id}`)) count++;
+      }
+      setUnreadCount(Math.min(count, 99));
+    } catch {}
+  }, [requests]);
+
   const today          = new Date().toISOString().slice(0, 10);
   const newCount       = requests.filter(r => r.status === "new").length;
   const pendingCount   = requests.filter(r => r.status === "pending").length;
   const todayAppt      = requests.filter(r => r.appointment.date === today).length;
-  const completedToday = requests.filter(r => r.status === "completed" && r.createdAt.startsWith(today)).length;
-  const unreadCount    = 0;
+  const completedToday = requests.filter(r =>
+    r.statusLog.some(l => l.status === "completed" && l.timestamp.startsWith(today))
+  ).length;
 
   const recent = [...requests]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -153,27 +171,27 @@ export default function DashboardPage() {
                 recent.map(r => <RequestCard key={r.id} request={r} />)
               )}
             </div>
+
+            {/* Quick actions */}
+            <div style={{ marginBottom: "20px" }}>
+              <h2 style={{ color: TEXT, fontSize: "17px", fontWeight: 700, margin: "0 0 14px" }}>ทางลัด</h2>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                {quickActions.map(({ label, icon: Icon, href, color }) => (
+                  <button
+                    key={label}
+                    onClick={() => href.startsWith("tel") ? window.open(href) : router.push(href)}
+                    style={{ display: "flex", alignItems: "center", gap: "12px", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "16px", padding: "16px", cursor: "pointer", touchAction: "manipulation", color: TEXT, fontFamily: "inherit", fontSize: "14px", fontWeight: 500, textAlign: "left" }}
+                  >
+                    <div style={{ width: 36, height: 36, borderRadius: "10px", background: `${color}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Icon size={18} color={color} />
+                    </div>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </>
         )}
-
-        {/* Quick actions */}
-        <div style={{ marginBottom: "20px" }}>
-          <h2 style={{ color: TEXT, fontSize: "17px", fontWeight: 700, margin: "0 0 14px" }}>ทางลัด</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-            {quickActions.map(({ label, icon: Icon, href, color }) => (
-              <button
-                key={label}
-                onClick={() => href.startsWith("tel") ? window.open(href) : router.push(href)}
-                style={{ display: "flex", alignItems: "center", gap: "12px", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "16px", padding: "16px", cursor: "pointer", touchAction: "manipulation", color: TEXT, fontFamily: "inherit", fontSize: "14px", fontWeight: 500, textAlign: "left" }}
-              >
-                <div style={{ width: 36, height: 36, borderRadius: "10px", background: `${color}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <Icon size={18} color={color} />
-                </div>
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );
