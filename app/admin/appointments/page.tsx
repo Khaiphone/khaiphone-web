@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Clock, Loader2 } from "lucide-react";
 import { fetchDashboardData } from "@/app/actions/admin-requests";
@@ -39,10 +39,12 @@ export default function AppointmentsPage() {
   const baseDay = new Date();
   baseDay.setHours(0, 0, 0, 0);
 
-  const days     = Array.from({ length: 7 }, (_, i) => addDays(baseDay, i - 1));
+  const days     = Array.from({ length: 60 }, (_, i) => addDays(baseDay, i - 7));
   const todayStr = toISODate(baseDay);
 
   const [selectedDate, setSelectedDate] = useState(todayStr);
+  const stripRef   = useRef<HTMLDivElement>(null);
+  const todayRef   = useRef<HTMLButtonElement>(null);
   const [requests,     setRequests]     = useState<AdminRequest[]>([]);
   const [loading,      setLoading]      = useState(true);
 
@@ -53,6 +55,14 @@ export default function AppointmentsPage() {
       setRequests(data.requests);
       setLoading(false);
     });
+  }, []);
+
+  useEffect(() => {
+    if (todayRef.current && stripRef.current) {
+      const strip = stripRef.current;
+      const btn   = todayRef.current;
+      strip.scrollLeft = btn.offsetLeft - strip.clientWidth / 2 + btn.offsetWidth / 2;
+    }
   }, []);
 
   const appts = requests
@@ -76,7 +86,7 @@ export default function AppointmentsPage() {
           </div>
 
           {/* Date tabs */}
-          <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "12px", scrollbarWidth: "none", WebkitOverflowScrolling: "touch", marginLeft: "-2px", paddingLeft: "2px", marginRight: "-2px", paddingRight: "2px" } as React.CSSProperties}>
+          <div ref={stripRef} style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "12px", scrollbarWidth: "none", WebkitOverflowScrolling: "touch", marginLeft: "-2px", paddingLeft: "2px", marginRight: "-2px", paddingRight: "2px" } as React.CSSProperties}>
             {days.map(d => {
               const iso    = toISODate(d);
               const active = iso === selectedDate;
@@ -85,6 +95,7 @@ export default function AppointmentsPage() {
               return (
                 <button
                   key={iso}
+                  ref={isToday ? todayRef : undefined}
                   onClick={() => setSelectedDate(iso)}
                   style={{
                     flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: "2px",
