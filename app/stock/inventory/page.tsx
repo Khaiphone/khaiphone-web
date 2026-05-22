@@ -12,6 +12,7 @@ import StockDetailDrawer from "@/components/stock/StockDetailDrawer";
 import { useThemeColors } from "@/components/stock/ThemeContext";
 import { fetchStockItems, deleteStockItem } from "@/app/actions/stocks";
 import { STOCK_STATUS_COLORS } from "@/lib/stock/constants";
+import { getProductImage } from "@/lib/product-image";
 import type { StockItem, StockStatus } from "@/lib/stock/types";
 
 const STATUSES: Array<{ value: StockStatus | "all"; label: string }> = [
@@ -329,12 +330,15 @@ export default function StockInventoryPage() {
                             }} style={{ cursor: "pointer" }} />
                           </td>
                           <td style={{ padding: "10px 14px" }}>
-                            {s.photos[0] ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={s.photos[0]} alt="" style={{ width: 40, height: 40, objectFit: "contain", borderRadius: 8 }} />
-                            ) : (
-                              <div style={{ width: 40, height: 40, background: c.card2, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>📱</div>
-                            )}
+                            {(() => {
+                              const src = s.photos[0] || getProductImage(s.model);
+                              return src ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={src} alt="" style={{ width: 40, height: 40, objectFit: "contain", borderRadius: 8, background: c.card2, padding: s.photos[0] ? 0 : 4 }} />
+                              ) : (
+                                <div style={{ width: 40, height: 40, background: c.card2, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>📱</div>
+                              );
+                            })()}
                           </td>
                           <td style={{ padding: "10px 14px", color: c.gold, fontSize: 12, fontFamily: "monospace", whiteSpace: "nowrap" }}>{s.id}</td>
                           <td style={{ padding: "10px 14px", color: c.text, fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>{s.model}</td>

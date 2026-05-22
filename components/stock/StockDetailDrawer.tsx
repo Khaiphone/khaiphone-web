@@ -11,6 +11,7 @@ import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
 import { validateImageFiles, validateImageFile } from "@/lib/validate-file";
+import { getProductImage } from "@/lib/product-image";
 
 const TABS = ["รายละเอียด", "รูปภาพ", "เอกสาร", "ประวัติ"] as const;
 type Tab = typeof TABS[number];
@@ -357,12 +358,15 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
               {tab === "รายละเอียด" && (
                 <div>
                   <div style={{ background: c.card2, borderRadius: 16, padding: 16, marginBottom: 16, textAlign: "center" }}>
-                    {item.photos[0] ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.photos[0]} alt={item.model} style={{ height: 120, objectFit: "contain", borderRadius: 8 }} />
-                    ) : (
-                      <div style={{ height: 100, display: "flex", alignItems: "center", justifyContent: "center", color: c.text3, fontSize: 40 }}>📱</div>
-                    )}
+                    {(() => {
+                      const src = item.photos[0] || getProductImage(item.model);
+                      return src ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={src} alt={item.model} style={{ height: 120, objectFit: "contain", borderRadius: 8 }} />
+                      ) : (
+                        <div style={{ height: 100, display: "flex", alignItems: "center", justifyContent: "center", color: c.text3, fontSize: 40 }}>📱</div>
+                      );
+                    })()}
                   </div>
 
                   <Section label="ข้อมูลเครื่อง" c={c}>
