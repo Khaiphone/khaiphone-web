@@ -786,6 +786,9 @@ function SellModelPageContent() {
   const emailRef = useRef<HTMLInputElement>(null);
   const scrollYRef = useRef(0);
   const riderAddressInputRef = useRef<HTMLInputElement>(null);
+  const riderSectionRef  = useRef<HTMLDivElement>(null);
+  const bankSectionRef   = useRef<HTMLDivElement>(null);
+  const termsSectionRef  = useRef<HTMLDivElement>(null);
 
   const WIZARD_KEY = `khaiphone_wizard_${params.model}`;
 
@@ -879,7 +882,7 @@ function SellModelPageContent() {
       if (saved) setFormData(JSON.parse(saved));
     } catch {}
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const [errors, setErrors] = useState({ name: false, phone: false, terms: false });
+  const [errors, setErrors] = useState({ name: false, phone: false, terms: false, riderAddress: false, bankName: false, bankAccount: false, bankAccountName: false });
   const [submitting, setSubmitting] = useState(false);
   const [sellMethod, setSellMethod] = useState<"branch" | "rider" | "parcel">("branch");
   const [payMethod, setPayMethod] = useState<"cash" | "transfer">("cash");
@@ -996,8 +999,24 @@ function SellModelPageContent() {
     const name  = (nameRef.current?.value  ?? "").trim();
     const phone = (phoneRef.current?.value ?? "").trim();
     const email = (emailRef.current?.value ?? "").trim();
-    if (!name || !phone || !acceptTerms) {
-      setErrors({ name: !name, phone: !phone, terms: !acceptTerms });
+    const newErrors = {
+      name:            !name,
+      phone:           !phone,
+      terms:           !acceptTerms,
+      riderAddress:    sellMethod === "rider" && !riderAddress.trim(),
+      bankName:        payMethod === "transfer" && !bankName,
+      bankAccount:     payMethod === "transfer" && !bankAccount.trim(),
+      bankAccountName: payMethod === "transfer" && !bankAccountName.trim(),
+    };
+    if (Object.values(newErrors).some(Boolean)) {
+      setErrors(newErrors);
+      const firstEl: HTMLElement | null =
+        newErrors.name            ? nameRef.current :
+        newErrors.phone           ? phoneRef.current :
+        newErrors.riderAddress    ? riderSectionRef.current :
+        (newErrors.bankName || newErrors.bankAccount || newErrors.bankAccountName) ? bankSectionRef.current :
+        newErrors.terms           ? termsSectionRef.current : null;
+      firstEl?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
     setSubmitting(true);
@@ -1576,16 +1595,16 @@ function SellModelPageContent() {
                           <h3 className="font-bold text-black">นัดหมายรับถึงที่</h3>
                         </div>
                         {/* Address */}
-                        <div className="mb-4">
+                        <div ref={riderSectionRef} className="mb-4">
                           <label className="block text-xs font-semibold mb-1.5" style={{ color: "#374151" }}>
                             สถานที่รับเครื่อง <span style={{ color: "#EF4444" }}>*</span>
                           </label>
                           <div className="relative">
                             <textarea
-                              value={riderAddress} onChange={e => setRiderAddress(e.target.value)} rows={2}
+                              value={riderAddress} onChange={e => { setRiderAddress(e.target.value); if (e.target.value.trim()) setErrors(er => ({ ...er, riderAddress: false })); }} rows={2}
                               placeholder="ระบุที่อยู่ เช่น บ้าน ที่ทำงาน หรือห้างที่สะดวก"
                               className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-white outline-none resize-none pr-28"
-                              style={{ border: "1.5px solid #E5E7EB", fontFamily: "inherit" }}
+                              style={{ border: `1.5px solid ${errors.riderAddress ? "#EF4444" : "#E5E7EB"}`, fontFamily: "inherit" }}
                             />
                             <button
                               type="button" onClick={fetchCurrentLocation} disabled={locationLoading}
@@ -1596,6 +1615,7 @@ function SellModelPageContent() {
                               {locationLoading ? "กำลังโหลด..." : "ตำแหน่งปัจจุบัน"}
                             </button>
                           </div>
+                          {errors.riderAddress && <p className="text-xs mt-1" style={{ color: "#EF4444" }}>กรุณากรอกสถานที่รับเครื่อง</p>}
                           <p className="text-xs mt-1.5" style={{ color: "#9CA3AF" }}>เจ้าหน้าที่จะโทรยืนยันก่อนเดินทาง</p>
                         </div>
                         {/* Date + Time */}
@@ -1679,17 +1699,17 @@ function SellModelPageContent() {
 
                       {/* Bank transfer details */}
                       {payMethod === "transfer" && (
-                        <div className="flex flex-col gap-4">
+                        <div ref={bankSectionRef} className="flex flex-col gap-4">
                           {/* Bank grid */}
                           <div>
                             <p className="text-xs font-semibold mb-2.5" style={{ color: "#374151" }}>
                               เลือกธนาคาร <span style={{ color: "#EF4444" }}>*</span>
                             </p>
-                            <div className="grid grid-cols-5 gap-2">
+                            <div className="grid grid-cols-5 gap-2" style={{ outline: errors.bankName ? "1.5px solid #EF4444" : "none", borderRadius: 12, padding: errors.bankName ? 4 : 0 }}>
                               {THAI_BANKS.map(bank => {
                                 const active = bankName === bank.code;
                                 return (
-                                  <button key={bank.code} type="button" onClick={() => setBankName(bank.code)}
+                                  <button key={bank.code} type="button" onClick={() => { setBankName(bank.code); setErrors(er => ({ ...er, bankName: false })); }}
                                     className="flex flex-col items-center gap-1.5 py-2 px-1 rounded-xl"
                                     style={{
                                       border:     `1.5px solid ${active ? "#B8860B" : "#E5E7EB"}`,
@@ -1722,19 +1742,21 @@ function SellModelPageContent() {
                               <label className="block text-xs font-semibold mb-1.5" style={{ color: "#374151" }}>
                                 เลขที่บัญชี <span style={{ color: "#EF4444" }}>*</span>
                               </label>
-                              <input value={bankAccount} onChange={e => setBankAccount(e.target.value.replace(/\D/g, ""))}
+                              <input value={bankAccount} onChange={e => { setBankAccount(e.target.value.replace(/\D/g, "")); if (e.target.value.trim()) setErrors(er => ({ ...er, bankAccount: false })); }}
                                 type="text" inputMode="numeric" maxLength={15} placeholder="xxx-x-xxxxx-x"
                                 className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-white outline-none"
-                                style={{ border: "1.5px solid #E5E7EB", fontFamily: "inherit" }} />
+                                style={{ border: `1.5px solid ${errors.bankAccount ? "#EF4444" : "#E5E7EB"}`, fontFamily: "inherit" }} />
+                              {errors.bankAccount && <p className="text-xs mt-1" style={{ color: "#EF4444" }}>กรุณากรอกเลขที่บัญชี</p>}
                             </div>
                             <div>
                               <label className="block text-xs font-semibold mb-1.5" style={{ color: "#374151" }}>
                                 ชื่อบัญชี <span style={{ color: "#EF4444" }}>*</span>
                               </label>
-                              <input value={bankAccountName} onChange={e => setBankAccountName(e.target.value)}
+                              <input value={bankAccountName} onChange={e => { setBankAccountName(e.target.value); if (e.target.value.trim()) setErrors(er => ({ ...er, bankAccountName: false })); }}
                                 type="text" placeholder="ชื่อ-นามสกุล ตามบัญชีธนาคาร"
                                 className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-white outline-none"
-                                style={{ border: "1.5px solid #E5E7EB", fontFamily: "inherit" }} />
+                                style={{ border: `1.5px solid ${errors.bankAccountName ? "#EF4444" : "#E5E7EB"}`, fontFamily: "inherit" }} />
+                              {errors.bankAccountName && <p className="text-xs mt-1" style={{ color: "#EF4444" }}>กรุณากรอกชื่อบัญชี</p>}
                             </div>
                           </div>
                         </div>
@@ -1791,7 +1813,7 @@ function SellModelPageContent() {
                     </div>
 
                     {/* ยอมรับเงื่อนไข */}
-                    <div className="bg-white rounded-2xl p-5" style={{ border: `1.5px solid ${errors.terms ? "#FCA5A5" : "#E5E7EB"}`, background: errors.terms ? "#FEF2F2" : "#fff" }}>
+                    <div ref={termsSectionRef} className="bg-white rounded-2xl p-5" style={{ border: `1.5px solid ${errors.terms ? "#FCA5A5" : "#E5E7EB"}`, background: errors.terms ? "#FEF2F2" : "#fff" }}>
                       <label className="flex items-start gap-3 cursor-pointer select-none">
                         <button
                           type="button"
