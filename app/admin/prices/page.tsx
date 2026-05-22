@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { ChevronLeft, Plus, Check, Eye, EyeOff, ChevronRight, Layers, X } from "lucide-react";
+import { ChevronLeft, Plus, Check, Eye, EyeOff, ChevronRight, Layers, X, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { fetchProducts, updateProduct, createProduct, bulkUpdateProductPrices } from "@/app/actions/products";
+import { fetchProducts, updateProduct, createProduct, bulkUpdateProductPrices, syncProductsFromLib } from "@/app/actions/products";
 import type { ProductRow } from "@/app/actions/products";
 import { supabase } from "@/lib/supabase";
 
@@ -55,6 +55,24 @@ export default function PricesPage() {
   const [adding, setAdding]       = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | undefined>();
+
+  // Sync
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+
+  async function handleSync() {
+    setSyncing(true);
+    setSyncMsg(null);
+    const res = await syncProductsFromLib();
+    setSyncing(false);
+    if (res.success) {
+      setSyncMsg(res.inserted === 0 ? "✓ รายการครบแล้ว ไม่มีรุ่นใหม่ที่ต้องเพิ่ม" : `✓ เพิ่ม ${res.inserted} รุ่นเรียบร้อย`);
+      if (res.inserted > 0) await load();
+    } else {
+      setSyncMsg(`✗ ${"error" in res ? res.error : "เกิดข้อผิดพลาด"}`);
+    }
+    setTimeout(() => setSyncMsg(null), 5000);
+  }
 
   // Bulk (tier) mode
   const [bulkMode, setBulkMode]   = useState(false);
@@ -202,6 +220,24 @@ export default function PricesPage() {
             <h1 style={{ color: TEXT, fontSize: 22, fontWeight: 700, margin: 0 }}>จัดการราคา</h1>
             <p style={{ color: TEXT3, fontSize: 12, margin: "2px 0 0" }}>แก้ไขราคาประเมินแต่ละรุ่น</p>
           </div>
+          {/* Sync button */}
+          {!bulkMode && (
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              title="เพิ่มรุ่นที่ขาดจาก estimate list เข้า DB"
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "8px 14px", border: `1px solid ${BORDER}`, borderRadius: 10,
+                background: CARD, color: TEXT2, fontSize: 13, cursor: syncing ? "not-allowed" : "pointer",
+                fontFamily: "inherit", opacity: syncing ? 0.6 : 1,
+              }}
+            >
+              <RefreshCw size={15} className={syncing ? "animate-spin" : ""} />
+              {syncing ? "..." : "Sync"}
+            </button>
+          )}
+
           {/* Tier/bulk mode toggle */}
           {!bulkMode ? (
             <button
@@ -227,6 +263,18 @@ export default function PricesPage() {
             </button>
           )}
         </div>
+
+        {/* Sync message */}
+        {syncMsg && (
+          <div style={{
+            marginBottom: 12, padding: "10px 14px", borderRadius: 10, fontSize: 13, fontWeight: 600,
+            background: syncMsg.startsWith("✓") ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.08)",
+            color: syncMsg.startsWith("✓") ? "#059669" : "#DC2626",
+            border: `1px solid ${syncMsg.startsWith("✓") ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)"}`,
+          }}>
+            {syncMsg}
+          </div>
+        )}
 
         {/* Bulk result message */}
         {bulkResult && (

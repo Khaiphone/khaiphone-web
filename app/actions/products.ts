@@ -148,6 +148,45 @@ export async function bulkUpdateProductPrices(
   return { success: true as const, updated: rows.length };
 }
 
+export async function syncProductsFromLib() {
+  await requireAuth();
+  const { iphones, ipads, macbooks, watches } = await import("@/lib/products");
+
+  const categoryMap: Array<{ key: string; list: typeof iphones }> = [
+    { key: "iphone",  list: iphones  },
+    { key: "ipad",    list: ipads    },
+    { key: "macbook", list: macbooks },
+    { key: "watch",   list: watches  },
+  ];
+
+  const supabase = createServerClient();
+  const { data: existing } = await supabase.from("products").select("model, category");
+  const existingKeys = new Set((existing ?? []).map(p => `${p.category}:${p.model}`));
+
+  const toInsert: Array<{ model: string; storage: string; price_good: number; category: string; active: boolean; updated_at: string }> = [];
+  for (const { key, list } of categoryMap) {
+    for (const p of list) {
+      if (p.discontinued) continue;
+      if (!existingKeys.has(`${key}:${p.model}`)) {
+        toInsert.push({
+          model: p.model,
+          storage: p.storage,
+          price_good: p.priceGood,
+          category: key,
+          active: true,
+          updated_at: new Date().toISOString(),
+        });
+      }
+    }
+  }
+
+  if (toInsert.length === 0) return { success: true as const, inserted: 0 };
+
+  const { error } = await supabase.from("products").insert(toInsert);
+  if (error) return { success: false as const, error: error.message };
+  return { success: true as const, inserted: toInsert.length };
+}
+
 export async function createProduct(product: {
   model: string;
   storage: string;
