@@ -35,6 +35,8 @@ function slugToModelName(slug: string): string {
 }
 
 function getIphoneImage(model: string): string | null {
+  // Accessories — no product image
+  if (model.includes("Keyboard") || model.includes("Pencil") || model.includes("Folio")) return null;
   // iPhone
   if (model.includes("iPhone") && model.includes("Air")) return `/iPhone-air.webp`;
   const iphoneM = model.match(/iPhone (\d+)/);
