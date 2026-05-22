@@ -29,33 +29,33 @@ export default async function TradeInPage() {
   const categories: TradeInCategory[] = CATEGORY_META.map(cat => {
     const catProds = products.filter(p => p.category === cat.key);
 
-    const modelMap = new Map<string, {
-      variants: { storage: string; priceGood: number; priceFair: number; pricePoor: number }[];
-      active: boolean;
-    }>();
+    const modelProducts = catProds.map(p => {
+      // Build variants from storage_prices if available, else single variant
+      const storagePrices = p.storage_prices;
+      const variants =
+        storagePrices && Object.keys(storagePrices).length > 0
+          ? Object.entries(storagePrices)
+              .sort(([a], [b]) => parseStorageGB(a) - parseStorageGB(b))
+              .map(([storage, price]) => ({
+                storage,
+                priceGood: price,
+                priceFair: roundPrice(price * 0.88),
+                pricePoor: roundPrice(price * 0.65),
+              }))
+          : [{
+              storage: p.storage,
+              priceGood: p.price_good,
+              priceFair: roundPrice(p.price_good * 0.88),
+              pricePoor: roundPrice(p.price_good * 0.65),
+            }];
 
-    for (const p of catProds) {
-      const variant = {
-        storage: p.storage,
-        priceGood: p.price_good,
-        priceFair: roundPrice(p.price_good * 0.88),
-        pricePoor: roundPrice(p.price_good * 0.65),
+      return {
+        model: p.model,
+        variants,
+        isNew: NEW_MODELS.has(p.model),
+        discontinued: !p.active,
       };
-      const entry = modelMap.get(p.model);
-      if (entry) {
-        if (!entry.variants.find(v => v.storage === p.storage)) entry.variants.push(variant);
-        if (p.active) entry.active = true;
-      } else {
-        modelMap.set(p.model, { variants: [variant], active: p.active });
-      }
-    }
-
-    const modelProducts = Array.from(modelMap.entries()).map(([model, { variants, active }]) => ({
-      model,
-      variants: [...variants].sort((a, b) => parseStorageGB(a.storage) - parseStorageGB(b.storage)),
-      isNew: NEW_MODELS.has(model),
-      discontinued: !active,
-    }));
+    });
 
     return { ...cat, products: modelProducts };
   });
