@@ -42,6 +42,18 @@ export async function fetchActiveProducts(): Promise<ProductRow[]> {
   return data ?? [];
 }
 
+export async function fetchPublicActiveProducts(): Promise<ProductRow[]> {
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("products")
+    .select("*")
+    .eq("active", true)
+    .order("category")
+    .order("price_good", { ascending: false });
+
+  return data ?? [];
+}
+
 export async function fetchProductById(id: string): Promise<ProductRow | null> {
   await requireAuth();
   const supabase = createServerClient();

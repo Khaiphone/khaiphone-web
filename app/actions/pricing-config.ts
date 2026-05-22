@@ -7,8 +7,16 @@ import type { PricingConfig } from "@/lib/pricing-defaults";
 
 export type { PricingOption, PricingGroup, PricingConfig } from "@/lib/pricing-defaults";
 
+export async function fetchPublicPricingConfig(): Promise<PricingConfig> {
+  return _fetchPricingConfig();
+}
+
 export async function fetchPricingConfig(): Promise<PricingConfig> {
   await requireAuth();
+  return _fetchPricingConfig();
+}
+
+async function _fetchPricingConfig(): Promise<PricingConfig> {
   const supabase = createServerClient();
   const { data } = await supabase
     .from("pricing_config")

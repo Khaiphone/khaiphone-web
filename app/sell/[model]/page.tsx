@@ -7,8 +7,8 @@ import { ChevronLeft, Check, Lock, ChevronRight, User, Truck, Calendar, Banknote
 import Header from "../../components/Header";
 import { submitRequest } from "@/app/actions/submit-request";
 import { trackEstimateEvent } from "@/app/actions/analytics";
-import { fetchActiveProducts } from "@/app/actions/products";
-import { fetchPricingConfig } from "@/app/actions/pricing-config";
+import { fetchPublicActiveProducts } from "@/app/actions/products";
+import { fetchPublicPricingConfig } from "@/app/actions/pricing-config";
 import { getModelTypeOpts, DEFAULT_PRICING_CONFIG } from "@/lib/pricing-defaults";
 import type { PricingOption } from "@/lib/pricing-defaults";
 
@@ -733,7 +733,7 @@ function SellModelPageContent() {
 
   useEffect(() => {
     const modelSlug = params.model;
-    Promise.all([fetchActiveProducts(), fetchPricingConfig()]).then(([dbProducts, cfg]) => {
+    Promise.all([fetchPublicActiveProducts(), fetchPublicPricingConfig()]).then(([dbProducts, cfg]) => {
       if (dbProducts.length > 0) {
         setProducts(
           ALL_PRODUCTS.map(p => {
