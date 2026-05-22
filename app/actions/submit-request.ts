@@ -41,6 +41,14 @@ export async function submitRequest(data: SubmissionData) {
 
   const supabase = createServerClient();
 
+  // Idempotency: if this exact orderNumber already exists, the first attempt succeeded
+  // (network timeout lost the response) — return success so the client can navigate to /success
+  const { count: existingCount } = await supabase
+    .from("requests")
+    .select("*", { count: "exact", head: true })
+    .eq("order_number", data.orderNumber);
+  if ((existingCount ?? 0) > 0) return { success: true };
+
   // Fraud: block same phone + model within 30 minutes
   const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
   const { count: dupCount } = await supabase
