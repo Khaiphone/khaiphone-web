@@ -1824,9 +1824,10 @@ function SellModelPageContent() {
                         <ChevronLeft size={15} /> ย้อนกลับ
                       </a>
                       <button type="submit"
+                        disabled={submitting}
                         className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-sm text-white"
-                        style={{ background: "#1d1d1f", boxShadow: "0 1px 3px rgba(0,0,0,0.14), 0 1px 2px rgba(0,0,0,0.08)" }}>
-                        ตรวจสอบและยืนยันข้อมูล →
+                        style={{ background: "#1d1d1f", boxShadow: "0 1px 3px rgba(0,0,0,0.14), 0 1px 2px rgba(0,0,0,0.08)", opacity: submitting ? 0.6 : 1, cursor: submitting ? "not-allowed" : "pointer" }}>
+                        {submitting ? "กำลังส่ง..." : "ตรวจสอบและยืนยันข้อมูล →"}
                       </button>
                     </div>
                   </form>
