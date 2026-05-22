@@ -295,7 +295,7 @@ function SellPageContent() {
 
       {/* Sticky CTA */}
       {selectedModel && !selectedModel.discontinued && (
-        <div className="fixed bottom-16 md:bottom-0 left-0 right-0 z-40 px-4 py-3 bg-white border-t border-gray-100" style={{ transform: "translateZ(0)", WebkitTransform: "translateZ(0)" }}>
+        <div className="sell-sticky-cta fixed left-0 right-0 z-40 px-4 py-3 bg-white border-t border-gray-100" style={{ transform: "translateZ(0)", WebkitTransform: "translateZ(0)" }}>
           <div className="max-w-2xl mx-auto flex items-center gap-4">
             <div className="flex-1 min-w-0">
               <p className="text-xs text-gray-400">รุ่นที่เลือก</p>

@@ -4,6 +4,18 @@
   --gold: #B8860B;
   --gold-light: #D4A017;
   --gold-dark: #8B6508;
+  --browser-bar-h: 0px;
+}
+
+/* Sell-page sticky CTA: sits above MobileNav + Chrome Android's browser bar */
+.sell-sticky-cta {
+  bottom: calc(4rem + var(--browser-bar-h));
+}
+
+@media (min-width: 768px) {
+  .sell-sticky-cta {
+    bottom: 0;
+  }
 }
 
 * {

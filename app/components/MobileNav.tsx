@@ -1,10 +1,29 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import { House, List, Search, MessageCircle, DollarSign } from "lucide-react";
 
 export default function MobileNav() {
   const pathname = usePathname();
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.visualViewport) return;
+    const update = () => {
+      const h = Math.max(
+        0,
+        window.innerHeight - window.visualViewport!.offsetTop - window.visualViewport!.height,
+      );
+      document.documentElement.style.setProperty("--browser-bar-h", `${h}px`);
+    };
+    update();
+    window.visualViewport!.addEventListener("resize", update);
+    window.visualViewport!.addEventListener("scroll", update);
+    return () => {
+      window.visualViewport!.removeEventListener("resize", update);
+      window.visualViewport!.removeEventListener("scroll", update);
+    };
+  }, []);
 
   // Admin has its own BottomTabNav — hide public nav on all admin routes
   if (pathname.startsWith("/admin")) return null;
@@ -24,8 +43,9 @@ export default function MobileNav() {
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200"
+      className="md:hidden fixed left-0 right-0 z-50 bg-white border-t border-gray-200"
       style={{
+        bottom: "var(--browser-bar-h, 0px)",
         paddingBottom: "env(safe-area-inset-bottom)",
         transform: "translateZ(0)",
         WebkitTransform: "translateZ(0)",
