@@ -163,7 +163,7 @@ async function sendNotificationEmail(data: SubmissionData) {
           <tr><td style="padding:4px 12px 4px 0;color:#666;font-size:13px">ช่องทาง</td><td style="font-size:13px">${methodLabel[data.appointment.method] ?? data.appointment.method}</td></tr>
           <tr><td style="padding:4px 12px 4px 0;color:#666;font-size:13px">วันที่</td><td style="font-size:13px">${data.appointment.date}</td></tr>
           <tr><td style="padding:4px 12px 4px 0;color:#666;font-size:13px">เวลา</td><td style="font-size:13px">${data.appointment.time}</td></tr>
-          ${data.appointment.location ? `<tr><td style="padding:4px 12px 4px 0;color:#666;font-size:13px">สถานที่</td><td style="font-size:13px">${data.appointment.location}</td></tr>` : ""}
+          ${data.appointment.location ? `<tr><td style="padding:4px 12px 4px 0;color:#666;font-size:13px">สถานที่</td><td style="font-size:13px">${data.appointment.method === "rider" ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.appointment.location)}" style="color:#B8860B;font-weight:600;text-decoration:none">${data.appointment.location} ↗</a>` : data.appointment.location}</td></tr>` : ""}
         </table>
 
         <h3 style="margin:0 0 10px;font-size:14px;color:#888;text-transform:uppercase;letter-spacing:.5px">การรับเงิน</h3>
