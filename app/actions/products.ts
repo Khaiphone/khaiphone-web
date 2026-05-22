@@ -114,6 +114,40 @@ export async function updateProductDeductions(
   return { success: true as const };
 }
 
+export async function bulkUpdateProductPrices(
+  ids: string[],
+  type: "flat" | "pct",
+  value: number,
+  updatedBy?: string,
+) {
+  await requireAuth();
+  if (!ids.length) return { success: true as const, updated: 0 };
+  const supabase = createServerClient();
+
+  const { data: rows } = await supabase
+    .from("products")
+    .select("id, price_good")
+    .in("id", ids);
+
+  if (!rows?.length) return { success: false as const, error: "ไม่พบรุ่นที่เลือก" };
+
+  const now = new Date().toISOString();
+  let failed = 0;
+  for (const row of rows) {
+    const newPrice = type === "flat"
+      ? Math.max(0, row.price_good + value)
+      : Math.max(0, Math.round(row.price_good * (1 + value / 100)));
+    const { error } = await supabase
+      .from("products")
+      .update({ price_good: newPrice, updated_at: now, ...(updatedBy ? { updated_by: updatedBy } : {}) })
+      .eq("id", row.id);
+    if (error) failed++;
+  }
+
+  if (failed > 0) return { success: false as const, error: `ปรับ ${failed} รุ่นไม่สำเร็จ` };
+  return { success: true as const, updated: rows.length };
+}
+
 export async function createProduct(product: {
   model: string;
   storage: string;
