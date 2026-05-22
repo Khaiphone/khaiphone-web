@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Star, ShieldCheck, ThumbsUp, Award, CheckCircle } from "lucide-react";
 
 const reviews = [
@@ -124,16 +125,8 @@ function ReviewCard({ r }: { r: (typeof reviews)[number] }) {
         className="flex items-center gap-3 rounded-xl p-2.5 mb-3"
         style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
       >
-        <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden" style={{ background: "#2a2a2a" }}>
-          <img
-            src={r.product.image}
-            alt={r.product.model}
-            className="w-full h-full object-contain p-1"
-            onError={e => {
-              const img = e.currentTarget as HTMLImageElement;
-              img.src = "/product-iphone.webp";
-            }}
-          />
+        <div className="relative w-12 h-12 rounded-lg flex-shrink-0 overflow-hidden" style={{ background: "#2a2a2a" }}>
+          <Image src={r.product.image} alt={r.product.model} fill className="object-contain p-1" sizes="48px" />
         </div>
         <div className="min-w-0">
           <p className="text-white text-xs font-semibold leading-snug">{r.product.model}</p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState, useRef, useEffect, Suspense } from "react";
+import Image from "next/image";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { ChevronLeft, Check, Lock, ChevronRight, User, Truck, Calendar, Banknote, ShieldCheck, MapPin, Building2, Clock, Phone, Plus, X } from "lucide-react";
 import Header from "../../components/Header";
@@ -510,7 +511,7 @@ function FocusHeader({ backHref }: { backHref: string }) {
             className="flex-1 flex items-center justify-start gap-1 bg-transparent border-none"
             style={{ cursor: "pointer" }}
           >
-            <img src="/logo-icon.webp" alt="ขายไอโฟน.com" className="h-8 w-auto flex-shrink-0" />
+            <Image src="/logo-icon.webp" alt="ขายไอโฟน.com" width={32} height={32} className="flex-shrink-0 rounded-lg" style={{ width: 32, height: 32 }} />
             <div className="flex flex-col text-left">
               <p className="font-bold text-sm text-black leading-tight">ขายไอโฟน.com</p>
               <p className="text-xs leading-tight" style={{ color: "#9CA3AF" }}>รับซื้อ Apple มือสอง</p>
@@ -692,11 +693,11 @@ function BottomContextBar({ product }: { product: Product }) {
     >
       <div className="max-w-6xl mx-auto flex items-center px-4 gap-3" style={{ height: 56 }}>
         <div
-          className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center"
+          className="relative w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center"
           style={{ background: "#F5F5F7" }}
         >
           {img
-            ? <img src={img} alt={product.model} className="w-full h-full object-contain p-1" />
+            ? <Image src={img} alt={product.model} fill className="object-contain p-1" sizes="32px" />
             : <IconApple className="w-5 h-5" style={{ color: "#999" }} />}
         </div>
         <div className="flex-1 min-w-0">
@@ -1307,9 +1308,9 @@ function SellModelPageContent() {
                   <div className="bg-white rounded-2xl p-5" style={{ border: "1px solid #E5E7EB" }}>
                     <h3 className="font-bold text-black mb-4">ข้อมูลเครื่องที่ประเมิน</h3>
                     <div className="flex items-center gap-4 mb-4">
-                      <div className="flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center" style={{ width: 72, height: 72, background: "#F5F5F7" }}>
+                      <div className="relative flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center" style={{ width: 72, height: 72, background: "#F5F5F7" }}>
                         {getProductImage(product.model)
-                          ? <img src={getProductImage(product.model)!} alt={product.model} className="w-full h-full object-contain p-1.5" />
+                          ? <Image src={getProductImage(product.model)!} alt={product.model} fill className="object-contain p-1.5" sizes="72px" />
                           : <IconApple className="w-10 h-10 opacity-20" />}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -1915,9 +1916,9 @@ function SellModelPageContent() {
                         <a href={backToWizardUrl()} className="text-xs font-semibold" style={{ color: "#B8860B" }}>แก้ไข</a>
                       </div>
                       <div className="flex items-center gap-3 mb-2">
-                        <div className="w-12 h-12 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: "#F5F5F7" }}>
+                        <div className="relative w-12 h-12 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: "#F5F5F7" }}>
                           {getProductImage(product.model)
-                            ? <img src={getProductImage(product.model)!} alt={product.model} className="w-full h-full object-contain p-1" />
+                            ? <Image src={getProductImage(product.model)!} alt={product.model} fill className="object-contain p-1" sizes="48px" />
                             : <IconApple className="w-7 h-7 opacity-20" />}
                         </div>
                         <div className="min-w-0">
@@ -2092,7 +2093,7 @@ function SellModelPageContent() {
                     {(() => {
                       const img = getProductImage(product.model);
                       return img
-                        ? <img src={img} alt={product.model} className="w-16 h-16 object-contain flex-shrink-0" />
+                        ? <Image src={img} alt={product.model} width={64} height={64} className="object-contain flex-shrink-0" sizes="64px" />
                         : <IconApple className="w-14 h-14 flex-shrink-0 opacity-20" />;
                     })()}
                     <div>

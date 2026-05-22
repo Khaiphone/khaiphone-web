@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Phone, Menu, X, ChevronDown } from "lucide-react";
 
@@ -98,7 +99,7 @@ export default function Header() {
       <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <a href="/" className="flex items-center gap-0">
-            <img src="/logo-icon.webp" alt="ขายไอโฟน.com" className="h-10 w-auto flex-shrink-0 md:mr-1" />
+            <Image src="/logo-icon.webp" alt="ขายไอโฟน.com" width={40} height={40} className="flex-shrink-0 md:mr-1 rounded-lg" style={{ width: 40, height: 40 }} />
             <div>
               <div className="font-bold text-lg leading-none text-black">ขายไอโฟน.com</div>
               <div className="text-xs text-gray-400">รับซื้อ-ขาย Apple มือสอง</div>
@@ -157,8 +158,7 @@ export default function Header() {
                         style={{ textDecoration: "none" }}
                       >
                         <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center flex-shrink-0 group-hover:bg-white transition-colors">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={cat.img} alt={cat.name} className="w-8 h-8 object-contain" />
+                          <Image src={cat.img} alt={cat.name} width={32} height={32} className="object-contain" />
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-black leading-tight">{cat.name}</p>
@@ -202,7 +202,7 @@ export default function Header() {
           {/* Drawer header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <div className="flex items-center gap-0">
-              <img src="/logo-icon.webp" alt="ขายไอโฟน.com" className="h-10 w-auto flex-shrink-0" />
+              <Image src="/logo-icon.webp" alt="ขายไอโฟน.com" width={40} height={40} className="flex-shrink-0 rounded-lg" style={{ width: 40, height: 40 }} />
               <div>
                 <div className="font-bold text-base leading-none text-black">ขายไอโฟน.com</div>
                 <div className="text-xs text-gray-400">รับซื้อ-ขาย Apple มือสอง</div>

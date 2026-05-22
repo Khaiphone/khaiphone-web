@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Image from "next/image";
 import { Smartphone, Truck, Search, Banknote } from "lucide-react";
 
 const howToSteps = [
@@ -32,7 +33,7 @@ export default function HowToSellSection() {
           {howToSteps.map(({ step, title, desc, img }) => (
             <div key={step} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
               {img ? (
-                <img src={img} alt={title} className="h-44 w-full object-cover object-top" />
+                <div className="relative h-44 w-full"><Image src={img} alt={title} fill className="object-cover object-top" sizes="(max-width: 768px) 100vw, 25vw" /></div>
               ) : (
                 <div className="h-44 w-full" style={{ background: "#f0f0f0" }} />
               )}
@@ -58,7 +59,7 @@ export default function HowToSellSection() {
             <div key={step} style={{ minWidth: "100%", flexShrink: 0, scrollSnapAlign: "start", padding: "0 1rem", boxSizing: "border-box" }}>
               <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
                 {img ? (
-                  <img src={img} alt={title} className="h-44 w-full object-cover object-top" />
+                  <div className="relative h-44 w-full"><Image src={img} alt={title} fill className="object-cover object-top" sizes="(max-width: 768px) 100vw, 25vw" /></div>
                 ) : (
                   <div className="h-44 w-full" style={{ background: "#f0f0f0" }} />
                 )}

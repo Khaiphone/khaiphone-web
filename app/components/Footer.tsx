@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Phone, MessageCircle, Clock, MapPin } from "lucide-react";
 import CookieReopenButton from "./CookieReopenButton";
 
@@ -42,7 +43,7 @@ export default function Footer() {
           {/* Column 1 — Brand */}
           <div>
             <div className="flex items-center gap-2.5 mb-4">
-              <img src="/logo-icon.webp" alt="ขายไอโฟน.com" className="w-9 h-9 object-contain" />
+              <Image src="/logo-icon.webp" alt="ขายไอโฟน.com" width={36} height={36} className="rounded-lg" style={{ width: 36, height: 36 }} />
               <div>
                 <p className="font-bold text-white text-sm leading-snug">ขายไอโฟน.com</p>
                 <p className="text-xs leading-snug" style={{ color: "#6B7280" }}>รับซื้อ Apple มือสอง</p>

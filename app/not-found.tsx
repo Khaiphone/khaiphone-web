@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Search, ArrowRight, Home, ShoppingBag, HelpCircle, Phone } from "lucide-react";
 import { allProducts } from "@/lib/products";
 
@@ -42,8 +43,7 @@ export default function NotFound() {
       {/* Header */}
       <div style={{ background: "#fff", borderBottom: "1px solid #E5E5E5", padding: "16px 20px" }}>
         <Link href="/" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 10 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-icon.webp" alt="logo" style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover" }} />
+          <Image src="/logo-icon.webp" alt="logo" width={36} height={36} style={{ borderRadius: 8 }} />
           <div>
             <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#111" }}>ขายไอโฟน.com</p>
             <p style={{ margin: 0, fontSize: 11, color: "#B8860B" }}>รับซื้อ Apple ให้ราคาสูง</p>

@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import Header from "../components/Header";
 import { ChevronRight, RotateCcw, Clock, Lock } from "lucide-react";
 import { CATEGORIES, type CategoryKey } from "@/lib/products";
@@ -211,8 +212,8 @@ function SellPageContent() {
                     background: active ? "rgba(184,134,11,0.06)" : "#fff",
                   }}
                 >
-                  <div className="w-full h-20 flex items-center justify-center">
-                    <img src={src} alt={cat.label} className="h-full w-full object-contain" style={{ transform: `scale(${scale})` }} />
+                  <div className="relative w-full h-20 flex items-center justify-center">
+                    <Image src={src} alt={cat.label} fill className="object-contain" style={{ transform: `scale(${scale})` }} sizes="(max-width: 768px) 25vw, 140px" />
                   </div>
                   <span className="font-semibold text-sm mt-1" style={{ color: active ? "#B8860B" : "#374151" }}>
                     {cat.label}
@@ -245,13 +246,13 @@ function SellPageContent() {
                   >
                     {/* Model icon */}
                     <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
+                      className="relative w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
                       style={{ background: active ? "#111" : "#f5f5f7" }}
                     >
                       {(() => {
                         const img = getIphoneImage(p.model);
                         return img ? (
-                          <img src={img} alt={p.model} className="w-full h-full object-contain p-1" />
+                          <Image src={img} alt={p.model} fill className="object-contain p-1" sizes="40px" />
                         ) : (
                           <IconApple className="w-5 h-5" style={{ color: active ? "#B8860B" : "#d1d5db" }} />
                         );

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import { Truck, Banknote, Clock, ShieldCheck, ChevronDown, ChevronRight, Lock } from "lucide-react";
@@ -93,11 +94,12 @@ function BlogSection() {
             >
               {/* Image with category badge */}
               <div className="relative rounded-xl overflow-hidden" style={{ aspectRatio: "16/9" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={post.image}
                   alt={post.title}
-                  className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                  fill
+                  className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                 />
                 <span
                   className="absolute bottom-3 left-3 text-xs font-semibold text-white px-3 py-1 rounded-full"
@@ -198,7 +200,7 @@ export default function Home() {
 
             {/* Mobile: image full width */}
             <div className="md:hidden" style={{ margin: "-56px -1rem 0", width: "calc(100% + 2rem)" }}>
-              <img src="/hero-products.webp" alt="Apple products" className="w-full h-auto block" />
+              <Image src="/hero-products.webp" alt="Apple products" width={1536} height={1024} priority style={{ width: "100%", height: "auto", display: "block" }} sizes="100vw" />
             </div>
 
             {/* Mobile: badges below image */}
@@ -261,9 +263,12 @@ export default function Home() {
         </div>
 
         {/* Desktop: image absolute-positioned from right */}
-        <img
+        <Image
           src="/hero-products.webp"
           alt="iPhone, iPad, MacBook, Apple Watch, AirPods"
+          width={1536}
+          height={1024}
+          priority
           className="hidden md:block absolute pointer-events-none select-none"
           style={{
             right: 0,
@@ -273,6 +278,7 @@ export default function Home() {
             width: "auto",
             maxWidth: "none",
           }}
+          sizes="(max-width: 768px) 0px, 50vw"
         />
       </section>
 
@@ -325,8 +331,8 @@ export default function Home() {
                 className="flex-none w-[28vw] md:w-auto flex flex-col items-center bg-white border border-gray-100 rounded-xl md:rounded-2xl p-3 md:p-6 shadow-sm transition-shadow group"
                 style={{ textDecoration: "none", cursor: p.href ? "pointer" : "default" }}
               >
-                <div className={`w-full h-20 md:h-28 mb-2 md:mb-3 flex items-center justify-center transition-transform ${p.href ? "group-hover:scale-105" : ""}`}>
-                  <img src={p.img} alt={p.name} className="h-full w-full object-contain" style={{ transform: `scale(${p.scale})` }} />
+                <div className={`relative w-full h-20 md:h-28 mb-2 md:mb-3 flex items-center justify-center transition-transform ${p.href ? "group-hover:scale-105" : ""}`}>
+                  <Image src={p.img} alt={p.name} fill className="object-contain" style={{ transform: `scale(${p.scale})` }} sizes="(max-width: 768px) 28vw, 180px" />
                 </div>
                 <p className="font-bold text-black text-xs md:text-lg text-center">{p.name}</p>
                 <p className="text-xs mb-4 hidden md:block" style={{ color: "#6B7280" }}>{p.sub}</p>
