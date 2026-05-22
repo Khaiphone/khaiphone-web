@@ -1,0 +1,35 @@
+import type { MetadataRoute } from "next";
+import { allProducts } from "@/lib/products";
+
+function toSlug(model: string) {
+  return model.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+export default function sitemap(): MetadataRoute.Sitemap {
+  const base = "https://khaiphone.com";
+  const now = new Date();
+
+  const staticPages: MetadataRoute.Sitemap = [
+    { url: `${base}/`,            lastModified: now, changeFrequency: "weekly",  priority: 1.0 },
+    { url: `${base}/sell`,        lastModified: now, changeFrequency: "weekly",  priority: 0.9 },
+    { url: `${base}/how-to-sell`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${base}/faq`,         lastModified: now, changeFrequency: "monthly", priority: 0.6 },
+    { url: `${base}/blog`,        lastModified: now, changeFrequency: "weekly",  priority: 0.7 },
+    { url: `${base}/contact`,     lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${base}/reviews`,     lastModified: now, changeFrequency: "weekly",  priority: 0.6 },
+    { url: `${base}/track`,       lastModified: now, changeFrequency: "monthly", priority: 0.4 },
+    { url: `${base}/privacy`,     lastModified: now, changeFrequency: "yearly",  priority: 0.3 },
+    { url: `${base}/terms`,       lastModified: now, changeFrequency: "yearly",  priority: 0.3 },
+  ];
+
+  const productPages: MetadataRoute.Sitemap = allProducts
+    .filter(p => !p.discontinued)
+    .map(p => ({
+      url: `${base}/sell/${toSlug(p.model)}`,
+      lastModified: now,
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    }));
+
+  return [...staticPages, ...productPages];
+}
