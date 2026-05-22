@@ -1,6 +1,7 @@
 "use server";
 
 import { createServerClient } from "@/lib/supabase-server";
+import { requireAuth } from "@/lib/require-auth";
 
 export interface PriceHistory {
   buyPrice: number;
@@ -32,6 +33,7 @@ function mapRow(row: any): PriceRule {
 }
 
 export async function fetchPriceRules(): Promise<PriceRule[]> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data } = await supabase
     .from("stock_price_rules")
@@ -47,6 +49,7 @@ export async function upsertPriceRule(
   buyPrice: number,
   sellPrice: number,
 ): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
 
@@ -74,6 +77,7 @@ export async function upsertPriceRule(
 }
 
 export async function deletePriceRule(id: string): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
   const supabase = createServerClient();
   const { error } = await supabase.from("stock_price_rules").delete().eq("id", id);
   if (error) return { success: false, error: error.message };
@@ -81,6 +85,7 @@ export async function deletePriceRule(id: string): Promise<{ success: boolean; e
 }
 
 export async function fetchStockModels(): Promise<string[]> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data } = await supabase
     .from("stocks")

@@ -1,6 +1,7 @@
 "use server";
 
 import { createServerClient } from "@/lib/supabase-server";
+import { requireAuth } from "@/lib/require-auth";
 
 export async function trackEstimateEvent(params: {
   sessionId: string;
@@ -123,6 +124,7 @@ function buildFunnel(sessions: Session[], total: number): FunnelStep[] {
 }
 
 export async function fetchEstimateAnalytics(days = 30): Promise<EstimateAnalytics> {
+  await requireAuth();
   const supabase = createServerClient();
   const since = new Date();
   since.setDate(since.getDate() - (days - 1));

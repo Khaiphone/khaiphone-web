@@ -31,6 +31,14 @@ interface SubmissionData {
 }
 
 export async function submitRequest(data: SubmissionData) {
+  // Input length validation
+  if (data.customer.name.length > 100)  return { success: false, error: "ชื่อยาวเกินไป" };
+  if (data.customer.phone.length > 20)  return { success: false, error: "เบอร์โทรไม่ถูกต้อง" };
+  if ((data.customer.email?.length ?? 0) > 200) return { success: false, error: "อีเมลยาวเกินไป" };
+  if (data.model.length > 100)          return { success: false, error: "ชื่อรุ่นยาวเกินไป" };
+  if ((data.notes?.length ?? 0) > 1000) return { success: false, error: "หมายเหตุยาวเกินไป (สูงสุด 1,000 ตัวอักษร)" };
+  if ((data.extraDevices?.length ?? 0) > 10) return { success: false, error: "จำนวนอุปกรณ์เพิ่มเติมเกิน 10 ชิ้น" };
+
   const supabase = createServerClient();
 
   // Fraud: block same phone + model within 30 minutes

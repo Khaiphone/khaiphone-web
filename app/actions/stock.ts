@@ -1,6 +1,7 @@
 "use server";
 
 import { createServerClient } from "@/lib/supabase-server";
+import { requireAuth } from "@/lib/require-auth";
 
 export type StockStatus = "in_stock" | "repairing" | "sold";
 
@@ -20,6 +21,7 @@ export interface StockItem {
 }
 
 export async function fetchStockItems(): Promise<StockItem[]> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data } = await supabase
     .from("requests")
@@ -50,6 +52,7 @@ export async function createManualStock(data: {
   costPrice: number;
   notes?: string;
 }) {
+  await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
   const orderNumber = `MN-${Date.now().toString(36).toUpperCase()}`;
@@ -90,6 +93,7 @@ export async function updateStockItem(
   sellPrice?: number,
   sellDate?: string,
 ) {
+  await requireAuth();
   const supabase = createServerClient();
   const { error } = await supabase
     .from("requests")

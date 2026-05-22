@@ -1,6 +1,7 @@
 "use server";
 
 import { createServerClient } from "@/lib/supabase-server";
+import { requireAuth } from "@/lib/require-auth";
 import type { RequestStatus } from "@/lib/types/admin";
 
 export interface StockRequest {
@@ -55,6 +56,7 @@ function mapRow(row: any, stockMap: Map<string, { id: string; status: string }>)
 }
 
 export async function fetchStockRequests(): Promise<StockRequest[]> {
+  await requireAuth();
   const supabase = createServerClient();
 
   const [requestsRes, stocksRes] = await Promise.all([
@@ -80,6 +82,7 @@ export async function fetchStockRequests(): Promise<StockRequest[]> {
 export async function createStockFromRequest(
   requestId: string,
 ): Promise<{ success: true; stockId: string } | { success: false; error: string }> {
+  await requireAuth();
   const supabase = createServerClient();
 
   const { data: req, error: reqErr } = await supabase
@@ -147,6 +150,7 @@ export async function createStockFromRequest(
 }
 
 export async function fetchStockSummary(): Promise<{ todayRevenue: number; todayProfit: number }> {
+  await requireAuth();
   const supabase = createServerClient();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -164,6 +168,7 @@ export async function fetchStockSummary(): Promise<{ todayRevenue: number; today
 }
 
 export async function fetchRequestStats(): Promise<RequestStats> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data } = await supabase
     .from("requests")

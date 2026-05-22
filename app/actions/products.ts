@@ -1,6 +1,7 @@
 "use server";
 
 import { createServerClient } from "@/lib/supabase-server";
+import { requireAuth } from "@/lib/require-auth";
 import type { PricingGroup } from "@/lib/pricing-defaults";
 
 export type ProductRow = {
@@ -17,6 +18,7 @@ export type ProductRow = {
 };
 
 export async function fetchProducts(): Promise<ProductRow[]> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data } = await supabase
     .from("products")
@@ -28,6 +30,7 @@ export async function fetchProducts(): Promise<ProductRow[]> {
 }
 
 export async function fetchActiveProducts(): Promise<ProductRow[]> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data } = await supabase
     .from("products")
@@ -40,6 +43,7 @@ export async function fetchActiveProducts(): Promise<ProductRow[]> {
 }
 
 export async function fetchProductById(id: string): Promise<ProductRow | null> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data } = await supabase
     .from("products")
@@ -55,6 +59,7 @@ export async function updateProduct(
   updates: { price_good?: number; active?: boolean },
   updatedBy?: string,
 ) {
+  await requireAuth();
   const supabase = createServerClient();
   const { error } = await supabase
     .from("products")
@@ -74,6 +79,7 @@ export async function updateProductStoragePrices(
   storage_prices: Record<string, number> | null,
   updatedBy?: string,
 ) {
+  await requireAuth();
   const supabase = createServerClient();
   const { error } = await supabase
     .from("products")
@@ -93,6 +99,7 @@ export async function updateProductDeductions(
   deductions: PricingGroup[] | null,
   updatedBy?: string,
 ) {
+  await requireAuth();
   const supabase = createServerClient();
   const { error } = await supabase
     .from("products")
@@ -113,6 +120,7 @@ export async function createProduct(product: {
   price_good: number;
   category: string;
 }) {
+  await requireAuth();
   const supabase = createServerClient();
   const { error } = await supabase
     .from("products")

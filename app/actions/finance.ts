@@ -1,6 +1,7 @@
 "use server";
 
 import { createServerClient } from "@/lib/supabase-server";
+import { requireAuth } from "@/lib/require-auth";
 
 export type FinanceRow = {
   id: string;
@@ -97,6 +98,7 @@ function monthLabel(key: string) {
 }
 
 export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string): Promise<FinanceDashboard> {
+  await requireAuth();
   const supabase = createServerClient();
   const [{ data }, { data: expenseData }] = await Promise.all([
     supabase
@@ -183,6 +185,7 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
 }
 
 export async function fetchFinanceIncome(): Promise<FinanceIncome[]> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data } = await supabase
     .from("requests")
@@ -212,6 +215,7 @@ export async function fetchFinanceIncome(): Promise<FinanceIncome[]> {
 }
 
 export async function fetchFinancePurchases(): Promise<FinancePurchase[]> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data } = await supabase
     .from("requests")
@@ -237,6 +241,7 @@ export async function fetchFinanceProfitByModel(): Promise<{
   kpi: { totalRevenue: number; totalCost: number; netProfit: number; margin: number };
   byModel: FinanceProfitByModel[];
 }> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data } = await supabase
     .from("requests")
@@ -283,6 +288,7 @@ export async function fetchFinanceCashFlow(): Promise<{
   summary: FinanceCashFlowSummary;
   entries: FinanceCashFlowEntry[];
 }> {
+  await requireAuth();
   const supabase = createServerClient();
 
   const [{ data: purchases }, { data: sales }] = await Promise.all([
@@ -357,6 +363,7 @@ export type FinanceAuditEntry = {
 
 
 export async function fetchFinanceAudit(): Promise<FinanceAuditEntry[]> {
+  await requireAuth();
   const supabase = createServerClient();
   const [{ data }, { data: expenseLogs }] = await Promise.all([
     supabase
@@ -415,7 +422,8 @@ async function insertAuditLog(data: {
   category?: string;
 }) {
   try {
-    const supabase = createServerClient();
+    await requireAuth();
+  const supabase = createServerClient();
     await supabase.from("finance_audit_logs").insert({
       action: data.action,
       ref_number: data.refNumber ?? "",
@@ -441,6 +449,7 @@ export type Expense = {
 };
 
 export async function fetchExpenses(): Promise<Expense[]> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from("expenses")
@@ -469,6 +478,7 @@ export async function createExpense(data: {
   status: ExpenseStatus;
   notes: string;
 }): Promise<{ success: true; id: string } | { success: false; error: string }> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data: row, error } = await supabase
     .from("expenses")
@@ -497,6 +507,7 @@ export async function updateExpense(
   id: string,
   data: { date: string; product: string; category: string; amount: number; status: ExpenseStatus; notes: string },
 ): Promise<{ success: true } | { success: false; error: string }> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data: existing } = await supabase.from("expenses").select("ref_number").eq("id", id).single();
   const { error } = await supabase
@@ -513,6 +524,7 @@ export async function updateExpense(
 }
 
 export async function deleteExpense(id: string): Promise<{ success: true } | { success: false; error: string }> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data: existing } = await supabase.from("expenses").select("ref_number, product").eq("id", id).single();
   const { error } = await supabase.from("expenses").delete().eq("id", id);
@@ -565,6 +577,7 @@ const DEFAULT_SETTINGS: FinanceSettings = {
 };
 
 export async function fetchFinanceSettings(): Promise<FinanceSettings> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data } = await supabase.from("finance_settings").select("*").eq("id", 1).single();
   if (!data) return DEFAULT_SETTINGS;
@@ -591,6 +604,7 @@ export async function fetchFinanceSettings(): Promise<FinanceSettings> {
 export async function saveFinanceSettings(
   s: FinanceSettings,
 ): Promise<{ success: true } | { success: false; error: string }> {
+  await requireAuth();
   const supabase = createServerClient();
   const { error } = await supabase.from("finance_settings").update({
     business_name:       s.businessName,
@@ -630,6 +644,7 @@ export type FinanceNotification = {
 };
 
 export async function fetchFinanceNotifications(): Promise<FinanceNotification[]> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data } = await supabase
     .from("expenses")
@@ -657,6 +672,7 @@ export type FinanceSearchResult = {
 
 export async function searchFinance(query: string): Promise<FinanceSearchResult[]> {
   if (!query || query.trim().length < 2) return [];
+  await requireAuth();
   const supabase = createServerClient();
   const q = query.trim();
   const [{ data: incomes }, { data: expenses }] = await Promise.all([

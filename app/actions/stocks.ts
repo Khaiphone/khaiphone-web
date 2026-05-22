@@ -1,6 +1,7 @@
 "use server";
 
 import { createServerClient } from "@/lib/supabase-server";
+import { requireAuth } from "@/lib/require-auth";
 import type { StockItem, StockStatus, AuditEntry } from "@/lib/stock/types";
 
 const FIELD_LABELS: Record<string, string> = {
@@ -53,6 +54,7 @@ function mapRow(row: any): StockItem {
 }
 
 export async function fetchStockItems(): Promise<StockItem[]> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from("stocks")
@@ -63,6 +65,7 @@ export async function fetchStockItems(): Promise<StockItem[]> {
 }
 
 export async function fetchStockItem(id: string): Promise<StockItem | null> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data, error } = await supabase.from("stocks").select("*").eq("id", id).single();
   if (error || !data) return null;
@@ -70,6 +73,7 @@ export async function fetchStockItem(id: string): Promise<StockItem | null> {
 }
 
 export async function createStockItem(input: Omit<StockItem, "notes" | "statusLog" | "photos"> & { photos?: string[] }): Promise<{ success: true; id: string } | { success: false; error: string }> {
+  await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
   const year = new Date().getFullYear();
@@ -99,6 +103,7 @@ export async function createStockItem(input: Omit<StockItem, "notes" | "statusLo
 export async function updateStockStatus(
   id: string, status: StockStatus, note: string, by = "admin",
 ): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
   const { data: current } = await supabase.from("stocks").select("status, status_log, audit_log").eq("id", id).single();
@@ -112,6 +117,7 @@ export async function updateStockStatus(
 }
 
 export async function updateStockPrice(id: string, sellingPrice: number): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
   const { data: current } = await supabase.from("stocks").select("selling_price, audit_log").eq("id", id).single();
@@ -133,6 +139,7 @@ export async function verifyStockField(
   field: "imei" | "serial" | "model" | "storage" | "color",
   chosenSource: "inspection" | "stock",
 ): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
   const supabase = createServerClient();
 
   if (chosenSource === "inspection") {
@@ -155,6 +162,7 @@ export async function verifyStockField(
 export async function markStockSold(
   id: string, soldPrice: number, buyerName: string, buyerPhone: string,
 ): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
   const { data: current } = await supabase.from("stocks").select("status_log").eq("id", id).single();
@@ -172,6 +180,7 @@ export interface RevenuePoint { date: string; revenue: number; cost: number; pro
 export interface CategoryPoint { name: string; count: number; value: number; }
 
 export async function fetchRevenueData(): Promise<RevenuePoint[]> {
+  await requireAuth();
   const supabase = createServerClient();
   const since = new Date();
   since.setDate(since.getDate() - 29);
@@ -208,6 +217,7 @@ export async function fetchRevenueData(): Promise<RevenuePoint[]> {
 }
 
 export async function fetchCategoryData(): Promise<CategoryPoint[]> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data } = await supabase
     .from("stocks")
@@ -253,6 +263,7 @@ export interface SoldItem {
 }
 
 export async function fetchSoldItems(): Promise<SoldItem[]> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data } = await supabase
     .from("stocks")
@@ -295,6 +306,7 @@ export interface StockCustomer {
 }
 
 export async function fetchStockCustomers(): Promise<StockCustomer[]> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data } = await supabase
     .from("stocks")
@@ -358,6 +370,7 @@ export interface StockReportData {
 }
 
 export async function fetchStockReportData(): Promise<StockReportData> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data } = await supabase
     .from("stocks")
@@ -455,6 +468,7 @@ export async function updateStockItem(
     sellerName?: string; sellerPhone?: string; sourceChannel?: string;
   }
 ): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
   const fieldMap: Record<string, string> = {
@@ -495,6 +509,7 @@ export async function updateStockItem(
 }
 
 export async function updateStockPhotos(id: string, photos: string[]): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
   const { data: current } = await supabase.from("stocks").select("photos, audit_log").eq("id", id).single();
@@ -510,6 +525,7 @@ export async function updateStockPhotos(id: string, photos: string[]): Promise<{
 }
 
 export async function logDocumentView(id: string, docLabel: string): Promise<void> {
+  await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -521,6 +537,7 @@ export async function logDocumentView(id: string, docLabel: string): Promise<voi
 }
 
 export async function updateStockDocuments(id: string, documents: string[]): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
   const supabase = createServerClient();
   const { error } = await supabase.from("stocks").update({ documents, updated_at: new Date().toISOString() }).eq("id", id);
   if (error) return { success: false, error: error.message };
@@ -528,6 +545,7 @@ export async function updateStockDocuments(id: string, documents: string[]): Pro
 }
 
 export async function deleteStockItem(id: string): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
   const supabase = createServerClient();
   const { error } = await supabase.from("stocks").delete().eq("id", id);
   if (error) return { success: false, error: error.message };
@@ -544,6 +562,7 @@ export interface AuditRow {
 }
 
 export async function fetchAllAuditLog(): Promise<AuditRow[]> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data } = await supabase
     .from("stocks")
@@ -581,6 +600,7 @@ export async function fetchAllAuditLog(): Promise<AuditRow[]> {
 }
 
 export async function fetchRequestDocuments(requestRef: string): Promise<{ contractUrl?: string; receiptUrl?: string } | null> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data } = await supabase
     .from("requests")

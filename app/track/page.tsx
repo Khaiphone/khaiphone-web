@@ -56,11 +56,11 @@ export default function TrackPage() {
         return;
       }
 
-      // Order exists but phone mismatch → specific error
+      // Intentionally show generic error (not revealing whether order exists)
       const exists = await checkOrderExists(normalizedOrder);
       if (exists) {
         setLoading(false);
-        setError("พบเลขคำขอแล้ว แต่เบอร์โทรไม่ตรง กรุณาตรวจสอบเบอร์ที่ลงทะเบียนไว้");
+        setError("ไม่พบข้อมูลที่ตรงกัน กรุณาตรวจสอบเลขคำขอและเบอร์โทรอีกครั้ง");
         return;
       }
     } catch (err) {

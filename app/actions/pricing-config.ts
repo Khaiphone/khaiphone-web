@@ -1,12 +1,14 @@
 "use server";
 
 import { createServerClient } from "@/lib/supabase-server";
+import { requireAuth } from "@/lib/require-auth";
 import { DEFAULT_PRICING_CONFIG } from "@/lib/pricing-defaults";
 import type { PricingConfig } from "@/lib/pricing-defaults";
 
 export type { PricingOption, PricingGroup, PricingConfig } from "@/lib/pricing-defaults";
 
 export async function fetchPricingConfig(): Promise<PricingConfig> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data } = await supabase
     .from("pricing_config")
@@ -35,6 +37,7 @@ export async function fetchPricingConfig(): Promise<PricingConfig> {
 }
 
 export async function savePricingConfig(config: PricingConfig) {
+  await requireAuth();
   const supabase = createServerClient();
   const { error } = await supabase
     .from("pricing_config")

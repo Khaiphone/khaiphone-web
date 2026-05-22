@@ -1,6 +1,7 @@
 "use server";
 
 import { createServerClient } from "@/lib/supabase-server";
+import { requireAuth } from "@/lib/require-auth";
 import { broadcastRequestUpdate } from "@/lib/broadcast";
 import type { AdminRequest, RequestStatus, SellMethod, PayMethod } from "@/lib/types/admin";
 import type { Permission } from "@/lib/admin-permissions";
@@ -61,6 +62,7 @@ function mapRow(row: any): AdminRequest {
 
 // ─── Fetch all requests (owner) or assigned-only (staff) ─────────────────────
 export async function fetchRequests(assignedToUserId?: string): Promise<AdminRequest[]> {
+  await requireAuth();
   const supabase = createServerClient();
   let query = supabase.from("requests").select("*")
     .neq("source", "manual")
@@ -78,6 +80,7 @@ export async function fetchDashboardData(userId: string): Promise<{
   requests: AdminRequest[];
   staffUserId: string | undefined;
 }> {
+  await requireAuth();
   const supabase = createServerClient();
 
   const [profileRes, reqRes] = await Promise.all([
@@ -119,6 +122,7 @@ export async function createRequest(data: {
   source: "line" | "phone" | "facebook";
   notes?: string;
 }): Promise<{ success: true; orderNumber: string; id: string } | { success: false; error: string }> {
+  await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
   const orderNumber = `KP-${Date.now().toString(36).toUpperCase().slice(-6)}`;
@@ -165,6 +169,7 @@ export async function createRequest(data: {
 
 // ─── Assign request to staff ──────────────────────────────────────────────────
 export async function assignRequest(id: string, userId: string | null, name: string | null) {
+  await requireAuth();
   const supabase = createServerClient();
   const { error } = await supabase
     .from("requests")
@@ -176,6 +181,7 @@ export async function assignRequest(id: string, userId: string | null, name: str
 
 // ─── Fetch single request ─────────────────────────────────────────────────────
 export async function fetchRequest(id: string): Promise<AdminRequest | null> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from("requests")
@@ -221,6 +227,7 @@ export async function updateStatus(
   status: RequestStatus,
   note: string,
 ) {
+  await requireAuth();
   console.log("[updateStatus] id:", id, "→", status);
   const supabase = createServerClient();
 
@@ -311,6 +318,7 @@ export async function addNote(
   text: string,
   showToCustomer: boolean,
 ) {
+  await requireAuth();
   const supabase = createServerClient();
 
   const { data: current } = await supabase
@@ -343,6 +351,7 @@ export async function updateAppointment(
   id: string,
   appt: { date: string; time: string; location: string; method: string },
 ) {
+  await requireAuth();
   const supabase = createServerClient();
   const { data: updated, error } = await supabase
     .from("requests")
@@ -365,6 +374,7 @@ export async function updatePayment(
   id: string,
   pay: { method: string; bankName?: string; accountName?: string; accountNumber?: string },
 ) {
+  await requireAuth();
   const supabase = createServerClient();
   const { data: updated, error } = await supabase
     .from("requests")
@@ -384,6 +394,7 @@ export async function updatePayment(
 
 // ─── Mark contract signed ─────────────────────────────────────────────────────
 export async function markContractSigned(id: string) {
+  await requireAuth();
   const supabase = createServerClient();
   const signedAt = new Date().toISOString();
   const { error } = await supabase
@@ -396,6 +407,7 @@ export async function markContractSigned(id: string) {
 
 // ─── Save payment slip URL ────────────────────────────────────────────────────
 export async function savePaymentSlip(id: string, slipUrl: string) {
+  await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
   const { error } = await supabase
@@ -412,6 +424,7 @@ export async function updatePrice(
   estimatedPrice: number,
   actualPrice?: number,
 ) {
+  await requireAuth();
   const supabase = createServerClient();
   const { data: updated, error } = await supabase
     .from("requests")
@@ -429,6 +442,7 @@ export async function updatePrice(
 
 // ─── Update device color ──────────────────────────────────────────────────────
 export async function updateDeviceColor(id: string, color: string) {
+  await requireAuth();
   const supabase = createServerClient();
   const { error } = await supabase
     .from("requests")
@@ -444,6 +458,7 @@ export async function saveContractUrls(
   contractUrl: string,
   receiptUrl: string,
 ) {
+  await requireAuth();
   const supabase = createServerClient();
   const { error } = await supabase
     .from("requests")

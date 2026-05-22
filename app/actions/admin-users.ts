@@ -1,6 +1,7 @@
 "use server";
 
 import { createServerClient } from "@/lib/supabase-server";
+import { requireAuth } from "@/lib/require-auth";
 import type { Permission } from "@/lib/admin-permissions";
 export type { Permission } from "@/lib/admin-permissions";
 
@@ -53,6 +54,7 @@ export async function fetchMyRole(userId: string): Promise<AdminRole> {
 }
 
 export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
+  await requireAuth();
   const supabase = createServerClient();
   const { data } = await supabase
     .from("admin_users")
@@ -62,6 +64,7 @@ export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
 }
 
 export async function updateAdminPermissions(id: string, permissions: Permission[]) {
+  await requireAuth();
   const supabase = createServerClient();
   const { error } = await supabase.from("admin_users").update({ permissions }).eq("id", id);
   if (error) return { success: false as const, error: error.message };
@@ -80,6 +83,7 @@ export async function inviteStaff(
   name: string,
   role: AdminRole,
 ): Promise<{ success: true; tempPassword?: string } | { success: false; error: string }> {
+  await requireAuth();
   const supabase = createServerClient();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
@@ -129,6 +133,7 @@ export async function updateAdminUser(
   id: string,
   updates: { name?: string; role?: AdminRole; active?: boolean },
 ) {
+  await requireAuth();
   const supabase = createServerClient();
   const { error } = await supabase
     .from("admin_users")
@@ -139,6 +144,7 @@ export async function updateAdminUser(
 }
 
 export async function resetPasswordDirect(userId: string): Promise<{ success: true; tempPassword: string } | { success: false; error: string }> {
+  await requireAuth();
   const supabase = createServerClient();
   const tempPassword = generateTempPassword();
   const { error } = await supabase.auth.admin.updateUserById(userId, { password: tempPassword });
@@ -157,6 +163,7 @@ export async function sendPasswordReset(email: string): Promise<{ success: boole
 }
 
 export async function deleteAdminUser(id: string, userId: string) {
+  await requireAuth();
   const supabase = createServerClient();
   // Delete from admin_users first
   const { error: dbError } = await supabase.from("admin_users").delete().eq("id", id);

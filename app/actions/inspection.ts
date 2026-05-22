@@ -1,11 +1,13 @@
 "use server";
 
 import { createServerClient } from "@/lib/supabase-server";
+import { requireAuth } from "@/lib/require-auth";
 import { broadcastRequestUpdate } from "@/lib/broadcast";
 import type { InspectionData, RequestStatus } from "@/lib/types/admin";
 
 // ─── Admin: บันทึกเวลาถึง ─────────────────────────────────────────────────────
 export async function recordArrival(id: string) {
+  await requireAuth();
   const supabase = createServerClient();
   const arrivedAt = new Date().toISOString();
 
@@ -34,6 +36,7 @@ export async function saveInspection(
   newStatus: "contracting" | "price_negotiation" | "rejected",
   deviceColor?: string,
 ) {
+  await requireAuth();
   const supabase = createServerClient();
 
   const { data: current } = await supabase
@@ -74,6 +77,7 @@ export async function saveInspection(
 
 // ─── Admin: บันทึกรูปภาพหลักฐาน ──────────────────────────────────────────────
 export async function saveInspectionPhotos(id: string, photos: string[]) {
+  await requireAuth();
   const supabase = createServerClient();
 
   const { data: current } = await supabase
@@ -94,8 +98,8 @@ export async function saveInspectionPhotos(id: string, photos: string[]) {
   return { success: true as const };
 }
 
-// ─── Admin: ตอบแทนลูกค้า ──────────────────────────────────────────────────────
-export async function respondToNegotiation(
+// ─── Internal: shared logic for negotiation response ─────────────────────────
+async function _respondToNegotiation(
   id: string,
   accepted: boolean,
   respondedBy: "customer" | "staff",
@@ -144,6 +148,16 @@ export async function respondToNegotiation(
   return { success: true as const, statusLog: newLog, newStatus };
 }
 
+// ─── Admin: exported wrapper with auth ───────────────────────────────────────
+export async function respondToNegotiation(
+  id: string,
+  accepted: boolean,
+  respondedBy: "customer" | "staff",
+) {
+  await requireAuth();
+  return _respondToNegotiation(id, accepted, respondedBy);
+}
+
 // ─── Public: ลูกค้ายืนยัน/ปฏิเสธราคา (verify phone) ─────────────────────────
 export async function customerRespondToNegotiation(
   orderNumber: string,
@@ -165,5 +179,5 @@ export async function customerRespondToNegotiation(
   if (dbPhone !== inputPhone) return { success: false as const, error: "เบอร์โทรไม่ตรง" };
   if (data.status !== "price_negotiation") return { success: false as const, error: "ไม่อยู่ในสถานะรอยืนยัน" };
 
-  return respondToNegotiation(data.id, accepted, "customer");
+  return _respondToNegotiation(data.id, accepted, "customer");
 }
