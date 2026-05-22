@@ -879,6 +879,7 @@ function SellModelPageContent() {
     } catch {}
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [errors, setErrors] = useState({ name: false, phone: false, terms: false });
+  const [submitting, setSubmitting] = useState(false);
   const [sellMethod, setSellMethod] = useState<"branch" | "rider" | "parcel">("branch");
   const [payMethod, setPayMethod] = useState<"cash" | "transfer">("cash");
   const [appointDate, setAppointDate] = useState(() => {
@@ -990,6 +991,7 @@ function SellModelPageContent() {
 
   async function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (submitting) return;
     const name  = (nameRef.current?.value  ?? "").trim();
     const phone = (phoneRef.current?.value ?? "").trim();
     const email = (emailRef.current?.value ?? "").trim();
@@ -997,6 +999,7 @@ function SellModelPageContent() {
       setErrors({ name: !name, phone: !phone, terms: !acceptTerms });
       return;
     }
+    setSubmitting(true);
     const sellerData = { name, phone, email };
     setFormData(sellerData);
     try { sessionStorage.setItem("kp_seller", JSON.stringify(sellerData)); } catch {}
@@ -2200,9 +2203,10 @@ function SellModelPageContent() {
               <p className="font-bold text-lg leading-tight" style={{ color: "#B8860B" }}>฿{totalBundlePrice.toLocaleString("th-TH")}</p>
             </div>
             <button type="submit" form="sell-form"
+              disabled={submitting}
               className="flex-1 flex items-center justify-center font-semibold text-white text-sm rounded-2xl"
-              style={{ background: "#1d1d1f", height: 44, boxShadow: "0 1px 3px rgba(0,0,0,0.14)" }}>
-              ตรวจสอบและยืนยันข้อมูล →
+              style={{ background: "#1d1d1f", height: 44, boxShadow: "0 1px 3px rgba(0,0,0,0.14)", opacity: submitting ? 0.6 : 1, cursor: submitting ? "not-allowed" : "pointer" }}>
+              {submitting ? "กำลังส่ง..." : "ตรวจสอบและยืนยันข้อมูล →"}
             </button>
           </div>
         </div>
