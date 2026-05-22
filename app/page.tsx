@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+
+export const revalidate = 3600;
 import Image from "next/image";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -220,7 +222,7 @@ export default async function Home() {
 
             {/* Mobile: image full width */}
             <div className="md:hidden" style={{ margin: "-56px -1rem 0", width: "calc(100% + 2rem)" }}>
-              <Image src="/hero-products.webp" alt="Apple products" width={1536} height={1024} priority style={{ width: "100%", height: "auto", display: "block" }} sizes="100vw" />
+              <Image src="/hero-products.webp" alt="Apple products" width={1536} height={1024} priority fetchPriority="high" style={{ width: "100%", height: "auto", display: "block" }} sizes="100vw" />
             </div>
 
             {/* Mobile: badges below image */}
@@ -289,6 +291,7 @@ export default async function Home() {
           width={1536}
           height={1024}
           priority
+          fetchPriority="high"
           className="hidden md:block absolute pointer-events-none select-none"
           style={{
             right: 0,
