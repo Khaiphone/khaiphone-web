@@ -1851,7 +1851,7 @@ function SellModelPageContent() {
                       </h3>
                       <textarea
                         value={notes} onChange={e => setNotes(e.target.value)} rows={3}
-                        placeholder="สะดวกช่วงไหน สามารถโทรติดต่อครั้งนี้ได้เลยค่ะ"
+                        placeholder="เช่น สะดวกให้ติดต่อกลับเวลาไหน หรืออยู่ตึกไหน"
                         className="w-full px-4 py-3 rounded-xl text-sm bg-white outline-none resize-none mt-3"
                         style={{ border: "1.5px solid #E5E7EB", fontFamily: "inherit" }}
                       />
