@@ -7,6 +7,7 @@ export function compressImage(file: File): Promise<File> {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const img = new Image();
+      img.onerror = () => resolve(file);
       img.onload = () => {
         const scale = Math.min(1, MAX_DIMENSION / Math.max(img.width, img.height));
         const w = Math.round(img.width  * scale);
