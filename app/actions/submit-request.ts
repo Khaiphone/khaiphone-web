@@ -64,7 +64,7 @@ export async function submitRequest(data: SubmissionData) {
 
   const conditionDetails = Object.values(data.selections).filter(Boolean);
 
-  const { error } = await supabase.from("requests").insert({
+  const { data: inserted, error } = await supabase.from("requests").insert({
     order_number:           data.orderNumber,
     customer_name:          data.customer.name,
     customer_phone:         data.customer.phone,
@@ -89,7 +89,7 @@ export async function submitRequest(data: SubmissionData) {
     source: "website",
     customer_notes:  data.notes        || null,
     extra_devices:   data.extraDevices?.length ? data.extraDevices : [],
-  });
+  }).select("id").single();
 
   if (error) {
     console.error("submitRequest error:", error);
@@ -97,7 +97,7 @@ export async function submitRequest(data: SubmissionData) {
   }
 
   // Send notification email — fire-and-forget (don't block the response)
-  sendNotificationEmail(data).catch(e => console.error("email error:", e));
+  sendNotificationEmail(data, inserted?.id).catch(e => console.error("email error:", e));
 
   return { success: true };
 }
@@ -106,7 +106,7 @@ function formatPrice(n: number) {
   return n.toLocaleString("th-TH") + " บาท";
 }
 
-async function sendNotificationEmail(data: SubmissionData) {
+async function sendNotificationEmail(data: SubmissionData, uuid?: string) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return;
 
@@ -177,7 +177,7 @@ async function sendNotificationEmail(data: SubmissionData) {
         ${data.notes ? `<h3 style="margin:0 0 6px;font-size:14px;color:#888;text-transform:uppercase;letter-spacing:.5px">หมายเหตุ</h3><p style="margin:0 0 20px;font-size:13px;color:#444">${data.notes}</p>` : ""}
 
         <div style="background:#F5F5F7;border-radius:8px;padding:12px 16px;text-align:center">
-          <a href="https://khaiphone.com/admin/requests/${data.orderNumber}"
+          <a href="https://khaiphone.com/admin/requests/${uuid ?? data.orderNumber}"
              style="color:#B8860B;font-weight:600;font-size:13px;text-decoration:none">
             ดูคำขอในระบบ →
           </a>
