@@ -109,6 +109,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const [showStatus, setShowStatus] = useState(false);
   const [saving,     setSaving]     = useState<string | null>(null);
   const [saveError,  setSaveError]  = useState<string | null>(null);
+  const [phoneCopied, setPhoneCopied] = useState(false);
 
   // Editable: price
   const [editPrice,   setEditPrice]   = useState(false);
@@ -977,9 +978,19 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
 
       {/* Bottom Action Bar */}
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: CARD, borderTop: `1px solid ${BORDER}`, padding: "10px 16px", paddingBottom: "calc(env(safe-area-inset-bottom) + 10px)", zIndex: 20, display: "grid", gridTemplateColumns: "1fr 2fr", gap: "8px" }}>
-        <a href={tel} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "3px", padding: "10px 0", background: "#F5F5F7", borderRadius: "12px", color: TEXT2, textDecoration: "none", fontSize: "12px", fontWeight: 600, minHeight: "52px", touchAction: "manipulation", border: `1px solid ${BORDER}` }}>
+        <a
+          href={tel}
+          onClick={e => {
+            if (window.innerWidth >= 768) {
+              e.preventDefault();
+              navigator.clipboard.writeText(request.customer.phone.replace(/-/g, ""));
+              setPhoneCopied(true);
+              setTimeout(() => setPhoneCopied(false), 2000);
+            }
+          }}
+          style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "3px", padding: "10px 0", background: phoneCopied ? "#E6F4EA" : "#F5F5F7", borderRadius: "12px", color: phoneCopied ? "#1B7F3A" : TEXT2, textDecoration: "none", fontSize: "12px", fontWeight: 600, minHeight: "52px", touchAction: "manipulation", border: `1px solid ${phoneCopied ? "#A8D5B5" : BORDER}`, transition: "all 150ms" }}>
           <Phone size={18} />
-          <span>โทร</span>
+          <span>{phoneCopied ? "คัดลอกแล้ว!" : "โทร / คัดลอก"}</span>
         </a>
         <button
           onClick={() => setShowStatus(true)}
