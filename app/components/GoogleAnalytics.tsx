@@ -4,7 +4,7 @@ import Script from "next/script";
 import { useEffect } from "react";
 import { STORAGE_KEY, CONSENT_SAVED_EVENT } from "./CookieConsent";
 
-export const GA_ID = "G-91M262J90K";
+export const GA_ID = "G-LN5FGDX3XM";
 
 declare global {
   interface Window {
