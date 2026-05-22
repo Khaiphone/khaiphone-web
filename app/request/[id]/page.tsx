@@ -344,6 +344,7 @@ function RequestDetailInner() {
 
   const currentStepRef = useRef<HTMLDivElement | null>(null);
   const prevDoneUpTo   = useRef(-1);
+  const notesRef       = useRef<HTMLDivElement | null>(null);
 
   const [sub, setSub] = useState<SubmissionData | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "unauthorized" | "notfound">("loading");
@@ -510,6 +511,13 @@ function RequestDetailInner() {
       setNegotiating("error");
     }
   }
+
+  // Scroll to notes section if there are customer-visible notes
+  useEffect(() => {
+    if (customerNotes.length > 0 && notesRef.current) {
+      setTimeout(() => notesRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 600);
+    }
+  }, [customerNotes]);
 
   // Redirect after a short delay so user can read the message
   useEffect(() => {
@@ -738,7 +746,7 @@ function RequestDetailInner() {
 
             {/* Staff notes visible to customer */}
             {customerNotes.length > 0 && (
-              <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid #FDE68A" }}>
+              <div ref={notesRef} className="rounded-2xl overflow-hidden" style={{ border: "1px solid #FDE68A" }}>
                 <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: "1px solid #FDE68A", background: "#FFFBEB" }}>
                   <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(184,134,11,0.12)" }}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
