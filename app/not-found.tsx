@@ -170,23 +170,21 @@ export default function NotFound() {
               ลิงก์ด่วน
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
-              {QUICK_LINKS.map(({ href, icon: Icon, label, external }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    padding: "8px 14px", borderRadius: 99,
-                    background: "#fff", border: "1px solid #E5E5E5",
-                    fontSize: 13, fontWeight: 500, color: "#374151",
-                    textDecoration: "none",
-                  }}
-                >
-                  <Icon size={14} style={{ color: "#B8860B" }} />
-                  {label}
-                </Link>
-              ))}
+              {QUICK_LINKS.map(({ href, icon: Icon, label, external }) => {
+                const style: React.CSSProperties = {
+                  display: "flex", alignItems: "center", gap: 6,
+                  padding: "8px 14px", borderRadius: 99,
+                  background: "#fff", border: "1px solid #E5E5E5",
+                  fontSize: 13, fontWeight: 500, color: "#374151",
+                  textDecoration: "none",
+                };
+                const content = <><Icon size={14} style={{ color: "#B8860B" }} />{label}</>;
+                return external ? (
+                  <a key={href} href={href} target="_blank" rel="noopener noreferrer" style={style}>{content}</a>
+                ) : (
+                  <Link key={href} href={href} style={style}>{content}</Link>
+                );
+              })}
             </div>
           </div>
 
