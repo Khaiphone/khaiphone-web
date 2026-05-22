@@ -169,16 +169,17 @@ export default function NotFound() {
             <p style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 14, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
               ลิงก์ด่วน
             </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
+            <div style={{ display: "flex", flexWrap: "nowrap", gap: 6, justifyContent: "center", overflowX: "auto" }}>
               {QUICK_LINKS.map(({ href, icon: Icon, label, external }) => {
+                const isLine = href.includes("line.me");
                 const style: React.CSSProperties = {
-                  display: "flex", alignItems: "center", gap: 6,
-                  padding: "8px 14px", borderRadius: 99,
+                  display: "flex", alignItems: "center", gap: 5,
+                  padding: "7px 12px", borderRadius: 99, flexShrink: 0,
                   background: "#fff", border: "1px solid #E5E5E5",
-                  fontSize: 13, fontWeight: 500, color: "#374151",
-                  textDecoration: "none",
+                  fontSize: 12, fontWeight: 500, color: "#374151",
+                  textDecoration: "none", whiteSpace: "nowrap",
                 };
-                const content = <><Icon size={14} style={{ color: "#B8860B" }} />{label}</>;
+                const content = <><Icon size={13} style={{ color: isLine ? "#06C755" : "#B8860B" }} />{label}</>;
                 return external ? (
                   <a key={href} href={href} target="_blank" rel="noopener noreferrer" style={style}>{content}</a>
                 ) : (
