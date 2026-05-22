@@ -2,7 +2,8 @@ export type PricingOption = { label: string; sub?: string; ded: number };
 export type PricingGroup  = { key: string; title: string; options: PricingOption[] };
 export type PricingConfig = { storageMultiplier: number; groups: PricingGroup[] };
 
-export function getModelTypeOpts(model: string): PricingOption[] {
+// Returns null for non-iPhone — callers should fall back to the DB pricing config.
+export function getModelTypeOpts(model: string): PricingOption[] | null {
   const gen = parseInt(model.match(/iPhone (\d+)/)?.[1] ?? "0", 10);
   if (gen >= 14) {
     return [
@@ -16,11 +17,8 @@ export function getModelTypeOpts(model: string): PricingOption[] {
       { label: "เครื่องนอก / ไม่ทราบ", sub: "ราคาเริ่มต้น", ded: -1500 },
     ];
   }
-  // iPad / MacBook / Watch
-  return [
-    { label: "เครื่องศูนย์ไทย",       ded: 0     },
-    { label: "เครื่องนอก / ไม่ทราบ", ded: -1500 },
-  ];
+  // iPad / MacBook / Watch → use deductions from DB config (admin-controlled)
+  return null;
 }
 
 export const DEFAULT_PRICING_CONFIG: PricingConfig = {
@@ -29,9 +27,8 @@ export const DEFAULT_PRICING_CONFIG: PricingConfig = {
     {
       key: "model_type", title: "Model ของเครื่อง",
       options: [
-        { label: "เครื่องศูนย์ไทย TH/A",                  sub: "ราคาสูงสุด",         ded: 0     },
-        { label: "เครื่องศูนย์ไทย ZP/A รุ่น 14,15,16,17", sub: "ราคาใกล้เคียง TH/A", ded: -500  },
-        { label: "เครื่องนอก / ไม่ทราบ",                  sub: "ราคาเริ่มต้น",        ded: -1500 },
+        { label: "เครื่องศูนย์ไทย",       ded: 0     },
+        { label: "เครื่องนอก / ไม่ทราบ", ded: -1500 },
       ],
     },
     {
