@@ -17,32 +17,42 @@ function roundPrice(n: number) {
   return Math.round(n / 500) * 500;
 }
 
+function parseStorageGB(s: string): number {
+  const m = s.match(/(\d+)\s*(TB|GB)/i);
+  if (!m) return 0;
+  return m[2].toUpperCase() === "TB" ? parseInt(m[1]) * 1024 : parseInt(m[1]);
+}
+
 export default async function TradeInPage() {
   const products = await fetchPublicActiveProducts();
 
-  // Group by model within each category, combine storage variants
   const categories: TradeInCategory[] = CATEGORY_META.map(cat => {
     const catProds = products.filter(p => p.category === cat.key);
 
-    // Deduplicate by model — combine storage labels, take max price_good
-    const modelMap = new Map<string, { storages: string[]; maxPrice: number; active: boolean }>();
+    const modelMap = new Map<string, {
+      variants: { storage: string; priceGood: number; priceFair: number; pricePoor: number }[];
+      active: boolean;
+    }>();
+
     for (const p of catProds) {
+      const variant = {
+        storage: p.storage,
+        priceGood: p.price_good,
+        priceFair: roundPrice(p.price_good * 0.88),
+        pricePoor: roundPrice(p.price_good * 0.65),
+      };
       const entry = modelMap.get(p.model);
       if (entry) {
-        if (!entry.storages.includes(p.storage)) entry.storages.push(p.storage);
-        if (p.price_good > entry.maxPrice) entry.maxPrice = p.price_good;
+        if (!entry.variants.find(v => v.storage === p.storage)) entry.variants.push(variant);
         if (p.active) entry.active = true;
       } else {
-        modelMap.set(p.model, { storages: [p.storage], maxPrice: p.price_good, active: p.active });
+        modelMap.set(p.model, { variants: [variant], active: p.active });
       }
     }
 
-    const modelProducts = Array.from(modelMap.entries()).map(([model, { storages, maxPrice, active }]) => ({
+    const modelProducts = Array.from(modelMap.entries()).map(([model, { variants, active }]) => ({
       model,
-      storage: storages.join(" / "),
-      priceGood: maxPrice,
-      priceFair: roundPrice(maxPrice * 0.88),
-      pricePoor: roundPrice(maxPrice * 0.65),
+      variants: [...variants].sort((a, b) => parseStorageGB(a.storage) - parseStorageGB(b.storage)),
       isNew: NEW_MODELS.has(model),
       discontinued: !active,
     }));

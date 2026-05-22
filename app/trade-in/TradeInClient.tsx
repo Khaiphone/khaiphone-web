@@ -22,12 +22,16 @@ function formatPrice(n: number) {
 
 type Condition = "good" | "fair" | "poor";
 
-export type TradeInProduct = {
-  model: string;
+export type TradeInVariant = {
   storage: string;
   priceGood: number;
   priceFair: number;
   pricePoor: number;
+};
+
+export type TradeInProduct = {
+  model: string;
+  variants: TradeInVariant[];
   isNew: boolean;
   discontinued: boolean;
 };
@@ -44,10 +48,10 @@ const CONDITIONS: { key: Condition; label: string }[] = [
   { key: "poor", label: "สภาพเสีย/แตก" },
 ];
 
-function getPrice(p: TradeInProduct, cond: Condition) {
-  if (cond === "good") return p.priceGood;
-  if (cond === "fair") return p.priceFair;
-  return p.pricePoor;
+function getVariantPrice(v: TradeInVariant, cond: Condition) {
+  if (cond === "good") return v.priceGood;
+  if (cond === "fair") return v.priceFair;
+  return v.pricePoor;
 }
 
 function toSlug(model: string) {
@@ -102,6 +106,11 @@ function getProductImage(model: string): string | null {
 
 function ProductCard({ p, condition }: { p: TradeInProduct; condition: Condition }) {
   const img = getProductImage(p.model);
+  const prices = p.variants.map(v => getVariantPrice(v, condition));
+  const minPrice = Math.min(...prices);
+  const maxPrice = Math.max(...prices);
+  const singleVariant = p.variants.length === 1;
+
   return (
     <details className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden group" style={p.discontinued ? { pointerEvents: "none" } : {}}>
       <summary className="flex items-center gap-4 p-4 cursor-pointer list-none">
@@ -132,7 +141,12 @@ function ProductCard({ p, condition }: { p: TradeInProduct; condition: Condition
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: "#FEE2E2", color: "#EF4444" }}>ยกเลิกการรับซื้อ</span>
             )}
           </div>
-          {p.storage && <p className="text-xs" style={{ color: "#9CA3AF" }}>{p.storage}</p>}
+          {!p.discontinued && !singleVariant && (
+            <p className="text-xs" style={{ color: "#9CA3AF" }}>{p.variants.length} ความจุ</p>
+          )}
+          {!p.discontinued && singleVariant && (
+            <p className="text-xs" style={{ color: "#9CA3AF" }}>{p.variants[0].storage}</p>
+          )}
         </div>
 
         <div className="flex flex-col items-end gap-1 flex-shrink-0">
@@ -140,9 +154,13 @@ function ProductCard({ p, condition }: { p: TradeInProduct; condition: Condition
             <p className="text-sm" style={{ color: "#9CA3AF" }}>ไม่รับซื้อ</p>
           ) : (
             <>
-              <p className="font-bold text-lg md:text-xl" style={{ color: "#111" }}>{formatPrice(getPrice(p, condition))}</p>
+              <p className="font-bold text-lg md:text-xl" style={{ color: "#111" }}>
+                {singleVariant || minPrice === maxPrice
+                  ? formatPrice(maxPrice)
+                  : `${formatPrice(minPrice)} – ${formatPrice(maxPrice)}`}
+              </p>
               <span className="flex items-center gap-1 text-xs font-medium" style={{ color: "#B8860B" }}>
-                ดูทั้งหมด
+                ดูตามความจุ
                 <ChevronDown size={13} />
               </span>
             </>
@@ -152,13 +170,25 @@ function ProductCard({ p, condition }: { p: TradeInProduct; condition: Condition
 
       {!p.discontinued && (
         <div className="border-t border-gray-100 px-4 pb-4 pt-3">
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            {CONDITIONS.map(c => (
-              <div key={c.key} className="rounded-xl p-3 text-center" style={{ background: c.key === condition ? "#111111" : "#f5f5f7" }}>
-                <p className="text-xs mb-1" style={{ color: c.key === condition ? "#B8860B" : "#9CA3AF" }}>{c.label}</p>
-                <p className="font-bold text-sm" style={{ color: c.key === condition ? "#fff" : "#111" }}>{formatPrice(getPrice(p, c.key))}</p>
-              </div>
-            ))}
+          <div className="flex flex-col gap-2 mb-4">
+            {p.variants.map(v => {
+              const price = getVariantPrice(v, condition);
+              const isMax = price === maxPrice;
+              return (
+                <div
+                  key={v.storage}
+                  className="flex items-center justify-between rounded-xl px-4 py-3"
+                  style={{ background: isMax ? "#111" : "#f5f5f7" }}
+                >
+                  <span className="text-sm font-medium" style={{ color: isMax ? "#B8860B" : "#6B7280" }}>
+                    {v.storage}
+                  </span>
+                  <span className="text-sm font-bold" style={{ color: isMax ? "#fff" : "#111" }}>
+                    {formatPrice(price)}
+                  </span>
+                </div>
+              );
+            })}
           </div>
           <a
             href={`/sell/${toSlug(p.model)}`}
