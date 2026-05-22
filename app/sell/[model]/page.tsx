@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { ChevronLeft, Check, Lock, ChevronRight, User, Truck, Calendar, Banknote, ShieldCheck, MapPin, Building2, Clock, Phone, Plus, X } from "lucide-react";
 import Header from "../../components/Header";
-import { submitRequest } from "@/app/actions/submit-request";
+import { submitRequest, checkOrderExists } from "@/app/actions/submit-request";
 import { trackEstimateEvent } from "@/app/actions/analytics";
 import { fetchPublicActiveProducts } from "@/app/actions/products";
 import { fetchPublicPricingConfig } from "@/app/actions/pricing-config";
@@ -1048,20 +1048,27 @@ function SellModelPageContent() {
       extraDevices: extraDevices.length > 0 ? extraDevices : undefined,
     };
 
-    // Save to Supabase — retry up to 4 times to handle cold-start (schema cache + network warm-up)
-    const RETRY_DELAYS = [1500, 2500, 3500];
+    // Save to Supabase — retry up to 4 times with backoff to handle cold-start
+    const RETRY_DELAYS = [2000, 3000, 4000];
     let result: { success: boolean; error?: string } = { success: false, error: "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง" };
     for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt++) {
       try {
         result = await submitRequest(submission);
         if (result.success) break;
-        // Non-exception errors that are likely transient (schema cache not ready)
         const isTransient = result.error?.toLowerCase().includes("schema") || result.error?.toLowerCase().includes("cache");
         if (!isTransient) break;
       } catch (err) {
         console.error(`submitRequest attempt ${attempt + 1} failed:`, err);
       }
       if (attempt < RETRY_DELAYS.length) await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt]));
+    }
+
+    // All attempts failed — check if DB actually saved it (response may have been lost)
+    if (!result.success) {
+      try {
+        const saved = await checkOrderExists(submission.orderNumber);
+        if (saved) result = { success: true };
+      } catch {}
     }
 
     if (!result.success) {

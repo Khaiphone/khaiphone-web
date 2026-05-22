@@ -96,3 +96,12 @@ export async function submitRequest(data: SubmissionData) {
   }
   return { success: true };
 }
+
+export async function checkOrderExists(orderNumber: string): Promise<boolean> {
+  const supabase = createServerClient();
+  const { count } = await supabase
+    .from("requests")
+    .select("*", { count: "exact", head: true })
+    .eq("order_number", orderNumber);
+  return (count ?? 0) > 0;
+}
