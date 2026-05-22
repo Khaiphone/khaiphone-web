@@ -94,7 +94,7 @@ const CATEGORY_IMAGES: Record<CategoryKey, { src: string; scale: number }> = {
   ipad:      { src: "/product-ipad.webp",      scale: 1    },
   macbook:   { src: "/product-macbook.webp",   scale: 1.35 },
   watch:     { src: "/product-watch.webp",     scale: 1    },
-  accessory: { src: "/product-airpods.webp",    scale: 1    },
+  accessory: { src: "/product-accessory.webp",  scale: 1    },
 };
 
 function SellPageContent() {
