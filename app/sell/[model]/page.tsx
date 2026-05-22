@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { ChevronLeft, Check, Lock, ChevronRight, User, Truck, Calendar, Banknote, ShieldCheck, MapPin, Building2, Clock, Phone, Plus, X } from "lucide-react";
 import Header from "../../components/Header";
-import { submitRequest, checkOrderExists } from "@/app/actions/submit-request";
+import { submitRequest } from "@/app/actions/submit-request";
 import { trackEstimateEvent } from "@/app/actions/analytics";
 import { fetchPublicActiveProducts } from "@/app/actions/products";
 import { fetchPublicPricingConfig } from "@/app/actions/pricing-config";
@@ -1048,42 +1048,32 @@ function SellModelPageContent() {
       extraDevices: extraDevices.length > 0 ? extraDevices : undefined,
     };
 
-    // Save to Supabase — retry up to 4 times with backoff to handle cold-start
-    const RETRY_DELAYS = [2000, 3000, 4000];
-    let result: { success: boolean; error?: string } = { success: false, error: "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง" };
-    for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt++) {
-      try {
-        result = await submitRequest(submission);
-        if (result.success) break;
+    // Submit to Supabase — navigate optimistically on transient errors so the user isn't kept waiting
+    const successUrl = `/sell/success?order=${encodeURIComponent(submission.orderNumber)}&phone=${encodeURIComponent(submission.customer.phone)}`;
+    let submitted = false;
+    try {
+      const result = await submitRequest(submission);
+      if (result.success) {
+        submitted = true;
+      } else {
+        // Real validation/business error — show immediately, do not navigate
         const isTransient = result.error?.toLowerCase().includes("schema") || result.error?.toLowerCase().includes("cache");
-        if (!isTransient) break;
-      } catch (err) {
-        console.error(`submitRequest attempt ${attempt + 1} failed:`, err);
+        if (!isTransient) {
+          setSubmitting(false);
+          alert(result.error ?? "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
+          return;
+        }
+        // Transient DB error — navigate anyway, success page will retry
       }
-      if (attempt < RETRY_DELAYS.length) await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt]));
+    } catch {
+      // Network/timeout error — navigate anyway, success page will retry
     }
 
-    // All attempts failed — check if DB actually saved it (response may have been lost)
-    if (!result.success) {
-      try {
-        const saved = await checkOrderExists(submission.orderNumber);
-        if (saved) result = { success: true };
-      } catch {}
-    }
-
-    if (!result.success) {
-      setSubmitting(false);
-      alert(result.error ?? "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
-      return;
-    }
-
-    trackEstimateEvent({ sessionId: sessionIdRef.current, event: "submit", model: product!.model });
-
-    // Keep localStorage as backup for success page display
+    if (submitted) trackEstimateEvent({ sessionId: sessionIdRef.current, event: "submit", model: product!.model });
     try { localStorage.setItem("khaiphone_submission", JSON.stringify({ ...submission, submittedAt: new Date().toISOString() })); } catch {}
     try { localStorage.removeItem(WIZARD_KEY); } catch {}
     try { localStorage.removeItem(BUNDLE_KEY); localStorage.removeItem(BUNDLE_RETURN_KEY); } catch {}
-    router.push(`/sell/success?order=${encodeURIComponent(submission.orderNumber)}&phone=${encodeURIComponent(submission.customer.phone)}`);
+    router.push(successUrl);
   }
 
   const effectiveGroupOptions: PricingOption[][] = product
