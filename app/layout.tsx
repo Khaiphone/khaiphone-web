@@ -37,13 +37,13 @@ export const metadata: Metadata = {
     siteName: "ขายไอโฟน.com",
     title: "ขายไอโฟน.com — รับซื้อ iPhone, iPad, MacBook ให้ราคาสูง",
     description: "ประเมินราคาออนไลน์ฟรี ไม่ผูกมัด รับซื้อ iPhone, iPad, MacBook, Apple Watch ทุกรุ่น จ่ายเงินสดทันที",
-    images: [{ url: "/og-image.webp", width: 1200, height: 630, alt: "ขายไอโฟน.com" }],
+    images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: "ขายไอโฟน.com" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "ขายไอโฟน.com — รับซื้อ iPhone ให้ราคาสูง",
     description: "ประเมินราคาออนไลน์ฟรี ไม่ผูกมัด จ่ายเงินสดทันที",
-    images: ["/og-image.webp"],
+    images: ["/og-image.jpg"],
   },
 };
 
