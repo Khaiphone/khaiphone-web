@@ -787,6 +787,9 @@ function SellModelPageContent() {
   const scrollYRef = useRef(0);
   const riderAddressInputRef = useRef<HTMLInputElement>(null);
   const riderSectionRef  = useRef<HTMLDivElement>(null);
+  const mapDivRef        = useRef<HTMLDivElement | null>(null);
+  const mapsLoadedRef    = useRef(false);
+  const mapInitRef       = useRef(false);
   const bankSectionRef   = useRef<HTMLDivElement>(null);
   const termsSectionRef  = useRef<HTMLDivElement>(null);
 
@@ -894,9 +897,9 @@ function SellModelPageContent() {
   const [appointTime, setAppointTime] = useState("14:00");
   const [notes, setNotes] = useState("");
   const [riderAddress, setRiderAddress] = useState("");
+  const [pinAddress, setPinAddress] = useState("");
   const [locationLoading, setLocationLoading] = useState(false);
-  const [locationModal, setLocationModal] = useState<{ lat: number; lng: number; address: string; mapQuery: string } | null>(null);
-  const [mapSearchInput, setMapSearchInput] = useState("");
+  const [locationModal, setLocationModal] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [bankName, setBankName] = useState("");
   const [bankAccount, setBankAccount] = useState("");
@@ -955,14 +958,86 @@ function SellModelPageContent() {
         }
       }
 
-      setMapSearchInput("");
-      setLocationModal({ lat: latitude, lng: longitude, address, mapQuery: "" });
+      setPinAddress(address);
+      setLocationModal({ lat: latitude, lng: longitude, address });
     } catch {
       setRiderAddress("ไม่สามารถดึงตำแหน่งได้อัตโนมัติ กรุณากรอกที่อยู่เอง");
     } finally {
       setLocationLoading(false);
     }
   }
+
+  // Load Google Maps JS API + attach Places Autocomplete when rider section is visible
+  useEffect(() => {
+    if (sellMethod !== "rider") return;
+    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+    if (!key) return;
+
+    function initAutocomplete() {
+      const input = riderAddressInputRef.current;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const g = (window as any).google;
+      if (!input || !g?.maps?.places) return;
+      const ac = new g.maps.places.Autocomplete(input, {
+        componentRestrictions: { country: "th" },
+        fields: ["formatted_address", "geometry", "name"],
+      });
+      ac.addListener("place_changed", () => {
+        const place = ac.getPlace();
+        const loc = place?.geometry?.location;
+        if (!loc) return;
+        const address: string = place.formatted_address ?? place.name ?? input.value;
+        setRiderAddress(address);
+        setErrors(er => ({ ...er, riderAddress: false }));
+        setPinAddress(address);
+        setLocationModal({ lat: loc.lat(), lng: loc.lng(), address });
+      });
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((window as any).google?.maps?.places) { initAutocomplete(); return; }
+    if (mapsLoadedRef.current) return;
+    mapsLoadedRef.current = true;
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&language=th&region=TH`;
+    script.async = true;
+    script.onload = initAutocomplete;
+    document.head.appendChild(script);
+  }, [sellMethod]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Init interactive map + draggable marker when location modal opens
+  useEffect(() => {
+    if (!locationModal) { mapInitRef.current = false; return; }
+    if (mapInitRef.current) return;
+    const t = setTimeout(() => {
+      const container = mapDivRef.current;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const g = (window as any).google;
+      if (!container || !g?.maps) return;
+      mapInitRef.current = true;
+      const { lat, lng } = locationModal;
+      const map = new g.maps.Map(container, {
+        center: { lat, lng }, zoom: 16,
+        mapTypeControl: false, streetViewControl: false,
+        fullscreenControl: false, gestureHandling: "greedy",
+      });
+      const marker = new g.maps.Marker({
+        position: { lat, lng }, map, draggable: true,
+        title: "ลากเพื่อปรับตำแหน่ง",
+      });
+      marker.addListener("dragend", () => {
+        const pos = marker.getPosition();
+        if (!pos) return;
+        new g.maps.Geocoder().geocode({ location: pos }, (results: Array<{formatted_address: string}>, status: string) => {
+          const addr = status === "OK" && results?.[0]
+            ? results[0].formatted_address
+            : `${pos.lat().toFixed(5)}, ${pos.lng().toFixed(5)}`;
+          setPinAddress(addr);
+        });
+      });
+    }, 80);
+    return () => clearTimeout(t);
+  }, [locationModal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleAddToBundle() {
     if (!product) return;
@@ -1600,15 +1675,19 @@ function SellModelPageContent() {
                             สถานที่รับเครื่อง <span style={{ color: "#EF4444" }}>*</span>
                           </label>
                           <div className="relative">
-                            <textarea
-                              value={riderAddress} onChange={e => { setRiderAddress(e.target.value); if (e.target.value.trim()) setErrors(er => ({ ...er, riderAddress: false })); }} rows={2}
-                              placeholder="ระบุที่อยู่ เช่น บ้าน ที่ทำงาน หรือห้างที่สะดวก"
-                              className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-white outline-none resize-none pr-28"
+                            <input
+                              ref={riderAddressInputRef}
+                              type="text"
+                              autoComplete="off"
+                              value={riderAddress}
+                              onChange={e => { setRiderAddress(e.target.value); if (e.target.value.trim()) setErrors(er => ({ ...er, riderAddress: false })); }}
+                              placeholder="พิมพ์ชื่อสถานที่หรือที่อยู่..."
+                              className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-white outline-none pr-32"
                               style={{ border: `1.5px solid ${errors.riderAddress ? "#EF4444" : "#E5E7EB"}`, fontFamily: "inherit" }}
                             />
                             <button
                               type="button" onClick={fetchCurrentLocation} disabled={locationLoading}
-                              className="absolute right-2 top-2 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold"
+                              className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold"
                               style={{ background: "rgba(184,134,11,0.1)", color: "#B8860B", cursor: locationLoading ? "wait" : "pointer", border: "none" }}
                             >
                               <MapPin size={11} />
@@ -1860,50 +1939,15 @@ function SellModelPageContent() {
                 {locationModal && (
                   <div className="fixed inset-0 z-[80] flex items-end md:items-center justify-center" style={{ background: "rgba(0,0,0,0.5)" }}>
                     <div className="bg-white w-full md:max-w-md rounded-t-2xl md:rounded-2xl overflow-hidden shadow-2xl">
-                      {/* Search bar */}
-                      <div className="p-3" style={{ borderBottom: "1px solid #F3F4F6" }}>
-                        <form
-                          onSubmit={e => {
-                            e.preventDefault();
-                            if (mapSearchInput.trim())
-                              setLocationModal({ ...locationModal, mapQuery: mapSearchInput.trim() });
-                          }}
-                          className="flex gap-2"
-                        >
-                          <input
-                            type="text"
-                            value={mapSearchInput}
-                            onChange={e => setMapSearchInput(e.target.value)}
-                            placeholder="ค้นหาสถานที่ เช่น เซ็นทรัลรังสิต"
-                            className="flex-1 px-3 py-2 rounded-xl text-sm outline-none"
-                            style={{ border: "1.5px solid #E5E7EB", fontFamily: "inherit" }}
-                          />
-                          <button
-                            type="submit"
-                            className="px-4 py-2 rounded-xl text-sm font-semibold text-white flex-shrink-0"
-                            style={{ background: "#111" }}
-                          >
-                            ค้นหา
-                          </button>
-                        </form>
+                      <div className="p-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
+                        <p className="font-bold text-sm text-black">ยืนยันตำแหน่ง</p>
+                        <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>ลากหมุดเพื่อปรับตำแหน่งให้แม่นยำ</p>
                       </div>
-                      <iframe
-                        title="map"
-                        key={locationModal.mapQuery || `${locationModal.lat},${locationModal.lng}`}
-                        src={
-                          locationModal.mapQuery
-                            ? `https://www.google.com/maps/embed/v1/search?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY}&q=${encodeURIComponent(locationModal.mapQuery)}&language=th`
-                            : `https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY}&q=${locationModal.lat},${locationModal.lng}&zoom=16`
-                        }
-                        className="w-full"
-                        style={{ height: 220, border: "none" }}
-                      />
+                      <div ref={mapDivRef} className="w-full" style={{ height: 260 }} />
                       <div className="p-4">
-                        <p className="text-xs font-semibold mb-1" style={{ color: "#6B7280" }}>
-                          {locationModal.mapQuery ? "สถานที่ที่ค้นหา" : "ที่อยู่ที่ตรวจจับได้"}
-                        </p>
+                        <p className="text-xs font-semibold mb-1" style={{ color: "#6B7280" }}>ตำแหน่งที่เลือก</p>
                         <p className="text-sm text-black leading-relaxed mb-4">
-                          {locationModal.mapQuery || locationModal.address}
+                          {pinAddress || locationModal.address}
                         </p>
                         <div className="flex gap-2">
                           <button
@@ -1916,7 +1960,7 @@ function SellModelPageContent() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => { setRiderAddress(locationModal.mapQuery || locationModal.address); setLocationModal(null); }}
+                            onClick={() => { setRiderAddress(pinAddress || locationModal.address); setLocationModal(null); }}
                             className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white"
                             style={{ background: "#111" }}
                           >
