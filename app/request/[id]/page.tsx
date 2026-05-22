@@ -345,6 +345,8 @@ function RequestDetailInner() {
   const currentStepRef = useRef<HTMLDivElement | null>(null);
   const prevDoneUpTo   = useRef(-1);
   const notesRef       = useRef<HTMLDivElement | null>(null);
+  const arrivedRef     = useRef<HTMLDivElement | null>(null);
+  const prevArrivedAt  = useRef<string | undefined>(undefined);
 
   const [sub, setSub] = useState<SubmissionData | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "unauthorized" | "notfound">("loading");
@@ -518,6 +520,15 @@ function RequestDetailInner() {
       setTimeout(() => notesRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 600);
     }
   }, [customerNotes]);
+
+  // Scroll to arrival banner when staff marks as arrived
+  useEffect(() => {
+    const arrivedAt = inspection?.arrivedAt;
+    if (arrivedAt && !prevArrivedAt.current && arrivedRef.current) {
+      setTimeout(() => arrivedRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 400);
+    }
+    prevArrivedAt.current = arrivedAt;
+  }, [inspection?.arrivedAt]);
 
   // Redirect after a short delay so user can read the message
   useEffect(() => {
@@ -729,17 +740,26 @@ function RequestDetailInner() {
 
             {/* Notice: staff arrived (arrivedAt set, but inspection not done yet) */}
             {inspection?.arrivedAt && !inspection.result && (
-              <div className="rounded-2xl px-5 py-4 flex items-start gap-3" style={{ background: "#F0FDF4", border: "1px solid #86EFAC" }}>
+              <div ref={arrivedRef} className="rounded-2xl px-5 py-4 flex items-start gap-3" style={{ background: "#F0FDF4", border: "1px solid #86EFAC" }}>
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "#BBF7D0" }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                     <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/>
                   </svg>
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold" style={{ color: "#065F46" }}>เจ้าหน้าที่เดินทางมาถึงแล้ว</p>
                   <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "#059669" }}>
                     ถึงเมื่อ {formatThaiDateTime(inspection.arrivedAt).time} น. · กำลังดำเนินการตรวจสอบเครื่อง
                   </p>
+                  {inspection.arrivedPhotoUrl && (
+                    <a href={inspection.arrivedPhotoUrl} target="_blank" rel="noopener noreferrer" className="mt-3 block">
+                      <img
+                        src={inspection.arrivedPhotoUrl}
+                        alt="หลักฐานการถึง"
+                        style={{ width: 88, height: 88, objectFit: "cover", borderRadius: 10, border: "1px solid #86EFAC" }}
+                      />
+                    </a>
+                  )}
                 </div>
               </div>
             )}

@@ -71,6 +71,7 @@ export interface ExtraDeviceInspection {
 
 export interface InspectionData {
   arrivedAt?: string;
+  arrivedPhotoUrl?: string;
   inspectedAt: string;
   result: InspectionResult;
   criteria: InspectionCriterion[];

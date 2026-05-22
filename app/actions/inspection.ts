@@ -6,7 +6,7 @@ import { broadcastRequestUpdate } from "@/lib/broadcast";
 import type { InspectionData, RequestStatus } from "@/lib/types/admin";
 
 // ─── Admin: บันทึกเวลาถึง ─────────────────────────────────────────────────────
-export async function recordArrival(id: string) {
+export async function recordArrival(id: string, arrivedPhotoUrl?: string) {
   await requireAuth();
   const supabase = createServerClient();
   const arrivedAt = new Date().toISOString();
@@ -17,7 +17,11 @@ export async function recordArrival(id: string) {
     .eq("id", id)
     .single();
 
-  const inspection = { ...(current?.inspection ?? {}), arrivedAt };
+  const inspection: Record<string, unknown> = {
+    ...(current?.inspection ?? {}),
+    arrivedAt,
+    ...(arrivedPhotoUrl ? { arrivedPhotoUrl } : {}),
+  };
 
   const { error } = await supabase
     .from("requests")

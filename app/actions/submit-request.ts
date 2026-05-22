@@ -75,6 +75,7 @@ export async function submitRequest(data: SubmissionData) {
     payment_bank:           data.payment.bankName  || null,
     payment_account_name:   data.payment.accountName   || null,
     payment_account_number: data.payment.accountNumber || null,
+    status:     "new",
     status_log: [{ status: "new", timestamp: new Date().toISOString(), note: "คำขอใหม่จากเว็บไซต์" }],
     source: "website",
     customer_notes:  data.notes        || null,

@@ -162,6 +162,9 @@ function SellSuccessInner() {
 
   useEffect(() => {
     async function init() {
+      const orderParam = searchParams.get("order");
+      const phoneParam = searchParams.get("phone");
+
       // Primary: localStorage
       try {
         const raw = localStorage.getItem("khaiphone_submission");
@@ -174,30 +177,52 @@ function SellSuccessInner() {
         }
       } catch {}
 
-      // Fallback: URL params (order + phone) → load from DB
-      const orderParam = searchParams.get("order");
-      const phoneParam = searchParams.get("phone");
+      // Fallback: URL params → load from DB with retry (handles race condition after insert)
       if (orderParam && phoneParam) {
-        const req = await loadFromDb(orderParam, phoneParam);
-        if (req) {
-          setData({
-            orderNumber:    req.orderNumber,
-            submittedAt:    req.createdAt,
-            model:          req.device.model,
-            storage:        req.device.storage,
-            condition:      req.device.condition ?? "",
-            selections:     req.device.selections ?? {},
-            estimatedPrice: req.device.actualPrice ?? req.device.estimatedPrice,
-            priceMin:       req.device.estimatedPrice,
-            priceMax:       req.device.estimatedPrice,
-            customer:       { name: req.customer.name, phone: req.customer.phone, email: req.customer.email ?? "" },
-            appointment:    { method: req.appointment.method as SubmissionData["appointment"]["method"], date: req.appointment.date, time: req.appointment.time, location: req.appointment.location },
-            payment:        { method: req.payment.method as SubmissionData["payment"]["method"], bankName: req.payment.bankName, accountName: req.payment.accountName, accountNumber: req.payment.accountNumber },
-          });
-          return;
+        // Stub data from URL so the page renders immediately without redirecting
+        setData(prev => prev ?? {
+          orderNumber:    orderParam,
+          submittedAt:    new Date().toISOString(),
+          model:          "",
+          storage:        "",
+          condition:      "",
+          selections:     {},
+          estimatedPrice: 0,
+          priceMin:       0,
+          priceMax:       0,
+          customer:       { name: "", phone: phoneParam, email: "" },
+          appointment:    { method: "branch", date: "", time: "", location: "" },
+          payment:        { method: "cash" },
+        });
+
+        // Retry up to 4 times with backoff (500ms, 1s, 2s, 3s) in case DB replication lag
+        const delays = [500, 1000, 2000, 3000];
+        for (const delay of delays) {
+          await new Promise(r => setTimeout(r, delay));
+          const req = await loadFromDb(orderParam, phoneParam);
+          if (req) {
+            setData({
+              orderNumber:    req.orderNumber,
+              submittedAt:    req.createdAt,
+              model:          req.device.model,
+              storage:        req.device.storage,
+              condition:      req.device.condition ?? "",
+              selections:     req.device.selections ?? {},
+              estimatedPrice: req.device.actualPrice ?? req.device.estimatedPrice,
+              priceMin:       req.device.estimatedPrice,
+              priceMax:       req.device.estimatedPrice,
+              customer:       { name: req.customer.name, phone: req.customer.phone, email: req.customer.email ?? "" },
+              appointment:    { method: req.appointment.method as SubmissionData["appointment"]["method"], date: req.appointment.date, time: req.appointment.time, location: req.appointment.location },
+              payment:        { method: req.payment.method as SubmissionData["payment"]["method"], bankName: req.payment.bankName, accountName: req.payment.accountName, accountNumber: req.payment.accountNumber },
+            });
+            return;
+          }
         }
+        // All retries exhausted — keep stub data, do NOT redirect
+        return;
       }
 
+      // No order param at all → redirect
       router.replace("/sell");
     }
     init();

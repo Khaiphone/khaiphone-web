@@ -135,6 +135,12 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const [assignSaving, setAssignSaving] = useState(false);
   const [assignDraft,  setAssignDraft]  = useState<string>(""); // user_id or ""
 
+  // Arrival photo
+  const [showArrivalForm,   setShowArrivalForm]   = useState(false);
+  const [arrivalPhotoFile,  setArrivalPhotoFile]  = useState<File | null>(null);
+  const [arrivalUploading,  setArrivalUploading]  = useState(false);
+  const arrivalFileRef = useRef<HTMLInputElement>(null);
+
   // Contract & slip
   const [slipUploading, setSlipUploading] = useState(false);
   const [linkCopied,    setLinkCopied]    = useState(false);
@@ -279,20 +285,39 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
     setEditPay(false);
   }
 
-  async function handleArrival() {
+  async function handleArrivalConfirm() {
     if (!request) return;
-    setSaving("arrival");
+    setArrivalUploading(true);
     setSaveError(null);
-    const result = await recordArrival(id);
+
+    let photoUrl: string | undefined;
+    if (arrivalPhotoFile) {
+      const check = validateImageFile(arrivalPhotoFile);
+      if (!check.valid) { setSaveError(check.error); setArrivalUploading(false); return; }
+      const file = await compressImage(arrivalPhotoFile);
+      const path = `arrivals/${id}/${Date.now()}-${file.name.replace(/\s/g, "_")}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage.from("inspection-photos").upload(path, file, { upsert: true });
+      if (uploadError) { setSaveError("อัพโหลดรูปไม่สำเร็จ: " + uploadError.message); setArrivalUploading(false); return; }
+      const { data: pub } = supabase.storage.from("inspection-photos").getPublicUrl(uploadData.path);
+      photoUrl = pub.publicUrl;
+    }
+
+    const result = await recordArrival(id, photoUrl);
     if (result.success) {
       setRequest(prev => prev ? {
         ...prev,
-        inspection: { ...(prev.inspection ?? { inspectedAt: "", result: "matched", criteria: [], issues: [], photos: [], originalPrice: 0, actualPrice: 0, priceReason: "", negotiationResponse: null, negotiationRespondedAt: null, negotiationRespondedBy: null }), arrivedAt: result.arrivedAt },
+        inspection: {
+          ...(prev.inspection ?? { inspectedAt: "", result: "matched", criteria: [], issues: [], photos: [], originalPrice: 0, actualPrice: 0, priceReason: "", negotiationResponse: null, negotiationRespondedAt: null, negotiationRespondedBy: null }),
+          arrivedAt: result.arrivedAt,
+          ...(photoUrl ? { arrivedPhotoUrl: photoUrl } : {}),
+        },
       } : prev);
+      setShowArrivalForm(false);
+      setArrivalPhotoFile(null);
     } else {
       setSaveError("บันทึกเวลาถึงไม่สำเร็จ");
     }
-    setSaving(null);
+    setArrivalUploading(false);
   }
 
   async function handleInspectionSave(data: import("@/lib/types/admin").InspectionData, newStatus: "contracting" | "price_negotiation" | "rejected", deviceColor: string) {
@@ -804,20 +829,71 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
           <Card ref={inspectionRef}>
             <div style={{ padding: "16px" }}>
               {/* Header row with arrival button */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <SectionLabel>ผลการตรวจสภาพ</SectionLabel>
-                {!request.inspection?.arrivedAt ? (
-                  <button
-                    onClick={handleArrival}
-                    disabled={saving === "arrival"}
-                    style={{ background: "#FEF3C7", border: "1px solid rgba(184,134,11,0.3)", borderRadius: 8, padding: "4px 10px", color: GOLD, fontSize: 12, fontWeight: 600, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit", marginTop: -10, opacity: saving === "arrival" ? 0.6 : 1 }}
-                  >
-                    📍 บันทึกเวลาถึง
-                  </button>
-                ) : (
-                  <span style={{ color: TEXT3, fontSize: 11, marginTop: -10 }}>
-                    ถึง {fmtDateTime(request.inspection.arrivedAt)} น.
-                  </span>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <SectionLabel>ผลการตรวจสภาพ</SectionLabel>
+                  {!request.inspection?.arrivedAt ? (
+                    <button
+                      onClick={() => setShowArrivalForm(v => !v)}
+                      style={{ background: "#FEF3C7", border: "1px solid rgba(184,134,11,0.3)", borderRadius: 8, padding: "4px 10px", color: GOLD, fontSize: 12, fontWeight: 600, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit", marginTop: -10 }}
+                    >
+                      📍 {showArrivalForm ? "ยกเลิก" : "บันทึกเวลาถึง"}
+                    </button>
+                  ) : (
+                    <span style={{ color: TEXT3, fontSize: 11, marginTop: -10 }}>
+                      ถึง {fmtDateTime(request.inspection.arrivedAt)} น.
+                    </span>
+                  )}
+                </div>
+
+                {/* Arrival photo form */}
+                {showArrivalForm && !request.inspection?.arrivedAt && (
+                  <div style={{ marginTop: 10, background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 12, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+                    <p style={{ margin: 0, fontSize: 12, color: "#92400E", fontWeight: 600 }}>ถ่ายรูปหลักฐานการถึง (ไม่บังคับ)</p>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <button
+                        type="button"
+                        onClick={() => arrivalFileRef.current?.click()}
+                        style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", border: "1px solid #FDE68A", borderRadius: 8, padding: "8px 12px", color: "#92400E", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+                      >
+                        📷 {arrivalPhotoFile ? arrivalPhotoFile.name.slice(0, 20) + (arrivalPhotoFile.name.length > 20 ? "…" : "") : "เลือกรูป"}
+                      </button>
+                      {arrivalPhotoFile && (
+                        <button type="button" onClick={() => setArrivalPhotoFile(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", fontSize: 13, padding: 0 }}>✕</button>
+                      )}
+                    </div>
+                    <input
+                      ref={arrivalFileRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      style={{ display: "none" }}
+                      onChange={e => { const f = e.target.files?.[0]; if (f) setArrivalPhotoFile(f); e.target.value = ""; }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleArrivalConfirm}
+                      disabled={arrivalUploading}
+                      style={{ background: GOLD, border: "none", borderRadius: 10, padding: "10px", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit", opacity: arrivalUploading ? 0.6 : 1 }}
+                    >
+                      {arrivalUploading ? "กำลังบันทึก…" : "✅ ยืนยันถึงแล้ว"}
+                    </button>
+                  </div>
+                )}
+
+                {/* Arrival photo thumbnail */}
+                {request.inspection?.arrivedAt && request.inspection?.arrivedPhotoUrl && (
+                  <div style={{ marginTop: 8 }}>
+                    <a href={request.inspection.arrivedPhotoUrl} target="_blank" rel="noopener noreferrer">
+                      <Image
+                        src={request.inspection.arrivedPhotoUrl}
+                        alt="หลักฐานการถึง"
+                        width={80}
+                        height={80}
+                        style={{ borderRadius: 8, objectFit: "cover", border: "1px solid #FDE68A" }}
+                      />
+                    </a>
+                  </div>
                 )}
               </div>
 

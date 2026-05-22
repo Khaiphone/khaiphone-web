@@ -1048,12 +1048,16 @@ function SellModelPageContent() {
       extraDevices: extraDevices.length > 0 ? extraDevices : undefined,
     };
 
-    // Save to Supabase
-    let result: { success: boolean; error?: string } = { success: false, error: "ไม่สามารถเชื่อมต่อได้" };
-    try {
-      result = await submitRequest(submission);
-    } catch (err) {
-      console.error("submitRequest failed:", err);
+    // Save to Supabase — retry once on network error (handles cold-start timeout)
+    let result: { success: boolean; error?: string } = { success: false, error: "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง" };
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        result = await submitRequest(submission);
+        break;
+      } catch (err) {
+        console.error(`submitRequest attempt ${attempt + 1} failed:`, err);
+        if (attempt === 0) await new Promise(r => setTimeout(r, 1500));
+      }
     }
 
     if (!result.success) {
