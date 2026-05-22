@@ -132,7 +132,7 @@ export default function NewRequestPage() {
       return first.deductions;
     }
     return pricingCfg.groups.map(g =>
-      g.key === "model_type" && first ? { ...g, options: getModelTypeOpts(first.model) ?? g.options } : g,
+      g.key === "model_type" && first ? { ...g, options: getModelTypeOpts(first.model, g.options) ?? g.options } : g,
     );
   }, [selectedModelProducts, pricingCfg]);
 

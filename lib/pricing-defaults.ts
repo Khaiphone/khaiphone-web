@@ -2,22 +2,25 @@ export type PricingOption = { label: string; sub?: string; ded: number };
 export type PricingGroup  = { key: string; title: string; options: PricingOption[] };
 export type PricingConfig = { storageMultiplier: number; groups: PricingGroup[] };
 
-// Returns null for non-iPhone — callers should fall back to the DB pricing config.
-export function getModelTypeOpts(model: string): PricingOption[] | null {
+// Returns iPhone-generation-specific labels with deductions from configOpts (DB).
+// Returns null for non-iPhone — callers use configOpts directly.
+export function getModelTypeOpts(model: string, configOpts: PricingOption[]): PricingOption[] | null {
+  const ded0 = configOpts[0]?.ded ?? 0;
+  const ded1 = configOpts[1]?.ded ?? -1500;
   const gen = parseInt(model.match(/iPhone (\d+)/)?.[1] ?? "0", 10);
   if (gen >= 14) {
     return [
-      { label: "เครื่องศูนย์ไทย ZP/A", sub: "ราคาสูงสุด",   ded: 0     },
-      { label: "เครื่องนอก / ไม่ทราบ", sub: "ราคาเริ่มต้น", ded: -1000 },
+      { label: "เครื่องศูนย์ไทย ZP/A", sub: "ราคาสูงสุด",   ded: ded0 },
+      { label: "เครื่องนอก / ไม่ทราบ", sub: "ราคาเริ่มต้น", ded: ded1 },
     ];
   }
   if (gen >= 11) {
     return [
-      { label: "เครื่องศูนย์ไทย TH/A", sub: "ราคาสูงสุด",   ded: 0     },
-      { label: "เครื่องนอก / ไม่ทราบ", sub: "ราคาเริ่มต้น", ded: -1500 },
+      { label: "เครื่องศูนย์ไทย TH/A", sub: "ราคาสูงสุด",   ded: ded0 },
+      { label: "เครื่องนอก / ไม่ทราบ", sub: "ราคาเริ่มต้น", ded: ded1 },
     ];
   }
-  // iPad / MacBook / Watch → use deductions from DB config (admin-controlled)
+  // iPad / MacBook / Watch → use configOpts directly
   return null;
 }
 

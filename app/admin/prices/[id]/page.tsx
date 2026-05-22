@@ -303,7 +303,9 @@ export default function ProductDetailPage() {
                     } else {
                       const base = deepClone(globalGroups);
                       const modelTypeIdx = base.findIndex(g => g.key === "model_type");
-                      const overrideOpts = modelTypeIdx !== -1 ? getModelTypeOpts(product.model) : null;
+                      const overrideOpts = modelTypeIdx !== -1
+                        ? getModelTypeOpts(product.model, base[modelTypeIdx].options)
+                        : null;
                       if (modelTypeIdx !== -1 && overrideOpts) base[modelTypeIdx].options = overrideOpts;
                       setGroups(base);
                       setDedInputs(groupsToDedInputs(base));

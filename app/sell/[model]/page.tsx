@@ -1096,7 +1096,7 @@ function SellModelPageContent() {
   }
 
   const effectiveGroupOptions: PricingOption[][] = product
-    ? [getModelTypeOpts(product.model) ?? groupOptions[0], ...groupOptions.slice(1)]
+    ? [getModelTypeOpts(product.model, groupOptions[0]) ?? groupOptions[0], ...groupOptions.slice(1)]
     : groupOptions;
 
   const price = product ? calcPrice(product, picks, effectiveGroupOptions, storageMultiplier, storagePrices) : 0;
