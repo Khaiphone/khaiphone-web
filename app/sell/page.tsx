@@ -18,9 +18,6 @@ function IconApple({ className, style }: IconProps) {
   );
 }
 
-function formatPrice(n: number) {
-  return "฿" + n.toLocaleString("th-TH");
-}
 
 function toSlug(model: string) {
   return model.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -264,7 +261,7 @@ function SellPageContent() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-sm" style={{ color: p.discontinued ? "#9CA3AF" : "#111" }}>{p.model}</span>
                         {p.isNew && (
-                          <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.12)", color: "#B8860B" }}>ใหม่</span>
+                          <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.12)", color: "#B8860B" }}>รุ่นใหม่</span>
                         )}
                         {p.discontinued && (
                           <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "#FEE2E2", color: "#EF4444" }}>ยกเลิกการรับซื้อ</span>
@@ -272,7 +269,7 @@ function SellPageContent() {
                       </div>
                       {p.discontinued
                         ? <span className="text-xs" style={{ color: "#D1D5DB" }}>ไม่รับซื้อรุ่นนี้</span>
-                        : <span className="text-xs" style={{ color: "#9CA3AF" }}>เริ่มต้น {formatPrice(p.priceGood)}</span>
+                        : null
                       }
                     </div>
 

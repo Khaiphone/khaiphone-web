@@ -1452,7 +1452,7 @@ function SellModelPageContent() {
                             id="f-phone" name="f-phone" type="tel" required
                             defaultValue={formData.phone}
                             onChange={e => { setFormData(d => ({ ...d, phone: e.target.value })); if (errors.phone) setErrors(er => ({ ...er, phone: false })); }}
-                            placeholder="095-553-5167"
+                            placeholder="กรุณากรอกเบอร์ติดต่อ"
                             className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-white outline-none"
                             style={{ border: `1.5px solid ${errors.phone ? "#EF4444" : "#E5E7EB"}`, fontFamily: "inherit" }}
                           />
@@ -1484,7 +1484,7 @@ function SellModelPageContent() {
                         <h3 className="font-bold text-black">ช่องทางการขาย</h3>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        {([ { id: "branch", label: "นัดหมายหน้าสาขา", sub: "นำเครื่องมาส่งที่สาขา" }, { id: "rider", label: "รับถึง (Rider)", sub: "ทีมงานไปรับเครื่องถึงบ้าน" }, { id: "parcel", label: "ส่งเครื่องทางพัสดุ", sub: "จัดส่งเครื่องมาที่บริษัท" } ] as const).map(opt => (
+                        {([ { id: "branch", label: "นัดหมายหน้าสาขา", sub: "นำเครื่องมาส่งที่สาขา" }, { id: "rider", label: "รับซื้อถึงที่ (Rider)", sub: "ทีมงานไปรับเครื่องถึงบ้าน" }, { id: "parcel", label: "ส่งเครื่องทางพัสดุ", sub: "จัดส่งเครื่องมาที่บริษัท" } ] as const).map(opt => (
                           <button key={opt.id} type="button" onClick={() => setSellMethod(opt.id)}
                             className="flex items-start gap-3 px-4 py-3.5 rounded-xl border-2 text-left w-full"
                             style={{ borderColor: sellMethod === opt.id ? "#B8860B" : "#E5E7EB", background: sellMethod === opt.id ? "rgba(184,134,11,0.06)" : "#fff", cursor: "pointer" }}>

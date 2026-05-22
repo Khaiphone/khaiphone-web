@@ -94,7 +94,7 @@ export const DEFAULT_PRICING_CONFIG: PricingConfig = {
       key: "icloud", title: "iCloud / Activation Lock",
       options: [
         { label: "สามารถออก iCloud ได้",         sub: "ไม่ติด Activation Lock / ไม่ติดล็อค MDM หรือ ติดผ่อน", ded: 0     },
-        { label: "ติด iCloud / Activation Lock", sub: "ราคาจะลดลงอย่างมาก",             ded: -8000 },
+        { label: "ติด iCloud / Activation Lock", sub: "ไม่เข้าเงื่อนไขการรับซื้อ",       ded: -8000 },
       ],
     },
   ],
