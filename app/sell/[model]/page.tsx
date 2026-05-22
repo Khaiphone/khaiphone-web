@@ -1048,16 +1048,20 @@ function SellModelPageContent() {
       extraDevices: extraDevices.length > 0 ? extraDevices : undefined,
     };
 
-    // Save to Supabase — retry once on network error (handles cold-start timeout)
+    // Save to Supabase — retry up to 4 times to handle cold-start (schema cache + network warm-up)
+    const RETRY_DELAYS = [1500, 2500, 3500];
     let result: { success: boolean; error?: string } = { success: false, error: "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง" };
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt++) {
       try {
         result = await submitRequest(submission);
-        break;
+        if (result.success) break;
+        // Non-exception errors that are likely transient (schema cache not ready)
+        const isTransient = result.error?.toLowerCase().includes("schema") || result.error?.toLowerCase().includes("cache");
+        if (!isTransient) break;
       } catch (err) {
         console.error(`submitRequest attempt ${attempt + 1} failed:`, err);
-        if (attempt === 0) await new Promise(r => setTimeout(r, 1500));
       }
+      if (attempt < RETRY_DELAYS.length) await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt]));
     }
 
     if (!result.success) {
