@@ -16,11 +16,10 @@ export function getModelTypeOpts(model: string): PricingOption[] {
       { label: "เครื่องนอก / ไม่ทราบ", sub: "ราคาเริ่มต้น", ded: -1500 },
     ];
   }
-  // iPad / MacBook / Watch — คงเดิม 3 ตัวเลือก
+  // iPad / MacBook / Watch
   return [
-    { label: "เครื่องศูนย์ไทย TH/A",                  sub: "ราคาสูงสุด",         ded: 0     },
-    { label: "เครื่องศูนย์ไทย ZP/A รุ่น 14,15,16,17", sub: "ราคาใกล้เคียง TH/A", ded: -500  },
-    { label: "เครื่องนอก / ไม่ทราบ",                  sub: "ราคาเริ่มต้น",        ded: -1500 },
+    { label: "เครื่องศูนย์ไทย",       ded: 0     },
+    { label: "เครื่องนอก / ไม่ทราบ", ded: -1500 },
   ];
 }
 
