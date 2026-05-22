@@ -1057,6 +1057,7 @@ function SellModelPageContent() {
     }
 
     if (!result.success) {
+      setSubmitting(false);
       alert(result.error ?? "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
       return;
     }
