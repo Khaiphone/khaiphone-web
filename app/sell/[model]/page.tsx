@@ -1044,12 +1044,19 @@ function SellModelPageContent() {
       extraDevices: extraDevices.length > 0 ? extraDevices : undefined,
     };
 
-    // Save to Supabase (fire-and-forget on error so UX never blocks)
+    // Save to Supabase
+    let result: { success: boolean; error?: string } = { success: false, error: "ไม่สามารถเชื่อมต่อได้" };
     try {
-      await submitRequest(submission);
+      result = await submitRequest(submission);
     } catch (err) {
       console.error("submitRequest failed:", err);
     }
+
+    if (!result.success) {
+      alert(result.error ?? "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
+      return;
+    }
+
     trackEstimateEvent({ sessionId: sessionIdRef.current, event: "submit", model: product!.model });
 
     // Keep localStorage as backup for success page display
