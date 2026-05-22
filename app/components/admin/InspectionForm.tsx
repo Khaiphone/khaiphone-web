@@ -149,11 +149,15 @@ export default function InspectionForm({
   const [priceReason, setPriceReason] = useState(existing?.priceReason ?? "");
   const [imei,        setImei]        = useState(existing?.imei ?? "");
   const [serial,      setSerial]      = useState(existing?.serial ?? "");
+  const [imeiError,   setImeiError]   = useState(false);
+  const [serialError, setSerialError] = useState(false);
   const [uploading,    setUploading]   = useState(false);
   const [uploadErr,    setUploadErr]   = useState<string | null>(null);
   const [photoSaving,  setPhotoSaving] = useState(false);
   const [photoSaved,   setPhotoSaved]  = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const fileRef    = useRef<HTMLInputElement>(null);
+  const colorRef   = useRef<HTMLDivElement>(null);
+  const imeiRef    = useRef<HTMLDivElement>(null);
 
   // ── Extra device inspection state ───────────────────────────────────────────
 
@@ -165,6 +169,8 @@ export default function InspectionForm({
     color: string;
     imei: string;
     serial: string;
+    imeiError: boolean;
+    serialError: boolean;
     criteria: CriterionRow[];
     functionalTests: FunctionalTest[];
     issues: string[];
@@ -193,6 +199,8 @@ export default function InspectionForm({
       color:          saved?.color ?? "",
       imei:           saved?.imei ?? "",
       serial:         saved?.serial ?? "",
+      imeiError:      false,
+      serialError:    false,
       criteria:       savedCriteria,
       functionalTests: saved?.functionalTests?.length
         ? saved.functionalTests
@@ -227,6 +235,7 @@ export default function InspectionForm({
   }
 
   const extraFileRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const extraImeiRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   async function handleExtraFiles(idx: number, e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -334,8 +343,37 @@ export default function InspectionForm({
   const [colorError, setColorError] = useState(false);
 
   async function handleSubmit(action: "contracting" | "price_negotiation" | "rejected") {
-    if (!colorDraft.trim()) { setColorError(true); return; }
+    // Validate required fields — collect first error to scroll to
+    let firstErrorEl: HTMLElement | null = null;
+
+    const colorMissing  = !colorDraft.trim();
+    const imeiMissing   = !imei.trim();
+    const serialMissing = !serial.trim();
+
+    if (colorMissing)  { setColorError(true);  firstErrorEl = firstErrorEl ?? colorRef.current; }
+    if (imeiMissing)   { setImeiError(true);   firstErrorEl = firstErrorEl ?? imeiRef.current; }
+    if (serialMissing) { setSerialError(true);  firstErrorEl = firstErrorEl ?? (imeiMissing ? imeiRef.current : null) ?? null; }
+
+    // Validate extra devices
+    const extraErrors = extraStates.map((e, idx) => ({
+      imei:   !e.imei.trim(),
+      serial: !e.serial.trim(),
+    }));
+    extraErrors.forEach((err, idx) => {
+      if (err.imei || err.serial) {
+        setExtraStates(prev => prev.map((s, i) => i === idx ? { ...s, imeiError: err.imei, serialError: err.serial } : s));
+        if (!firstErrorEl) firstErrorEl = extraImeiRefs.current[idx];
+      }
+    });
+
+    if (colorMissing || imeiMissing || serialMissing || extraErrors.some(e => e.imei || e.serial)) {
+      firstErrorEl?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+
     setColorError(false);
+    setImeiError(false);
+    setSerialError(false);
     const data: InspectionData = {
       arrivedAt:              existing?.arrivedAt,
       inspectedAt:            new Date().toISOString(),
@@ -382,6 +420,7 @@ export default function InspectionForm({
     <div>
 
       {/* Color field */}
+      <div ref={colorRef}>
       {sectionLabel("สีตัวเครื่อง (ตรวจจริง) *")}
       {colorOptions.length > 0 ? (
         <div style={{ marginBottom: colorError ? 6 : 20 }}>
@@ -431,31 +470,41 @@ export default function InspectionForm({
         />
       )}
       {colorError && <p style={{ color: "#EF4444", fontSize: 12, marginBottom: 16, marginTop: 4 }}>กรุณาระบุสีตัวเครื่อง</p>}
+      </div>
 
       {/* IMEI + Serial */}
-      {sectionLabel("IMEI / Serial (ตรวจจริงหน้างาน)")}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
+      <div ref={imeiRef}>
+      {sectionLabel("IMEI / Serial (ตรวจจริงหน้างาน) *")}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 4 }}>
         <div>
-          <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>IMEI</label>
+          <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>
+            IMEI <span style={{ color: "#EF4444" }}>*</span>
+          </label>
           <input
             value={imei}
-            onChange={e => setImei(e.target.value)}
+            onChange={e => { setImei(e.target.value); if (e.target.value.trim()) setImeiError(false); }}
             placeholder="เช่น 356789123456789"
             maxLength={20}
-            style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" }}
+            style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${imeiError ? "#EF4444" : BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" }}
           />
+          {imeiError && <p style={{ color: "#EF4444", fontSize: 11, marginTop: 4 }}>กรุณากรอก IMEI</p>}
         </div>
         <div>
-          <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>Serial Number</label>
+          <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>
+            Serial Number <span style={{ color: "#EF4444" }}>*</span>
+          </label>
           <input
             value={serial}
-            onChange={e => setSerial(e.target.value)}
+            onChange={e => { setSerial(e.target.value.toUpperCase()); if (e.target.value.trim()) setSerialError(false); }}
             placeholder="เช่น F2LJH0X7XY"
             maxLength={20}
-            style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" }}
+            style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${serialError ? "#EF4444" : BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" }}
           />
+          {serialError && <p style={{ color: "#EF4444", fontSize: 11, marginTop: 4 }}>กรุณากรอก Serial Number</p>}
         </div>
       </div>
+      </div>
+      <div style={{ marginBottom: 20 }} />
 
       {/* Quick status banner */}
       <div style={{ marginBottom: 16, padding: "10px 14px", background: allPass && !priceChanged ? "#F0FFF4" : "#FFFBEB", borderRadius: 12, border: `1px solid ${allPass && !priceChanged ? "#BBF7D0" : "#FDE68A"}` }}>
@@ -683,19 +732,28 @@ export default function InspectionForm({
           />
 
           {/* IMEI + Serial */}
-          {sectionLabel("IMEI / Serial (ตรวจจริงหน้างาน)")}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
+          <div ref={el => { extraImeiRefs.current[idx] = el; }}>
+          {sectionLabel("IMEI / Serial (ตรวจจริงหน้างาน) *")}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 4 }}>
             <div>
-              <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>IMEI</label>
-              <input value={e.imei} onChange={ev => patchExtra(idx, { imei: ev.target.value })} placeholder="เช่น 356789123456789" maxLength={20}
-                style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" }} />
+              <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>IMEI <span style={{ color: "#EF4444" }}>*</span></label>
+              <input value={e.imei}
+                onChange={ev => patchExtra(idx, { imei: ev.target.value, imeiError: false })}
+                placeholder="เช่น 356789123456789" maxLength={20}
+                style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${e.imeiError ? "#EF4444" : BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" }} />
+              {e.imeiError && <p style={{ color: "#EF4444", fontSize: 11, marginTop: 4 }}>กรุณากรอก IMEI</p>}
             </div>
             <div>
-              <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>Serial Number</label>
-              <input value={e.serial} onChange={ev => patchExtra(idx, { serial: ev.target.value })} placeholder="เช่น F2LJH0X7XY" maxLength={20}
-                style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" }} />
+              <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>Serial Number <span style={{ color: "#EF4444" }}>*</span></label>
+              <input value={e.serial}
+                onChange={ev => patchExtra(idx, { serial: ev.target.value.toUpperCase(), serialError: false })}
+                placeholder="เช่น F2LJH0X7XY" maxLength={20}
+                style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${e.serialError ? "#EF4444" : BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" }} />
+              {e.serialError && <p style={{ color: "#EF4444", fontSize: 11, marginTop: 4 }}>กรุณากรอก Serial Number</p>}
             </div>
           </div>
+          </div>
+          <div style={{ marginBottom: 20 }} />
 
           {/* Criteria */}
           {sectionLabel("เปรียบเทียบสภาพเครื่อง")}
