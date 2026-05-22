@@ -16,10 +16,11 @@ const TEXT3  = "#AAAAAA";
 const GOLD   = "#B8860B";
 
 const CATEGORIES = [
-  { key: "iphone",  label: "iPhone"  },
-  { key: "ipad",    label: "iPad"    },
-  { key: "macbook", label: "MacBook" },
-  { key: "watch",   label: "Watch"   },
+  { key: "iphone",    label: "iPhone"      },
+  { key: "ipad",      label: "iPad"        },
+  { key: "macbook",   label: "MacBook"     },
+  { key: "watch",     label: "Watch"       },
+  { key: "accessory", label: "Accessories" },
 ] as const;
 
 type Category = typeof CATEGORIES[number]["key"];

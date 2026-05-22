@@ -285,13 +285,34 @@ export const watches: Product[] = [
   { id: "awu3",    model: "Apple Watch Ultra 3", storage: "—", isNew: true, priceGood: 20000, priceFair: 16000, pricePoor: 11000 },
 ];
 
-export const allProducts: Product[] = [...iphones, ...ipads, ...macbooks, ...watches];
+export const accessories: Product[] = [
+  // ── Apple Pencil ─────────────────────────────────────────────────────────────
+  { id: "apc1",    model: "Apple Pencil (1st gen)",  storage: "—", priceGood: 1500, priceFair: 1200, pricePoor: 800  },
+  { id: "apc2",    model: "Apple Pencil (2nd gen)",  storage: "—", priceGood: 2000, priceFair: 1600, pricePoor: 1100 },
+  { id: "apcpro",  model: "Apple Pencil Pro",        storage: "—", isNew: true, priceGood: 3000, priceFair: 2400, pricePoor: 1700 },
+  { id: "apcusbc", model: "Apple Pencil (USB-C)",    storage: "—", priceGood: 1500, priceFair: 1200, pricePoor: 800  },
+  // ── Smart Keyboard ────────────────────────────────────────────────────────────
+  { id: "sk_ipad",    model: 'Smart Keyboard for iPad (7/8/9) / Air 3 / Pro 10.5"', storage: "—", priceGood: 800,  priceFair: 600,  pricePoor: 400  },
+  { id: "sk_pro11",   model: 'Smart Keyboard for iPad Pro 11" (1st gen)',            storage: "—", priceGood: 1000, priceFair: 800,  pricePoor: 500  },
+  { id: "sk_pro12",   model: 'Smart Keyboard for iPad Pro 12.9" (1st-2nd gen)',      storage: "—", priceGood: 1000, priceFair: 800,  pricePoor: 500  },
+  // ── Smart Keyboard Folio ─────────────────────────────────────────────────────
+  { id: "skf11",  model: 'Smart Keyboard Folio for iPad Pro 11" (1st–4th gen)',      storage: "—", priceGood: 1500, priceFair: 1200, pricePoor: 800  },
+  { id: "skf129", model: 'Smart Keyboard Folio for iPad Pro 12.9" (3rd–6th gen)',    storage: "—", priceGood: 2000, priceFair: 1600, pricePoor: 1100 },
+  // ── Magic Keyboard for iPad (with trackpad) ───────────────────────────────────
+  { id: "mk11",    model: 'Magic Keyboard for iPad Pro 11" (1st–4th) / Air 4–5',    storage: "—", priceGood: 3000, priceFair: 2400, pricePoor: 1700 },
+  { id: "mk129",   model: 'Magic Keyboard for iPad Pro 12.9" (3rd–6th gen)',         storage: "—", priceGood: 3500, priceFair: 2800, pricePoor: 2000 },
+  { id: "mk11m4",  model: 'Magic Keyboard for iPad Pro 11" M4 / Air 11" M2–M3',     storage: "—", isNew: true, priceGood: 4000, priceFair: 3200, pricePoor: 2200 },
+  { id: "mk13m4",  model: 'Magic Keyboard for iPad Pro 13" M4 / Air 13" M2–M3',     storage: "—", isNew: true, priceGood: 4500, priceFair: 3600, pricePoor: 2500 },
+];
+
+export const allProducts: Product[] = [...iphones, ...ipads, ...macbooks, ...watches, ...accessories];
 
 export const CATEGORIES = [
-  { key: "iphone",  label: "iPhone",      products: iphones  },
-  { key: "ipad",    label: "iPad",        products: ipads    },
-  { key: "macbook", label: "MacBook",     products: macbooks },
-  { key: "watch",   label: "Apple Watch", products: watches  },
+  { key: "iphone",    label: "iPhone",      products: iphones     },
+  { key: "ipad",      label: "iPad",        products: ipads       },
+  { key: "macbook",   label: "MacBook",     products: macbooks    },
+  { key: "watch",     label: "Apple Watch", products: watches     },
+  { key: "accessory", label: "Accessories", products: accessories },
 ] as const;
 
 export type CategoryKey = typeof CATEGORIES[number]["key"];
