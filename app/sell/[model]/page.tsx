@@ -474,10 +474,10 @@ function shortenModelLabel(label: string) {
   return label.replace(/ รุ่น[\s\d,]+/g, "");
 }
 
-function buildSummaryRows(picks: (number | null)[], storages: string[]) {
+function buildSummaryRows(picks: (number | null)[], storages: string[], modelTypeOpts: Opt[]) {
   return [
     { title: "ความจุ",     value: picks[0] !== null ? (storages[picks[0]] ?? null) : null },
-    { title: "Model",      value: picks[1] !== null ? (shortenModelLabel(_MODEL_TYPE_GROUP[picks[1]]?.label ?? "")) || null : null },
+    { title: "Model",      value: picks[1] !== null ? (shortenModelLabel(modelTypeOpts[picks[1]]?.label ?? "")) || null : null },
     { title: "ประกัน",     value: picks[2] !== null ? (WARRANTY_OPTS[picks[2]]?.label ?? null) : null },
     { title: "ตัวเครื่อง", value: picks[3] !== null ? (BODY_OPTS[picks[3]]?.label ?? null) : null },
     { title: "หน้าจอ",     value: picks[4] !== null ? (SCREEN_OPTS[picks[4]]?.label ?? null) : null },
@@ -1019,7 +1019,7 @@ function SellModelPageContent() {
       condition: picks[3] !== null ? BODY_OPTS[picks[3]]?.sub ?? "" : "",
       selections: {
         storage:     picks[0] !== null ? storages[picks[0]] : "",
-        modelType:   picks[1] !== null ? _MODEL_TYPE_GROUP[picks[1]]?.label ?? "" : "",
+        modelType:   picks[1] !== null ? effectiveGroupOptions[0][picks[1]]?.label ?? "" : "",
         warranty:    picks[2] !== null ? WARRANTY_OPTS[picks[2]]?.label ?? "" : "",
         body:        picks[3] !== null ? BODY_OPTS[picks[3]]?.label ?? "" : "",
         screen:      picks[4] !== null ? SCREEN_OPTS[picks[4]]?.label ?? "" : "",
@@ -1081,7 +1081,7 @@ function SellModelPageContent() {
 
   const price = product ? calcPrice(product, picks, effectiveGroupOptions, storageMultiplier, storagePrices) : 0;
   const { min: priceMin, max: priceMax } = calcPriceRange(price);
-  const summaryRows = product ? buildSummaryRows(picks, storages) : [];
+  const summaryRows = product ? buildSummaryRows(picks, storages, effectiveGroupOptions[0]) : [];
   const totalBundlePrice = price + extraDevices.reduce((sum, d) => sum + d.estimatedPrice, 0);
 
   // URL helpers
