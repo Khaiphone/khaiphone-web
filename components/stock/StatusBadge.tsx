@@ -1,7 +1,7 @@
 "use client";
 
 import type { StockStatus } from "@/lib/stock/types";
-import { STOCK_STATUS_COLORS } from "@/lib/stock/mockData";
+import { STOCK_STATUS_COLORS } from "@/lib/stock/constants";
 
 export default function StockStatusBadge({ status }: { status: StockStatus }) {
   const color = STOCK_STATUS_COLORS[status] ?? "#6b7280";

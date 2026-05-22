@@ -20,6 +20,22 @@ export const viewport: Viewport = {
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://khaiphone.com";
 
+const localBusinessSchema = {
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  name: "ขายไอโฟน.com",
+  alternateName: "KhaiPhone",
+  description: "รับซื้อ iPhone, iPad, MacBook, Apple Watch ทุกรุ่น ให้ราคาสูง ประเมินราคาออนไลน์ฟรี จ่ายเงินสดทันที",
+  url: SITE_URL,
+  telephone: "+66-95-553-5167",
+  priceRange: "฿฿",
+  currenciesAccepted: "THB",
+  paymentAccepted: "Cash, Bank Transfer, PromptPay",
+  areaServed: { "@type": "Country", name: "Thailand" },
+  serviceType: ["รับซื้อ iPhone", "รับซื้อ iPad", "รับซื้อ MacBook", "รับซื้อ Apple Watch"],
+  sameAs: [],
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
@@ -63,6 +79,10 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{analytics_storage:'denied',ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied'});`,
           }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
         />
         {children}
         <MobileNav />

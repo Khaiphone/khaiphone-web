@@ -6,6 +6,7 @@ import { Truck, Banknote, Clock, ShieldCheck, ChevronDown, ChevronRight, Lock } 
 import HowToSellSection from "./components/HowToSellSection";
 import ReviewSection from "./components/ReviewSection";
 import { blogPosts } from "@/lib/blogData";
+import { fetchPublicActiveProducts } from "@/app/actions/products";
 
 export const metadata: Metadata = {
   title: "ขายไอโฟน.com — รับซื้อ iPhone iPad MacBook ให้ราคาสูง",
@@ -168,7 +169,26 @@ function FAQSection() {
   );
 }
 
-export default function Home() {
+function toSlug(model: string) {
+  return model.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+export default async function Home() {
+  // Top 5 iPhones: one row per model, highest storage price
+  const allProds = await fetchPublicActiveProducts();
+  const topIphones = Object.values(
+    allProds
+      .filter(p => p.category === "iphone")
+      .reduce<Record<string, { model: string; storage: string; price: number }>>((acc, p) => {
+        if (!acc[p.model] || p.price_good > acc[p.model].price) {
+          acc[p.model] = { model: p.model, storage: p.storage, price: p.price_good };
+        }
+        return acc;
+      }, {})
+  )
+    .sort((a, b) => b.price - a.price)
+    .slice(0, 5);
+
   return (
     <div className="min-h-screen bg-white pb-16 md:pb-0">
       <Header />
@@ -454,13 +474,11 @@ export default function Home() {
 
           {/* Pricing card */}
           <div className="rounded-2xl overflow-hidden bg-white" style={{ border: "1px solid #E5E7EB" }}>
-            {([
-              { model: "iPhone 17 Pro Max", detail: "256GB • มือสองสภาพดี", price: "฿38,000", slug: "iphone-17-pro-max" },
-              { model: "iPhone 17 Pro",     detail: "256GB • มือสองสภาพดี", price: "฿32,000", slug: "iphone-17-pro"     },
-              { model: "iPhone 16 Pro Max", detail: "256GB • มือสองสภาพดี", price: "฿30,000", slug: "iphone-16-pro-max" },
-              { model: "iPhone 16 Pro",     detail: "256GB • มือสองสภาพดี", price: "฿25,000", slug: "iphone-16-pro"     },
-              { model: "iPhone 13 Pro Max", detail: "256GB • มือสองสภาพดี", price: "฿19,000", slug: "iphone-13-pro-max" },
-            ] as const).map(({ model, detail, price, slug }, i) => (
+            {topIphones.map(({ model, storage, price }, i) => {
+              const slug = toSlug(model);
+              const detail = `${storage.split("/")[0].trim()} • มือสองสภาพดี`;
+              const priceText = `฿${price.toLocaleString("th-TH")}`;
+              return (
               <a
                 key={model}
                 href={`/sell/${slug}`}
@@ -477,7 +495,7 @@ export default function Home() {
                 <div className="flex-shrink-0 text-right md:text-left">
                   <p className="text-xs mb-0.5" style={{ color: "#9CA3AF" }}>ราคาสูงสุด</p>
                   <div className="flex items-center gap-1.5 justify-end md:justify-start">
-                    <p className="font-bold text-xl md:text-2xl leading-none" style={{ color: "#B8860B" }}>{price}</p>
+                    <p className="font-bold text-xl md:text-2xl leading-none" style={{ color: "#B8860B" }}>{priceText}</p>
                     <div className="w-4 h-4 rounded-full border hidden md:flex items-center justify-center flex-shrink-0" style={{ borderColor: "#D1D5DB" }}>
                       <span style={{ fontSize: 9, color: "#9CA3AF", lineHeight: 1 }}>i</span>
                     </div>
@@ -492,7 +510,7 @@ export default function Home() {
                 {/* Mobile: chevron only */}
                 <ChevronRight size={15} className="flex-shrink-0 md:hidden" style={{ color: "#D1D5DB" }} />
               </a>
-            ))}
+            ); })}
 
             {/* "ไม่พบรุ่นที่ต้องการ?" footer row */}
             <div

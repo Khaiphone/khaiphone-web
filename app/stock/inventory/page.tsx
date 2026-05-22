@@ -11,7 +11,7 @@ import StockStatusBadge, { GradeBadge } from "@/components/stock/StatusBadge";
 import StockDetailDrawer from "@/components/stock/StockDetailDrawer";
 import { useThemeColors } from "@/components/stock/ThemeContext";
 import { fetchStockItems, deleteStockItem } from "@/app/actions/stocks";
-import { STOCK_STATUS_COLORS } from "@/lib/stock/mockData";
+import { STOCK_STATUS_COLORS } from "@/lib/stock/constants";
 import type { StockItem, StockStatus } from "@/lib/stock/types";
 
 const STATUSES: Array<{ value: StockStatus | "all"; label: string }> = [

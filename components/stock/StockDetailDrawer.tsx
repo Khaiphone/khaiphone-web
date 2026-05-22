@@ -6,7 +6,7 @@ import { X, Edit2, Upload, RefreshCw, Tag, Printer, CheckSquare, Save, ChevronLe
 import { useThemeColors } from "./ThemeContext";
 import StockStatusBadge, { GradeBadge } from "./StatusBadge";
 import type { StockItem, StockStatus } from "@/lib/stock/types";
-import { STOCK_STATUS_COLORS } from "@/lib/stock/mockData";
+import { STOCK_STATUS_COLORS } from "@/lib/stock/constants";
 import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos, updateStockDocuments, logDocumentView } from "@/app/actions/stocks";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";

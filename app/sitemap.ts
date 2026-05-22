@@ -1,11 +1,11 @@
 import type { MetadataRoute } from "next";
-import { allProducts } from "@/lib/products";
+import { fetchPublicActiveProducts } from "@/app/actions/products";
 
 function toSlug(model: string) {
   return model.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = "https://khaiphone.com";
   const now = new Date();
 
@@ -22,14 +22,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/terms`,       lastModified: now, changeFrequency: "yearly",  priority: 0.3 },
   ];
 
-  const productPages: MetadataRoute.Sitemap = allProducts
-    .filter(p => !p.discontinued)
-    .map(p => ({
-      url: `${base}/sell/${toSlug(p.model)}`,
-      lastModified: now,
-      changeFrequency: "weekly" as const,
+  const products = await fetchPublicActiveProducts();
+  const seenSlugs = new Set<string>();
+  const productPages: MetadataRoute.Sitemap = [];
+  for (const p of products) {
+    const slug = toSlug(p.model);
+    if (seenSlugs.has(slug)) continue;
+    seenSlugs.add(slug);
+    productPages.push({
+      url: `${base}/sell/${slug}`,
+      lastModified: new Date(p.updated_at),
+      changeFrequency: "weekly",
       priority: 0.8,
-    }));
+    });
+  }
 
   return [...staticPages, ...productPages];
 }
