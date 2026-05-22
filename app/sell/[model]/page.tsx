@@ -1705,7 +1705,7 @@ function SellModelPageContent() {
                             <p className="text-xs font-semibold mb-2.5" style={{ color: "#374151" }}>
                               เลือกธนาคาร <span style={{ color: "#EF4444" }}>*</span>
                             </p>
-                            <div className="grid grid-cols-5 gap-2" style={{ outline: errors.bankName ? "1.5px solid #EF4444" : "none", borderRadius: 12, padding: errors.bankName ? 4 : 0 }}>
+                            <div className="grid grid-cols-5 gap-2">
                               {THAI_BANKS.map(bank => {
                                 const active = bankName === bank.code;
                                 return (
@@ -1734,6 +1734,7 @@ function SellModelPageContent() {
                                 );
                               })}
                             </div>
+                            {errors.bankName && <p className="text-xs mt-1" style={{ color: "#EF4444" }}>กรุณาเลือกธนาคาร</p>}
                           </div>
 
                           {/* Account fields */}
