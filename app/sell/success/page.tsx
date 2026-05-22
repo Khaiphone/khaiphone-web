@@ -128,6 +128,7 @@ function SellSuccessInner() {
   const searchParams = useSearchParams();
   const [data, setData] = useState<SubmissionData | null>(null);
   const [doneUpTo, setDoneUpTo] = useState(0);
+  const [verifyFailed, setVerifyFailed] = useState(false);
   const [copied, setCopied] = useState(false);
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
   const [openCard, setOpenCard] = useState<string | null>(null);
@@ -218,7 +219,8 @@ function SellSuccessInner() {
             return;
           }
         }
-        // All retries exhausted — keep stub data, do NOT redirect
+        // All retries exhausted — order may not have saved, show warning
+        setVerifyFailed(true);
         return;
       }
 
@@ -376,6 +378,28 @@ function SellSuccessInner() {
   return (
     <div className="min-h-screen bg-white pb-20 md:pb-0">
       <Header />
+
+      {verifyFailed && (
+        <div className="w-full px-4 py-3" style={{ background: "#FEF2F2", borderBottom: "1px solid #FECACA" }}>
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center gap-3">
+            <p className="text-sm font-medium flex-1" style={{ color: "#991B1B" }}>
+              ไม่สามารถยืนยันคำขอได้ในขณะนี้ — อาจเกิดจากระบบขัดข้องชั่วคราว กรุณาติดต่อทีมงานเพื่อตรวจสอบ
+            </p>
+            <div className="flex gap-2 flex-shrink-0">
+              <a href="https://line.me/R/ti/p/@khaiphone" target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white"
+                style={{ background: "#06C755" }}>
+                <IconLine className="w-3.5 h-3.5" /> LINE
+              </a>
+              <a href="tel:0955535167"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold"
+                style={{ border: "1px solid #FECACA", background: "#fff", color: "#991B1B" }}>
+                โทร 095-553-5167
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-6xl mx-auto px-4 py-8 md:py-10">
         <div className="flex flex-col md:flex-row gap-8 items-start">
