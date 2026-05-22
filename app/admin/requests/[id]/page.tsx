@@ -885,12 +885,10 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                 {request.inspection?.arrivedAt && request.inspection?.arrivedPhotoUrl && (
                   <div style={{ marginTop: 8 }}>
                     <a href={request.inspection.arrivedPhotoUrl} target="_blank" rel="noopener noreferrer">
-                      <Image
+                      <img
                         src={request.inspection.arrivedPhotoUrl}
                         alt="หลักฐานการถึง"
-                        width={80}
-                        height={80}
-                        style={{ borderRadius: 8, objectFit: "cover", border: "1px solid #FDE68A" }}
+                        style={{ width: 80, height: 80, borderRadius: 8, objectFit: "cover", border: "1px solid #FDE68A", display: "block" }}
                       />
                     </a>
                   </div>
