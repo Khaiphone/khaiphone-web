@@ -43,9 +43,8 @@ export default function MobileNav() {
 
   return (
     <nav
-      className="md:hidden fixed left-0 right-0 z-50 bg-white border-t border-gray-200"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200"
       style={{
-        bottom: "var(--browser-bar-h, 0px)",
         paddingBottom: "env(safe-area-inset-bottom)",
         transform: "translateZ(0)",
         WebkitTransform: "translateZ(0)",
