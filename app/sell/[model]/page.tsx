@@ -1403,7 +1403,7 @@ function SellModelPageContent() {
                         </p>
                         {pricesLoaded
                           ? <p className="text-2xl font-bold leading-tight" style={{ color: "#B8860B" }}>฿{totalBundlePrice.toLocaleString("th-TH")}</p>
-                          : <div className="h-8 w-28 rounded-lg animate-pulse mt-0.5" style={{ background: "#F3F4F6" }} />}
+                          : <p className="text-sm font-medium mt-0.5" style={{ color: "#B8860B" }}>กำลังคำนวณราคา…</p>}
                       </div>
                     </div>
                   </div>
@@ -1460,7 +1460,7 @@ function SellModelPageContent() {
                         </div>
                         {pricesLoaded
                           ? <p className="text-sm font-bold flex-shrink-0" style={{ color: "#B8860B" }}>฿{price.toLocaleString("th-TH")}</p>
-                          : <div className="h-5 w-20 rounded animate-pulse flex-shrink-0" style={{ background: "#F3F4F6" }} />}
+                          : <p className="text-xs font-medium flex-shrink-0" style={{ color: "#B8860B" }}>คำนวณอยู่…</p>}
                       </div>
                       {/* Extra devices */}
                       {extraDevices.map((d, i) => (
@@ -1495,7 +1495,7 @@ function SellModelPageContent() {
                           <p className="text-xs font-semibold" style={{ color: "#6B7280" }}>รวมทั้งหมด ({extraDevices.length + 1} เครื่อง)</p>
                           {pricesLoaded
                             ? <p className="text-sm font-bold" style={{ color: "#B8860B" }}>฿{totalBundlePrice.toLocaleString("th-TH")}</p>
-                            : <div className="h-5 w-20 rounded animate-pulse" style={{ background: "#F3F4F6" }} />}
+                            : <p className="text-xs font-medium" style={{ color: "#B8860B" }}>คำนวณอยู่…</p>}
                         </div>
                       )}
                     </div>
@@ -1990,7 +1990,7 @@ function SellModelPageContent() {
                       <p className="text-xs mt-3" style={{ color: "#9CA3AF" }}>ราคาประเมินของคุณ</p>
                       {pricesLoaded
                         ? <p className="text-3xl font-bold mt-0.5" style={{ color: "#B8860B" }}>฿{price.toLocaleString("th-TH")}</p>
-                        : <div className="h-9 w-32 rounded-lg animate-pulse mt-0.5" style={{ background: "#F3F4F6" }} />}
+                        : <p className="text-base font-medium mt-0.5" style={{ color: "#B8860B" }}>กำลังคำนวณราคา…</p>}
                     </div>
 
                     {/* Device */}
@@ -2196,7 +2196,7 @@ function SellModelPageContent() {
                     </p>
                     {pricesLoaded
                       ? <p className="font-black leading-none mb-2" style={{ fontSize: 44, color: "#B8860B" }}>฿{price.toLocaleString("th-TH")}</p>
-                      : <div className="h-11 w-40 rounded-lg animate-pulse mb-2" style={{ background: "#F3F4F6" }} />}
+                      : <p className="font-bold text-xl mb-2" style={{ color: "#B8860B" }}>กำลังคำนวณราคาประเมิน…</p>}
                     <p className="text-sm" style={{ color: "#6B7280" }}>
                       ช่วงราคาที่รับซื้อ{" "}
                       <span style={{ color: "#B8860B" }}>
@@ -2287,7 +2287,7 @@ function SellModelPageContent() {
               </p>
               {pricesLoaded
                 ? <p className="font-bold text-lg leading-tight" style={{ color: "#B8860B" }}>฿{totalBundlePrice.toLocaleString("th-TH")}</p>
-                : <div className="h-6 w-24 rounded animate-pulse mt-0.5" style={{ background: "#F3F4F6" }} />}
+                : <p className="font-medium text-sm mt-0.5" style={{ color: "#B8860B" }}>คำนวณอยู่…</p>}
             </div>
             <button type="submit" form="sell-form"
               disabled={submitting}
