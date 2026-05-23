@@ -47,6 +47,13 @@ export const metadata: Metadata = {
   keywords: ["ขายไอโฟน", "รับซื้อ iPhone", "ขาย iPhone", "ประเมินราคา iPhone", "รับซื้อ iPad", "รับซื้อ MacBook", "ขายมือถือ"],
   authors: [{ name: "ขายไอโฟน.com" }],
   robots: { index: true, follow: true },
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/icon.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
   openGraph: {
     type: "website",
     locale: "th_TH",
