@@ -1176,7 +1176,7 @@ function SellModelPageContent() {
     ? [getModelTypeOpts(product.model, groupOptions[0]) ?? groupOptions[0], ...groupOptions.slice(1)]
     : groupOptions;
 
-  const price = product ? calcPrice(product, picks, effectiveGroupOptions, storageMultiplier, storagePrices) : 0;
+  const price = (product && pricesLoaded) ? calcPrice(product, picks, effectiveGroupOptions, storageMultiplier, storagePrices) : 0;
   const { min: priceMin, max: priceMax } = calcPriceRange(price);
   const summaryRows = product ? buildSummaryRows(picks, storages, effectiveGroupOptions[0]) : [];
   const totalBundlePrice = price + extraDevices.reduce((sum, d) => sum + d.estimatedPrice, 0);
