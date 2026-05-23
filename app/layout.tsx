@@ -47,12 +47,19 @@ export const metadata: Metadata = {
   keywords: ["ขายไอโฟน", "รับซื้อ iPhone", "ขาย iPhone", "ประเมินราคา iPhone", "รับซื้อ iPad", "รับซื้อ MacBook", "ขายมือถือ"],
   authors: [{ name: "ขายไอโฟน.com" }],
   robots: { index: true, follow: true },
+  manifest: "/manifest.json",
   icons: {
     icon: [
       { url: "/favicon.ico" },
-      { url: "/icon.png", type: "image/png", sizes: "512x512" },
+      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
     ],
-    apple: "/apple-touch-icon.png",
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Khaiphone",
   },
   openGraph: {
     type: "website",
