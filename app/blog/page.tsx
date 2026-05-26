@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { Calendar, Clock, ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { blogPosts } from "@/lib/blogData";
+import BlogSearch from "./BlogSearch";
 
 export const metadata: Metadata = {
   title: "บทความและความรู้ | ขายไอโฟน.com",
@@ -15,8 +16,6 @@ export const metadata: Metadata = {
 const posts = [...blogPosts].sort(
   (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
 );
-
-const categories = ["ทั้งหมด", "ราคาล่าสุด", "วิธีการขาย", "ปัญหาเครื่อง", "ความปลอดภัย", "MacBook / iPad", "เปรียบเทียบ"];
 
 const faqs = [
   { q: "ขาย iPhone ต้องเตรียมอะไรบ้าง?",    a: "เตรียม 3 อย่าง ได้แก่ (1) บัตรประชาชนตัวจริง (2) ออก iCloud และ Apple ID ให้เรียบร้อยก่อนส่งมอบ และ (3) กล่องและอุปกรณ์ที่มีอยู่ เช่น สายชาร์จ adapter" },
@@ -38,12 +37,11 @@ const faqSchema = {
 };
 
 const internalLinks = [
-  { label: "ขาย iPhone ที่ไหนดีที่สุด 2024",             href: "/blog/where-to-sell-iphone"     },
-  { label: "วิธีเช็ค iCloud ก่อนขาย ทำยังไง?",            href: "/blog/check-icloud-before-sell"  },
-  { label: "ราคา iPhone ล่าสุด พฤษภาคม 2567",             href: "/blog/iphone-price-may-2024"     },
-  { label: "แบตเสื่อมขายได้ไหม? มีผลต่อราคาแค่ไหน",       href: "/blog/battery-health-price"      },
-  { label: "MacBook รุ่นไหนราคาดีที่สุดตอนนี้",            href: "/blog/macbook-best-price"        },
-  { label: "ขาย iPhone จอแตก ราคาเป็นยังไง?",             href: "/blog/broken-screen-price"       },
+  { label: "วิธีล้างข้อมูล iPhone ก่อนขาย ให้ปลอดภัย 100%", href: "/blog/erase-iphone-before-selling" },
+  { label: "iPhone จอแตก ขายได้ไหม?",                        href: "/blog/iphone-broken-screen"        },
+  { label: "อัปเดตราคารับซื้อ iPhone พฤษภาคม 2567",          href: "/blog/iphone-price-may-2024"       },
+  { label: "ขาย iPhone ต้องลบอะไรบ้างก่อนไปขาย?",            href: "/blog/what-to-delete-before-sell"  },
+  { label: "รับซื้อ MacBook รุ่นไหนบ้างในปี 2024",            href: "/blog/macbook-buyback-2024"        },
 ];
 
 const latestPrices = [
@@ -60,7 +58,7 @@ export default function BlogPage() {
       <Header />
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section className="py-14 md:py-20 px-4 text-center" style={{ background: "#f9f9f7" }}>
+      <section className="pt-14 md:pt-20 pb-0 px-4 text-center" style={{ background: "#f9f9f7" }}>
         <div className="max-w-3xl mx-auto">
           <div
             className="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-full mb-5"
@@ -72,98 +70,11 @@ export default function BlogPage() {
           <p className="text-sm md:text-base mb-9" style={{ color: "#6B7280" }}>
             รวมบทความ ข่าวสาร และเทคนิคเกี่ยวกับการซื้อ-ขาย iPhone, iPad, MacBook มือสอง
           </p>
-
-          {/* Search */}
-          <div className="relative max-w-xl mx-auto">
-            <svg
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
-              style={{ color: "#6B7280" }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"
-            >
-              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-            </svg>
-            <input
-              type="search"
-              placeholder="ค้นหาบทความ เช่น จอแตก, iCloud, แบต, ราคา iPhone 15"
-              className="w-full pl-11 pr-4 py-3.5 rounded-xl text-sm bg-white"
-              style={{
-                border: "1.5px solid #E5E7EB",
-                outline: "none",
-                fontFamily: "var(--font-prompt), sans-serif",
-                color: "#111",
-              }}
-            />
-          </div>
         </div>
       </section>
 
-      {/* ── Category Filter ────────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-20 bg-white px-4 py-3.5" style={{ borderBottom: "1px solid #F3F4F6" }}>
-        <div className="max-w-6xl mx-auto flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
-          {categories.map((cat, i) => (
-            <a
-              key={cat}
-              href={i === 0 ? "/blog" : `/blog?category=${encodeURIComponent(cat)}`}
-              className="flex-none px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors"
-              style={
-                i === 0
-                  ? { background: "#B8860B", color: "#fff" }
-                  : { background: "#fff", color: "#374151", border: "1.5px solid #E5E7EB" }
-              }
-            >
-              {cat}
-            </a>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Blog Grid ──────────────────────────────────────────────────────── */}
-      <section className="py-10 md:py-14 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
-            {posts.map((post) => (
-              <a
-                key={post.id}
-                href={`/blog/${post.slug}`}
-                className="group flex flex-col gap-3"
-                style={{ textDecoration: "none" }}
-              >
-                {/* Cover image */}
-                <div className="relative rounded-xl overflow-hidden" style={{ aspectRatio: "3/2" }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={post.image}
-                    alt={post.title}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                  <span
-                    className="absolute bottom-3 left-3 text-xs font-semibold text-white px-3 py-1 rounded-full"
-                    style={{ background: "#B8860B" }}
-                  >
-                    {post.category}
-                  </span>
-                </div>
-
-                {/* Content */}
-                <div>
-                  <h2 className="font-bold text-black text-sm md:text-base leading-snug line-clamp-2 mb-2 group-hover:text-[#B8860B] transition-colors">
-                    {post.title}
-                  </h2>
-                  <div className="flex items-center gap-4">
-                    <span className="flex items-center gap-1 text-xs" style={{ color: "#6B7280" }}>
-                      <Calendar size={11} />{post.displayDate}
-                    </span>
-                    <span className="flex items-center gap-1 text-xs" style={{ color: "#6B7280" }}>
-                      <Clock size={11} />{post.readTime}
-                    </span>
-                  </div>
-                </div>
-              </a>
-            ))}
-          </div>
-
-          {/* Pagination — hidden until real backend pagination exists */}
-        </div>
-      </section>
+      {/* ── Search + Categories + Grid (client — interactive) ─────────────── */}
+      <BlogSearch posts={posts} />
 
       {/* ── Section 1: FAQ SEO ─────────────────────────────────────────────── */}
       <section className="py-12 md:py-16 px-4 bg-white" style={{ borderTop: "1px solid #F3F4F6" }}>

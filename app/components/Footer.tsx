@@ -12,6 +12,7 @@ const serviceLinks = [
 ];
 
 const helpLinks = [
+  { label: "เกี่ยวกับเรา",          href: "/about"   },
   { label: "คำถามที่พบบ่อย",       href: "/#faq"    },
   { label: "เงื่อนไขการรับซื้อ",    href: "/terms"   },
   { label: "นโยบายความเป็นส่วนตัว", href: "/privacy" },

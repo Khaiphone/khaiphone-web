@@ -54,7 +54,7 @@ export const blogPosts: BlogPost[] = [
     readTime: "5 นาที",
     title: "ขาย iPhone ต้องลบอะไรบ้างก่อนไปขาย?",
     excerpt: "เช็กลิสต์ 5 อย่างที่ต้องทำก่อนขายเพื่อความปลอดภัยของข้อมูลคุณ",
-    image: "/blog_iphone-delete.webp",
+    image: "/blog_iphone-data.webp",
     slug: "what-to-delete-before-sell",
   },
   {
