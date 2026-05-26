@@ -4,7 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import MobileNav from "./components/MobileNav";
 import CookieConsent from "./components/CookieConsent";
-import GoogleAnalytics, { GA_ID } from "./components/GoogleAnalytics";
+import GoogleAnalytics from "./components/GoogleAnalytics";
 
 const prompt = Prompt({
   weight: ["400", "500", "600", "700", "800"],
@@ -86,12 +86,29 @@ export default function RootLayout({
     <html lang="th" className={prompt.variable} suppressHydrationWarning={true}>
       <head />
       <body className="min-h-screen bg-white text-gray-900 antialiased" style={{ fontFamily: "var(--font-prompt), sans-serif" }}>
-        {/* Consent Mode v2 defaults — must run before gtag.js loads */}
+        {/* GTM noscript fallback */}
+        <noscript>
+          <iframe
+            src="https://www.googletagmanager.com/ns.html?id=GTM-NL5D6NR7"
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+          />
+        </noscript>
+        {/* Consent Mode v2 defaults — must run before GTM loads */}
         <Script
           id="ga-consent-init"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{analytics_storage:'denied',ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied'});`,
+          }}
+        />
+        {/* Google Tag Manager */}
+        <Script
+          id="gtm"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-NL5D6NR7');`,
           }}
         />
         <script

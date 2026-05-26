@@ -1,6 +1,5 @@
 "use client";
 
-import Script from "next/script";
 import { useEffect } from "react";
 import { STORAGE_KEY, CONSENT_SAVED_EVENT } from "./CookieConsent";
 
@@ -44,14 +43,5 @@ export default function GoogleAnalytics() {
     return () => window.removeEventListener(CONSENT_SAVED_EVENT, handleConsentSaved);
   }, []);
 
-  return (
-    <Script
-      src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
-      strategy="afterInteractive"
-      onReady={() => {
-        window.gtag("js", new Date());
-        window.gtag("config", GA_ID, { send_page_view: true });
-      }}
-    />
-  );
+  return null;
 }
