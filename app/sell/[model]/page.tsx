@@ -1627,7 +1627,7 @@ function SellModelPageContent() {
                               วันที่นัดหมาย <span style={{ color: "#EF4444" }}>*</span>
                             </label>
                             <input type="date" value={appointDate}
-                              min={new Date().toISOString().split("T")[0]}
+                              min={(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })()}
                               onChange={e => setAppointDate(e.target.value)}
                               className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-white outline-none"
                               style={{ border: "1.5px solid #E5E7EB", fontFamily: "inherit", color: "#111" }} />
@@ -1712,7 +1712,7 @@ function SellModelPageContent() {
                               วันที่นัดหมาย <span style={{ color: "#EF4444" }}>*</span>
                             </label>
                             <input type="date" value={appointDate}
-                              min={new Date().toISOString().split("T")[0]}
+                              min={(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })()}
                               onChange={e => setAppointDate(e.target.value)}
                               className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-white outline-none"
                               style={{ border: "1.5px solid #E5E7EB", fontFamily: "inherit", color: "#111" }} />
