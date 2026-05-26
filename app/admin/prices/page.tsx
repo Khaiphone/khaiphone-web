@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { ChevronLeft, Plus, Check, Eye, EyeOff, ChevronRight, Layers, X, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { fetchProducts, updateProduct, createProduct, bulkUpdateProductPrices, syncProductsFromLib } from "@/app/actions/products";
+import { fetchProducts, updateProduct, createProduct, bulkUpdateProductPrices, syncProductsFromLib, syncStorageFromLib } from "@/app/actions/products";
 import type { ProductRow } from "@/app/actions/products";
 import { supabase } from "@/lib/supabase";
 
@@ -60,6 +60,7 @@ export default function PricesPage() {
   // Sync
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [syncingStorage, setSyncingStorage] = useState(false);
 
   async function handleSync() {
     setSyncing(true);
@@ -69,6 +70,20 @@ export default function PricesPage() {
     if (res.success) {
       setSyncMsg(res.inserted === 0 ? "✓ รายการครบแล้ว ไม่มีรุ่นใหม่ที่ต้องเพิ่ม" : `✓ เพิ่ม ${res.inserted} รุ่นเรียบร้อย`);
       if (res.inserted > 0) await load();
+    } else {
+      setSyncMsg(`✗ ${"error" in res ? res.error : "เกิดข้อผิดพลาด"}`);
+    }
+    setTimeout(() => setSyncMsg(null), 5000);
+  }
+
+  async function handleSyncStorage() {
+    setSyncingStorage(true);
+    setSyncMsg(null);
+    const res = await syncStorageFromLib();
+    setSyncingStorage(false);
+    if (res.success) {
+      setSyncMsg(`✓ อัปเดต storage ${res.updated} รุ่นเรียบร้อย`);
+      await load();
     } else {
       setSyncMsg(`✗ ${"error" in res ? res.error : "เกิดข้อผิดพลาด"}`);
     }
@@ -221,22 +236,38 @@ export default function PricesPage() {
             <h1 style={{ color: TEXT, fontSize: 22, fontWeight: 700, margin: 0 }}>จัดการราคา</h1>
             <p style={{ color: TEXT3, fontSize: 12, margin: "2px 0 0" }}>แก้ไขราคาประเมินแต่ละรุ่น</p>
           </div>
-          {/* Sync button */}
+          {/* Sync buttons */}
           {!bulkMode && (
-            <button
-              onClick={handleSync}
-              disabled={syncing}
-              title="เพิ่มรุ่นที่ขาดจาก estimate list เข้า DB"
-              style={{
-                display: "flex", alignItems: "center", gap: 6,
-                padding: "8px 14px", border: `1px solid ${BORDER}`, borderRadius: 10,
-                background: CARD, color: TEXT2, fontSize: 13, cursor: syncing ? "not-allowed" : "pointer",
-                fontFamily: "inherit", opacity: syncing ? 0.6 : 1,
-              }}
-            >
-              <RefreshCw size={15} className={syncing ? "animate-spin" : ""} />
-              {syncing ? "..." : "Sync"}
-            </button>
+            <>
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                title="เพิ่มรุ่นที่ขาดจาก estimate list เข้า DB"
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  padding: "8px 14px", border: `1px solid ${BORDER}`, borderRadius: 10,
+                  background: CARD, color: TEXT2, fontSize: 13, cursor: syncing ? "not-allowed" : "pointer",
+                  fontFamily: "inherit", opacity: syncing ? 0.6 : 1,
+                }}
+              >
+                <RefreshCw size={15} className={syncing ? "animate-spin" : ""} />
+                {syncing ? "..." : "Sync"}
+              </button>
+              <button
+                onClick={handleSyncStorage}
+                disabled={syncingStorage}
+                title="อัปเดต storage string และลบ storage ที่ไม่มีแล้วออกจาก storage_prices"
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  padding: "8px 14px", border: `1px solid ${BORDER}`, borderRadius: 10,
+                  background: CARD, color: TEXT2, fontSize: 13, cursor: syncingStorage ? "not-allowed" : "pointer",
+                  fontFamily: "inherit", opacity: syncingStorage ? 0.6 : 1,
+                }}
+              >
+                <RefreshCw size={15} className={syncingStorage ? "animate-spin" : ""} />
+                {syncingStorage ? "..." : "Sync Storage"}
+              </button>
+            </>
           )}
 
           {/* Tier/bulk mode toggle */}
