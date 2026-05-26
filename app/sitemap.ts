@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { fetchPublicActiveProducts } from "@/app/actions/products";
+import { blogPosts } from "@/lib/blogData";
 
 function toSlug(model: string) {
   return model.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -38,6 +39,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
   }
 
+  const blogPages: MetadataRoute.Sitemap = blogPosts.map((post) => ({
+    url: `${base}/blog/${post.slug}`,
+    lastModified: new Date(post.date),
+    changeFrequency: "monthly" as const,
+    priority: 0.65,
+  }));
+
   const locationPages: MetadataRoute.Sitemap = [
     "rangsit", "pathumthani", "lamlukka", "donmueang", "bangkhen",
   ].map((slug) => ({
@@ -47,5 +55,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.75,
   }));
 
-  return [...staticPages, ...locationPages, ...productPages];
+  return [...staticPages, ...blogPages, ...locationPages, ...productPages];
 }

@@ -6,6 +6,8 @@ import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import { blogPosts } from "@/lib/blogData";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://khaiphone.com";
+
 // ── Static generation ──────────────────────────────────────────────────────────
 
 export function generateStaticParams() {
@@ -20,9 +22,28 @@ export async function generateMetadata({
   const { slug } = await params;
   const post = blogPosts.find((p) => p.slug === slug);
   if (!post) return { title: "ไม่พบบทความ | ขายไอโฟน.com" };
+  const canonical = `${SITE_URL}/blog/${post.slug}`;
+  const ogImage = `${SITE_URL}${post.image}`;
   return {
     title: `${post.title} | ขายไอโฟน.com`,
     description: post.excerpt,
+    keywords: post.keywords,
+    alternates: { canonical },
+    openGraph: {
+      type: "article",
+      locale: "th_TH",
+      siteName: "ขายไอโฟน.com",
+      title: post.title,
+      description: post.excerpt,
+      url: canonical,
+      images: [{ url: ogImage, alt: post.title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description: post.excerpt,
+      images: [ogImage],
+    },
   };
 }
 
@@ -33,9 +54,67 @@ type Section =
   | { type: "heading"; text: string }
   | { type: "list"; items: string[] }
   | { type: "callout"; text: string }
-  | { type: "table"; headers: string[]; rows: string[][] };
+  | { type: "table"; headers: string[]; rows: string[][] }
+  | { type: "faq"; items: { q: string; a: string }[] };
 
 const CONTENT: Record<string, Section[]> = {
+  "erase-iphone-before-selling": [
+    { type: "paragraph", text: "หลายคนที่จะขาย iPhone มักข้ามขั้นตอนนี้ไป หรือทำไม่ครบ ผลที่ตามมาคือข้อมูลส่วนตัวยังอยู่ในเครื่อง หรือที่เกิดขึ้นบ่อยกว่านั้นคือเครื่องติด iCloud ทำให้ผู้ซื้อไม่สามารถใช้งานได้ บทความนี้รวบรวมทุกขั้นตอนที่ต้องทำก่อนส่งมอบ iPhone พร้อมเช็กลิสต์ ทำตามได้เลยทันที" },
+    { type: "heading", text: "ทำไมต้องล้างข้อมูลก่อนขาย iPhone?" },
+    { type: "paragraph", text: "iPhone เก็บข้อมูลสำคัญไว้มากมาย ทั้งรหัสผ่าน บัตรเครดิต บัญชีแอปธนาคาร รูปภาพส่วนตัว และข้อความ ถ้าไม่ล้างข้อมูลให้ถูกต้อง มีความเสี่ยงสองอย่างหลัก — หนึ่งคือผู้รับเครื่องต่ออาจเข้าถึงข้อมูลส่วนตัวได้ สองคือถ้าไม่ออก iCloud เครื่องจะถูก Activation Lock ทำให้ขายไม่ได้จริงๆ" },
+    { type: "heading", text: "ขั้นตอนที่ 1 — Backup ข้อมูลก่อน (อย่าข้าม)" },
+    { type: "paragraph", text: "ขั้นตอนแรกที่ต้องทำก่อนทุกอย่างคือ Backup ข้อมูลทั้งหมดออกมาก่อน เพราะหลังจาก Factory Reset แล้ว ข้อมูลทุกอย่างจะหายถาวร ไม่สามารถกู้คืนได้ ทำผ่าน iCloud หรือ Mac/PC ก็ได้" },
+    { type: "list", items: [
+      "iCloud Backup — เปิด Settings → [ชื่อ] → iCloud → iCloud Backup → Back Up Now (ต้องต่อ Wi-Fi และชาร์จ)",
+      "Mac Backup — ต่อสาย USB เปิด Finder เลือก iPhone แล้วคลิก Back Up Now",
+      "PC Backup — เปิด iTunes เลือก iPhone แล้วคลิก Back Up Now",
+      "รอ Backup เสร็จสมบูรณ์ก่อนไปขั้นตอนถัดไป ตรวจสอบวันเวลา Backup ล่าสุดใน Settings ให้ตรงก่อน",
+    ]},
+    { type: "callout", text: "อย่าข้ามขั้นตอน Backup เด็ดขาด เพราะหลังจาก Factory Reset แล้ว ข้อมูลทุกอย่างจะหายถาวร ไม่สามารถกู้คืนได้" },
+    { type: "heading", text: "ขั้นตอนที่ 2 — ออก iCloud และปิด Find My iPhone (สำคัญที่สุด)" },
+    { type: "paragraph", text: "นี่คือขั้นตอนที่สำคัญที่สุด และที่คนมักทำผิดพลาดมากที่สุด ถ้าไม่ออก iCloud เครื่องจะถูก Activation Lock ซึ่งทำให้ผู้ซื้อไม่สามารถตั้งค่าหรือใช้งานเครื่องได้เลย และเจ้าของเดิมเท่านั้นที่ปลด Lock ได้" },
+    { type: "list", items: [
+      "เปิด Settings → แตะชื่อของคุณที่ด้านบนสุด",
+      "แตะ Find My → Find My iPhone → สลับปิด (Toggle OFF)",
+      "กรอกรหัสผ่าน Apple ID เพื่อยืนยันการปิด",
+      "กลับไปหน้าชื่อ → เลื่อนลงสุด → แตะ Sign Out",
+      "เลือกข้อมูลที่ต้องการเก็บ (ถ้ามี) แล้วแตะ Sign Out",
+      "รอระบบดำเนินการ — iCloud จะถูกยกเลิกการเชื่อมต่อจากเครื่องนี้",
+    ]},
+    { type: "callout", text: "ถ้าจำรหัสผ่าน Apple ID ไม่ได้ ให้รีเซ็ตที่ iforgot.apple.com ก่อน เป็นขั้นตอนที่ข้ามไม่ได้เด็ดขาด ร้านรับซื้อที่น่าเชื่อถือทุกร้านจะไม่รับเครื่องที่ยังมี iCloud อยู่" },
+    { type: "heading", text: "ขั้นตอนที่ 3 — Factory Reset (Erase All Content and Settings)" },
+    { type: "paragraph", text: "หลังออก iCloud สำเร็จแล้ว ให้ทำ Factory Reset เพื่อลบข้อมูลทั้งหมดออกจากเครื่องอย่างสมบูรณ์ ขั้นตอนนี้ iPhone จะล้างข้อมูลทุกอย่างและกลับมาเป็นเครื่องใหม่" },
+    { type: "list", items: [
+      "เปิด Settings → General",
+      "เลื่อนลงด้านล่าง แตะ Transfer or Reset iPhone",
+      "แตะ Erase All Content and Settings",
+      "อ่านคำเตือน แล้วแตะ Continue",
+      "กรอก Passcode ของเครื่อง (ถ้ามี) เพื่อยืนยัน",
+      "รอ iPhone รีสตาร์ทและล้างข้อมูล ใช้เวลาประมาณ 2–5 นาที",
+      "เครื่องจะแสดงหน้า Hello — หมายความว่าสำเร็จแล้ว พร้อมส่งมอบ",
+    ]},
+    { type: "heading", text: "ขั้นตอนที่ 4 — ถอด SIM Card ออก" },
+    { type: "paragraph", text: "ขั้นตอนสุดท้ายที่คนมักลืมบ่อยที่สุด ใช้ SIM Ejector Tool (เข็มถาด SIM) แทงรูเล็กด้านข้างตัวเครื่อง ถาด SIM จะดีดออกมา นำ SIM Card ออกเก็บไว้หรือย้ายไปใส่โทรศัพท์เครื่องใหม่ก่อนส่งมอบ" },
+    { type: "heading", text: "เช็กลิสต์ก่อนส่งมอบ iPhone" },
+    { type: "list", items: [
+      "Backup ข้อมูลเรียบร้อยแล้ว (iCloud หรือ Mac/PC)",
+      "Find My iPhone ปิดแล้ว",
+      "ออก iCloud / Sign out Apple ID สำเร็จแล้ว",
+      "Factory Reset เสร็จแล้ว (หน้า Hello แสดงอยู่)",
+      "ถอด SIM Card ออกแล้ว",
+      "เตรียมกล่องและอุปกรณ์เสริม (ถ้ามี)",
+    ]},
+    { type: "callout", text: "เมื่อทำครบทุกข้อแล้ว iPhone พร้อมส่งมอบ ผู้ซื้อสามารถตั้งค่าและใช้งานได้ทันที ไม่มีข้อมูลของคุณหลงเหลืออยู่" },
+    { type: "heading", text: "คำถามที่พบบ่อยเกี่ยวกับการล้างข้อมูล iPhone ก่อนขาย" },
+    { type: "faq", items: [
+      { q: "ถ้าจำรหัสผ่าน Apple ID ไม่ได้ จะออก iCloud ได้ไหม?", a: "ต้องรีเซ็ตรหัสผ่านก่อนครับ เข้าที่ iforgot.apple.com แล้วรีเซ็ตผ่านเบอร์โทรหรืออีเมลสำรอง ถ้าลืมทั้งหมด Apple มีกระบวนการ Account Recovery แต่อาจใช้เวลาหลายวัน ไม่มีทางลัดสำหรับขั้นตอนนี้" },
+      { q: "Factory Reset แล้ว ข้อมูลยังอยู่ไหม?", a: "ไม่ครับ Erase All Content and Settings จะลบข้อมูลทั้งหมดถาวร ไม่สามารถกู้คืนได้ นั่นคือเหตุผลที่ต้อง Backup ก่อนเสมอ" },
+      { q: "iPhone ที่ยังติด iCloud อยู่ ขายที่ร้านรับซื้อได้ไหม?", a: "ไม่ได้ครับ ร้านรับซื้อที่น่าเชื่อถือทุกร้านจะไม่รับเครื่องที่ยังมี iCloud อยู่ เพราะผู้ซื้อต่อไปจะไม่สามารถใช้งานเครื่องได้เลย จำเป็นต้องออก iCloud ก่อนทุกครั้ง" },
+      { q: "ทำทั้งหมดใช้เวลานานแค่ไหน?", a: "รวมทุกขั้นตอนประมาณ 15–30 นาทีครับ ส่วนใหญ่เวลาจะอยู่ที่การรอ Backup ขึ้นอยู่กับขนาดข้อมูลและความเร็ว Wi-Fi ส่วน Factory Reset ใช้เวลาประมาณ 2–5 นาที" },
+      { q: "iPhone เปิดไม่ติด จะล้างข้อมูลได้ไหม?", a: "ถ้าเปิดไม่ติดเลย อาจต้องใช้ Recovery Mode ครับ ต่อ iPhone กับ Mac/PC แล้วใช้ Finder (Mac) หรือ iTunes (PC) เพื่อ Restore ถ้าเครื่องมีปัญหาหนัก แจ้งร้านรับซื้อให้ทราบก่อน หลายร้านยังรับซื้อได้แต่ราคาจะปรับตามสภาพ" },
+    ]},
+  ],
+
   "iphone-broken-screen": [
     { type: "paragraph", text: "หนึ่งในคำถามที่พบบ่อยที่สุดจากลูกค้าคือ iPhone จอแตก ยังขายได้ไหม? คำตอบคือ ได้ครับ — เรารับซื้อ iPhone จอแตกทุกรุ่น แต่ราคาจะต่างกันขึ้นอยู่กับระดับความเสียหาย" },
     { type: "heading", text: "แตกแบบไหนยังรับซื้อ?" },
@@ -146,9 +225,49 @@ export default async function BlogPostPage({
 
   const sections = CONTENT[slug] ?? [];
   const related = blogPosts.filter((p) => p.slug !== slug).slice(0, 3);
+  const canonical = `${SITE_URL}/blog/${post.slug}`;
+
+  const faqItems = sections
+    .filter((s): s is Extract<typeof s, { type: "faq" }> => s.type === "faq")
+    .flatMap((s) => s.items);
+
+  const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: post.title,
+    description: post.excerpt,
+    datePublished: post.date,
+    image: `${SITE_URL}${post.image}`,
+    url: canonical,
+    author: { "@type": "Organization", name: "ขายไอโฟน.com", url: SITE_URL },
+    publisher: { "@type": "Organization", name: "ขายไอโฟน.com", url: SITE_URL },
+  };
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "หน้าหลัก", item: SITE_URL },
+      { "@type": "ListItem", position: 2, name: "บทความ", item: `${SITE_URL}/blog` },
+      { "@type": "ListItem", position: 3, name: post.title, item: canonical },
+    ],
+  };
+
+  const faqSchema = faqItems.length > 0 ? {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqItems.map(({ q, a }) => ({
+      "@type": "Question",
+      name: q,
+      acceptedAnswer: { "@type": "Answer", text: a },
+    })),
+  } : null;
 
   return (
     <div className="min-h-screen bg-white pb-16 md:pb-0">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+      {faqSchema && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />}
       <Header />
 
       {/* Breadcrumb */}
@@ -233,6 +352,24 @@ export default async function BlogPostPage({
                 <div key={i} className="flex items-start gap-3 rounded-2xl px-5 py-4 my-5" style={{ background: "rgba(184,134,11,0.07)", border: "1.5px solid rgba(184,134,11,0.2)" }}>
                   <span className="flex-shrink-0 text-base mt-0.5">💡</span>
                   <p className="text-sm leading-relaxed font-medium" style={{ color: "#374151" }}>{section.text}</p>
+                </div>
+              );
+            }
+            if (section.type === "faq") {
+              return (
+                <div key={i} className="mt-2 mb-5">
+                  {section.items.map(({ q, a }, j) => (
+                    <details key={j} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                      <summary
+                        className="flex items-center justify-between gap-4 py-4 cursor-pointer select-none"
+                        style={{ listStyle: "none" }}
+                      >
+                        <span className="font-semibold text-black text-sm md:text-base leading-snug">{q}</span>
+                        <span className="flex-shrink-0 font-bold text-lg" style={{ color: "#B8860B" }}>+</span>
+                      </summary>
+                      <p className="pb-4 text-sm leading-relaxed" style={{ color: "#6B7280" }}>{a}</p>
+                    </details>
+                  ))}
                 </div>
               );
             }

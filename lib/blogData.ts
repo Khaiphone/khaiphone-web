@@ -8,9 +8,22 @@ export interface BlogPost {
   excerpt: string;
   image: string;
   slug: string;
+  keywords?: string[];
 }
 
 export const blogPosts: BlogPost[] = [
+  {
+    id: 5,
+    category: "วิธีขาย",
+    date: "2026-05-27",
+    displayDate: "27 พ.ค. 2569",
+    readTime: "5 นาที",
+    title: "วิธีล้างข้อมูล iPhone ก่อนขาย ให้ปลอดภัย 100%",
+    excerpt: "ก่อนส่งมอบ iPhone ต้องทำ 4 ขั้นตอนนี้ให้ครบ เพื่อป้องกันข้อมูลส่วนตัวหลุด และให้เครื่องพร้อมใช้งานสำหรับผู้ซื้อทันที มีเช็กลิสต์ครบ",
+    image: "/blog_iphone-delete.webp",
+    slug: "erase-iphone-before-selling",
+    keywords: ["วิธีล้างข้อมูล iPhone ก่อนขาย", "ออก iCloud ก่อนขาย", "factory reset iPhone ก่อนขาย", "เตรียม iPhone ก่อนขาย"],
+  },
   {
     id: 1,
     category: "วิธีขาย",
