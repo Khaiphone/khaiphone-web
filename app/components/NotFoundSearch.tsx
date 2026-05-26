@@ -30,7 +30,7 @@ export default function NotFoundSearch({ products }: { products: Product[] }) {
         borderColor: focused ? "#B8860B" : "#E5E5E5",
         transition: "all 150ms",
       }}>
-        <Search size={18} style={{ color: "#9CA3AF", flexShrink: 0 }} />
+        <Search size={18} style={{ color: "#6B7280", flexShrink: 0 }} />
         <input
           type="text"
           value={query}
@@ -66,7 +66,7 @@ export default function NotFoundSearch({ products }: { products: Product[] }) {
             >
               <div>
                 <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#111" }}>{p.model}</p>
-                <p style={{ margin: 0, fontSize: 11, color: "#9CA3AF" }}>
+                <p style={{ margin: 0, fontSize: 11, color: "#6B7280" }}>
                   เริ่มต้น ฿{p.priceGood.toLocaleString("th-TH")}
                 </p>
               </div>

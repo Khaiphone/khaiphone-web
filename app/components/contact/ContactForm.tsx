@@ -101,7 +101,7 @@ export default function ContactForm() {
         <div>
           <label style={labelStyle}>
             อีเมล{" "}
-            <span style={{ fontSize: "0.75rem", color: "#9CA3AF", fontWeight: 400 }}>
+            <span style={{ fontSize: "0.75rem", color: "#6B7280", fontWeight: 400 }}>
               (ไม่บังคับ)
             </span>
           </label>

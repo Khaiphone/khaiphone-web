@@ -55,7 +55,7 @@ export default function AdminHeader({ title, subtitle }: AdminHeaderProps) {
             {title}
           </h1>
           {subtitle && (
-            <p style={{ color: "#9CA3AF", fontSize: "13px", margin: "2px 0 0" }}>
+            <p style={{ color: "#6B7280", fontSize: "13px", margin: "2px 0 0" }}>
               {subtitle}
             </p>
           )}
@@ -74,7 +74,7 @@ export default function AdminHeader({ title, subtitle }: AdminHeaderProps) {
               borderRadius: 8,
               padding: "7px 12px",
               cursor: "pointer",
-              color: "#9CA3AF",
+              color: "#6B7280",
               fontSize: 13,
               minWidth: 200,
             }}
@@ -88,7 +88,7 @@ export default function AdminHeader({ title, subtitle }: AdminHeaderProps) {
               padding: "1px 6px",
               fontSize: 11,
               fontFamily: "monospace",
-              color: "#9CA3AF",
+              color: "#6B7280",
             }}>⌘K</kbd>
           </button>
 
@@ -104,7 +104,7 @@ export default function AdminHeader({ title, subtitle }: AdminHeaderProps) {
               padding: "7px 12px",
             }}
           >
-            <Calendar size={14} color="#9CA3AF" />
+            <Calendar size={14} color="#6B7280" />
             <span style={{ color: "#374151", fontSize: "12px" }}>{thaiDate}</span>
           </div>
 
@@ -126,7 +126,7 @@ export default function AdminHeader({ title, subtitle }: AdminHeaderProps) {
               }}
             >
               {period}
-              <ChevronDown size={14} color="#9CA3AF" />
+              <ChevronDown size={14} color="#6B7280" />
             </button>
             {showPeriodDropdown && (
               <div

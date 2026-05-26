@@ -38,7 +38,7 @@ export default function MobileNav() {
     return active ? "#B8860B" : undefined;
   }
   function tabClass(active: boolean) {
-    return active ? "text-xs font-medium" : "text-xs text-gray-400";
+    return active ? "text-xs font-medium" : "text-xs text-gray-500";
   }
 
   return (
@@ -52,11 +52,11 @@ export default function MobileNav() {
     >
       <div className="flex items-end h-16">
         <a href="/" className="flex-1 flex flex-col items-center justify-end pb-2 gap-0.5">
-          <House size={20} style={{ color: tabColor(isHome) }} className={!isHome ? "text-gray-400" : ""} />
+          <House size={20} style={{ color: tabColor(isHome) }} className={!isHome ? "text-gray-500" : ""} />
           <span className={tabClass(isHome)} style={isHome ? { color: "#B8860B" } : undefined}>หน้าแรก</span>
         </a>
         <a href="/trade-in" className="flex-1 flex flex-col items-center justify-end pb-2 gap-0.5">
-          <List size={20} style={{ color: tabColor(isTradeIn) }} className={!isTradeIn ? "text-gray-400" : ""} />
+          <List size={20} style={{ color: tabColor(isTradeIn) }} className={!isTradeIn ? "text-gray-500" : ""} />
           <span className={tabClass(isTradeIn)} style={isTradeIn ? { color: "#B8860B" } : undefined}>รายการรับซื้อ</span>
         </a>
         <a href="/sell" className="flex-1 flex flex-col items-center justify-end pb-1 gap-0.5">
@@ -69,11 +69,11 @@ export default function MobileNav() {
           <span className={tabClass(isSell)} style={isSell ? { color: "#B8860B" } : undefined}>ประเมินราคา</span>
         </a>
         <a href="/track" className="flex-1 flex flex-col items-center justify-end pb-2 gap-0.5">
-          <Search size={20} style={{ color: tabColor(isTrack) }} className={!isTrack ? "text-gray-400" : ""} />
+          <Search size={20} style={{ color: tabColor(isTrack) }} className={!isTrack ? "text-gray-500" : ""} />
           <span className={tabClass(isTrack)} style={isTrack ? { color: "#B8860B" } : undefined}>ติดตามสถานะ</span>
         </a>
         <a href="/contact" className="flex-1 flex flex-col items-center justify-end pb-2 gap-0.5">
-          <MessageCircle size={20} style={{ color: tabColor(isContact) }} className={!isContact ? "text-gray-400" : ""} />
+          <MessageCircle size={20} style={{ color: tabColor(isContact) }} className={!isContact ? "text-gray-500" : ""} />
           <span className={tabClass(isContact)} style={isContact ? { color: "#B8860B" } : undefined}>ติดต่อเรา</span>
         </a>
       </div>

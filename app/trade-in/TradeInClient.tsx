@@ -89,7 +89,7 @@ function ProductCard({ p, condition }: { p: TradeInProduct; condition: Condition
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-0.5">
-            <p className="font-bold text-sm md:text-base leading-snug" style={{ color: p.discontinued ? "#9CA3AF" : "#111" }}>{p.model}</p>
+            <p className="font-bold text-sm md:text-base leading-snug" style={{ color: p.discontinued ? "#6B7280" : "#111" }}>{p.model}</p>
             {p.isNew && (
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.12)", color: "#B8860B" }}>ใหม่ล่าสุด</span>
             )}
@@ -98,16 +98,16 @@ function ProductCard({ p, condition }: { p: TradeInProduct; condition: Condition
             )}
           </div>
           {!p.discontinued && !singleVariant && (
-            <p className="text-xs" style={{ color: "#9CA3AF" }}>{p.variants.length} ความจุ</p>
+            <p className="text-xs" style={{ color: "#6B7280" }}>{p.variants.length} ความจุ</p>
           )}
           {!p.discontinued && singleVariant && (
-            <p className="text-xs" style={{ color: "#9CA3AF" }}>{p.variants[0].storage}</p>
+            <p className="text-xs" style={{ color: "#6B7280" }}>{p.variants[0].storage}</p>
           )}
         </div>
 
         <div className="flex flex-col items-end gap-1 flex-shrink-0">
           {p.discontinued ? (
-            <p className="text-sm" style={{ color: "#9CA3AF" }}>ไม่รับซื้อ</p>
+            <p className="text-sm" style={{ color: "#6B7280" }}>ไม่รับซื้อ</p>
           ) : (
             <>
               <p className="font-bold text-lg md:text-xl" style={{ color: "#111" }}>
@@ -218,7 +218,7 @@ function TradeInContent({ categories }: { categories: TradeInCategory[] }) {
         </div>
 
         <div className="relative flex-1 max-w-sm">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#9CA3AF" }} />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#6B7280" }} />
           <input
             type="text"
             placeholder="ค้นหารุ่น..."
@@ -228,19 +228,19 @@ function TradeInContent({ categories }: { categories: TradeInCategory[] }) {
           />
           {search && (
             <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2">
-              <X size={14} style={{ color: "#9CA3AF" }} />
+              <X size={14} style={{ color: "#6B7280" }} />
             </button>
           )}
         </div>
 
-        <p className="self-center text-sm text-gray-400 hidden md:block">
+        <p className="self-center text-sm text-gray-500 hidden md:block">
           {filtered.length} รายการ
         </p>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 pb-8">
         {filtered.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
+          <div className="text-center py-16 text-gray-500">
             <IconApple className="w-12 h-12 mx-auto mb-3 opacity-20" />
             <p className="font-medium">ไม่พบรุ่นที่ค้นหา</p>
           </div>
@@ -258,7 +258,7 @@ function TradeInContent({ categories }: { categories: TradeInCategory[] }) {
           <div className="flex flex-col md:flex-row items-center justify-between gap-5 px-6 py-7 md:px-10 md:py-10" style={{ background: "#111111" }}>
             <div>
               <h3 className="text-xl md:text-2xl font-bold text-white mb-1">ไม่เจอรุ่นที่ต้องการ?</h3>
-              <p className="text-sm" style={{ color: "#9CA3AF" }}>ติดต่อเราได้เลย เรารับซื้อทุกรุ่น ทุกสภาพ</p>
+              <p className="text-sm" style={{ color: "#6B7280" }}>ติดต่อเราได้เลย เรารับซื้อทุกรุ่น ทุกสภาพ</p>
             </div>
             <a
               href="https://line.me/R/ti/p/@khaiphone"

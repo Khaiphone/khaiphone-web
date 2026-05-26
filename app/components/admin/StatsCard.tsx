@@ -26,7 +26,7 @@ export default function StatsCard({ title, value, change, icon, color }: StatsCa
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
-          <p style={{ color: "#9CA3AF", fontSize: "13px", marginBottom: "4px" }}>{title}</p>
+          <p style={{ color: "#6B7280", fontSize: "13px", marginBottom: "4px" }}>{title}</p>
           <p style={{ color: "#111111", fontSize: "28px", fontWeight: 700, lineHeight: 1 }}>{value}</p>
         </div>
         <div
@@ -47,7 +47,7 @@ export default function StatsCard({ title, value, change, icon, color }: StatsCa
       <p
         style={{
           fontSize: "12px",
-          color: isPositive ? "#16A34A" : isNegative ? "#EF4444" : "#9CA3AF",
+          color: isPositive ? "#16A34A" : isNegative ? "#EF4444" : "#6B7280",
           margin: 0,
         }}
       >

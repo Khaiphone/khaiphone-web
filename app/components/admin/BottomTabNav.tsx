@@ -27,7 +27,7 @@ export default function BottomTabNav() {
   }, [pathname]);
 
   const GOLD     = dark ? "#D4A843" : "#B8860B";
-  const INACTIVE = dark ? "#636366" : "#9CA3AF";
+  const INACTIVE = dark ? "#636366" : "#6B7280";
   const BG       = dark ? "#1C1C1E" : "#FFFFFF";
   const BORDER   = dark ? "#2C2C2E" : "#E5E7EB";
 

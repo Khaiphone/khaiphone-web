@@ -73,7 +73,7 @@ export default function HowToSellPage() {
               <div key={title} className="flex flex-col items-center gap-1.5 py-4 px-3">
                 <Icon size={20} style={{ color: "#B8860B" }} />
                 <p className="font-semibold text-black text-xs md:text-sm text-center">{title}</p>
-                <p className="text-xs text-center" style={{ color: "#9CA3AF" }}>{sub}</p>
+                <p className="text-xs text-center" style={{ color: "#6B7280" }}>{sub}</p>
               </div>
             ))}
           </div>

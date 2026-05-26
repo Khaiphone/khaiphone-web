@@ -35,7 +35,7 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
           justifyContent: "center",
         }}
       >
-        <div style={{ color: "#9CA3AF", fontSize: "14px" }}>กำลังโหลด...</div>
+        <div style={{ color: "#6B7280", fontSize: "14px" }}>กำลังโหลด...</div>
       </div>
     );
   }

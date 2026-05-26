@@ -498,7 +498,7 @@ export default function PrivacyPage() {
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
             ต้องการประเมินราคาอุปกรณ์ Apple ของคุณ?
           </h2>
-          <p className="text-sm mb-8" style={{ color: "#9CA3AF" }}>
+          <p className="text-sm mb-8" style={{ color: "#6B7280" }}>
             ประเมินฟรี ไม่มีค่าใช้จ่าย รู้ราคาภายในไม่กี่นาที
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -527,7 +527,7 @@ export default function PrivacyPage() {
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <p className="text-xs font-semibold shrink-0" style={{ color: "#374151" }}>
             ราคารับซื้อล่าสุด{" "}
-            <span style={{ color: "#9CA3AF", fontWeight: 400 }}>(อัปเดต 20 พ.ค. 2567)</span>
+            <span style={{ color: "#6B7280", fontWeight: 400 }}>(อัปเดต 20 พ.ค. 2567)</span>
           </p>
           <div className="flex flex-wrap gap-x-5 gap-y-1 flex-1">
             {PRICES.map((p) => (

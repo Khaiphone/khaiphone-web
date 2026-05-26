@@ -114,7 +114,7 @@ function BlogSection() {
 
               {/* Content */}
               <div className="flex flex-col gap-1.5">
-                <p className="text-xs" style={{ color: "#9CA3AF" }}>{post.displayDate}</p>
+                <p className="text-xs" style={{ color: "#6B7280" }}>{post.displayDate}</p>
                 <h3 className="font-bold text-black text-sm md:text-base leading-snug line-clamp-2">
                   {post.title}
                 </h3>
@@ -364,7 +364,7 @@ export default async function Home() {
                     ประเมินราคา
                   </span>
                 ) : (
-                  <span className="hidden md:block w-full border font-medium py-2 rounded-full text-sm text-center" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", color: "#9CA3AF" }}>
+                  <span className="hidden md:block w-full border font-medium py-2 rounded-full text-sm text-center" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", color: "#6B7280" }}>
                     เร็วๆ นี้
                   </span>
                 )}
@@ -432,9 +432,9 @@ export default async function Home() {
             {/* Highlight row */}
             <div className="grid grid-cols-4 text-center" style={{ borderTop: "1px solid #e5e7eb", background: "rgba(184,134,11,0.06)" }}>
               <div className="px-4 py-3.5 text-left text-xs md:text-sm font-semibold" style={{ color: "#B8860B" }}>ราคาสูงกว่า Trade-in</div>
-              <div className="px-2 py-3.5 leading-snug" style={{ color: "#B8860B" }}><span className="font-bold text-xs whitespace-nowrap">+฿2,000–4,000</span><br/><span className="font-normal text-xs" style={{ color: "#9CA3AF" }}>ขึ้นอยู่กับรุ่น</span></div>
-              <div className="px-2 py-3.5 text-xs" style={{ color: "#9CA3AF" }}>ราคาอ้างอิง</div>
-              <div className="px-2 py-3.5 text-xs" style={{ color: "#9CA3AF" }}>—</div>
+              <div className="px-2 py-3.5 leading-snug" style={{ color: "#B8860B" }}><span className="font-bold text-xs whitespace-nowrap">+฿2,000–4,000</span><br/><span className="font-normal text-xs" style={{ color: "#6B7280" }}>ขึ้นอยู่กับรุ่น</span></div>
+              <div className="px-2 py-3.5 text-xs" style={{ color: "#6B7280" }}>ราคาอ้างอิง</div>
+              <div className="px-2 py-3.5 text-xs" style={{ color: "#6B7280" }}>—</div>
             </div>
           </div>
         </div>
@@ -452,7 +452,7 @@ export default async function Home() {
             <h2 className="text-2xl md:text-4xl font-bold text-black mb-2">
               ราคารับซื้อ iPhone <span style={{ color: "#B8860B" }}>ยอดนิยม</span>
             </h2>
-            <p className="text-sm md:text-base" style={{ color: "#9CA3AF" }}>
+            <p className="text-sm md:text-base" style={{ color: "#6B7280" }}>
               ประเมินเบื้องต้น ใช้เวลาไม่ถึง 1 นาที
             </p>
           </div>
@@ -491,16 +491,16 @@ export default async function Home() {
                 {/* Left: model info */}
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm md:text-base text-black leading-snug mb-0.5">{model}</p>
-                  <p className="text-xs md:text-sm" style={{ color: "#9CA3AF" }}>{detail}</p>
+                  <p className="text-xs md:text-sm" style={{ color: "#6B7280" }}>{detail}</p>
                 </div>
 
                 {/* Middle: price */}
                 <div className="flex-shrink-0 text-right md:text-left">
-                  <p className="text-xs mb-0.5" style={{ color: "#9CA3AF" }}>ราคาสูงสุด</p>
+                  <p className="text-xs mb-0.5" style={{ color: "#6B7280" }}>ราคาสูงสุด</p>
                   <div className="flex items-center gap-1.5 justify-end md:justify-start">
                     <p className="font-bold text-xl md:text-2xl leading-none" style={{ color: "#B8860B" }}>{priceText}</p>
                     <div className="w-4 h-4 rounded-full border hidden md:flex items-center justify-center flex-shrink-0" style={{ borderColor: "#D1D5DB" }}>
-                      <span style={{ fontSize: 9, color: "#9CA3AF", lineHeight: 1 }}>i</span>
+                      <span style={{ fontSize: 9, color: "#6B7280", lineHeight: 1 }}>i</span>
                     </div>
                   </div>
                 </div>
@@ -521,14 +521,14 @@ export default async function Home() {
               style={{ borderTop: "1px solid #F3F4F6", background: "#FAFAFA" }}
             >
               <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#F3F4F6" }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                   <rect x="5" y="2" width="14" height="20" rx="2" />
-                  <circle cx="12" cy="17" r="0.5" fill="#9CA3AF" />
+                  <circle cx="12" cy="17" r="0.5" fill="#6B7280" />
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm text-black leading-snug">ไม่พบรุ่นที่ต้องการ?</p>
-                <p className="text-xs mt-0.5 leading-snug" style={{ color: "#9CA3AF" }}>ประเมินราคา iPhone รุ่นอื่นๆ ได้มากกว่า 50 รุ่น</p>
+                <p className="text-xs mt-0.5 leading-snug" style={{ color: "#6B7280" }}>ประเมินราคา iPhone รุ่นอื่นๆ ได้มากกว่า 50 รุ่น</p>
               </div>
               <a href="/sell" className="flex-shrink-0 text-sm font-bold whitespace-nowrap" style={{ color: "#B8860B" }}>
                 ดูรุ่นทั้งหมด →
@@ -556,7 +556,7 @@ export default async function Home() {
                 </div>
                 <div>
                   <p className="font-bold text-sm text-black mb-0.5">{title}</p>
-                  <p className="text-xs leading-relaxed" style={{ color: "#9CA3AF" }}>{sub}</p>
+                  <p className="text-xs leading-relaxed" style={{ color: "#6B7280" }}>{sub}</p>
                 </div>
               </div>
             ))}

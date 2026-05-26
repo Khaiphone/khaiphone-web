@@ -102,7 +102,7 @@ export default function Header() {
             <Image src="/logo-icon.webp" alt="ขายไอโฟน.com" width={40} height={40} className="flex-shrink-0 md:mr-1 rounded-lg" style={{ width: 40, height: 40 }} />
             <div>
               <div className="font-bold text-lg leading-none text-black">ขายไอโฟน.com</div>
-              <div className="text-xs text-gray-400">รับซื้อ-ขาย Apple มือสอง</div>
+              <div className="text-xs text-gray-500">รับซื้อ-ขาย Apple มือสอง</div>
             </div>
           </a>
 
@@ -162,7 +162,7 @@ export default function Header() {
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-black leading-tight">{cat.name}</p>
-                          <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{cat.sub}</p>
+                          <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{cat.sub}</p>
                         </div>
                       </a>
                     ))}
@@ -205,7 +205,7 @@ export default function Header() {
               <Image src="/logo-icon.webp" alt="ขายไอโฟน.com" width={40} height={40} className="flex-shrink-0 rounded-lg" style={{ width: 40, height: 40 }} />
               <div>
                 <div className="font-bold text-base leading-none text-black">ขายไอโฟน.com</div>
-                <div className="text-xs text-gray-400">รับซื้อ-ขาย Apple มือสอง</div>
+                <div className="text-xs text-gray-500">รับซื้อ-ขาย Apple มือสอง</div>
               </div>
             </div>
             <label htmlFor="menu-toggle" className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center cursor-pointer">

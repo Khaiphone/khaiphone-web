@@ -193,8 +193,8 @@ export default function TrackPage() {
 
             {/* Helper */}
             <div className="mt-5 pt-5 flex items-start gap-2" style={{ borderTop: "1px solid #F3F4F6" }}>
-              <AlertCircle size={13} style={{ color: "#9CA3AF", flexShrink: 0, marginTop: 1 }} />
-              <p className="text-xs leading-relaxed" style={{ color: "#9CA3AF" }}>
+              <AlertCircle size={13} style={{ color: "#6B7280", flexShrink: 0, marginTop: 1 }} />
+              <p className="text-xs leading-relaxed" style={{ color: "#6B7280" }}>
                 กรอกเลขคำขอเต็มๆ เช่น <span className="font-semibold text-black" style={{ fontFamily: "monospace" }}>KH-2026-45362</span> หรือ <span className="font-semibold text-black" style={{ fontFamily: "monospace" }}>KP-DLWSCX</span>
                 {" "}— เลขคำขออยู่ในลิงก์ติดตามที่ได้รับ
               </p>
@@ -204,7 +204,7 @@ export default function TrackPage() {
           {/* Trust strip */}
           <div className="mt-6 flex items-center justify-center gap-5 flex-wrap">
             {["ข้อมูลปลอดภัย 100%", "ไม่ต้องล็อกอิน", "อัปเดตแบบ real-time"].map((t) => (
-              <span key={t} className="flex items-center gap-1.5 text-xs" style={{ color: "#9CA3AF" }}>
+              <span key={t} className="flex items-center gap-1.5 text-xs" style={{ color: "#6B7280" }}>
                 <span style={{ color: "#B8860B" }}>✓</span>
                 {t}
               </span>

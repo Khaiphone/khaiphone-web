@@ -130,7 +130,7 @@ function ReviewCard({ r }: { r: (typeof reviews)[number] }) {
         </div>
         <div className="min-w-0">
           <p className="text-white text-xs font-semibold leading-snug">{r.product.model}</p>
-          <p className="text-xs" style={{ color: "#9CA3AF" }}>{r.product.storage} | {r.product.color}</p>
+          <p className="text-xs" style={{ color: "#6B7280" }}>{r.product.storage} | {r.product.color}</p>
         </div>
       </div>
 
@@ -164,7 +164,7 @@ export default function ReviewSection() {
               <Star key={i} size={22} fill="#D4AF37" color="#D4AF37" />
             ))}
           </div>
-          <p className="text-sm" style={{ color: "#9CA3AF" }}>จาก 300+ รีวิว</p>
+          <p className="text-sm" style={{ color: "#6B7280" }}>จาก 300+ รีวิว</p>
         </div>
 
         {/* Trust Badges */}
@@ -181,7 +181,7 @@ export default function ReviewSection() {
               <Icon size={18} color="#D4AF37" className="flex-shrink-0" />
               <div>
                 <p className="text-white text-xs font-semibold leading-snug">{title}</p>
-                <p className="text-xs hidden md:block" style={{ color: "#9CA3AF" }}>{sub}</p>
+                <p className="text-xs hidden md:block" style={{ color: "#6B7280" }}>{sub}</p>
               </div>
             </div>
           ))}

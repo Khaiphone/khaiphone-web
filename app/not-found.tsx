@@ -116,7 +116,7 @@ export default async function NotFound() {
 
           {/* Quick links */}
           <div style={{ borderTop: "1px solid #E5E5E5", paddingTop: 24 }}>
-            <p style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 14, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <p style={{ fontSize: 12, color: "#6B7280", marginBottom: 14, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
               ลิงก์ด่วน
             </p>
             <div style={{ display: "flex", flexWrap: "nowrap", gap: 6, justifyContent: "center", overflowX: "auto" }}>
@@ -144,7 +144,7 @@ export default async function NotFound() {
 
       {/* Footer note */}
       <div style={{ textAlign: "center", padding: "16px", borderTop: "1px solid #E5E5E5", background: "#fff" }}>
-        <p style={{ margin: 0, fontSize: 12, color: "#9CA3AF" }}>
+        <p style={{ margin: 0, fontSize: 12, color: "#6B7280" }}>
           © {new Date().getFullYear()} ขายไอโฟน.com — รับซื้อ Apple ให้ราคาสูง จ่ายเงินสดทันที
         </p>
       </div>

@@ -41,7 +41,7 @@ export default function RequestsTable({ requests, onRowClick }: RequestsTablePro
                 style={{
                   padding: "10px 12px",
                   textAlign: "left",
-                  color: "#9CA3AF",
+                  color: "#6B7280",
                   fontSize: "12px",
                   fontWeight: 600,
                   whiteSpace: "nowrap",
@@ -79,7 +79,7 @@ export default function RequestsTable({ requests, onRowClick }: RequestsTablePro
                   <p style={{ color: "#111111", fontSize: "13px", fontWeight: 500, margin: 0 }}>
                     {req.customer.name}
                   </p>
-                  <p style={{ color: "#9CA3AF", fontSize: "12px", margin: 0 }}>
+                  <p style={{ color: "#6B7280", fontSize: "12px", margin: 0 }}>
                     {req.customer.phone}
                   </p>
                 </div>
@@ -89,7 +89,7 @@ export default function RequestsTable({ requests, onRowClick }: RequestsTablePro
                   <p style={{ color: "#111111", fontSize: "13px", margin: 0 }}>
                     {req.device.model}
                   </p>
-                  <p style={{ color: "#9CA3AF", fontSize: "12px", margin: 0 }}>
+                  <p style={{ color: "#6B7280", fontSize: "12px", margin: 0 }}>
                     {req.device.storage}
                   </p>
                 </div>
@@ -103,7 +103,7 @@ export default function RequestsTable({ requests, onRowClick }: RequestsTablePro
                 <StatusBadge status={req.status} />
               </td>
               <td style={{ padding: "12px 12px" }}>
-                <span style={{ color: "#9CA3AF", fontSize: "12px" }}>
+                <span style={{ color: "#6B7280", fontSize: "12px" }}>
                   {formatDate(req.createdAt)}
                 </span>
               </td>
@@ -156,7 +156,7 @@ export default function RequestsTable({ requests, onRowClick }: RequestsTablePro
           style={{
             padding: "48px",
             textAlign: "center",
-            color: "#9CA3AF",
+            color: "#6B7280",
             fontSize: "14px",
           }}
         >

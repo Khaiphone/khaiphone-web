@@ -61,13 +61,13 @@ export default function ReviewsPage() {
             <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <Stars n={r.stars} />
-                <span className="text-xs" style={{ color: "#9CA3AF" }}>{r.date}</span>
+                <span className="text-xs" style={{ color: "#6B7280" }}>{r.date}</span>
               </div>
               <p className="text-sm leading-relaxed flex-1" style={{ color: "#374151" }}>"{r.text}"</p>
               <div className="flex items-center justify-between pt-2 border-t border-gray-50">
                 <div>
                   <p className="text-sm font-semibold text-black">{r.name}</p>
-                  <p className="text-xs" style={{ color: "#9CA3AF" }}>ขาย {r.model}</p>
+                  <p className="text-xs" style={{ color: "#6B7280" }}>ขาย {r.model}</p>
                 </div>
                 <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.1)", color: "#B8860B" }}>ยืนยันแล้ว</span>
               </div>

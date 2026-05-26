@@ -81,7 +81,7 @@ export default function BlogPage() {
           <div className="relative max-w-xl mx-auto">
             <svg
               className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
-              style={{ color: "#9CA3AF" }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"
+              style={{ color: "#6B7280" }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"
             >
               <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
             </svg>
@@ -153,10 +153,10 @@ export default function BlogPage() {
                     {post.title}
                   </h2>
                   <div className="flex items-center gap-4">
-                    <span className="flex items-center gap-1 text-xs" style={{ color: "#9CA3AF" }}>
+                    <span className="flex items-center gap-1 text-xs" style={{ color: "#6B7280" }}>
                       <Calendar size={11} />{post.date}
                     </span>
-                    <span className="flex items-center gap-1 text-xs" style={{ color: "#9CA3AF" }}>
+                    <span className="flex items-center gap-1 text-xs" style={{ color: "#6B7280" }}>
                       <Clock size={11} />{post.readTime}
                     </span>
                   </div>
@@ -199,7 +199,7 @@ export default function BlogPage() {
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-3 leading-tight">
             อยากรู้ราคาขายเครื่องของคุณ?
           </h2>
-          <p className="text-base mb-1.5" style={{ color: "#9CA3AF" }}>ประเมินฟรีภายใน 1 นาที</p>
+          <p className="text-base mb-1.5" style={{ color: "#6B7280" }}>ประเมินฟรีภายใน 1 นาที</p>
           <p className="text-sm mb-10" style={{ color: "#6B7280" }}>ไม่มีค่าใช้จ่าย • นัดรับได้ทั่วประเทศ</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
@@ -223,7 +223,7 @@ export default function BlogPage() {
       {/* ── Section 3: Internal Links ──────────────────────────────────────── */}
       <section className="py-12 px-4" style={{ background: "#f9f9f7" }}>
         <div className="max-w-6xl mx-auto">
-          <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{ color: "#9CA3AF" }}>
+          <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{ color: "#6B7280" }}>
             บทความยอดนิยม
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -249,7 +249,7 @@ export default function BlogPage() {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3 flex-shrink-0">
             <span className="text-sm font-bold text-black">ราคารับซื้อล่าสุด</span>
-            <span className="text-xs" style={{ color: "#9CA3AF" }}>อัปเดต 18 พ.ค. 2567</span>
+            <span className="text-xs" style={{ color: "#6B7280" }}>อัปเดต 18 พ.ค. 2567</span>
           </div>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             {latestPrices.map(({ model, price }) => (

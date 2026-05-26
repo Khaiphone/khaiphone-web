@@ -859,7 +859,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                         📷 {arrivalPhotoFile ? arrivalPhotoFile.name.slice(0, 20) + (arrivalPhotoFile.name.length > 20 ? "…" : "") : "เลือกรูป"}
                       </button>
                       {arrivalPhotoFile && (
-                        <button type="button" onClick={() => setArrivalPhotoFile(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", fontSize: 13, padding: 0 }}>✕</button>
+                        <button type="button" onClick={() => setArrivalPhotoFile(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#6B7280", fontSize: 13, padding: 0 }}>✕</button>
                       )}
                     </div>
                     <input

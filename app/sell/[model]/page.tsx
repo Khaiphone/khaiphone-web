@@ -514,7 +514,7 @@ function FocusHeader({ backHref }: { backHref: string }) {
             <Image src="/logo-icon.webp" alt="ขายไอโฟน.com" width={32} height={32} className="flex-shrink-0 rounded-lg" style={{ width: 32, height: 32 }} />
             <div className="flex flex-col text-left">
               <p className="font-bold text-sm text-black leading-tight">ขายไอโฟน.com</p>
-              <p className="text-xs leading-tight" style={{ color: "#9CA3AF" }}>รับซื้อ Apple มือสอง</p>
+              <p className="text-xs leading-tight" style={{ color: "#6B7280" }}>รับซื้อ Apple มือสอง</p>
             </div>
           </button>
           <div className="flex items-center gap-1 flex-shrink-0">
@@ -563,7 +563,7 @@ function FocusHeader({ backHref }: { backHref: string }) {
             </div>
             <div className="flex items-center justify-center gap-1.5 mt-4">
               <Lock size={11} style={{ color: "#D1D5DB" }} />
-              <span className="text-xs" style={{ color: "#9CA3AF" }}>ข้อมูลของคุณจะถูกบันทึกไว้อย่างปลอดภัย</span>
+              <span className="text-xs" style={{ color: "#6B7280" }}>ข้อมูลของคุณจะถูกบันทึกไว้อย่างปลอดภัย</span>
             </div>
           </div>
         </div>
@@ -601,14 +601,14 @@ function ProgressBarPremium({ step }: { step: number }) {
                       fontSize: 11, fontWeight: 700,
                       background:  isDone ? "#B8860B" : "#fff",
                       borderColor: isDone || isCurrent ? "#B8860B" : "#D1D5DB",
-                      color:       isDone ? "#fff" : isCurrent ? "#B8860B" : "#9CA3AF",
+                      color:       isDone ? "#fff" : isCurrent ? "#B8860B" : "#6B7280",
                     }}
                   >
                     {isDone ? <Check size={11} strokeWidth={3} color="#fff" /> : i + 1}
                   </div>
                   <p
                     className="text-center mt-1 leading-tight"
-                    style={{ fontSize: 8, width: 36, marginLeft: -4, color: isDone || isCurrent ? "#B8860B" : "#9CA3AF" }}
+                    style={{ fontSize: 8, width: 36, marginLeft: -4, color: isDone || isCurrent ? "#B8860B" : "#6B7280" }}
                   >
                     {STEP_LABELS[i]}
                   </p>
@@ -653,7 +653,7 @@ function ProgressBarForm() {
                       fontSize: 11, fontWeight: 700,
                       background:  isDone ? "#B8860B" : "#fff",
                       borderColor: isActive ? "#B8860B" : "#D1D5DB",
-                      color:       isDone ? "#fff" : isCurrent ? "#B8860B" : "#9CA3AF",
+                      color:       isDone ? "#fff" : isCurrent ? "#B8860B" : "#6B7280",
                       transition:  "all 220ms cubic-bezier(0.4,0,0.2,1)",
                       boxShadow:   isCurrent ? "0 0 0 3px rgba(184,134,11,0.18)" : "none",
                       transform:   isCurrent ? "scale(1.13)" : "scale(1)",
@@ -665,7 +665,7 @@ function ProgressBarForm() {
                     className="text-center mt-1 leading-tight"
                     style={{
                       fontSize: 9,
-                      color:      isActive ? "#B8860B" : "#9CA3AF",
+                      color:      isActive ? "#B8860B" : "#6B7280",
                       fontWeight: isCurrent ? 700 : isActive ? 600 : 400,
                       transition: "color 220ms ease, font-weight 220ms ease",
                     }}
@@ -701,7 +701,7 @@ function BottomContextBar({ product }: { product: Product }) {
             : <IconApple className="w-5 h-5" style={{ color: "#999" }} />}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs leading-tight" style={{ color: "#9CA3AF" }}>กำลังประเมิน</p>
+          <p className="text-xs leading-tight" style={{ color: "#6B7280" }}>กำลังประเมิน</p>
           <p className="text-sm font-bold text-black truncate leading-tight">{product.model}</p>
         </div>
         <a
@@ -1239,7 +1239,7 @@ function SellModelPageContent() {
           <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center mt-4">
             <IconApple className="w-12 h-12 mx-auto mb-3 opacity-20" />
             <p className="font-semibold text-black mb-1">ไม่พบรุ่นที่ต้องการ</p>
-            <p className="text-sm text-gray-400 mb-6">กรุณาเลือกรุ่นจากรายการรับซื้อ</p>
+            <p className="text-sm text-gray-500 mb-6">กรุณาเลือกรุ่นจากรายการรับซื้อ</p>
             <a href="/sell" className="inline-block bg-black text-white font-semibold px-6 py-3 rounded-full text-sm">
               เลือกรุ่น →
             </a>
@@ -1285,7 +1285,7 @@ function SellModelPageContent() {
                         </div>
                         <div className="min-w-0">
                           <p className="font-semibold text-sm text-black leading-snug">{opt.label}</p>
-                          {opt.sub && <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{opt.sub}</p>}
+                          {opt.sub && <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{opt.sub}</p>}
                         </div>
                       </button>
                     );
@@ -1372,7 +1372,7 @@ function SellModelPageContent() {
                       ) : (
                         <div
                           className="flex items-center justify-center py-3.5 rounded-full font-bold text-sm"
-                          style={{ background: "#E5E7EB", color: "#9CA3AF", flex: step > 0 ? "2 1 0" : "1 1 0" }}
+                          style={{ background: "#E5E7EB", color: "#6B7280", flex: step > 0 ? "2 1 0" : "1 1 0" }}
                         >
                           เลือกตัวเลือกก่อน
                         </div>
@@ -1395,10 +1395,10 @@ function SellModelPageContent() {
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <h2 className="text-xl font-bold text-black">สรุปราคาประเมิน</h2>
-                        <p className="text-sm mt-1" style={{ color: "#9CA3AF" }}>กรุณากรอกข้อมูลสำหรับการขายและนัดหมาย</p>
+                        <p className="text-sm mt-1" style={{ color: "#6B7280" }}>กรุณากรอกข้อมูลสำหรับการขายและนัดหมาย</p>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="text-xs mb-0.5" style={{ color: "#9CA3AF" }}>
+                        <p className="text-xs mb-0.5" style={{ color: "#6B7280" }}>
                           {extraDevices.length > 0 ? `ราคารวม ${extraDevices.length + 1} เครื่อง` : "ราคาประเมินของคุณ"}
                         </p>
                         {pricesLoaded
@@ -1419,7 +1419,7 @@ function SellModelPageContent() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-black text-base leading-snug">{product.model}</p>
-                        <p className="text-sm mt-0.5" style={{ color: "#9CA3AF" }}>
+                        <p className="text-sm mt-0.5" style={{ color: "#6B7280" }}>
                           {picks[0] !== null ? storages[picks[0]] : ""}
                           {picks[3] !== null ? ` • ${BODY_OPTS[picks[3]]?.sub ?? ""}` : ""}
                         </p>
@@ -1435,7 +1435,7 @@ function SellModelPageContent() {
                     <div className="flex flex-col" style={{ borderTop: "1px solid #F9FAFB" }}>
                       {summaryRows.map(({ title, value }) => (
                         <div key={title} className="flex items-center justify-between py-2.5" style={{ borderBottom: "1px solid #F9FAFB" }}>
-                          <span className="text-sm" style={{ color: "#9CA3AF" }}>{title}</span>
+                          <span className="text-sm" style={{ color: "#6B7280" }}>{title}</span>
                           <span className="text-sm font-medium text-black text-right">{value}</span>
                         </div>
                       ))}
@@ -1453,7 +1453,7 @@ function SellModelPageContent() {
                             <p className="text-sm font-semibold text-black leading-snug">{product?.model}</p>
                             <span className="text-xs font-medium px-1.5 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.15)", color: "#B8860B" }}>หลัก</span>
                           </div>
-                          <p className="text-xs" style={{ color: "#9CA3AF" }}>
+                          <p className="text-xs" style={{ color: "#6B7280" }}>
                             {picks[0] !== null ? storages[picks[0]] : ""}
                             {picks[3] !== null ? ` • ${BODY_OPTS[picks[3]]?.sub ?? ""}` : ""}
                           </p>
@@ -1469,11 +1469,11 @@ function SellModelPageContent() {
                           <div className="flex items-center gap-3 px-3 py-2.5" style={{ background: "#F9FAFB" }}>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold text-black leading-snug">{d.model}</p>
-                              <p className="text-xs" style={{ color: "#9CA3AF" }}>{d.storage || "—"}</p>
+                              <p className="text-xs" style={{ color: "#6B7280" }}>{d.storage || "—"}</p>
                             </div>
                             <p className="text-sm font-bold flex-shrink-0" style={{ color: "#6B7280" }}>฿{d.estimatedPrice.toLocaleString("th-TH")}</p>
                             <button type="button" onClick={() => handleRemoveExtra(i)} className="flex-shrink-0 ml-1 p-1 rounded-full hover:bg-gray-100">
-                              <X size={13} style={{ color: "#9CA3AF" }} />
+                              <X size={13} style={{ color: "#6B7280" }} />
                             </button>
                           </div>
                           {/* Condition details */}
@@ -1481,7 +1481,7 @@ function SellModelPageContent() {
                             <div className="px-3 pb-2" style={{ borderTop: "1px solid #F3F4F6", background: "#fff" }}>
                               {d.details.map(({ title, value }) => (
                                 <div key={title} className="flex items-center justify-between py-1.5" style={{ borderBottom: "1px solid #F9FAFB" }}>
-                                  <span className="text-xs" style={{ color: "#9CA3AF" }}>{title}</span>
+                                  <span className="text-xs" style={{ color: "#6B7280" }}>{title}</span>
                                   <span className="text-xs font-medium text-black text-right">{value}</span>
                                 </div>
                               ))}
@@ -1563,7 +1563,7 @@ function SellModelPageContent() {
                         </div>
                         <div>
                           <label className="block text-xs font-semibold mb-1.5" style={{ color: "#374151" }}>
-                            อีเมล <span className="font-normal" style={{ color: "#9CA3AF" }}>(ไม่บังคับ)</span>
+                            อีเมล <span className="font-normal" style={{ color: "#6B7280" }}>(ไม่บังคับ)</span>
                           </label>
                           <input
                             ref={emailRef}
@@ -1597,7 +1597,7 @@ function SellModelPageContent() {
                             </div>
                             <div>
                               <p className="font-semibold text-sm text-black leading-snug">{opt.label}</p>
-                              <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{opt.sub}</p>
+                              <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{opt.sub}</p>
                             </div>
                           </button>
                         ))}
@@ -1658,7 +1658,7 @@ function SellModelPageContent() {
                           </div>
                           <div className="flex-1 p-3 min-w-0">
                             <p className="font-semibold text-sm text-black">สาขารังสิต</p>
-                            <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "#9CA3AF" }}>เดอะแพลนท์ วงแหวน-รังสิต ปทุมธานี</p>
+                            <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "#6B7280" }}>เดอะแพลนท์ วงแหวน-รังสิต ปทุมธานี</p>
                             <div className="flex items-center gap-1 mt-1">
                               <MapPin size={11} style={{ color: "#B8860B" }} />
                               <a href="https://www.google.com/maps?q=14.0128858,100.7201145" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold" style={{ color: "#B8860B" }}>ดูแผนที่</a>
@@ -1703,7 +1703,7 @@ function SellModelPageContent() {
                             </button>
                           </div>
                           {errors.riderAddress && <p className="text-xs mt-1" style={{ color: "#EF4444" }}>กรุณากรอกสถานที่รับเครื่อง</p>}
-                          <p className="text-xs mt-1.5" style={{ color: "#9CA3AF" }}>เจ้าหน้าที่จะโทรยืนยันก่อนเดินทาง</p>
+                          <p className="text-xs mt-1.5" style={{ color: "#6B7280" }}>เจ้าหน้าที่จะโทรยืนยันก่อนเดินทาง</p>
                         </div>
                         {/* Date + Time */}
                         <div className="grid grid-cols-1 gap-3">
@@ -1768,7 +1768,7 @@ function SellModelPageContent() {
                               <div className="flex items-center justify-between w-full">
                                 <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
                                   style={{ background: active ? "#B8860B" : "#F3F4F6", transition: "background 180ms ease" }}>
-                                  <Icon size={15} color={active ? "#fff" : "#9CA3AF"} />
+                                  <Icon size={15} color={active ? "#fff" : "#6B7280"} />
                                 </div>
                                 <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0"
                                   style={{ borderColor: active ? "#B8860B" : "#D1D5DB", background: active ? "#B8860B" : "transparent", transition: "all 180ms ease" }}>
@@ -1777,7 +1777,7 @@ function SellModelPageContent() {
                               </div>
                               <div>
                                 <p className="font-semibold text-sm leading-snug" style={{ color: active ? "#1d1d1f" : "#374151" }}>{label}</p>
-                                <p className="text-xs mt-0.5 leading-snug" style={{ color: "#9CA3AF" }}>{sub}</p>
+                                <p className="text-xs mt-0.5 leading-snug" style={{ color: "#6B7280" }}>{sub}</p>
                               </div>
                             </button>
                           );
@@ -1855,7 +1855,7 @@ function SellModelPageContent() {
                     <div className="bg-white rounded-2xl p-5" style={{ border: "1px solid #E5E7EB" }}>
                       <h3 className="font-bold text-black mb-1">
                         หมายเหตุเพิ่มเติม{" "}
-                        <span className="font-normal text-sm" style={{ color: "#9CA3AF" }}>(ไม่บังคับ)</span>
+                        <span className="font-normal text-sm" style={{ color: "#6B7280" }}>(ไม่บังคับ)</span>
                       </h3>
                       <textarea
                         value={notes} onChange={e => setNotes(e.target.value)} rows={3}
@@ -1883,17 +1883,17 @@ function SellModelPageContent() {
                           <div key={label} className="flex items-start gap-3">
                             <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
                               style={{ background: required ? "#B8860B" : "#F3F4F6" }}>
-                              <Check size={10} color={required ? "#fff" : "#9CA3AF"} strokeWidth={3} />
+                              <Check size={10} color={required ? "#fff" : "#6B7280"} strokeWidth={3} />
                             </div>
                             <div>
                               <p className="text-sm font-semibold text-black leading-snug">
                                 {label}
                                 {required
                                   ? <span className="ml-1.5 text-xs font-medium px-1.5 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.1)", color: "#B8860B" }}>จำเป็น</span>
-                                  : <span className="ml-1.5 text-xs font-medium px-1.5 py-0.5 rounded-full" style={{ background: "#F3F4F6", color: "#9CA3AF" }}>แนะนำ</span>
+                                  : <span className="ml-1.5 text-xs font-medium px-1.5 py-0.5 rounded-full" style={{ background: "#F3F4F6", color: "#6B7280" }}>แนะนำ</span>
                                 }
                               </p>
-                              <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{sub}</p>
+                              <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{sub}</p>
                             </div>
                           </div>
                         ))}
@@ -1949,7 +1949,7 @@ function SellModelPageContent() {
                     <div className="bg-white w-full md:max-w-md rounded-t-2xl md:rounded-2xl overflow-hidden shadow-2xl">
                       <div className="p-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
                         <p className="font-bold text-sm text-black">ยืนยันตำแหน่ง</p>
-                        <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>ลากหมุดเพื่อปรับตำแหน่งให้แม่นยำ</p>
+                        <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>ลากหมุดเพื่อปรับตำแหน่งให้แม่นยำ</p>
                       </div>
                       <div ref={mapDivRef} className="w-full" style={{ height: 260 }} />
                       <div className="p-4">
@@ -1987,7 +1987,7 @@ function SellModelPageContent() {
                     {/* Header */}
                     <div className="p-5" style={{ borderBottom: "1px solid #F3F4F6" }}>
                       <h3 className="font-bold text-black text-base">สรุปข้อมูลการขาย</h3>
-                      <p className="text-xs mt-3" style={{ color: "#9CA3AF" }}>ราคาประเมินของคุณ</p>
+                      <p className="text-xs mt-3" style={{ color: "#6B7280" }}>ราคาประเมินของคุณ</p>
                       {pricesLoaded
                         ? <p className="text-3xl font-bold mt-0.5" style={{ color: "#B8860B" }}>฿{price.toLocaleString("th-TH")}</p>
                         : <p className="text-base font-medium mt-0.5" style={{ color: "#B8860B" }}>กำลังคำนวณราคา…</p>}
@@ -2007,7 +2007,7 @@ function SellModelPageContent() {
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-black leading-snug truncate">{product.model}</p>
-                          <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>
+                          <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>
                             {picks[0] !== null ? storages[picks[0]] : ""}
                             {picks[3] !== null ? ` • ${BODY_OPTS[picks[3]]?.sub ?? ""}` : ""}
                           </p>
@@ -2016,7 +2016,7 @@ function SellModelPageContent() {
                       <div className="flex flex-col">
                         {summaryRows.map(({ title, value }) => (
                           <div key={title} className="flex items-center justify-between py-1">
-                            <span className="text-xs" style={{ color: "#9CA3AF" }}>{title}</span>
+                            <span className="text-xs" style={{ color: "#6B7280" }}>{title}</span>
                             <span className="text-xs font-medium text-black text-right">{value}</span>
                           </div>
                         ))}
@@ -2046,8 +2046,8 @@ function SellModelPageContent() {
                           {" • "}{appointTime} น.
                         </p>
                         {sellMethod === "rider"
-                          ? <p className="text-xs truncate" style={{ color: "#9CA3AF" }}>{riderAddress || "ยังไม่ได้ระบุที่อยู่"}</p>
-                          : <p className="text-xs" style={{ color: "#9CA3AF" }}>สาขารังสิต</p>
+                          ? <p className="text-xs truncate" style={{ color: "#6B7280" }}>{riderAddress || "ยังไม่ได้ระบุที่อยู่"}</p>
+                          : <p className="text-xs" style={{ color: "#6B7280" }}>สาขารังสิต</p>
                         }
                       </div>
                     )}
@@ -2060,7 +2060,7 @@ function SellModelPageContent() {
                       </div>
                       <p className="text-xs" style={{ color: "#6B7280" }}>{payMethod === "cash" ? "เงินสด" : "โอนเข้าบัญชี"}</p>
                       {payMethod === "transfer" && bankName && (
-                        <p className="text-xs mt-0.5 truncate" style={{ color: "#9CA3AF" }}>
+                        <p className="text-xs mt-0.5 truncate" style={{ color: "#6B7280" }}>
                           {THAI_BANKS.find(b => b.code === bankName)?.short ?? bankName}
                           {bankAccountName ? ` • ${bankAccountName}` : ""}
                         </p>
@@ -2075,7 +2075,7 @@ function SellModelPageContent() {
                       </div>
                       {formData.name && <p className="text-xs" style={{ color: "#6B7280" }}>{formData.name}</p>}
                       {formData.phone && <p className="text-xs" style={{ color: "#6B7280" }}>{formData.phone}</p>}
-                      {formData.email && <p className="text-xs" style={{ color: "#9CA3AF" }}>{formData.email}</p>}
+                      {formData.email && <p className="text-xs" style={{ color: "#6B7280" }}>{formData.email}</p>}
                     </div>
 
                     {/* Trust badges */}
@@ -2112,7 +2112,7 @@ function SellModelPageContent() {
                       </div>
                       <div>
                         <p className="text-xs font-semibold text-black">ใช้เวลาเฉลี่ย 5 นาที</p>
-                        <p className="text-xs" style={{ color: "#9CA3AF" }}>กรอกข้อมูลเสร็จแล้วรอรับราคา</p>
+                        <p className="text-xs" style={{ color: "#6B7280" }}>กรอกข้อมูลเสร็จแล้วรอรับราคา</p>
                       </div>
                     </div>
 
@@ -2151,7 +2151,7 @@ function SellModelPageContent() {
                         ].map(({ q, a }) => (
                           <div key={q} className="rounded-xl p-2.5" style={{ background: "#F9FAFB" }}>
                             <p className="text-xs font-semibold text-black leading-snug">{q}</p>
-                            <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "#9CA3AF" }}>{a}</p>
+                            <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "#6B7280" }}>{a}</p>
                           </div>
                         ))}
                       </div>
@@ -2182,7 +2182,7 @@ function SellModelPageContent() {
                     })()}
                     <div>
                       <p className="font-bold text-black text-lg leading-snug">{product.model}</p>
-                      <p className="text-sm mt-0.5" style={{ color: "#9CA3AF" }}>
+                      <p className="text-sm mt-0.5" style={{ color: "#6B7280" }}>
                         {picks[0] !== null ? storages[picks[0]] : ""}
                         {picks[3] !== null ? ` • ${BODY_OPTS[picks[3]]?.sub ?? ""}` : ""}
                       </p>
@@ -2191,7 +2191,7 @@ function SellModelPageContent() {
 
                   {/* Price block */}
                   <div className="px-5 py-5" style={{ borderBottom: "1px solid #F3F4F6" }}>
-                    <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "#9CA3AF" }}>
+                    <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "#6B7280" }}>
                       ราคาประเมินของคุณ
                     </p>
                     {pricesLoaded
@@ -2203,7 +2203,7 @@ function SellModelPageContent() {
                         {pricesLoaded ? `${formatPrice(priceMin)} – ${formatPrice(priceMax)}` : "—"}
                       </span>
                     </p>
-                    <p className="text-xs mt-1.5" style={{ color: "#9CA3AF" }}>
+                    <p className="text-xs mt-1.5" style={{ color: "#6B7280" }}>
                       ราคาขึ้นอยู่กับการตรวจสอบสภาพเครื่องจริง
                     </p>
                   </div>
@@ -2215,7 +2215,7 @@ function SellModelPageContent() {
                       className="flex items-center justify-between px-5 py-3.5"
                       style={{ borderBottom: "1px solid #F3F4F6" }}
                     >
-                      <span className="text-sm" style={{ color: "#9CA3AF" }}>{title}</span>
+                      <span className="text-sm" style={{ color: "#6B7280" }}>{title}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-black text-right leading-snug">{value}</span>
                         <ChevronRight size={14} style={{ color: "#D1D5DB" }} />
@@ -2238,7 +2238,7 @@ function SellModelPageContent() {
                     <a
                       href="/"
                       className="flex items-center justify-center w-full py-3.5 rounded-2xl font-semibold text-sm"
-                      style={{ border: "1px solid #E5E7EB", color: "#9CA3AF" }}
+                      style={{ border: "1px solid #E5E7EB", color: "#6B7280" }}
                     >
                       บันทึกผลประเมินไว้ก่อน
                     </a>
@@ -2259,13 +2259,13 @@ function SellModelPageContent() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-black leading-snug">{formData.name}</p>
-                      <p className="text-xs leading-snug" style={{ color: "#9CA3AF" }}>{formData.phone}</p>
+                      <p className="text-xs leading-snug" style={{ color: "#6B7280" }}>{formData.phone}</p>
                     </div>
                   </div>
                 )}
 
                 {/* Bottom note */}
-                <p className="text-center text-xs pb-2" style={{ color: "#9CA3AF" }}>
+                <p className="text-center text-xs pb-2" style={{ color: "#6B7280" }}>
                   ราคานี้เป็นการประเมินเบื้องต้น ราคาสุดท้ายขึ้นอยู่กับการตรวจสอบเครื่องจริง
                 </p>
               </div>
@@ -2282,7 +2282,7 @@ function SellModelPageContent() {
         <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white" style={{ borderTop: "1px solid #E5E7EB" }}>
           <div className="flex items-center px-4 gap-3" style={{ height: 64 }}>
             <div className="flex flex-col flex-shrink-0">
-              <p className="text-xs leading-tight" style={{ color: "#9CA3AF" }}>
+              <p className="text-xs leading-tight" style={{ color: "#6B7280" }}>
                 {extraDevices.length > 0 ? `รวม ${extraDevices.length + 1} เครื่อง` : "ราคาประเมิน"}
               </p>
               {pricesLoaded

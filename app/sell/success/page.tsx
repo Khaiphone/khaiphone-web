@@ -349,7 +349,7 @@ function SellSuccessInner() {
                   style={{ width: circleSize, height: circleSize, background: isDone ? "#B8860B" : "#fff", borderColor: isDone ? "#B8860B" : "#D1D5DB" }}>
                   {isDone
                     ? <Check size={iconSize} strokeWidth={3} color="#fff" />
-                    : <span style={{ fontSize, fontWeight: 700, color: "#9CA3AF" }}>{i + 1}</span>}
+                    : <span style={{ fontSize, fontWeight: 700, color: "#6B7280" }}>{i + 1}</span>}
                 </div>
                 {i < STATUS_STEPS.length - 1 && (
                   <div className="w-px mt-1" style={{ height: lineH, background: isDone ? "#B8860B" : "#E5E7EB" }} />
@@ -358,7 +358,7 @@ function SellSuccessInner() {
               <div>
                 <p className="text-xs font-semibold leading-snug" style={{ color: isDone ? "#B8860B" : "#374151" }}>{step}</p>
                 {i === 0 && data && (
-                  <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>
+                  <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>
                     {formatThaiDate(data.submittedAt)} {formatThaiTime(data.submittedAt)} น.
                   </p>
                 )}
@@ -460,7 +460,7 @@ function SellSuccessInner() {
                       <rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 9h8M8 12h5M8 15h4"/>
                     </svg>
                   </div>
-                  <span className="text-xs font-medium" style={{ color: "#9CA3AF" }}>หมายเลขคำขอ</span>
+                  <span className="text-xs font-medium" style={{ color: "#6B7280" }}>หมายเลขคำขอ</span>
                 </div>
                 <div className="flex flex-col gap-2">
                   <p className="text-sm font-bold text-black leading-snug" style={{ wordBreak: "break-all" }}>
@@ -472,7 +472,7 @@ function SellSuccessInner() {
                     <Copy size={11} />{copied ? "คัดลอกแล้ว" : "คัดลอก"}
                   </button>
                 </div>
-                <p className="text-xs mt-1.5" style={{ color: "#9CA3AF" }}>บันทึกไว้ใช้ในการติดตามสถานะ</p>
+                <p className="text-xs mt-1.5" style={{ color: "#6B7280" }}>บันทึกไว้ใช้ในการติดตามสถานะ</p>
               </div>
 
               {/* Price */}
@@ -481,14 +481,14 @@ function SellSuccessInner() {
                   <div className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(184,134,11,0.1)" }}>
                     <Banknote size={15} style={{ color: "#B8860B" }} />
                   </div>
-                  <span className="text-xs font-medium" style={{ color: "#9CA3AF" }}>
+                  <span className="text-xs font-medium" style={{ color: "#6B7280" }}>
                     {(data?.extraDevices?.length ?? 0) > 0 ? `ราคารวม ${(data?.extraDevices?.length ?? 0) + 1} เครื่อง` : "ราคาประเมินเบื้องต้น"}
                   </span>
                 </div>
                 <p className="text-lg md:text-xl font-bold leading-snug" style={{ color: "#B8860B" }}>
                   ฿{((data?.estimatedPrice ?? 0) + (data?.extraDevices ?? []).reduce((s, d) => s + d.estimatedPrice, 0)).toLocaleString("th-TH")}
                 </p>
-                <p className="text-xs mt-1.5" style={{ color: "#9CA3AF" }}>ราคานี้อาจเปลี่ยนแปลงได้หลังตรวจสอบเครื่อง</p>
+                <p className="text-xs mt-1.5" style={{ color: "#6B7280" }}>ราคานี้อาจเปลี่ยนแปลงได้หลังตรวจสอบเครื่อง</p>
               </div>
             </div>
 
@@ -502,16 +502,16 @@ function SellSuccessInner() {
               </div>
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-6">
                 <div className="flex-1">
-                  <p className="text-xs mb-0.5" style={{ color: "#9CA3AF" }}>ชื่อ-นามสกุล</p>
+                  <p className="text-xs mb-0.5" style={{ color: "#6B7280" }}>ชื่อ-นามสกุล</p>
                   <p className="text-sm font-semibold text-black">{data?.customer?.name ?? "—"}</p>
                 </div>
                 <div className="flex-1">
-                  <p className="text-xs mb-0.5" style={{ color: "#9CA3AF" }}>เบอร์โทรศัพท์</p>
+                  <p className="text-xs mb-0.5" style={{ color: "#6B7280" }}>เบอร์โทรศัพท์</p>
                   <p className="text-sm font-semibold text-black">{data?.customer?.phone ?? "—"}</p>
                 </div>
                 {data?.customer?.email && (
                   <div className="flex-1">
-                    <p className="text-xs mb-0.5" style={{ color: "#9CA3AF" }}>อีเมล</p>
+                    <p className="text-xs mb-0.5" style={{ color: "#6B7280" }}>อีเมล</p>
                     <p className="text-sm font-semibold text-black">{data.customer.email}</p>
                   </div>
                 )}
@@ -537,13 +537,13 @@ function SellSuccessInner() {
                           style={{ background: isDone ? "#B8860B" : "#fff", borderColor: isDone ? "#B8860B" : "#D1D5DB" }}>
                           {isDone
                             ? <Check size={14} strokeWidth={3} color="#fff" />
-                            : <span style={{ fontSize: 12, fontWeight: 700, color: "#9CA3AF" }}>{i + 1}</span>}
+                            : <span style={{ fontSize: 12, fontWeight: 700, color: "#6B7280" }}>{i + 1}</span>}
                         </div>
-                        <p className="text-center mt-2 leading-snug" style={{ fontSize: 11, color: isDone ? "#B8860B" : "#9CA3AF", fontWeight: isDone ? 700 : 500 }}>
+                        <p className="text-center mt-2 leading-snug" style={{ fontSize: 11, color: isDone ? "#B8860B" : "#6B7280", fontWeight: isDone ? 700 : 500 }}>
                           {step}
                         </p>
                         {i === 0 && data && (
-                          <p className="text-center leading-tight mt-1" style={{ fontSize: 10, color: "#9CA3AF" }}>
+                          <p className="text-center leading-tight mt-1" style={{ fontSize: 10, color: "#6B7280" }}>
                             {formatThaiDate(data.submittedAt)}<br />{formatThaiTime(data.submittedAt)} น.
                           </p>
                         )}
@@ -584,7 +584,7 @@ function SellSuccessInner() {
                         <span className="text-xs font-bold px-1.5 py-0.5 rounded flex-shrink-0" style={{ background: "rgba(184,134,11,0.15)", color: "#B8860B" }}>หลัก</span>
                       )}
                     </div>
-                    <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>
+                    <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>
                       {[data?.storage, data?.condition].filter(Boolean).join(" • ")}
                     </p>
                   </div>
@@ -595,7 +595,7 @@ function SellSuccessInner() {
                   <div key={i} className="flex items-center gap-3 mb-2 pl-1 py-2 rounded-lg" style={{ borderTop: "1px solid #F3F4F6" }}>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-black">{d.model}</p>
-                      <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{d.storage}</p>
+                      <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{d.storage}</p>
                     </div>
                     <span className="text-sm font-bold flex-shrink-0" style={{ color: "#374151" }}>฿{d.estimatedPrice.toLocaleString("th-TH")}</span>
                   </div>
@@ -615,7 +615,7 @@ function SellSuccessInner() {
                       const labels: Record<string, string> = { storage: "ความจุ", modelType: "รุ่นเครื่อง", warranty: "ประกัน", body: "ตัวเครื่อง", screen: "หน้าจอ", display: "ภาพหน้าจอ", battery: "แบตเตอรี่", accessories: "อุปกรณ์", icloud: "iCloud" };
                       return (
                         <div key={k} className="flex justify-between px-3 py-2" style={{ borderBottom: i < arr.length - 1 ? "1px solid #F3F4F6" : "none" }}>
-                          <span className="text-xs" style={{ color: "#9CA3AF" }}>{labels[k] ?? k}</span>
+                          <span className="text-xs" style={{ color: "#6B7280" }}>{labels[k] ?? k}</span>
                           <span className="text-xs font-semibold text-black text-right max-w-[58%] leading-snug">{v}</span>
                         </div>
                       );
@@ -663,7 +663,7 @@ function SellSuccessInner() {
                       { label: "สถานที่/ที่อยู่", value: locationLabel },
                     ].map(({ label, value }, i, arr) => (
                       <div key={label} className="flex justify-between px-3 py-2" style={{ borderBottom: i < arr.length - 1 ? "1px solid #F3F4F6" : "none" }}>
-                        <span className="text-xs" style={{ color: "#9CA3AF" }}>{label}</span>
+                        <span className="text-xs" style={{ color: "#6B7280" }}>{label}</span>
                         <span className="text-xs font-semibold text-black text-right max-w-[60%] leading-snug">{value}</span>
                       </div>
                     ))}
@@ -702,7 +702,7 @@ function SellSuccessInner() {
                       ] : []),
                     ].map(({ label, value }, i, arr) => (
                       <div key={label} className="flex justify-between px-3 py-2" style={{ borderBottom: i < arr.length - 1 ? "1px solid #F3F4F6" : "none" }}>
-                        <span className="text-xs" style={{ color: "#9CA3AF" }}>{label}</span>
+                        <span className="text-xs" style={{ color: "#6B7280" }}>{label}</span>
                         <span className="text-xs font-semibold text-black text-right">{value}</span>
                       </div>
                     ))}
@@ -727,7 +727,7 @@ function SellSuccessInner() {
 
               {/* Order number + copy */}
               <div className="px-4 py-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
-                <p className="text-xs mb-1" style={{ color: "#9CA3AF" }}>หมายเลขคำขอ</p>
+                <p className="text-xs mb-1" style={{ color: "#6B7280" }}>หมายเลขคำขอ</p>
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-base font-bold text-black leading-snug">#{data?.orderNumber ?? "KH-2026-XXXXX"}</p>
                   <button type="button" onClick={copyOrderId}
@@ -740,7 +740,7 @@ function SellSuccessInner() {
 
               {/* Price */}
               <div className="px-4 py-3.5" style={{ borderBottom: "1px solid #F3F4F6" }}>
-                <p className="text-xs mb-0.5" style={{ color: "#9CA3AF" }}>
+                <p className="text-xs mb-0.5" style={{ color: "#6B7280" }}>
                   {(data?.extraDevices?.length ?? 0) > 0 ? `ราคารวม ${(data?.extraDevices?.length ?? 0) + 1} เครื่อง` : "ราคาประเมินเบื้องต้น"}
                 </p>
                 <p className="text-2xl font-bold" style={{ color: "#B8860B" }}>
@@ -767,8 +767,8 @@ function SellSuccessInner() {
                     style={{ cursor: "pointer", background: "transparent", border: "none" }}>
                     <span className="text-xs font-semibold text-black">{label}</span>
                     {openAccordion === id
-                      ? <ChevronUp size={14} style={{ color: "#9CA3AF" }} />
-                      : <ChevronDown size={14} style={{ color: "#9CA3AF" }} />}
+                      ? <ChevronUp size={14} style={{ color: "#6B7280" }} />
+                      : <ChevronDown size={14} style={{ color: "#6B7280" }} />}
                   </button>
                   {openAccordion === id && (
                     <div className="px-4 pb-4 flex flex-col gap-0">
@@ -782,7 +782,7 @@ function SellSuccessInner() {
                             </div>
                             <div className="min-w-0">
                               <p className="text-xs font-semibold text-black truncate">{data?.model ?? "—"}</p>
-                              <p className="text-xs" style={{ color: "#9CA3AF" }}>
+                              <p className="text-xs" style={{ color: "#6B7280" }}>
                                 {[data?.storage, data?.condition].filter(Boolean).join(" • ")}
                               </p>
                             </div>
@@ -791,7 +791,7 @@ function SellSuccessInner() {
                             const labels: Record<string, string> = { storage: "ความจุ", modelType: "รุ่น", warranty: "ประกัน", body: "ตัวเครื่อง", screen: "หน้าจอ", display: "ภาพหน้าจอ", battery: "แบตเตอรี่", accessories: "อุปกรณ์", icloud: "iCloud" };
                             return (
                               <div key={k} className="flex justify-between py-1.5" style={{ borderBottom: i < arr.length - 1 ? "1px solid #F9FAFB" : "none" }}>
-                                <span className="text-xs" style={{ color: "#9CA3AF" }}>{labels[k] ?? k}</span>
+                                <span className="text-xs" style={{ color: "#6B7280" }}>{labels[k] ?? k}</span>
                                 <span className="text-xs font-medium text-black text-right max-w-[58%] leading-snug">{v}</span>
                               </div>
                             );
@@ -807,7 +807,7 @@ function SellSuccessInner() {
                             { label: "สถานที่", value: locationLabel },
                           ].map(({ label, value }, i, arr) => (
                             <div key={label} className="flex justify-between py-1.5" style={{ borderBottom: i < arr.length - 1 ? "1px solid #F9FAFB" : "none" }}>
-                              <span className="text-xs" style={{ color: "#9CA3AF" }}>{label}</span>
+                              <span className="text-xs" style={{ color: "#6B7280" }}>{label}</span>
                               <span className="text-xs font-medium text-black text-right max-w-[58%] leading-snug">{value}</span>
                             </div>
                           ))}
@@ -824,7 +824,7 @@ function SellSuccessInner() {
                             ] : []),
                           ].map(({ label, value }, i, arr) => (
                             <div key={label} className="flex justify-between py-1.5" style={{ borderBottom: i < arr.length - 1 ? "1px solid #F9FAFB" : "none" }}>
-                              <span className="text-xs" style={{ color: "#9CA3AF" }}>{label}</span>
+                              <span className="text-xs" style={{ color: "#6B7280" }}>{label}</span>
                               <span className="text-xs font-medium text-black text-right">{value}</span>
                             </div>
                           ))}

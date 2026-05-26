@@ -154,7 +154,7 @@ export default function ContactPage() {
               <div className="flex items-center justify-center rounded-full mb-3" style={{ width: 44, height: 44, background: LINE_GREEN, flexShrink: 0 }}>
                 <IconLine size={22} color="#ffffff" />
               </div>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: "#9CA3AF" }}>LINE OFFICIAL</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: "#6B7280" }}>LINE OFFICIAL</p>
               <p className="text-2xl font-bold mb-1" style={{ color: "#111111" }}>@khaiphone</p>
               <p className="text-sm mb-4" style={{ color: "#6B7280", lineHeight: 1.6 }}>ตอบเร็วที่สุด แนะนำช่องทางนี้</p>
               <a href="https://line.me/ti/p/~@khaiphone" target="_blank" rel="noopener noreferrer" className="mt-auto text-center text-sm font-semibold rounded-full py-2.5 transition-opacity hover:opacity-90" style={{ background: LINE_GREEN, color: "#ffffff", textDecoration: "none", display: "block" }}>เพิ่มเพื่อน LINE</a>
@@ -165,7 +165,7 @@ export default function ContactPage() {
               <div className="flex items-center justify-center rounded-full mb-3" style={{ width: 44, height: 44, background: "#FEF9E7", flexShrink: 0 }}>
                 <Phone size={20} color={GOLD} strokeWidth={1.75} />
               </div>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: "#9CA3AF" }}>โทรศัพท์</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: "#6B7280" }}>โทรศัพท์</p>
               <p className="text-2xl font-bold mb-1" style={{ color: "#111111" }}>095-553-5167</p>
               <p className="text-sm mb-4" style={{ color: "#6B7280", lineHeight: 1.6 }}>โทรได้เลย ทุกวัน 09:00 – 00:00</p>
               <a href="tel:0955535167" className="mt-auto text-center text-sm font-semibold rounded-full py-2.5" style={{ border: `1.5px solid ${GOLD}`, color: GOLD, textDecoration: "none", display: "block" }}>โทรเลย</a>
@@ -176,7 +176,7 @@ export default function ContactPage() {
               <div className="flex items-center justify-center rounded-full mb-3" style={{ width: 44, height: 44, background: "#FEF9E7", flexShrink: 0 }}>
                 <MapPin size={20} color={GOLD} strokeWidth={1.75} />
               </div>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: "#9CA3AF" }}>สาขารังสิต</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: "#6B7280" }}>สาขารังสิต</p>
               <p className="text-2xl font-bold mb-1" style={{ color: "#111111" }}>The Plant วงแหวน-รังสิต</p>
               <p className="text-sm mb-4" style={{ color: "#6B7280", lineHeight: 1.6 }}>เปิดทุกวัน 09:00 – 00:00 น.</p>
               <a href="https://maps.google.com/?q=The+Plant+Wongwaen+Rangsit" target="_blank" rel="noopener noreferrer" className="mt-auto text-center text-sm font-semibold rounded-full py-2.5 transition-colors hover:border-gray-400" style={{ border: "1.5px solid #D1D5DB", color: "#374151", textDecoration: "none", display: "block" }}>ดูแผนที่</a>

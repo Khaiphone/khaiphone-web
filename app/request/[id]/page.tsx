@@ -194,18 +194,18 @@ function StatusTimeline({
                 >
                   {done
                     ? <Check size={10} strokeWidth={3} color="#fff" />
-                    : <span style={{ fontSize: 9, fontWeight: 700, color: current ? "#B8860B" : "#9CA3AF" }}>{i + 1}</span>}
+                    : <span style={{ fontSize: 9, fontWeight: 700, color: current ? "#B8860B" : "#6B7280" }}>{i + 1}</span>}
                 </div>
                 {i < TIMELINE_STEPS.length - 1 && (
                   <div className="w-px mt-0.5" style={{ height: 10, background: done ? "#B8860B" : "#E5E7EB" }} />
                 )}
               </div>
               <div style={{ paddingTop: 1 }}>
-                <p style={{ fontSize: 11, fontWeight: done || current ? 600 : 500, color: done ? "#B8860B" : current ? "#374151" : "#9CA3AF" }}>
+                <p style={{ fontSize: 11, fontWeight: done || current ? 600 : 500, color: done ? "#B8860B" : current ? "#374151" : "#6B7280" }}>
                   {label}
                 </p>
                 {ts && (
-                  <p style={{ fontSize: 10, color: "#9CA3AF", marginTop: 1 }}>
+                  <p style={{ fontSize: 10, color: "#6B7280", marginTop: 1 }}>
                     {ts.date}
                   </p>
                 )}
@@ -243,13 +243,13 @@ function StatusTimeline({
                 >
                   {done
                     ? <Check size={14} strokeWidth={3} color="#fff" />
-                    : <span style={{ fontSize: 12, fontWeight: 700, color: current ? "#B8860B" : "#9CA3AF" }}>{i + 1}</span>}
+                    : <span style={{ fontSize: 12, fontWeight: 700, color: current ? "#B8860B" : "#6B7280" }}>{i + 1}</span>}
                 </div>
-                <p className="text-center mt-2 leading-snug" style={{ fontSize: 11, fontWeight: done || current ? 600 : 500, color: done ? "#B8860B" : current ? "#374151" : "#9CA3AF" }}>
+                <p className="text-center mt-2 leading-snug" style={{ fontSize: 11, fontWeight: done || current ? 600 : 500, color: done ? "#B8860B" : current ? "#374151" : "#6B7280" }}>
                   {label}
                 </p>
                 {ts && (
-                  <p className="text-center mt-1 leading-tight" style={{ fontSize: 10, color: "#9CA3AF" }}>
+                  <p className="text-center mt-1 leading-tight" style={{ fontSize: 10, color: "#6B7280" }}>
                     {ts.date}<br />{ts.time} น.
                   </p>
                 )}
@@ -279,18 +279,18 @@ function StatusTimeline({
                 >
                   {done
                     ? <Check size={12} strokeWidth={3} color="#fff" />
-                    : <span style={{ fontSize: 11, fontWeight: 700, color: current ? "#B8860B" : "#9CA3AF" }}>{i + 1}</span>}
+                    : <span style={{ fontSize: 11, fontWeight: 700, color: current ? "#B8860B" : "#6B7280" }}>{i + 1}</span>}
                 </div>
                 {i < TIMELINE_STEPS.length - 1 && (
                   <div className="w-px mt-1" style={{ height: 16, background: done ? "#B8860B" : "#E5E7EB" }} />
                 )}
               </div>
               <div style={{ paddingTop: 4 }}>
-                <p className="text-xs font-semibold leading-snug" style={{ color: done ? "#B8860B" : current ? "#374151" : "#9CA3AF" }}>
+                <p className="text-xs font-semibold leading-snug" style={{ color: done ? "#B8860B" : current ? "#374151" : "#6B7280" }}>
                   {label}
                 </p>
                 {ts && (
-                  <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>
+                  <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>
                     {ts.date} · {ts.time} น.
                   </p>
                 )}
@@ -557,10 +557,10 @@ function RequestDetailInner() {
       <div className="min-h-screen flex items-center justify-center" style={{ background: "#f9f9f7" }}>
         <div className="text-center px-4">
           <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "rgba(156,163,175,0.15)" }}>
-            <Shield size={22} style={{ color: "#9CA3AF" }} />
+            <Shield size={22} style={{ color: "#6B7280" }} />
           </div>
           <p className="font-semibold text-black mb-1">ไม่พบข้อมูลคำขอ</p>
-          <p className="text-sm" style={{ color: "#9CA3AF" }}>กำลังนำคุณไปหน้าค้นหา...</p>
+          <p className="text-sm" style={{ color: "#6B7280" }}>กำลังนำคุณไปหน้าค้นหา...</p>
         </div>
       </div>
     );
@@ -575,7 +575,7 @@ function RequestDetailInner() {
             <Shield size={22} style={{ color: "#EF4444" }} />
           </div>
           <p className="font-semibold text-black mb-1">ไม่มีสิทธิ์เข้าถึง</p>
-          <p className="text-sm" style={{ color: "#9CA3AF" }}>กำลังนำคุณกลับ...</p>
+          <p className="text-sm" style={{ color: "#6B7280" }}>กำลังนำคุณกลับ...</p>
         </div>
       </div>
     );
@@ -601,7 +601,7 @@ function RequestDetailInner() {
 
   const hero: HeroConfig =
     dbStatus === "cancelled"
-      ? { badge: "ยกเลิกการขาย",   badgeBg: "rgba(156,163,175,0.15)", badgeColor: "#9CA3AF", badgeBorder: "rgba(156,163,175,0.3)", title: "คำขอถูกยกเลิกแล้ว",          progress: 0 }
+      ? { badge: "ยกเลิกการขาย",   badgeBg: "rgba(156,163,175,0.15)", badgeColor: "#6B7280", badgeBorder: "rgba(156,163,175,0.3)", title: "คำขอถูกยกเลิกแล้ว",          progress: 0 }
     : dbStatus === "rejected"
       ? { badge: "ไม่เข้าเงื่อนไข", badgeBg: "rgba(239,68,68,0.12)",  badgeColor: "#F87171", badgeBorder: "rgba(239,68,68,0.25)",  title: "ไม่ผ่านเงื่อนไขการรับซื้อ",  progress: 0 }
     : getHeroConfig(doneUpTo);
@@ -779,7 +779,7 @@ function RequestDetailInner() {
                   {customerNotes.map((n, i) => (
                     <div key={i} className="rounded-xl p-4" style={{ background: "#fff", border: "1px solid #FDE68A" }}>
                       <p className="text-sm leading-relaxed" style={{ color: "#1F2937" }}>{n.text}</p>
-                      <p className="text-xs mt-2" style={{ color: "#9CA3AF" }}>
+                      <p className="text-xs mt-2" style={{ color: "#6B7280" }}>
                         {formatThaiDateTime(n.createdAt).date} · {formatThaiDateTime(n.createdAt).time} น.
                       </p>
                     </div>
@@ -803,8 +803,8 @@ function RequestDetailInner() {
                 </div>
                 <div className="p-5">
                   <div className="flex items-center justify-between py-2 mb-1">
-                    <span className="text-sm" style={{ color: "#9CA3AF" }}>{deviceCount > 1 ? `ราคาเดิมรวม ${deviceCount} เครื่อง` : "ราคาเดิม"}</span>
-                    <span className="text-sm line-through" style={{ color: "#9CA3AF" }}>฿{totalOrig.toLocaleString("th-TH")}</span>
+                    <span className="text-sm" style={{ color: "#6B7280" }}>{deviceCount > 1 ? `ราคาเดิมรวม ${deviceCount} เครื่อง` : "ราคาเดิม"}</span>
+                    <span className="text-sm line-through" style={{ color: "#6B7280" }}>฿{totalOrig.toLocaleString("th-TH")}</span>
                   </div>
                   <div className="flex items-center justify-between py-2 mb-2" style={{ borderTop: "1px solid #FDE68A" }}>
                     <span className="text-sm font-semibold" style={{ color: "#92400E" }}>{deviceCount > 1 ? `ราคาใหม่รวม ${deviceCount} เครื่อง` : "ราคาใหม่ที่เสนอ"}</span>
@@ -853,7 +853,7 @@ function RequestDetailInner() {
                   <div className="flex-1">
                     <h2 className="font-bold text-black text-sm">ผลการตรวจสภาพเครื่อง</h2>
                     {inspection.arrivedAt && (
-                      <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>
+                      <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>
                         เจ้าหน้าที่ถึง {formatThaiDateTime(inspection.arrivedAt).time} น.
                       </p>
                     )}
@@ -882,7 +882,7 @@ function RequestDetailInner() {
                           return (
                             <div key={i} className="grid grid-cols-3 px-3 py-2.5 items-center" style={{ borderBottom: i < (inspection.criteria ?? []).length - 1 ? "1px solid #F3F4F6" : "none", background: mismatch ? "#FFF8F8" : "transparent" }}>
                               <span className="text-xs font-semibold text-black">{c.label}</span>
-                              <span className="text-xs" style={{ color: mismatch ? "#9CA3AF" : "#6B7280", textDecoration: mismatch ? "line-through" : "none" }}>{c.stated || "—"}</span>
+                              <span className="text-xs" style={{ color: mismatch ? "#6B7280" : "#6B7280", textDecoration: mismatch ? "line-through" : "none" }}>{c.stated || "—"}</span>
                               <span className="text-xs font-bold flex items-center gap-1" style={{ color: mismatch ? "#DC2626" : "#059669" }}>
                                 {mismatch && <span style={{ fontSize: 10 }}>⚠</span>}
                                 {c.actual || "—"}
@@ -931,8 +931,8 @@ function RequestDetailInner() {
                     <div className="rounded-xl p-3" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}>
                       {inspection.result !== "matched" && (
                         <div className="flex justify-between mb-1.5">
-                          <span className="text-xs" style={{ color: "#9CA3AF" }}>ราคาเดิม</span>
-                          <span className="text-xs line-through" style={{ color: "#9CA3AF" }}>฿{totalOrig.toLocaleString("th-TH")}</span>
+                          <span className="text-xs" style={{ color: "#6B7280" }}>ราคาเดิม</span>
+                          <span className="text-xs line-through" style={{ color: "#6B7280" }}>฿{totalOrig.toLocaleString("th-TH")}</span>
                         </div>
                       )}
                       <div className="flex justify-between">
@@ -940,7 +940,7 @@ function RequestDetailInner() {
                         <span className="text-lg font-bold" style={{ color: "#B8860B" }}>฿{totalActual.toLocaleString("th-TH")}</span>
                       </div>
                       {inspection.priceReason && (
-                        <p className="text-xs mt-1.5" style={{ color: "#9CA3AF" }}>{inspection.priceReason}</p>
+                        <p className="text-xs mt-1.5" style={{ color: "#6B7280" }}>{inspection.priceReason}</p>
                       )}
                     </div>
                     );
@@ -977,7 +977,7 @@ function RequestDetailInner() {
                               return (
                                 <div key={ci} className="grid grid-cols-3 px-3 py-2.5 items-center" style={{ borderBottom: ci < ext.criteria.length - 1 ? "1px solid #F3F4F6" : "none", background: mismatch ? "#FFF8F8" : "transparent" }}>
                                   <span className="text-xs font-semibold text-black">{c.label}</span>
-                                  <span className="text-xs" style={{ color: mismatch ? "#9CA3AF" : "#6B7280", textDecoration: mismatch ? "line-through" : "none" }}>{c.stated || "—"}</span>
+                                  <span className="text-xs" style={{ color: mismatch ? "#6B7280" : "#6B7280", textDecoration: mismatch ? "line-through" : "none" }}>{c.stated || "—"}</span>
                                   <span className="text-xs font-bold flex items-center gap-1" style={{ color: mismatch ? "#DC2626" : "#059669" }}>
                                     {mismatch && <span style={{ fontSize: 10 }}>⚠</span>}{c.actual || "—"}
                                   </span>
@@ -1180,7 +1180,7 @@ function RequestDetailInner() {
                   {selectionEntries.map(({ label, value }, i) => (
                     <div key={i} className="flex justify-between px-4 py-2 items-center"
                       style={{ borderBottom: i < selectionEntries.length - 1 ? "1px solid #F9FAFB" : "none", background: i % 2 === 0 ? "#fff" : "#FAFAFA" }}>
-                      <span className="text-xs" style={{ color: "#9CA3AF" }}>{label}</span>
+                      <span className="text-xs" style={{ color: "#6B7280" }}>{label}</span>
                       <span className="text-xs font-semibold text-black text-right max-w-[60%]">{value}</span>
                     </div>
                   ))}
@@ -1199,7 +1199,7 @@ function RequestDetailInner() {
                     {(extra.details ?? []).map((d, i) => (
                       <div key={i} className="flex justify-between px-4 py-2 items-center"
                         style={{ borderBottom: i < extra.details.length - 1 ? "1px solid #F9FAFB" : "none", background: i % 2 === 0 ? "#fff" : "#FAFAFA" }}>
-                        <span className="text-xs" style={{ color: "#9CA3AF" }}>{d.title}</span>
+                        <span className="text-xs" style={{ color: "#6B7280" }}>{d.title}</span>
                         <span className="text-xs font-semibold text-black text-right">{d.value}</span>
                       </div>
                     ))}
@@ -1221,7 +1221,7 @@ function RequestDetailInner() {
                       <span className="text-lg font-bold" style={{ color: "#B8860B" }}>฿{sub.estimatedPrice.toLocaleString("th-TH")}</span>
                     </div>
                     {priceRangeLabel && (
-                      <p className="text-xs text-center" style={{ color: "#9CA3AF" }}>ช่วงราคา: {priceRangeLabel}</p>
+                      <p className="text-xs text-center" style={{ color: "#6B7280" }}>ช่วงราคา: {priceRangeLabel}</p>
                     )}
                   </>
                 )}
@@ -1246,7 +1246,7 @@ function RequestDetailInner() {
                   <div key={label} className="flex items-start gap-3">
                     <Icon size={16} style={{ color: "#B8860B", flexShrink: 0, marginTop: 1 }} />
                     <div>
-                      <p className="text-xs" style={{ color: "#9CA3AF" }}>{label}</p>
+                      <p className="text-xs" style={{ color: "#6B7280" }}>{label}</p>
                       <p className="text-sm font-semibold text-black leading-snug">{value}</p>
                     </div>
                   </div>
@@ -1277,12 +1277,12 @@ function RequestDetailInner() {
                 {sub.payment.method === "transfer" && sub.payment.accountName && (
                   <div className="flex items-center justify-between py-2.5 px-4 rounded-xl" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}>
                     <div>
-                      <p className="text-xs" style={{ color: "#9CA3AF" }}>ชื่อบัญชี</p>
+                      <p className="text-xs" style={{ color: "#6B7280" }}>ชื่อบัญชี</p>
                       <p className="text-sm font-semibold text-black">{sub.payment.accountName}</p>
                     </div>
                     {sub.payment.accountNumber && (
                       <div className="text-right">
-                        <p className="text-xs" style={{ color: "#9CA3AF" }}>เลขบัญชี</p>
+                        <p className="text-xs" style={{ color: "#6B7280" }}>เลขบัญชี</p>
                         <p className="text-sm font-bold" style={{ color: "#374151", fontFamily: "monospace" }}>
                           {maskAccount(sub.payment.accountNumber)}
                         </p>
@@ -1322,7 +1322,7 @@ function RequestDetailInner() {
 
               {/* Appointment */}
               <div className="px-4 py-3.5" style={{ borderBottom: "1px solid #F3F4F6" }}>
-                <p className="text-xs mb-1" style={{ color: "#9CA3AF" }}>วันนัดหมาย</p>
+                <p className="text-xs mb-1" style={{ color: "#6B7280" }}>วันนัดหมาย</p>
                 <div className="flex items-center gap-2">
                   <Calendar size={14} style={{ color: "#B8860B" }} />
                   <p className="text-sm font-semibold text-black">
@@ -1333,16 +1333,16 @@ function RequestDetailInner() {
 
               {/* Device */}
               <div className="px-4 py-3.5" style={{ borderBottom: "1px solid #F3F4F6" }}>
-                <p className="text-xs mb-1" style={{ color: "#9CA3AF" }}>เครื่อง</p>
+                <p className="text-xs mb-1" style={{ color: "#6B7280" }}>เครื่อง</p>
                 <p className="text-sm font-semibold text-black">{sub.model}</p>
-                <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{sub.storage} · {sub.condition}</p>
+                <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{sub.storage} · {sub.condition}</p>
               </div>
 
               {/* Customer */}
               <div className="px-4 py-3.5">
-                <p className="text-xs mb-1" style={{ color: "#9CA3AF" }}>ชื่อผู้ขาย</p>
+                <p className="text-xs mb-1" style={{ color: "#6B7280" }}>ชื่อผู้ขาย</p>
                 <p className="text-sm font-semibold text-black">{sub.customer.name}</p>
-                <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{sub.customer.phone}</p>
+                <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{sub.customer.phone}</p>
               </div>
             </div>
 

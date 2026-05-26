@@ -153,7 +153,7 @@ export default async function BlogPostPage({
 
       {/* Breadcrumb */}
       <div className="px-4 py-3 border-b border-gray-100" style={{ background: "#f9f9f7" }}>
-        <div className="max-w-3xl mx-auto flex items-center gap-1.5 text-xs" style={{ color: "#9CA3AF" }}>
+        <div className="max-w-3xl mx-auto flex items-center gap-1.5 text-xs" style={{ color: "#6B7280" }}>
           <Link href="/" className="hover:text-black transition-colors">หน้าแรก</Link>
           <ChevronRight size={12} />
           <Link href="/blog" className="hover:text-black transition-colors">บทความ</Link>
@@ -177,10 +177,10 @@ export default async function BlogPostPage({
             {post.excerpt}
           </p>
           <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5 text-sm" style={{ color: "#9CA3AF" }}>
+            <span className="flex items-center gap-1.5 text-sm" style={{ color: "#6B7280" }}>
               <Calendar size={13} />{post.displayDate}
             </span>
-            <span className="flex items-center gap-1.5 text-sm" style={{ color: "#9CA3AF" }}>
+            <span className="flex items-center gap-1.5 text-sm" style={{ color: "#6B7280" }}>
               <Clock size={13} />{post.readTime}
             </span>
           </div>
@@ -285,7 +285,7 @@ export default async function BlogPostPage({
             <Link
               href="/blog"
               className="inline-flex items-center gap-2 text-sm font-medium transition-colors hover:text-black"
-              style={{ color: "#9CA3AF" }}
+              style={{ color: "#6B7280" }}
             >
               <ArrowLeft size={14} />
               กลับไปหน้าบทความทั้งหมด
@@ -320,7 +320,7 @@ export default async function BlogPostPage({
                   <p className="text-sm font-bold text-black leading-snug line-clamp-2 group-hover:text-[#B8860B] transition-colors">
                     {p.title}
                   </p>
-                  <span className="text-xs" style={{ color: "#9CA3AF" }}>{p.displayDate}</span>
+                  <span className="text-xs" style={{ color: "#6B7280" }}>{p.displayDate}</span>
                 </Link>
               ))}
             </div>

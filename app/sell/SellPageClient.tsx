@@ -250,7 +250,7 @@ function SellPageContent({ categories }: { categories: SellCategory[] }) {
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm" style={{ color: p.discontinued ? "#9CA3AF" : "#111" }}>{p.model}</span>
+                        <span className="font-semibold text-sm" style={{ color: p.discontinued ? "#6B7280" : "#111" }}>{p.model}</span>
                         {p.isNew && (
                           <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.12)", color: "#B8860B" }}>รุ่นใหม่</span>
                         )}
@@ -287,7 +287,7 @@ function SellPageContent({ categories }: { categories: SellCategory[] }) {
         <div className="sell-sticky-cta fixed left-0 right-0 z-40 px-4 py-3 bg-white border-t border-gray-100" style={{ transform: "translateZ(0)", WebkitTransform: "translateZ(0)" }}>
           <div className="max-w-2xl mx-auto flex items-center gap-4">
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-gray-400">รุ่นที่เลือก</p>
+              <p className="text-xs text-gray-500">รุ่นที่เลือก</p>
               <p className="font-bold text-black text-sm truncate">{selectedModel.model}</p>
             </div>
             <a
@@ -349,7 +349,7 @@ function SellPageContent({ categories }: { categories: SellCategory[] }) {
             </div>
             <div className="flex items-center justify-center gap-1.5 mt-4">
               <Lock size={11} style={{ color: "#D1D5DB" }} />
-              <span className="text-xs" style={{ color: "#9CA3AF" }}>ข้อมูลของคุณจะถูกบันทึกไว้อย่างปลอดภัย</span>
+              <span className="text-xs" style={{ color: "#6B7280" }}>ข้อมูลของคุณจะถูกบันทึกไว้อย่างปลอดภัย</span>
             </div>
           </div>
         </div>

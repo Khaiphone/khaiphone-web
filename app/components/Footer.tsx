@@ -61,7 +61,7 @@ export default function Footer() {
 
           {/* Column 2 — บริการ */}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{ color: "#9CA3AF" }}>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{ color: "#6B7280" }}>
               บริการ
             </p>
             <ul className="flex flex-col gap-3.5">
@@ -77,7 +77,7 @@ export default function Footer() {
 
           {/* Column 3 — ช่วยเหลือ */}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{ color: "#9CA3AF" }}>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{ color: "#6B7280" }}>
               ช่วยเหลือ
             </p>
             <ul className="flex flex-col gap-3.5">
@@ -98,7 +98,7 @@ export default function Footer() {
 
           {/* Column 4 — ติดต่อเรา */}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{ color: "#9CA3AF" }}>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{ color: "#6B7280" }}>
               ติดต่อเรา
             </p>
             <ul className="flex flex-col gap-4">
