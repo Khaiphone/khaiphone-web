@@ -212,10 +212,10 @@ export default async function Home() {
               <p className="font-medium mb-1 md:mb-2 text-base md:text-xl" style={{ color: "#222222" }}>รับซื้อ iPhone, iPad, MacBook</p>
               {/* Mobile: inline headings; Desktop: stacked */}
               <h1 className="flex flex-wrap items-baseline gap-x-2 md:block leading-tight" style={{ fontWeight: 700 }}>
-                <span className="text-black" style={{ fontSize: "clamp(2rem, 7vw, 3.5rem)" }}>
+                <span className="md:block text-black" style={{ fontSize: "clamp(2rem, 7vw, 3.5rem)" }}>
                   ให้ราคาสูง
                 </span>
-                <span style={{ fontSize: "clamp(2rem, 7vw, 3.8rem)", color: "#B8860B" }}>
+                <span className="md:block" style={{ fontSize: "clamp(2rem, 7vw, 3.8rem)", color: "#B8860B" }}>
                   จ่ายเงินสดทันที
                 </span>
               </h1>
