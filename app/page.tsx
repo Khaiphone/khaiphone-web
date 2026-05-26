@@ -15,9 +15,13 @@ export const metadata: Metadata = {
   description: "รับซื้อ iPhone, iPad, MacBook, Apple Watch ทุกรุ่น ให้ราคาสูง จ่ายเงินสดทันที ประเมินราคาฟรี ไม่ผูกมัด รับถึงที่ทั่ว กทม.",
   alternates: { canonical: "/" },
   openGraph: {
+    type: "website",
+    locale: "th_TH",
+    siteName: "ขายไอโฟน.com",
     title: "ขายไอโฟน.com — รับซื้อ iPhone iPad MacBook ให้ราคาสูง",
     description: "รับซื้อ iPhone, iPad, MacBook, Apple Watch ทุกรุ่น ให้ราคาสูง จ่ายเงินสดทันที ประเมินราคาฟรี ไม่ผูกมัด",
     url: "/",
+    images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: "ขายไอโฟน.com" }],
   },
 };
 
@@ -207,14 +211,14 @@ export default async function Home() {
             <div>
               <p className="font-medium mb-1 md:mb-2 text-base md:text-xl" style={{ color: "#222222" }}>รับซื้อ iPhone, iPad, MacBook</p>
               {/* Mobile: inline headings; Desktop: stacked */}
-              <div className="flex flex-wrap items-baseline gap-x-2 md:block">
-                <h1 className="leading-tight text-black" style={{ fontSize: "clamp(2rem, 7vw, 3.5rem)", fontWeight: 700 }}>
+              <h1 className="flex flex-wrap items-baseline gap-x-2 md:block leading-tight" style={{ fontWeight: 700 }}>
+                <span className="text-black" style={{ fontSize: "clamp(2rem, 7vw, 3.5rem)" }}>
                   ให้ราคาสูง
-                </h1>
-                <h1 className="leading-tight" style={{ fontSize: "clamp(2rem, 7vw, 3.8rem)", fontWeight: 700, color: "#B8860B" }}>
+                </span>
+                <span style={{ fontSize: "clamp(2rem, 7vw, 3.8rem)", color: "#B8860B" }}>
                   จ่ายเงินสดทันที
-                </h1>
-              </div>
+                </span>
+              </h1>
             </div>
             <p className="text-sm md:text-lg" style={{ color: "#333333" }}>
               ประเมินราคาออนไลน์ฟรี ไม่ผูกมัด<br />ขายง่าย ได้เงินไว
