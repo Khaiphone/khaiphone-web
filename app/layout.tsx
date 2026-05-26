@@ -98,7 +98,7 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
         />
-        {children}
+        <main>{children}</main>
         <MobileNav />
         <CookieConsent />
         <GoogleAnalytics />

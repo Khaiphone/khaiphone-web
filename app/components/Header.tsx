@@ -179,7 +179,7 @@ export default function Header() {
 
           {/* Mobile Buttons */}
           <div className="md:hidden flex items-center gap-2">
-            <a href="tel:0955535167" className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50">
+            <a href="tel:0955535167" aria-label="โทรหาเรา" className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50">
               <Phone size={16} className="text-black" />
             </a>
             <label

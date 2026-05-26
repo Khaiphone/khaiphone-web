@@ -56,6 +56,7 @@ function Checkbox({
         transition: "background 0.15s, border-color 0.15s",
         flexShrink: 0,
       }}
+      role="checkbox"
       aria-checked={checked}
       aria-disabled={disabled}
     >
