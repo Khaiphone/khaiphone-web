@@ -17,17 +17,7 @@ function roundPrice(n: number) {
   return Math.round(n / 500) * 500;
 }
 
-function modelSortKey(model: string): [number, number] {
-  const gen = parseInt(model.match(/(\d+)/)?.[1] ?? "0", 10);
-  const m = model.toLowerCase();
-  let variant = 4;
-  if (m.includes("pro max"))                          variant = 0;
-  else if (m.includes("pro"))                         variant = 1;
-  else if (m.includes("plus") || (m.includes("max") && !m.includes("pro max"))) variant = 2;
-  else if (m.includes("air"))                         variant = 3;
-  else if (m.includes("mini") || /\d+e(\s|$)/.test(m)) variant = 5;
-  return [gen, variant];
-}
+const PRODUCT_ORDER = new Map(allProducts.map((p, i) => [p.model, i]));
 
 function parseStorageGB(s: string): number {
   const m = s.match(/(\d+)\s*(TB|GB)/i);
@@ -69,12 +59,9 @@ export default async function TradeInPage() {
       };
     });
 
-    const sorted = modelProducts.sort((a, b) => {
-      const [genA, varA] = modelSortKey(a.model);
-      const [genB, varB] = modelSortKey(b.model);
-      if (genB !== genA) return genB - genA;
-      return varA - varB;
-    });
+    const sorted = modelProducts.sort((a, b) =>
+      (PRODUCT_ORDER.get(a.model) ?? 9999) - (PRODUCT_ORDER.get(b.model) ?? 9999)
+    );
 
     return { ...cat, products: sorted };
   });
