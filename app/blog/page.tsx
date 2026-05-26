@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Calendar, Clock, ChevronDown, ChevronRight } from "lucide-react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import { blogPosts } from "@/lib/blogData";
 
 export const metadata: Metadata = {
   title: "บทความและความรู้ | ขายไอโฟน.com",
@@ -9,16 +10,11 @@ export const metadata: Metadata = {
     "รวมบทความ ข่าวสาร และเทคนิคการขาย iPhone iPad MacBook มือสอง อัปเดตทุกสัปดาห์",
 };
 
-// ── Mock data ──────────────────────────────────────────────────────────────────
+// ── Posts — sorted newest first ────────────────────────────────────────────────
 
-const posts = [
-  { id: 1, category: "ราคาล่าสุด",    date: "18 พ.ค. 2567", readTime: "2 นาที", title: "อัปเดตราคารับซื้อ iPhone ล่าสุด เดือนพฤษภาคม 2024",     slug: "iphone-price-may-2024",      image: "/blog_iphone-price.webp"  },
-  { id: 2, category: "ปัญหาเครื่อง",  date: "17 พ.ค. 2567", readTime: "4 นาที", title: "ลืมออกจาก iCloud ก่อนขาย ทำยังไง? แก้ไขได้ไหม?",          slug: "icloud-before-sell",         image: "/blog_iphone-delete.webp" },
-  { id: 3, category: "ปัญหาเครื่อง",  date: "16 พ.ค. 2567", readTime: "3 นาที", title: "แบตเสื่อม ขายได้มั้ย? มีผลต่อราคาขนาดไหน อัปเดต 2024",    slug: "battery-health-price",       image: "/blog_iphone-broken.webp" },
-  { id: 4, category: "วิธีการขาย",    date: "15 พ.ค. 2567", readTime: "5 นาที", title: "เตรียม iPhone ก่อนขาย ทำตามนี้ ได้ราคาแน่นอน",             slug: "prepare-iphone-before-sell", image: "/blog_iphone-delete.webp" },
-  { id: 5, category: "MacBook / iPad", date: "14 พ.ค. 2567", readTime: "3 นาที", title: "เช็กราคารับซื้อ MacBook มือสอง อัปเดต 2024",               slug: "macbook-best-price",         image: "/blog_macbook.webp"       },
-  { id: 6, category: "ความปลอดภัย",   date: "13 พ.ค. 2567", readTime: "4 นาที", title: "ขาย iPhone ยังไงให้ข้อมูลไม่หลุด ปลอดภัย 100%",            slug: "sell-iphone-safely",         image: "/blog_iphone-delete.webp" },
-];
+const posts = [...blogPosts].sort(
+  (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+);
 
 const categories = ["ทั้งหมด", "ราคาล่าสุด", "วิธีการขาย", "ปัญหาเครื่อง", "ความปลอดภัย", "MacBook / iPad", "เปรียบเทียบ"];
 
@@ -154,7 +150,7 @@ export default function BlogPage() {
                   </h2>
                   <div className="flex items-center gap-4">
                     <span className="flex items-center gap-1 text-xs" style={{ color: "#6B7280" }}>
-                      <Calendar size={11} />{post.date}
+                      <Calendar size={11} />{post.displayDate}
                     </span>
                     <span className="flex items-center gap-1 text-xs" style={{ color: "#6B7280" }}>
                       <Clock size={11} />{post.readTime}
