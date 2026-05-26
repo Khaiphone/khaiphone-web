@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { ChevronLeft, Plus, Check, Eye, EyeOff, ChevronRight, Layers, X, RefreshCw } from "lucide-react";
+import { ChevronLeft, Plus, Check, Eye, EyeOff, ChevronRight, Layers, X, RefreshCw, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { fetchProducts, updateProduct, createProduct, bulkUpdateProductPrices, syncProductsFromLib, syncStorageFromLib } from "@/app/actions/products";
+import { fetchProducts, updateProduct, createProduct, deleteProduct, bulkUpdateProductPrices, syncProductsFromLib, syncStorageFromLib } from "@/app/actions/products";
 import type { ProductRow } from "@/app/actions/products";
 import { supabase } from "@/lib/supabase";
 
@@ -61,6 +61,7 @@ export default function PricesPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [syncingStorage, setSyncingStorage] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   async function handleSync() {
     setSyncing(true);
@@ -74,6 +75,18 @@ export default function PricesPage() {
       setSyncMsg(`✗ ${"error" in res ? res.error : "เกิดข้อผิดพลาด"}`);
     }
     setTimeout(() => setSyncMsg(null), 5000);
+  }
+
+  async function handleDelete(p: ProductRow) {
+    if (!window.confirm(`ลบ "${p.model}" ออกจากระบบ?\n\nไม่สามารถย้อนกลับได้`)) return;
+    setDeleting(p.id);
+    const res = await deleteProduct(p.id);
+    setDeleting(null);
+    if (res.success) {
+      setProducts(prev => prev.filter(x => x.id !== p.id));
+    } else {
+      alert("ลบไม่สำเร็จ: " + res.error);
+    }
   }
 
   async function handleSyncStorage() {
@@ -385,7 +398,7 @@ export default function PricesPage() {
                     key={p.id}
                     style={{
                       display: "grid",
-                      gridTemplateColumns: bulkMode ? "32px 1fr 140px 100px 36px 36px" : "1fr 140px 100px 36px 36px",
+                      gridTemplateColumns: bulkMode ? "32px 1fr 140px 100px 36px 36px" : "1fr 140px 100px 36px 36px 36px",
                       alignItems: "center",
                       padding: "12px 16px",
                       borderBottom: i < visible.length - 1 ? `1px solid ${BORDER}` : "none",
@@ -485,6 +498,20 @@ export default function PricesPage() {
                     >
                       <ChevronRight size={16} />
                     </button>
+
+                    {/* Delete */}
+                    {!bulkMode && (
+                      <button
+                        onClick={() => handleDelete(p)}
+                        disabled={deleting === p.id}
+                        title="ลบรุ่นนี้ออกจากระบบ"
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", display: "flex", padding: 4, opacity: deleting === p.id ? 0.4 : 0.35 }}
+                        onMouseEnter={e => (e.currentTarget.style.opacity = "1")}
+                        onMouseLeave={e => (e.currentTarget.style.opacity = "0.35")}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
                   </div>
                 );
               })}

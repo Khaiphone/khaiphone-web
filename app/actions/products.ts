@@ -246,6 +246,14 @@ export async function syncStorageFromLib() {
   return { success: true as const, updated };
 }
 
+export async function deleteProduct(id: string) {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { error } = await supabase.from("products").delete().eq("id", id);
+  if (error) return { success: false as const, error: error.message };
+  return { success: true as const };
+}
+
 export async function createProduct(product: {
   model: string;
   storage: string;
