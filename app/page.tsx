@@ -576,7 +576,7 @@ export default async function Home() {
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
             <h3 className="text-2xl md:text-3xl font-bold text-white">ประเมินราคาฟรี ตอนนี้เลย!</h3>
-            <p className="text-yellow-100 mt-1">ไม่ต้องกรอกข้อมูลส่วนตัว ไม่ผูกมัด</p>
+            <p className="text-white mt-1">ไม่ต้องกรอกข้อมูลส่วนตัว ไม่ผูกมัด</p>
           </div>
           <a
             href="/sell"

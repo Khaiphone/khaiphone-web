@@ -46,14 +46,14 @@ export default function Footer() {
               <Image src="/logo-icon.webp" alt="ขายไอโฟน.com" width={36} height={36} className="rounded-lg" style={{ width: 36, height: 36 }} />
               <div>
                 <p className="font-bold text-white text-sm leading-snug">ขายไอโฟน.com</p>
-                <p className="text-xs leading-snug" style={{ color: "#6B7280" }}>รับซื้อ Apple มือสอง</p>
+                <p className="text-xs leading-snug" style={{ color: "#9CA3AF" }}>รับซื้อ Apple มือสอง</p>
               </div>
             </div>
-            <p className="text-sm leading-relaxed mb-5" style={{ color: "#6B7280" }}>
+            <p className="text-sm leading-relaxed mb-5" style={{ color: "#9CA3AF" }}>
               ให้ราคาสูง จ่ายเงินสดทันที<br />
               บริการรับถึงที่ทั่ว กทม.
             </p>
-            <div className="flex items-center gap-2 text-xs" style={{ color: "#6B7280" }}>
+            <div className="flex items-center gap-2 text-xs" style={{ color: "#9CA3AF" }}>
               <Clock size={12} style={{ flexShrink: 0 }} />
               <span>เปิดทุกวัน 09:00 – 00:00</span>
             </div>
@@ -61,13 +61,13 @@ export default function Footer() {
 
           {/* Column 2 — บริการ */}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{ color: "#6B7280" }}>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{ color: "#9CA3AF" }}>
               บริการ
             </p>
             <ul className="flex flex-col gap-3.5">
               {serviceLinks.map(({ label, href }) => (
                 <li key={label}>
-                  <a href={href} className="text-sm transition-colors hover:text-white" style={{ color: "#718096", lineHeight: 1.75 }}>
+                  <a href={href} className="text-sm transition-colors hover:text-white" style={{ color: "#9CA3AF", lineHeight: 1.75 }}>
                     {label}
                   </a>
                 </li>
@@ -77,19 +77,19 @@ export default function Footer() {
 
           {/* Column 3 — ช่วยเหลือ */}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{ color: "#6B7280" }}>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{ color: "#9CA3AF" }}>
               ช่วยเหลือ
             </p>
             <ul className="flex flex-col gap-3.5">
               {helpLinks.map(({ label, href }) => (
                 <li key={label}>
-                  <a href={href} className="text-sm transition-colors hover:text-white" style={{ color: "#718096", lineHeight: 1.75 }}>
+                  <a href={href} className="text-sm transition-colors hover:text-white" style={{ color: "#9CA3AF", lineHeight: 1.75 }}>
                     {label}
                   </a>
                 </li>
               ))}
               <li>
-                <span className="text-sm transition-colors hover:text-white" style={{ color: "#718096", lineHeight: 1.75 }}>
+                <span className="text-sm transition-colors hover:text-white" style={{ color: "#9CA3AF", lineHeight: 1.75 }}>
                   <CookieReopenButton />
                 </span>
               </li>
@@ -98,7 +98,7 @@ export default function Footer() {
 
           {/* Column 4 — ติดต่อเรา */}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{ color: "#6B7280" }}>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{ color: "#9CA3AF" }}>
               ติดต่อเรา
             </p>
             <ul className="flex flex-col gap-4">
@@ -108,13 +108,13 @@ export default function Footer() {
                     <a
                       href={href}
                       className="flex items-center gap-2.5 text-sm transition-colors hover:text-white"
-                      style={{ color: "#718096", lineHeight: 1.75 }}
+                      style={{ color: "#9CA3AF", lineHeight: 1.75 }}
                     >
                       <Icon size={13} style={{ flexShrink: 0 }} />
                       {label}
                     </a>
                   ) : (
-                    <span className="flex items-center gap-2.5 text-sm" style={{ color: "#718096", lineHeight: 1.75 }}>
+                    <span className="flex items-center gap-2.5 text-sm" style={{ color: "#9CA3AF", lineHeight: 1.75 }}>
                       <Icon size={13} style={{ flexShrink: 0 }} />
                       {label}
                     </span>
@@ -127,7 +127,7 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
-          <p className="text-xs" style={{ color: "#4B5563" }}>
+          <p className="text-xs" style={{ color: "#9CA3AF" }}>
             © 2025 ขายไอโฟน.com สงวนลิขสิทธิ์
           </p>
           <div className="flex items-center gap-5">
@@ -136,7 +136,7 @@ export default function Footer() {
                 key={label}
                 href={href}
                 className="text-xs transition-colors hover:text-white"
-                style={{ color: "#4B5563" }}
+                style={{ color: "#9CA3AF" }}
               >
                 {label}
               </a>
