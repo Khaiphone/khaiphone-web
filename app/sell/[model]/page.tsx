@@ -827,14 +827,14 @@ function SellModelPageContent() {
     } else if (step > 0 && step < TOTAL_STEPS && !trackedStepsRef.current.has(step)) {
       trackedStepsRef.current.add(step);
       trackEstimateEvent({ sessionId: sid, event: "step_reached", model: product.model, stepIndex: step, stepName: STEP_TITLES[step] });
-    } else if (step >= TOTAL_STEPS && !trackedStepsRef.current.has(TOTAL_STEPS)) {
+    } else if (step >= TOTAL_STEPS && pricesLoaded && !trackedStepsRef.current.has(TOTAL_STEPS)) {
       trackedStepsRef.current.add(TOTAL_STEPS);
       const selectedStorage = picks[0] !== null ? storages[picks[0]] : undefined;
-      const estPrice = product ? calcPrice(product, picks, effectiveGroupOptions, storageMultiplier, storagePrices) : undefined;
+      const estPrice = calcPrice(product, picks, effectiveGroupOptions, storageMultiplier, storagePrices);
       trackEstimateEvent({ sessionId: sid, event: "price_seen", model: product.model, storage: selectedStorage, price: estPrice });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, product?.model]);
+  }, [step, product?.model, pricesLoaded]);
 
   // Restore wizard progress on fresh URL
   useEffect(() => {
