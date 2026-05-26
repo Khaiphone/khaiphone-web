@@ -36,10 +36,12 @@ function Checkbox({
   checked,
   disabled,
   onChange,
+  label,
 }: {
   checked: boolean;
   disabled?: boolean;
   onChange?: () => void;
+  label: string;
 }) {
   return (
     <button
@@ -59,6 +61,7 @@ function Checkbox({
       role="checkbox"
       aria-checked={checked}
       aria-disabled={disabled}
+      aria-label={label}
     >
       {checked && <Check size={11} color="#ffffff" strokeWidth={3} />}
     </button>
@@ -181,6 +184,7 @@ export default function CookieConsent() {
           checked={consent[opt.key]}
           disabled={opt.disabled}
           onChange={() => !opt.disabled && toggleConsent(opt.key as "analytics" | "marketing")}
+          label={opt.label}
         />
       </div>
       <div>

@@ -355,7 +355,7 @@ export default async function Home() {
                 style={{ textDecoration: "none", cursor: p.href ? "pointer" : "default" }}
               >
                 <div className={`relative w-full h-20 md:h-28 mb-2 md:mb-3 flex items-center justify-center transition-transform ${p.href ? "group-hover:scale-105" : ""}`}>
-                  <Image src={p.img} alt={p.name} fill className="object-contain" style={{ transform: `scale(${p.scale})` }} sizes="(max-width: 768px) 28vw, 180px" />
+                  <Image src={p.img} alt="" fill className="object-contain" style={{ transform: `scale(${p.scale})` }} sizes="(max-width: 768px) 28vw, 180px" />
                 </div>
                 <p className="font-bold text-black text-xs md:text-lg text-center">{p.name}</p>
                 <p className="text-xs mb-4 hidden md:block" style={{ color: "#6B7280" }}>{p.sub}</p>
