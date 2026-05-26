@@ -38,5 +38,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
   }
 
-  return [...staticPages, ...productPages];
+  const locationPages: MetadataRoute.Sitemap = [
+    "rangsit", "pathumthani", "lamlukka", "donmueang", "bangkhen",
+  ].map((slug) => ({
+    url: `${base}/area/${slug}`,
+    lastModified: now,
+    changeFrequency: "monthly" as const,
+    priority: 0.75,
+  }));
+
+  return [...staticPages, ...locationPages, ...productPages];
 }
