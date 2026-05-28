@@ -766,11 +766,15 @@ function SellModelPageContent() {
   const product  = products.find(p => toSlug(p.model) === params.model) ?? null;
   const storages = product ? product.storage.split(" / ") : [];
 
-  const step  = Math.min(parseInt(searchParams.get("step") ?? "0"), TOTAL_STEPS);
-  const picks = Array.from({ length: TOTAL_STEPS }, (_, i) => {
-    const v = searchParams.get(`s${i}`);
-    return v !== null ? parseInt(v) : null;
-  });
+  const [step, setStep] = useState(() =>
+    Math.min(parseInt(searchParams.get("step") ?? "0"), TOTAL_STEPS)
+  );
+  const [picks, setPicks] = useState<(number | null)[]>(() =>
+    Array.from({ length: TOTAL_STEPS }, (_, i) => {
+      const v = searchParams.get(`s${i}`);
+      return v !== null ? parseInt(v) : null;
+    })
+  );
 
   const isWizardDone = step >= TOTAL_STEPS;
   const isWizard     = !isWizardDone;
@@ -839,7 +843,7 @@ function SellModelPageContent() {
   // Restore wizard progress on fresh URL
   useEffect(() => {
     if (!isHydrated) return;
-    const isFresh = !searchParams.has("step") && picks.every(p => p === null) && !searchParams.has("r");
+    const isFresh = step === 0 && picks.every(p => p === null) && !searchParams.has("r");
     if (!isFresh) return;
     try {
       const raw = localStorage.getItem(WIZARD_KEY);
@@ -851,7 +855,9 @@ function SellModelPageContent() {
       savedPicks.forEach((sel: number | null, i: number) => {
         if (sel !== null) p.set(`s${i}`, String(sel));
       });
-      window.location.replace(`/sell/${params.model}?${p.toString()}`);
+      setStep(savedStep);
+      setPicks(savedPicks);
+      window.history.replaceState(null, "", `/sell/${params.model}?${p.toString()}`);
     } catch {}
   }, [isHydrated]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -860,6 +866,39 @@ function SellModelPageContent() {
     try {
       localStorage.setItem(WIZARD_KEY, JSON.stringify({ step: newStep, picks: newPicks, savedAt: Date.now() }));
     } catch {}
+  }
+
+  function syncUrl(newStep: number, newPicks: (number | null)[], extra?: Record<string, string>) {
+    const p = new URLSearchParams();
+    p.set("step", String(newStep));
+    newPicks.forEach((pick, i) => { if (pick !== null) p.set(`s${i}`, String(pick)); });
+    if (extra) Object.entries(extra).forEach(([k, v]) => p.set(k, v));
+    window.history.replaceState(null, "", `/sell/${params.model}?${p.toString()}`);
+  }
+
+  function goNext(pick: number | null = localPick) {
+    const newPicks = [...picks];
+    if (pick !== null) newPicks[step] = pick;
+    const newStep = step + 1;
+    setPicks(newPicks);
+    setStep(newStep);
+    saveWizard(newStep, newPicks);
+    syncUrl(newStep, newPicks);
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }
+
+  function goBack() {
+    const newStep = Math.max(0, step - 1);
+    setStep(newStep);
+    syncUrl(newStep, picks);
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }
+
+  function goBackToWizard() {
+    const newStep = TOTAL_STEPS - 1;
+    setStep(newStep);
+    syncUrl(newStep, picks);
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
   }
 
   function handleSelect(fn: () => void) {
@@ -1297,13 +1336,14 @@ function SellModelPageContent() {
                   {step === TOTAL_STEPS - 1 && localPick === 1 ? (
                     <>
                       {step > 0 && (
-                        <a
-                          href={backUrl()}
+                        <button
+                          type="button"
+                          onClick={goBack}
                           className="flex items-center justify-center gap-1 w-full py-3 rounded-full font-semibold text-sm mb-3"
                           style={{ background: "#fff", border: "1px solid #E5E7EB", color: "#6B7280" }}
                         >
                           <ChevronLeft size={15} /> ย้อนกลับ
-                        </a>
+                        </button>
                       )}
                       <div className="rounded-2xl border-2 p-5 text-center" style={{ borderColor: "#FCA5A5", background: "rgba(239,68,68,0.05)" }}>
                         <div className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center" style={{ background: "rgba(239,68,68,0.12)" }}>
@@ -1337,18 +1377,20 @@ function SellModelPageContent() {
                   ) : (
                     <div className="flex gap-3">
                       {step > 0 && (
-                        <a
-                          href={backUrl()}
+                        <button
+                          type="button"
+                          onClick={goBack}
                           className="flex-1 flex items-center justify-center gap-1 py-3.5 rounded-full font-semibold text-sm"
                           style={{ background: "#fff", border: "1px solid #E5E7EB", color: "#6B7280" }}
                         >
                           <ChevronLeft size={15} /> ย้อนกลับ
-                        </a>
+                        </button>
                       )}
                       {localPick !== null ? (
                         <div className="flex flex-col gap-2" style={{ flex: step > 0 ? "2 1 0" : "1 1 0" }}>
                           {step === TOTAL_STEPS - 1 && bundleReturn && (
                             <button
+                              type="button"
                               onClick={() => { const np = [...picks]; np[step] = localPick; saveWizard(step + 1, np); handleAddToBundle(); }}
                               className="flex items-center justify-center gap-2 w-full py-3.5 rounded-full font-bold text-sm text-white"
                               style={{ background: "#111111" }}
@@ -1356,18 +1398,14 @@ function SellModelPageContent() {
                               <Plus size={15} /> เพิ่มสินค้านี้เข้ารายการขาย
                             </button>
                           )}
-                          <a
-                            href={nextUrl(localPick)}
-                            onClick={() => {
-                              const newPicks = [...picks];
-                              newPicks[step] = localPick;
-                              saveWizard(step + 1, newPicks);
-                            }}
+                          <button
+                            type="button"
+                            onClick={() => goNext(localPick)}
                             className="flex items-center justify-center py-3.5 rounded-full font-bold text-sm text-white w-full"
                             style={{ background: "#B8860B" }}
                           >
                             {step === TOTAL_STEPS - 1 ? (bundleReturn ? "ประเมินเครื่องนี้แยก →" : "กรอกข้อมูลเพื่อดูราคา →") : "ถัดไป →"}
-                          </a>
+                          </button>
                         </div>
                       ) : (
                         <div
@@ -1425,13 +1463,14 @@ function SellModelPageContent() {
                         </p>
                       </div>
                     </div>
-                    <a
-                      href={backToWizardUrl()}
+                    <button
+                      type="button"
+                      onClick={goBackToWizard}
                       className="flex items-center justify-center w-full py-2.5 rounded-full font-semibold text-sm mb-4"
                       style={{ border: "1px solid #B8860B", color: "#B8860B" }}
                     >
                       แก้ไขข้อมูลเครื่อง
-                    </a>
+                    </button>
                     <div className="flex flex-col" style={{ borderTop: "1px solid #F9FAFB" }}>
                       {summaryRows.map(({ title, value }) => (
                         <div key={title} className="flex items-center justify-between py-2.5" style={{ borderBottom: "1px solid #F9FAFB" }}>
@@ -1928,11 +1967,13 @@ function SellModelPageContent() {
 
                     {/* Desktop action buttons */}
                     <div className="hidden md:flex gap-3">
-                      <a href={backToWizardUrl()}
+                      <button
+                        type="button"
+                        onClick={goBackToWizard}
                         className="flex items-center justify-center gap-1 px-8 py-3 rounded-2xl font-medium text-sm"
                         style={{ border: "1px solid #E5E7EB", color: "#6B7280" }}>
                         <ChevronLeft size={15} /> ย้อนกลับ
-                      </a>
+                      </button>
                       <button type="submit"
                         disabled={submitting}
                         className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-sm text-white"
@@ -1997,7 +2038,7 @@ function SellModelPageContent() {
                     <div className="px-5 py-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-xs font-semibold text-black">ข้อมูลเครื่อง</span>
-                        <a href={backToWizardUrl()} className="text-xs font-semibold" style={{ color: "#B8860B" }}>แก้ไข</a>
+                        <button type="button" onClick={goBackToWizard} className="text-xs font-semibold" style={{ color: "#B8860B", background: "none", border: "none", padding: 0, cursor: "pointer" }}>แก้ไข</button>
                       </div>
                       <div className="flex items-center gap-3 mb-2">
                         <div className="relative w-12 h-12 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: "#F5F5F7" }}>
