@@ -1506,10 +1506,13 @@ function SellModelPageContent() {
                             <button
                               type="button"
                               onClick={() => {
-                                const updated = extraDevices.filter((_, j) => j !== i);
-                                setExtraDevices(updated);
-                                try { localStorage.setItem(BUNDLE_KEY, JSON.stringify(updated)); } catch {}
-                                try { localStorage.setItem(BUNDLE_RETURN_KEY, window.location.href); } catch {}
+                                try {
+                                  const stored: ExtraDevice[] = JSON.parse(localStorage.getItem(BUNDLE_KEY) ?? "[]");
+                                  const updated = stored.filter((_, j) => j !== i);
+                                  localStorage.setItem(BUNDLE_KEY, JSON.stringify(updated));
+                                  localStorage.setItem(BUNDLE_RETURN_KEY, window.location.href);
+                                  localStorage.removeItem(`khaiphone_wizard_${toSlug(d.model)}`);
+                                } catch {}
                                 window.location.href = `/sell/${toSlug(d.model)}`;
                               }}
                               className="flex-shrink-0 ml-1 text-xs font-semibold"
@@ -2115,11 +2118,13 @@ function SellModelPageContent() {
                           if (!d) return null;
                           const img = getProductImage(d.model);
                           function handleEditExtra() {
-                            // Remove this device from bundle, set return URL, navigate to its wizard
-                            const updated = extraDevices.filter((_, i) => i !== extraIdx);
-                            setExtraDevices(updated);
-                            try { localStorage.setItem(BUNDLE_KEY, JSON.stringify(updated)); } catch {}
-                            try { localStorage.setItem(BUNDLE_RETURN_KEY, window.location.href); } catch {}
+                            try {
+                              const stored: ExtraDevice[] = JSON.parse(localStorage.getItem(BUNDLE_KEY) ?? "[]");
+                              const updated = stored.filter((_, j) => j !== extraIdx);
+                              localStorage.setItem(BUNDLE_KEY, JSON.stringify(updated));
+                              localStorage.setItem(BUNDLE_RETURN_KEY, window.location.href);
+                              localStorage.removeItem(`khaiphone_wizard_${toSlug(d.model)}`);
+                            } catch {}
                             window.location.href = `/sell/${toSlug(d.model)}`;
                           }
                           return (
