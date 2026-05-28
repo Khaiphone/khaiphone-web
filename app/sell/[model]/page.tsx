@@ -2096,9 +2096,18 @@ function SellModelPageContent() {
                       ) : (
                         /* Extra device tab */
                         (() => {
-                          const d = extraDevices[sidebarDeviceTab - 1];
+                          const extraIdx = sidebarDeviceTab - 1;
+                          const d = extraDevices[extraIdx];
                           if (!d) return null;
                           const img = getProductImage(d.model);
+                          function handleEditExtra() {
+                            // Remove this device from bundle, set return URL, navigate to its wizard
+                            const updated = extraDevices.filter((_, i) => i !== extraIdx);
+                            setExtraDevices(updated);
+                            try { localStorage.setItem(BUNDLE_KEY, JSON.stringify(updated)); } catch {}
+                            try { localStorage.setItem(BUNDLE_RETURN_KEY, window.location.href); } catch {}
+                            window.location.href = `/sell/${toSlug(d.model)}`;
+                          }
                           return (
                             <>
                               <div className="flex items-center gap-3 mb-2">
@@ -2107,10 +2116,11 @@ function SellModelPageContent() {
                                     ? <Image src={img} alt={d.model} fill className="object-contain p-1" sizes="48px" />
                                     : <IconApple className="w-7 h-7 opacity-20" />}
                                 </div>
-                                <div className="min-w-0">
+                                <div className="min-w-0 flex-1">
                                   <p className="text-sm font-semibold text-black leading-snug truncate">{d.model}</p>
                                   <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{d.storage}</p>
                                 </div>
+                                <button type="button" onClick={handleEditExtra} className="text-xs font-semibold flex-shrink-0" style={{ color: "#B8860B", background: "none", border: "none", padding: 0, cursor: "pointer" }}>แก้ไข</button>
                               </div>
                               <div className="flex flex-col">
                                 {d.details.map(({ title, value }) => (
