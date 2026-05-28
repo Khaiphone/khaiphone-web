@@ -1995,6 +1995,49 @@ function SellModelPageContent() {
                   </form>
                 </div>
 
+                {/* ── Support card — mobile only (desktop has it in sidebar) ── */}
+                <div className="md:hidden bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid #E5E7EB" }}>
+                  <div className="flex items-center gap-2.5 px-4 py-3.5" style={{ borderBottom: "1px solid #F3F4F6", background: "rgba(184,134,11,0.04)" }}>
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(184,134,11,0.12)" }}>
+                      <Clock size={13} style={{ color: "#B8860B" }} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-black">ใช้เวลาเฉลี่ย 5 นาที</p>
+                      <p className="text-xs" style={{ color: "#6B7280" }}>กรอกข้อมูลเสร็จแล้วรอรับราคา</p>
+                    </div>
+                  </div>
+                  <div className="px-4 py-3.5" style={{ borderBottom: "1px solid #F3F4F6" }}>
+                    <p className="text-xs font-semibold text-black mb-2.5">ต้องการความช่วยเหลือ?</p>
+                    <div className="flex flex-col gap-2">
+                      <a href="https://line.me/R/ti/p/@khaiphone" target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold text-white"
+                        style={{ background: "#06C755" }}>
+                        <IconLine className="w-3.5 h-3.5" /> LINE @khaiphone
+                      </a>
+                      <a href="tel:0955535167"
+                        className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold text-black"
+                        style={{ border: "1px solid #E5E7EB", background: "#FAFAFA" }}>
+                        <Phone size={13} style={{ color: "#6B7280" }} /> โทร 095-553-5167
+                      </a>
+                    </div>
+                  </div>
+                  <div className="px-4 py-3.5">
+                    <p className="text-xs font-semibold text-black mb-2.5">คำถามที่พบบ่อย</p>
+                    <div className="flex flex-col gap-2">
+                      {[
+                        { q: "ราคานี้แม่นยำแค่ไหน?", a: "ประเมินเบื้องต้น ราคาจริงยืนยันหลังตรวจสภาพ" },
+                        { q: "ต้องพาเครื่องมาเองไหม?", a: "ไม่จำเป็น — เลือก Rider รับถึงที่หรือส่งพัสดุได้" },
+                        { q: "รับเงินช้าไหม?", a: "ตรวจเครื่องเสร็จรับเงินได้เลย ภายใน 30–60 นาที" },
+                      ].map(({ q, a }) => (
+                        <div key={q} className="rounded-xl p-2.5" style={{ background: "#F9FAFB" }}>
+                          <p className="text-xs font-semibold text-black leading-snug">{q}</p>
+                          <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "#6B7280" }}>{a}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
                 {/* ─── Location Modal ───────────────────────────────────── */}
                 {locationModal && (
                   <div className="fixed inset-0 z-[80] flex items-end md:items-center justify-center" style={{ background: "rgba(0,0,0,0.5)" }}>
