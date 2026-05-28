@@ -791,6 +791,7 @@ function SellModelPageContent() {
   const phoneRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const scrollYRef = useRef(0);
+  const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const riderAddressInputRef = useRef<HTMLInputElement>(null);
   const riderSectionRef  = useRef<HTMLDivElement>(null);
   const mapDivRef        = useRef<HTMLDivElement | null>(null);
@@ -888,6 +889,7 @@ function SellModelPageContent() {
   }
 
   function goBack() {
+    if (autoAdvanceTimerRef.current) { clearTimeout(autoAdvanceTimerRef.current); autoAdvanceTimerRef.current = null; }
     const newStep = Math.max(0, step - 1);
     setStep(newStep);
     syncUrl(newStep, picks);
@@ -895,6 +897,7 @@ function SellModelPageContent() {
   }
 
   function goBackToWizard() {
+    if (autoAdvanceTimerRef.current) { clearTimeout(autoAdvanceTimerRef.current); autoAdvanceTimerRef.current = null; }
     const newStep = TOTAL_STEPS - 1;
     setStep(newStep);
     syncUrl(newStep, picks);
@@ -1304,6 +1307,12 @@ function SellModelPageContent() {
                           const newPicks = [...picks];
                           newPicks[step] = i;
                           saveWizard(step, newPicks);
+                          // iCloud locked — show error, don't advance
+                          const isICloudLocked = step === TOTAL_STEPS - 1 && i === 1;
+                          if (!isICloudLocked) {
+                            if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
+                            autoAdvanceTimerRef.current = setTimeout(() => { goNext(i); }, 400);
+                          }
                         }}
                         className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 w-full text-left"
                         style={{
@@ -1386,34 +1395,15 @@ function SellModelPageContent() {
                           <ChevronLeft size={15} /> ย้อนกลับ
                         </button>
                       )}
-                      {localPick !== null ? (
-                        <div className="flex flex-col gap-2" style={{ flex: step > 0 ? "2 1 0" : "1 1 0" }}>
-                          {step === TOTAL_STEPS - 1 && bundleReturn && (
-                            <button
-                              type="button"
-                              onClick={() => { const np = [...picks]; np[step] = localPick; saveWizard(step + 1, np); handleAddToBundle(); }}
-                              className="flex items-center justify-center gap-2 w-full py-3.5 rounded-full font-bold text-sm text-white"
-                              style={{ background: "#111111" }}
-                            >
-                              <Plus size={15} /> เพิ่มสินค้านี้เข้ารายการขาย
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => goNext(localPick)}
-                            className="flex items-center justify-center py-3.5 rounded-full font-bold text-sm text-white w-full"
-                            style={{ background: "#B8860B" }}
-                          >
-                            {step === TOTAL_STEPS - 1 ? (bundleReturn ? "ประเมินเครื่องนี้แยก →" : "กรอกข้อมูลเพื่อดูราคา →") : "ถัดไป →"}
-                          </button>
-                        </div>
-                      ) : (
-                        <div
-                          className="flex items-center justify-center py-3.5 rounded-full font-bold text-sm"
-                          style={{ background: "#E5E7EB", color: "#6B7280", flex: step > 0 ? "2 1 0" : "1 1 0" }}
+                      {step === TOTAL_STEPS - 1 && bundleReturn && localPick !== null && (
+                        <button
+                          type="button"
+                          onClick={() => { const np = [...picks]; np[step] = localPick; saveWizard(step + 1, np); handleAddToBundle(); }}
+                          className="flex items-center justify-center gap-2 py-3.5 rounded-full font-bold text-sm text-white"
+                          style={{ background: "#111111", flex: "2 1 0" }}
                         >
-                          เลือกตัวเลือกก่อน
-                        </div>
+                          <Plus size={15} /> เพิ่มสินค้านี้เข้ารายการขาย
+                        </button>
                       )}
                     </div>
                   )}
