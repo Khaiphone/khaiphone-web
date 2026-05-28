@@ -1307,9 +1307,10 @@ function SellModelPageContent() {
                           const newPicks = [...picks];
                           newPicks[step] = i;
                           saveWizard(step, newPicks);
-                          // iCloud locked — show error, don't advance
+                          // iCloud locked or bundle last step — don't auto-advance
                           const isICloudLocked = step === TOTAL_STEPS - 1 && i === 1;
-                          if (!isICloudLocked) {
+                          const isBundleLastStep = step === TOTAL_STEPS - 1 && !!bundleReturn;
+                          if (!isICloudLocked && !isBundleLastStep) {
                             if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
                             autoAdvanceTimerRef.current = setTimeout(() => { goNext(i); }, 400);
                           }
