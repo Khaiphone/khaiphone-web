@@ -1475,8 +1475,8 @@ function SellModelPageContent() {
                     </div>
                   </div>
 
-                  {/* Bundle: สินค้าในรายการนี้ */}
-                  <div className="bg-white rounded-2xl p-5" style={{ border: "1px solid #E5E7EB" }}>
+                  {/* Bundle: สินค้าในรายการนี้ — hidden on desktop (sidebar handles this) */}
+                  <div className="md:hidden bg-white rounded-2xl p-5" style={{ border: "1px solid #E5E7EB" }}>
                     <h3 className="font-bold text-black mb-3">สินค้าที่จะขายในครั้งนี้</h3>
                     <div className="flex flex-col gap-2 mb-3">
                       {/* Current device (primary) — no delete button, shows "หลัก" badge */}
@@ -2162,6 +2162,20 @@ function SellModelPageContent() {
                           );
                         })()
                       )}
+                    </div>
+
+                    {/* Add more devices — desktop only (mobile has its own button in the card above) */}
+                    <div className="px-5 py-3" style={{ borderBottom: "1px solid #F3F4F6" }}>
+                      <a
+                        href="/sell"
+                        onClick={() => {
+                          try { localStorage.setItem(BUNDLE_RETURN_KEY, window.location.href); } catch {}
+                        }}
+                        className="flex items-center justify-center gap-2 w-full py-2 rounded-xl text-xs font-semibold"
+                        style={{ border: "1.5px dashed #D1D5DB", color: "#6B7280", textDecoration: "none" }}
+                      >
+                        <Plus size={13} /> ประเมินสินค้าเพิ่ม
+                      </a>
                     </div>
 
                     {/* Sell method */}
