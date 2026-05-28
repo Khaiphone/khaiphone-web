@@ -1836,7 +1836,7 @@ function SellModelPageContent() {
                                       cursor:     "pointer",
                                     }}>
                                     <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
-                                      style={{ background: active ? bank.color : "#E5E7EB", transition: "background 150ms ease" }}>
+                                      style={{ background: "#fff", boxShadow: active ? `0 0 0 2px ${bank.color}` : "0 0 0 1px #E5E7EB", transition: "box-shadow 150ms ease" }}>
                                       {/* eslint-disable-next-line @next/next/no-img-element */}
                                       <img
                                         src={bank.logo}
