@@ -236,7 +236,7 @@ function SellPageContent({ categories }: { categories: SellCategory[] }) {
                   >
                     <div
                       className="relative w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
-                      style={{ background: active ? "#111" : "#f5f5f7" }}
+                      style={{ background: "#f5f5f7" }}
                     >
                       {(() => {
                         const img = getModelImage(p.model);
