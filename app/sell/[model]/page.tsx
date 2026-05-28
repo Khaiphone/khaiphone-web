@@ -1440,8 +1440,8 @@ function SellModelPageContent() {
                     </div>
                   </div>
 
-                  {/* Device card */}
-                  <div className="bg-white rounded-2xl p-5" style={{ border: "1px solid #E5E7EB" }}>
+                  {/* Device card — hidden on desktop (sidebar handles this) */}
+                  <div className="md:hidden bg-white rounded-2xl p-5" style={{ border: "1px solid #E5E7EB" }}>
                     <h3 className="font-bold text-black mb-4">ข้อมูลเครื่องที่ประเมิน</h3>
                     <div className="flex items-center gap-4 mb-4">
                       <div className="relative flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center" style={{ width: 72, height: 72, background: "#F5F5F7" }}>
