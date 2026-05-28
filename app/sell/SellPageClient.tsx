@@ -336,7 +336,7 @@ function SellPageContent({ categories }: { categories: SellCategory[] }) {
                 <ChevronRight size={16} />
               </a>
               <a
-                href={`/sell/${resumeModal.slug}?r=1`}
+                href="/sell"
                 onClick={() => {
                   try { localStorage.removeItem(`khaiphone_wizard_${resumeModal.slug}`); } catch {}
                 }}
