@@ -950,6 +950,7 @@ function SellModelPageContent() {
   const [bankAccountName, setBankAccountName] = useState("");
   const [extraDevices, setExtraDevices] = useState<ExtraDevice[]>([]);
   const [bundleReturn, setBundleReturn] = useState<string | null>(null);
+  const [sidebarDeviceTab, setSidebarDeviceTab] = useState(0);
 
   // Sync appointment time when date changes — auto-select first valid slot
   useEffect(() => {
@@ -2019,9 +2020,11 @@ function SellModelPageContent() {
                     {/* Header */}
                     <div className="p-5" style={{ borderBottom: "1px solid #F3F4F6" }}>
                       <h3 className="font-bold text-black text-base">สรุปข้อมูลการขาย</h3>
-                      <p className="text-xs mt-3" style={{ color: "#6B7280" }}>ราคาประเมินของคุณ</p>
+                      <p className="text-xs mt-3" style={{ color: "#6B7280" }}>
+                        {extraDevices.length > 0 ? `ราคารวม ${extraDevices.length + 1} เครื่อง` : "ราคาประเมินของคุณ"}
+                      </p>
                       {pricesLoaded
-                        ? <p className="text-3xl font-bold mt-0.5" style={{ color: "#B8860B" }}>฿{price.toLocaleString("th-TH")}</p>
+                        ? <p className="text-3xl font-bold mt-0.5" style={{ color: "#B8860B" }}>฿{(extraDevices.length > 0 ? totalBundlePrice : price).toLocaleString("th-TH")}</p>
                         : <p className="text-base font-medium mt-0.5" style={{ color: "#B8860B" }}>กำลังคำนวณราคา…</p>}
                     </div>
 
@@ -2029,30 +2032,102 @@ function SellModelPageContent() {
                     <div className="px-5 py-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-xs font-semibold text-black">ข้อมูลเครื่อง</span>
-                        <button type="button" onClick={goBackToWizard} className="text-xs font-semibold" style={{ color: "#B8860B", background: "none", border: "none", padding: 0, cursor: "pointer" }}>แก้ไข</button>
+                        {sidebarDeviceTab === 0 && (
+                          <button type="button" onClick={goBackToWizard} className="text-xs font-semibold" style={{ color: "#B8860B", background: "none", border: "none", padding: 0, cursor: "pointer" }}>แก้ไข</button>
+                        )}
                       </div>
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="relative w-12 h-12 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: "#F5F5F7" }}>
-                          {getProductImage(product.model)
-                            ? <Image src={getProductImage(product.model)!} alt={product.model} fill className="object-contain p-1" sizes="48px" />
-                            : <IconApple className="w-7 h-7 opacity-20" />}
+
+                      {/* Tabs — only when extra devices exist */}
+                      {extraDevices.length > 0 && (
+                        <div className="flex gap-1 mb-3 p-1 rounded-xl" style={{ background: "#F5F5F7" }}>
+                          {[product.model, ...extraDevices.map(d => d.model)].map((label, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => setSidebarDeviceTab(i)}
+                              className="flex-1 py-1.5 rounded-lg text-xs font-semibold"
+                              style={{
+                                background: sidebarDeviceTab === i ? "#fff" : "transparent",
+                                color: sidebarDeviceTab === i ? "#111" : "#6B7280",
+                                boxShadow: sidebarDeviceTab === i ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                                border: "none",
+                                cursor: "pointer",
+                                transition: "all 150ms ease",
+                              }}
+                            >
+                              เครื่อง {i + 1}
+                            </button>
+                          ))}
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-black leading-snug truncate">{product.model}</p>
-                          <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>
-                            {picks[0] !== null ? storages[picks[0]] : ""}
-                            {picks[3] !== null ? ` • ${BODY_OPTS[picks[3]]?.sub ?? ""}` : ""}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex flex-col">
-                        {summaryRows.map(({ title, value }) => (
-                          <div key={title} className="flex items-center justify-between py-1">
-                            <span className="text-xs" style={{ color: "#6B7280" }}>{title}</span>
-                            <span className="text-xs font-medium text-black text-right">{value}</span>
+                      )}
+
+                      {/* Primary device */}
+                      {sidebarDeviceTab === 0 ? (
+                        <>
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="relative w-12 h-12 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: "#F5F5F7" }}>
+                              {getProductImage(product.model)
+                                ? <Image src={getProductImage(product.model)!} alt={product.model} fill className="object-contain p-1" sizes="48px" />
+                                : <IconApple className="w-7 h-7 opacity-20" />}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-black leading-snug truncate">{product.model}</p>
+                              <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>
+                                {picks[0] !== null ? storages[picks[0]] : ""}
+                                {picks[3] !== null ? ` • ${BODY_OPTS[picks[3]]?.sub ?? ""}` : ""}
+                              </p>
+                            </div>
                           </div>
-                        ))}
-                      </div>
+                          <div className="flex flex-col">
+                            {summaryRows.map(({ title, value }) => (
+                              <div key={title} className="flex items-center justify-between py-1">
+                                <span className="text-xs" style={{ color: "#6B7280" }}>{title}</span>
+                                <span className="text-xs font-medium text-black text-right">{value}</span>
+                              </div>
+                            ))}
+                            {extraDevices.length > 0 && pricesLoaded && (
+                              <div className="flex items-center justify-between py-1 mt-1" style={{ borderTop: "1px solid #F3F4F6" }}>
+                                <span className="text-xs font-semibold" style={{ color: "#6B7280" }}>ราคาประเมิน</span>
+                                <span className="text-xs font-bold" style={{ color: "#B8860B" }}>฿{price.toLocaleString("th-TH")}</span>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        /* Extra device tab */
+                        (() => {
+                          const d = extraDevices[sidebarDeviceTab - 1];
+                          if (!d) return null;
+                          const img = getProductImage(d.model);
+                          return (
+                            <>
+                              <div className="flex items-center gap-3 mb-2">
+                                <div className="relative w-12 h-12 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: "#F5F5F7" }}>
+                                  {img
+                                    ? <Image src={img} alt={d.model} fill className="object-contain p-1" sizes="48px" />
+                                    : <IconApple className="w-7 h-7 opacity-20" />}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-black leading-snug truncate">{d.model}</p>
+                                  <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{d.storage}</p>
+                                </div>
+                              </div>
+                              <div className="flex flex-col">
+                                {d.details.map(({ title, value }) => (
+                                  <div key={title} className="flex items-center justify-between py-1">
+                                    <span className="text-xs" style={{ color: "#6B7280" }}>{title}</span>
+                                    <span className="text-xs font-medium text-black text-right">{value}</span>
+                                  </div>
+                                ))}
+                                <div className="flex items-center justify-between py-1 mt-1" style={{ borderTop: "1px solid #F3F4F6" }}>
+                                  <span className="text-xs font-semibold" style={{ color: "#6B7280" }}>ราคาประเมิน</span>
+                                  <span className="text-xs font-bold" style={{ color: "#B8860B" }}>฿{d.estimatedPrice.toLocaleString("th-TH")}</span>
+                                </div>
+                              </div>
+                            </>
+                          );
+                        })()
+                      )}
                     </div>
 
                     {/* Sell method */}
