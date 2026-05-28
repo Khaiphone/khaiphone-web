@@ -1503,7 +1503,21 @@ function SellModelPageContent() {
                               <p className="text-xs" style={{ color: "#6B7280" }}>{d.storage || "—"}</p>
                             </div>
                             <p className="text-sm font-bold flex-shrink-0" style={{ color: "#6B7280" }}>฿{d.estimatedPrice.toLocaleString("th-TH")}</p>
-                            <button type="button" onClick={() => handleRemoveExtra(i)} className="flex-shrink-0 ml-1 p-1 rounded-full hover:bg-gray-100">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = extraDevices.filter((_, j) => j !== i);
+                                setExtraDevices(updated);
+                                try { localStorage.setItem(BUNDLE_KEY, JSON.stringify(updated)); } catch {}
+                                try { localStorage.setItem(BUNDLE_RETURN_KEY, window.location.href); } catch {}
+                                window.location.href = `/sell/${toSlug(d.model)}`;
+                              }}
+                              className="flex-shrink-0 ml-1 text-xs font-semibold"
+                              style={{ color: "#B8860B", background: "none", border: "none", padding: "2px 4px", cursor: "pointer" }}
+                            >
+                              แก้ไข
+                            </button>
+                            <button type="button" onClick={() => handleRemoveExtra(i)} className="flex-shrink-0 p-1 rounded-full hover:bg-gray-100">
                               <X size={13} style={{ color: "#6B7280" }} />
                             </button>
                           </div>
