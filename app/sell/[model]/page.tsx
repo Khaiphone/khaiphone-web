@@ -1084,13 +1084,15 @@ function SellModelPageContent() {
     return () => clearTimeout(t);
   }, [locationModal]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function handleAddToBundle() {
+  function handleAddToBundle(finalPicks?: (number | null)[]) {
     if (!product) return;
+    const fp = finalPicks ?? picks;
+    const finalRows = buildSummaryRows(fp, storages, effectiveGroupOptions[0]);
     const device: ExtraDevice = {
       model: product.model,
-      storage: picks[0] !== null ? storages[picks[0]] : "",
+      storage: fp[0] !== null ? storages[fp[0]] : "",
       estimatedPrice: price,
-      details: summaryRows,
+      details: finalRows,
     };
     try {
       const existing: ExtraDevice[] = JSON.parse(localStorage.getItem(BUNDLE_KEY) ?? "[]");
@@ -1400,7 +1402,7 @@ function SellModelPageContent() {
                       {step === TOTAL_STEPS - 1 && bundleReturn && localPick !== null && (
                         <button
                           type="button"
-                          onClick={() => { const np = [...picks]; np[step] = localPick; saveWizard(step + 1, np); handleAddToBundle(); }}
+                          onClick={() => { const np = [...picks]; np[step] = localPick; saveWizard(step + 1, np); handleAddToBundle(np); }}
                           className="flex items-center justify-center gap-2 py-3.5 rounded-full font-bold text-sm text-white"
                           style={{ background: "#111111", flex: "2 1 0" }}
                         >
@@ -2049,8 +2051,22 @@ function SellModelPageContent() {
                     <div className="px-5 py-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-xs font-semibold text-black">ข้อมูลเครื่อง</span>
-                        {sidebarDeviceTab === 0 && (
+                        {sidebarDeviceTab === 0 ? (
                           <button type="button" onClick={goBackToWizard} className="text-xs font-semibold" style={{ color: "#B8860B", background: "none", border: "none", padding: 0, cursor: "pointer" }}>แก้ไข</button>
+                        ) : (
+                          <button type="button" onClick={() => {
+                            const extraIdx = sidebarDeviceTab - 1;
+                            const d = extraDevices[extraIdx];
+                            if (!d) return;
+                            try {
+                              const stored: ExtraDevice[] = JSON.parse(localStorage.getItem(BUNDLE_KEY) ?? "[]");
+                              const updated = stored.filter((_, j) => j !== extraIdx);
+                              localStorage.setItem(BUNDLE_KEY, JSON.stringify(updated));
+                              localStorage.setItem(BUNDLE_RETURN_KEY, window.location.href);
+                              localStorage.removeItem(`khaiphone_wizard_${toSlug(d.model)}`);
+                            } catch {}
+                            window.location.href = `/sell/${toSlug(d.model)}`;
+                          }} className="text-xs font-semibold" style={{ color: "#B8860B", background: "none", border: "none", padding: 0, cursor: "pointer" }}>แก้ไข</button>
                         )}
                       </div>
 
@@ -2117,16 +2133,6 @@ function SellModelPageContent() {
                           const d = extraDevices[extraIdx];
                           if (!d) return null;
                           const img = getProductImage(d.model);
-                          function handleEditExtra() {
-                            try {
-                              const stored: ExtraDevice[] = JSON.parse(localStorage.getItem(BUNDLE_KEY) ?? "[]");
-                              const updated = stored.filter((_, j) => j !== extraIdx);
-                              localStorage.setItem(BUNDLE_KEY, JSON.stringify(updated));
-                              localStorage.setItem(BUNDLE_RETURN_KEY, window.location.href);
-                              localStorage.removeItem(`khaiphone_wizard_${toSlug(d.model)}`);
-                            } catch {}
-                            window.location.href = `/sell/${toSlug(d.model)}`;
-                          }
                           return (
                             <>
                               <div className="flex items-center gap-3 mb-2">
@@ -2139,7 +2145,6 @@ function SellModelPageContent() {
                                   <p className="text-sm font-semibold text-black leading-snug truncate">{d.model}</p>
                                   <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{d.storage}</p>
                                 </div>
-                                <button type="button" onClick={handleEditExtra} className="text-xs font-semibold flex-shrink-0" style={{ color: "#B8860B", background: "none", border: "none", padding: 0, cursor: "pointer" }}>แก้ไข</button>
                               </div>
                               <div className="flex flex-col">
                                 {d.details.map(({ title, value }) => (
