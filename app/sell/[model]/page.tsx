@@ -2013,22 +2013,6 @@ function SellModelPageContent() {
                       </a>
                     </div>
                   </div>
-                  {/* FAQ */}
-                  <div className="px-4 py-3">
-                    <p className="text-xs font-semibold text-black mb-2">คำถามที่พบบ่อย</p>
-                    <div className="flex flex-col gap-1.5">
-                      {[
-                        { q: "ราคานี้แม่นยำแค่ไหน?", a: "ประเมินเบื้องต้น ราคาจริงยืนยันหลังตรวจสภาพ" },
-                        { q: "ต้องพาเครื่องมาเองไหม?", a: "ไม่จำเป็น — เลือก Rider รับถึงที่หรือส่งพัสดุได้" },
-                        { q: "รับเงินช้าไหม?", a: "ตรวจเครื่องเสร็จรับเงินได้เลย ภายใน 30–60 นาที" },
-                      ].map(({ q, a }) => (
-                        <div key={q} className="rounded-lg px-3 py-2" style={{ background: "#F9FAFB" }}>
-                          <p className="text-xs font-semibold text-black">{q}</p>
-                          <p className="text-xs leading-relaxed" style={{ color: "#6B7280" }}>{a}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
                 </div>
 
                 {/* ─── Location Modal ───────────────────────────────────── */}
