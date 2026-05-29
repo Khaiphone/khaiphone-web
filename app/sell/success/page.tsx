@@ -172,6 +172,12 @@ function SellSuccessInner() {
         if (raw) {
           const parsed = JSON.parse(raw) as SubmissionData;
           setData(parsed);
+          // Fire Google Ads conversion exactly once per order number
+          if (parsed.orderNumber && !localStorage.getItem(`khaiphone_conv_${parsed.orderNumber}`)) {
+            localStorage.setItem(`khaiphone_conv_${parsed.orderNumber}`, "1");
+            window.dataLayer = window.dataLayer || [];
+            window.dataLayer.push({ event: "conversion_form_submit" });
+          }
           const phone = parsed.customer?.phone ?? "";
           if (parsed.orderNumber && phone) loadFromDb(parsed.orderNumber, phone);
           return;
