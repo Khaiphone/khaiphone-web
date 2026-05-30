@@ -92,6 +92,7 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
   const [trackingDraft, setTrackingDraft] = useState("");
   const [deliveryChannelDraft, setDeliveryChannelDraft] = useState("หน้าร้าน");
+  const [deliveryAddressDraft, setDeliveryAddressDraft] = useState("");
   const [confirmingDelivery, setConfirmingDelivery] = useState(false);
 
   if (!item) return null;
@@ -422,6 +423,7 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                           {item.deliveryStatus ?? "—"}
                         </span>
                       </div>
+                      {item.deliveryAddress && <Row label="ที่อยู่จัดส่ง" value={item.deliveryAddress} c={c} />}
                       {item.trackingNumber && <Row label="เลข Tracking" value={item.trackingNumber} c={c} mono />}
                     </Section>
                   )}
@@ -695,7 +697,7 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
               </div>
               {item.deliveryStatus === "รอจัดส่ง" && (
                 <button
-                  onClick={() => { setTrackingDraft(""); setDeliveryChannelDraft(item.deliveryChannel ?? "หน้าร้าน"); setShowDeliveryModal(true); }}
+                  onClick={() => { setTrackingDraft(""); setDeliveryAddressDraft(item.deliveryAddress ?? ""); setDeliveryChannelDraft(item.deliveryChannel ?? "หน้าร้าน"); setShowDeliveryModal(true); }}
                   style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "11px 8px", borderRadius: 10, border: "none", background: "rgba(245,158,11,0.15)", color: "#f59e0b", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginTop: 8 }}
                 >
                   <Truck size={14} />
@@ -767,6 +769,18 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                 }}>{ch.label}</button>
               ))}
             </div>
+            {deliveryChannelDraft === "ส่งถึงที่" && (
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ color: c.text2, fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>ที่อยู่จัดส่ง *</label>
+                <textarea
+                  value={deliveryAddressDraft}
+                  onChange={e => setDeliveryAddressDraft(e.target.value)}
+                  placeholder="บ้านเลขที่ / ถนน / แขวง / เขต / จังหวัด"
+                  rows={3}
+                  style={{ width: "100%", padding: "10px 12px", borderRadius: 10, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontSize: 14, fontFamily: "inherit", boxSizing: "border-box" as const, outline: "none", resize: "none" }}
+                />
+              </div>
+            )}
             {deliveryChannelDraft === "ส่งพัสดุ" && (
               <div style={{ marginBottom: 16 }}>
                 <label style={{ color: c.text2, fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>เลข Tracking (ถ้ามี)</label>
@@ -784,17 +798,17 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                 ยกเลิก
               </button>
               <button
-                disabled={confirmingDelivery}
+                disabled={confirmingDelivery || (deliveryChannelDraft === "ส่งถึงที่" && !deliveryAddressDraft.trim())}
                 onClick={async () => {
                   setConfirmingDelivery(true);
-                  const res = await confirmDelivery(item!.id, trackingDraft.trim() || undefined, deliveryChannelDraft);
+                  const res = await confirmDelivery(item!.id, trackingDraft.trim() || undefined, deliveryChannelDraft, deliveryAddressDraft.trim() || undefined);
                   if (res.success) {
-                    onUpdate({ ...item!, deliveryStatus: "จัดส่งแล้ว", trackingNumber: trackingDraft.trim() || undefined, deliveryChannel: deliveryChannelDraft });
+                    onUpdate({ ...item!, deliveryStatus: "จัดส่งแล้ว", trackingNumber: trackingDraft.trim() || undefined, deliveryChannel: deliveryChannelDraft, deliveryAddress: deliveryAddressDraft.trim() || undefined });
                     setShowDeliveryModal(false);
                   }
                   setConfirmingDelivery(false);
                 }}
-                style={{ flex: 2, padding: "12px", borderRadius: 12, background: "#f59e0b", border: "none", color: "#000", fontSize: 14, fontWeight: 700, cursor: confirmingDelivery ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: confirmingDelivery ? 0.6 : 1 }}>
+                style={{ flex: 2, padding: "12px", borderRadius: 12, background: "#f59e0b", border: "none", color: "#000", fontSize: 14, fontWeight: 700, cursor: (confirmingDelivery || (deliveryChannelDraft === "ส่งถึงที่" && !deliveryAddressDraft.trim())) ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: (confirmingDelivery || (deliveryChannelDraft === "ส่งถึงที่" && !deliveryAddressDraft.trim())) ? 0.5 : 1 }}>
                 {confirmingDelivery ? "กำลังบันทึก..." : "ยืนยัน"}
               </button>
             </div>

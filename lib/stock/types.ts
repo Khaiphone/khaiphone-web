@@ -88,6 +88,7 @@ export interface StockItem {
   deliveryChannel?: string;
   deliveryStatus?: string;
   trackingNumber?: string;
+  deliveryAddress?: string;
 
   // Original values captured by field staff during inspection — used for cross-checking
   inspectionSnapshot?: {

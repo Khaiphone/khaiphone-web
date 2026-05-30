@@ -65,6 +65,7 @@ export default function StockInventoryPage() {
   const [deliveryTarget, setDeliveryTarget] = useState<StockItem | null>(null);
   const [trackingInput, setTrackingInput] = useState("");
   const [deliveryChannelInput, setDeliveryChannelInput] = useState("หน้าร้าน");
+  const [deliveryAddressInput, setDeliveryAddressInput] = useState("");
   const [confirmingDelivery, setConfirmingDelivery] = useState(false);
 
   const [filterModel, setFilterModel] = useState("");
@@ -170,18 +171,20 @@ export default function StockInventoryPage() {
     setDeliveryTarget(item);
     setTrackingInput("");
     setDeliveryChannelInput(item.deliveryChannel ?? "หน้าร้าน");
+    setDeliveryAddressInput(item.deliveryAddress ?? "");
     setMoreMenuId(null);
   }
 
   async function handleConfirmDelivery() {
     if (!deliveryTarget) return;
     setConfirmingDelivery(true);
-    const res = await confirmDelivery(deliveryTarget.id, trackingInput.trim() || undefined, deliveryChannelInput);
+    const res = await confirmDelivery(deliveryTarget.id, trackingInput.trim() || undefined, deliveryChannelInput, deliveryAddressInput.trim() || undefined);
     if (res.success) {
       const updates: Partial<StockItem> = {
         deliveryStatus: "จัดส่งแล้ว",
         trackingNumber: trackingInput.trim() || undefined,
         deliveryChannel: deliveryChannelInput,
+        deliveryAddress: deliveryAddressInput.trim() || undefined,
       };
       setStocks(prev => prev.map(s => s.id === deliveryTarget.id ? { ...s, ...updates } : s));
       setDeliveryTarget(null);
@@ -555,6 +558,18 @@ export default function StockInventoryPage() {
                 }}>{ch.label}</button>
               ))}
             </div>
+            {deliveryChannelInput === "ส่งถึงที่" && (
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ color: c.text2, fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>ที่อยู่จัดส่ง *</label>
+                <textarea
+                  value={deliveryAddressInput}
+                  onChange={e => setDeliveryAddressInput(e.target.value)}
+                  placeholder="บ้านเลขที่ / ถนน / แขวง / เขต / จังหวัด"
+                  rows={3}
+                  style={{ width: "100%", padding: "10px 12px", borderRadius: 10, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontSize: 14, fontFamily: "inherit", boxSizing: "border-box" as const, outline: "none", resize: "none" }}
+                />
+              </div>
+            )}
             {deliveryChannelInput === "ส่งพัสดุ" && (
               <div style={{ marginBottom: 16 }}>
                 <label style={{ color: c.text2, fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>เลข Tracking (ถ้ามี)</label>
@@ -571,8 +586,8 @@ export default function StockInventoryPage() {
                 style={{ flex: 1, padding: "12px", borderRadius: 12, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
                 ยกเลิก
               </button>
-              <button onClick={handleConfirmDelivery} disabled={confirmingDelivery}
-                style={{ flex: 2, padding: "12px", borderRadius: 12, background: "#f59e0b", border: "none", color: "#000", fontSize: 14, fontWeight: 700, cursor: confirmingDelivery ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: confirmingDelivery ? 0.6 : 1 }}>
+              <button onClick={handleConfirmDelivery} disabled={confirmingDelivery || (deliveryChannelInput === "ส่งถึงที่" && !deliveryAddressInput.trim())}
+                style={{ flex: 2, padding: "12px", borderRadius: 12, background: "#f59e0b", border: "none", color: "#000", fontSize: 14, fontWeight: 700, cursor: (confirmingDelivery || (deliveryChannelInput === "ส่งถึงที่" && !deliveryAddressInput.trim())) ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: (confirmingDelivery || (deliveryChannelInput === "ส่งถึงที่" && !deliveryAddressInput.trim())) ? 0.5 : 1 }}>
                 {confirmingDelivery ? "กำลังบันทึก..." : "ยืนยันส่งของ"}
               </button>
             </div>

@@ -55,6 +55,7 @@ function mapRow(row: any): StockItem {
     deliveryChannel: row.delivery_channel ?? undefined,
     deliveryStatus: row.delivery_status ?? undefined,
     trackingNumber: row.tracking_number ?? undefined,
+    deliveryAddress: row.delivery_address ?? undefined,
     inspectionSnapshot: row.inspection_snapshot ?? undefined,
   };
 }
@@ -191,18 +192,18 @@ export async function markStockSold(
 }
 
 export async function confirmDelivery(
-  id: string, trackingNumber?: string, deliveryChannel?: string,
+  id: string, trackingNumber?: string, deliveryChannel?: string, deliveryAddress?: string,
 ): Promise<{ success: boolean; error?: string }> {
   await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
   const { data: current } = await supabase.from("stocks").select("status_log, audit_log").eq("id", id).single();
   const channelLabel = deliveryChannel === "ส่งพัสดุ" ? "ส่งพัสดุ" : deliveryChannel === "ส่งถึงที่" ? "ส่งถึงที่" : "หน้าร้าน";
-  const note = trackingNumber ? `จัดส่งแล้ว (${trackingNumber})` : `จัดส่งแล้ว · ${channelLabel}`;
+  const note = trackingNumber ? `จัดส่งแล้ว (${trackingNumber})` : deliveryAddress ? `จัดส่งแล้ว · ${deliveryAddress}` : `จัดส่งแล้ว · ${channelLabel}`;
   const newStatusLog = [...(current?.status_log ?? []), { status: "ขายแล้ว", timestamp: now, note, by: "admin" }];
   const newAuditLog: AuditEntry[] = [...(current?.audit_log ?? []), {
     action: "ยืนยันจัดส่ง",
-    detail: [channelLabel, trackingNumber ? `tracking: ${trackingNumber}` : ""].filter(Boolean).join(" · "),
+    detail: [channelLabel, deliveryAddress, trackingNumber ? `tracking: ${trackingNumber}` : ""].filter(Boolean).join(" · "),
     timestamp: now, by: "admin",
   }];
   const update: Record<string, unknown> = {
@@ -210,6 +211,7 @@ export async function confirmDelivery(
   };
   if (trackingNumber) update.tracking_number = trackingNumber;
   if (deliveryChannel) update.delivery_channel = deliveryChannel;
+  if (deliveryAddress) update.delivery_address = deliveryAddress;
   const { error } = await supabase.from("stocks").update(update).eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };
