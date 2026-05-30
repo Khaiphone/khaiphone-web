@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, ArrowRight, Phone, CalendarPlus, ClipboardList, Tag, SlidersHorizontal, PlusCircle, Moon, Sun } from "lucide-react";
-import { fetchDashboardData, fetchRequests } from "@/app/actions/admin-requests";
+import { fetchDashboardData, fetchRequests, fetchRecentActivity } from "@/app/actions/admin-requests";
 import { supabase } from "@/lib/supabase";
 import { useAdminTheme } from "@/lib/admin-theme";
 import type { AdminRequest } from "@/lib/types/admin";
@@ -41,6 +41,7 @@ export default function DashboardPage() {
   const [role,        setRole]        = useState<AdminRole | null>(null);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [activity,    setActivity]    = useState<Awaited<ReturnType<typeof fetchRecentActivity>>>([]);
   const staffUserIdRef  = useRef<string | undefined>(undefined);
   const lastRefetchRef  = useRef(0);
   const { dark, toggle } = useAdminTheme();
@@ -55,6 +56,7 @@ export default function DashboardPage() {
       staffUserIdRef.current = data.staffUserId;
       setRequests(data.requests);
       setLoading(false);
+      fetchRecentActivity().then(setActivity);
     });
   }, []);
 
@@ -203,6 +205,34 @@ export default function DashboardPage() {
                 recent.map(r => <RequestCard key={r.id} request={r} />)
               )}
             </div>
+
+            {/* Activity log */}
+            {role === "owner" && activity.length > 0 && (
+              <div style={{ marginBottom: "20px" }}>
+                <h2 style={{ color: TEXT, fontSize: "17px", fontWeight: 700, margin: "0 0 14px" }}>กิจกรรมล่าสุด</h2>
+                <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "16px", overflow: "hidden" }}>
+                  {activity.slice(0, 10).map((log, i) => {
+                    const actionColor = log.action === "ลบคำขอ" ? "#EF4444" : log.action === "สร้างคำขอ" ? "#10B981" : GOLD;
+                    return (
+                      <div key={log.id} style={{ padding: "12px 16px", borderBottom: i < Math.min(activity.length, 10) - 1 ? `1px solid ${BORDER}` : "none", display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: actionColor, marginTop: 6, flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                            <span style={{ color: TEXT, fontSize: "13px", fontWeight: 600 }}>{log.action}</span>
+                            <span style={{ color: TEXT3, fontSize: "11px", whiteSpace: "nowrap" }}>
+                              {new Date(log.created_at).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                          {log.order_number && <span style={{ color: actionColor, fontSize: "12px", fontWeight: 700 }}>{log.order_number} </span>}
+                          {log.detail && <span style={{ color: TEXT2, fontSize: "12px" }}>{log.detail}</span>}
+                          <p style={{ color: TEXT3, fontSize: "11px", margin: "2px 0 0" }}>โดย {log.performed_by_name}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Quick actions */}
             <div style={{ marginBottom: "20px" }}>

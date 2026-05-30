@@ -7,6 +7,43 @@ import type { AdminRequest, RequestStatus, SellMethod, PayMethod } from "@/lib/t
 import type { Permission } from "@/lib/admin-permissions";
 import type { AdminRole } from "@/app/actions/admin-users";
 
+// ─── Activity log helper ──────────────────────────────────────────────────────
+async function logActivity(opts: {
+  requestId?: string;
+  orderNumber?: string;
+  action: string;
+  detail?: string;
+  userId: string;
+}) {
+  try {
+    const supabase = createServerClient();
+    const { data: profile } = await supabase
+      .from("admin_users")
+      .select("name")
+      .eq("user_id", opts.userId)
+      .single();
+    await supabase.from("request_activity_logs").insert({
+      request_id:        opts.requestId ?? null,
+      order_number:      opts.orderNumber ?? null,
+      action:            opts.action,
+      detail:            opts.detail ?? null,
+      performed_by_name: profile?.name ?? "แอดมิน",
+    });
+  } catch { /* log failure must not block main operation */ }
+}
+
+// ─── Fetch recent activity (dashboard) ───────────────────────────────────────
+export async function fetchRecentActivity(limit = 20) {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("request_activity_logs")
+    .select("id, order_number, action, detail, performed_by_name, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return data ?? [];
+}
+
 // ─── Map DB row → AdminRequest ────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapRow(row: any): AdminRequest {
@@ -164,6 +201,8 @@ export async function createRequest(data: {
   }).select("id").single();
 
   if (error) return { success: false, error: error.message };
+  const user = await requireAuth().catch(() => null);
+  if (user) await logActivity({ requestId: row.id, orderNumber, action: "สร้างคำขอ", detail: `${data.deviceModel} · ${data.customerName}`, userId: user.id });
   return { success: true, orderNumber, id: row.id };
 }
 
@@ -227,7 +266,7 @@ export async function updateStatus(
   status: RequestStatus,
   note: string,
 ) {
-  await requireAuth();
+  const user = await requireAuth();
   console.log("[updateStatus] id:", id, "→", status);
   const supabase = createServerClient();
 
@@ -257,6 +296,8 @@ export async function updateStatus(
     console.error("updateStatus: 0 rows updated, id =", id);
     return { success: false, error: `ไม่พบคำขอ id=${id} ในฐานข้อมูล` };
   }
+
+  await logActivity({ requestId: id, orderNumber: current?.order_number, action: "เปลี่ยนสถานะ", detail: status, userId: user.id });
 
   // Auto-create stocks entry when request is completed
   if (status === "completed" && current) {
@@ -462,8 +503,10 @@ export async function deleteRequest(id: string) {
     .eq("user_id", user.id)
     .single();
   if (profile?.role !== "owner") return { success: false as const, error: "ไม่มีสิทธิ์ลบคำขอ" };
+  const { data: req } = await supabase.from("requests").select("order_number, device_model, customer_name").eq("id", id).single();
   const { error } = await supabase.from("requests").delete().eq("id", id);
   if (error) return { success: false as const, error: error.message };
+  await logActivity({ orderNumber: req?.order_number, action: "ลบคำขอ", detail: `${req?.device_model ?? ""} · ${req?.customer_name ?? ""}`, userId: user.id });
   return { success: true as const };
 }
 
