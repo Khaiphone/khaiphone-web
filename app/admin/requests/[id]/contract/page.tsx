@@ -597,6 +597,24 @@ export default function ContractPage() {
         } else if (payM === "transfer") {
           p += `<div style="margin:12px 0;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 13px;font-size:10.5px;color:#92400e">⚠ ยังไม่มีหลักฐานการโอนเงิน</div>`;
         }
+        if (idPhotoDataUrl) {
+          p += `<div class="id-photo-wrap"><div class="id-photo-hd">📷 เอกสารยืนยันตัวตนผู้ขาย — สำเนาบัตรประชาชน (มี Watermark)</div><img src="${idPhotoDataUrl}" alt="บัตรประชาชน"></div>`;
+        }
+        if (custProdPhotoDataUrl) {
+          p += `<div class="id-photo-wrap"><div class="id-photo-hd">📸 รูปหลักฐาน — ลูกค้าพร้อมสินค้าที่ขาย</div><img src="${custProdPhotoDataUrl}" alt="ลูกค้าพร้อมสินค้า" style="max-height:300px;object-fit:contain"></div>`;
+        }
+        const evItems = [
+          { label: "สำเนาบัตรประชาชน",     ok: !!idPhotoDataUrl },
+          { label: "รูปลูกค้าพร้อมสินค้า", ok: !!custProdPhotoDataUrl },
+          { label: "หลักฐานการโอนเงิน",    ok: !!slipImgSrc },
+          { label: "ผลตรวจสภาพเครื่อง",    ok: (dev.criteria ?? []).length > 0 },
+        ];
+        p += `<div style="margin:10px 0;padding:9px 13px;border:1px solid #e5e7eb;border-radius:8px;background:#fafafa">
+          <div style="font-size:9.5px;font-weight:700;color:#1a1a2e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📎 หลักฐานที่แนบในระบบ</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 16px">
+            ${evItems.map(e => `<div style="font-size:10px;${e.ok ? "color:#065f46;font-weight:600" : "color:#aaa"}">${e.ok ? "✓" : "—"} ${e.label}</div>`).join("")}
+          </div>
+        </div>`;
       }
       p += `<div style="margin-top:14px;border-top:1px solid #e5e7eb;padding-top:12px">
           <div style="display:grid;grid-template-columns:1fr auto;gap:14px;align-items:start">
