@@ -329,7 +329,7 @@ export default function StockInventoryPage() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: c.card2 }}>
-                    {["", "รูป", "รหัสสต็อก", "รุ่น", "ความจุ / สี", "IMEI / Serial", "เกรด", "ต้นทุน", "ราคาขาย", "กำไร", "สถานะ", "ช่องทาง", "วันรับเข้า", ""].map((h, i) => (
+                    {["", "รูป", "รหัสสต็อก", "รุ่น", "ความจุ / สี", "IMEI / Serial", "เกรด", "ต้นทุน", "ราคาขาย", "กำไร", "สถานะ", "ช่องทาง", "วันที่", ""].map((h, i) => (
                       <th key={i} style={{ padding: "12px 14px", textAlign: "left", color: c.text3, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
                     ))}
                   </tr>
@@ -398,15 +398,26 @@ export default function StockInventoryPage() {
                             }
                           </td>
                           <td style={{ padding: "10px 14px" }}>
-                            <StockStatusBadge status={s.status} />
-                            {s.status === "ขายแล้ว" && s.deliveryStatus === "รอจัดส่ง" && (
-                              <span style={{ display: "block", marginTop: 4, fontSize: 10, fontWeight: 700, color: "#f59e0b", background: "rgba(245,158,11,0.12)", padding: "2px 8px", borderRadius: 6 }}>
-                                รอจัดส่ง
-                              </span>
-                            )}
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
+                              <StockStatusBadge status={s.status} />
+                              {s.status === "ขายแล้ว" && s.deliveryStatus === "รอจัดส่ง" && (
+                                <span style={{ fontSize: 10, fontWeight: 700, color: "#f59e0b", background: "rgba(245,158,11,0.12)", padding: "2px 8px", borderRadius: 6, whiteSpace: "nowrap" }}>
+                                  รอจัดส่ง
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td style={{ padding: "10px 14px", color: c.text2, fontSize: 12, whiteSpace: "nowrap" }}>{s.sourceChannel}</td>
-                          <td style={{ padding: "10px 14px", color: c.text3, fontSize: 12, whiteSpace: "nowrap" }}>{fmtDate(s.receivedAt)}</td>
+                          <td style={{ padding: "10px 14px", whiteSpace: "nowrap" }}>
+                            <p style={{ color: c.text3, fontSize: 12, margin: 0 }}>{fmtDate(s.receivedAt)}</p>
+                            <p style={{ color: c.text3, fontSize: 10, margin: "1px 0 0" }}>รับเข้า</p>
+                            {s.status === "ขายแล้ว" && s.soldAt && (
+                              <>
+                                <p style={{ color: c.text2, fontSize: 12, margin: "4px 0 0", fontWeight: 600 }}>{fmtDate(s.soldAt)}</p>
+                                <p style={{ color: "#22c55e", fontSize: 10, margin: "1px 0 0", fontWeight: 600 }}>ขาย</p>
+                              </>
+                            )}
+                          </td>
                           <td style={{ padding: "10px 14px" }} onClick={e => e.stopPropagation()}>
                             <div style={{ display: "flex", gap: 2, position: "relative" }} ref={moreMenuId === s.id ? moreMenuRef : null}>
                               <button onClick={() => setSelected(s)} style={{ background: "none", border: "none", color: c.text3, cursor: "pointer", padding: 4, display: "flex", borderRadius: 6 }} title="ดูรายละเอียด">
