@@ -175,7 +175,7 @@ export async function markStockSold(
   const supabase = createServerClient();
   const now = new Date().toISOString();
   const soldAtTs = soldAt ? new Date(soldAt + "T12:00:00").toISOString() : now;
-  const { data: current } = await supabase.from("stocks").select("status_log").eq("id", id).single();
+  const { data: current } = await supabase.from("stocks").select("status_log, request_ref").eq("id", id).single();
   const note = saleType === "ขายส่ง" && partnerName ? `ขายส่งให้ ${partnerName}` : `ขายให้ ${buyerName}`;
   const newLog = [...(current?.status_log ?? []), { status: "ขายแล้ว", timestamp: soldAtTs, note, by: soldBy ?? "admin" }];
   const autoDeliveryStatus = deliveryChannel === "หน้าร้าน" ? "จัดส่งแล้ว" : "รอจัดส่ง";
@@ -188,6 +188,16 @@ export async function markStockSold(
     status_log: newLog, updated_at: now,
   }).eq("id", id);
   if (error) return { success: false, error: error.message };
+
+  // Sync sale data back to requests table so finance dashboard picks it up
+  if (current?.request_ref) {
+    await supabase.from("requests").update({
+      sell_price: soldPrice,
+      sell_date: soldAtTs.slice(0, 10),
+      stock_status: "sold",
+    }).eq("order_number", current.request_ref);
+  }
+
   return { success: true };
 }
 
