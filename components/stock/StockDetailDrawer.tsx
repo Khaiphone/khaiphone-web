@@ -87,6 +87,8 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   const [showSellModal, setShowSellModal] = useState(false);
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  const [priceDraftModal, setPriceDraftModal] = useState("");
 
   if (!item) return null;
 
@@ -623,7 +625,7 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                   { icon: Edit2,    label: "แก้ไขข้อมูล",   action: openEdit },
                   { icon: Upload,   label: uploading ? "กำลังอัปโหลด..." : "อัปโหลดรูป", action: () => photoInputRef.current?.click() },
                   { icon: RefreshCw, label: "เปลี่ยนสถานะ", action: () => setShowStatusMenu(v => !v) },
-                  { icon: Tag,      label: "ตั้งราคาขาย",  action: () => { setPriceDraft(String(item.sellingPrice)); setEditPrice(true); setTab("รายละเอียด"); } },
+                  { icon: Tag,      label: "ตั้งราคาขาย",  action: () => { setPriceDraftModal(item.sellingPrice ? String(item.sellingPrice) : ""); setShowPriceModal(true); } },
                 ].map(({ icon: Icon, label, action }) => (
                   <button key={label} onClick={action} disabled={uploading} style={{
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
@@ -672,6 +674,44 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
           )}
         </div>
       </motion.div>
+
+      {showPriceModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: c.card, borderRadius: 20, padding: 28, width: "100%", maxWidth: 360, border: `1px solid ${c.border}` }}>
+            <p style={{ color: c.text, fontSize: 17, fontWeight: 700, margin: "0 0 4px" }}>ตั้งราคาขาย</p>
+            <p style={{ color: c.text3, fontSize: 12, margin: "0 0 20px" }}>{item!.model} · {item!.storage}</p>
+            <p style={{ color: c.text2, fontSize: 12, fontWeight: 600, margin: "0 0 6px" }}>ราคาขาย (บาท)</p>
+            <input
+              type="number"
+              value={priceDraftModal}
+              onChange={e => setPriceDraftModal(e.target.value)}
+              placeholder="0"
+              autoFocus
+              style={{ width: "100%", padding: "12px 14px", borderRadius: 10, background: c.bg, border: `1px solid ${c.gold}`, color: c.text, fontSize: 16, fontFamily: "inherit", boxSizing: "border-box" as const, outline: "none", marginBottom: 20 }}
+            />
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setShowPriceModal(false)}
+                style={{ flex: 1, padding: "12px", borderRadius: 12, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
+                ยกเลิก
+              </button>
+              <button
+                onClick={async () => {
+                  const p = parseInt(priceDraftModal);
+                  if (!p || p <= 0) return;
+                  setSaving(true);
+                  await updateStockPrice(item!.id, p);
+                  onUpdate({ ...item!, sellingPrice: p });
+                  setShowPriceModal(false);
+                  setSaving(false);
+                }}
+                disabled={saving || !priceDraftModal || parseInt(priceDraftModal) <= 0}
+                style={{ flex: 2, padding: "12px", borderRadius: 12, background: !priceDraftModal || parseInt(priceDraftModal) <= 0 ? "#555" : c.gold, border: "none", color: "#000", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                {saving ? "กำลังบันทึก..." : "บันทึกราคา"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showSellModal && (
         <SellModal
