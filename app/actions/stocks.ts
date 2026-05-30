@@ -247,6 +247,8 @@ export async function confirmStockRecheck(
     cycleCount: number;
     inspector: string;
     note?: string;
+    criteria?: { label: string; stated: string; actual: string; pass: boolean }[];
+    functionalTests?: { label: string; pass: boolean }[];
   },
 ): Promise<{ success: boolean; error?: string }> {
   await requireAuth();
@@ -255,7 +257,7 @@ export async function confirmStockRecheck(
 
   const { data: current } = await supabase
     .from("stocks")
-    .select("status_log, audit_log, notes")
+    .select("status_log, audit_log, notes, inspection_snapshot")
     .eq("id", id)
     .single();
 
@@ -276,18 +278,35 @@ export async function confirmStockRecheck(
     ? [...(current?.notes ?? []), { text: `[รีเช็ค] ${data.note}`, createdAt: now, by: data.inspector }]
     : current?.notes ?? [];
 
+  // Rebuild physical_checks from recheck results
+  const newPhysicalChecks = [
+    ...(data.criteria ?? []).map(c => ({ label: c.label, condition: c.pass ? "ปกติ" : (c.actual?.trim() || "มีตำหนิ") })),
+    ...(data.functionalTests ?? []).map(t => ({ label: t.label, condition: t.pass ? "ปกติ" : "มีปัญหา" })),
+  ];
+
+  // Update inspection_snapshot with recheck results
+  const updatedSnapshot = {
+    ...(current?.inspection_snapshot ?? {}),
+    criteria:        data.criteria        ?? current?.inspection_snapshot?.criteria        ?? [],
+    functionalTests: data.functionalTests ?? current?.inspection_snapshot?.functionalTests ?? [],
+    recheckBy:       data.inspector,
+    recheckAt:       now,
+  };
+
   const { error } = await supabase.from("stocks").update({
-    imei:           data.imei,
-    serial:         data.serial,
-    grade:          data.grade,
-    battery_health: data.batteryHealth,
-    cycle_count:    data.cycleCount,
-    inspector:      data.inspector,
-    status:         "พร้อมขาย",
-    status_log:     newStatusLog,
-    audit_log:      newAuditLog,
-    notes:          newNotes,
-    updated_at:     now,
+    imei:                data.imei,
+    serial:              data.serial,
+    grade:               data.grade,
+    battery_health:      data.batteryHealth,
+    cycle_count:         data.cycleCount,
+    inspector:           data.inspector,
+    physical_checks:     newPhysicalChecks.length > 0 ? newPhysicalChecks : undefined,
+    inspection_snapshot: updatedSnapshot,
+    status:              "พร้อมขาย",
+    status_log:          newStatusLog,
+    audit_log:           newAuditLog,
+    notes:               newNotes,
+    updated_at:          now,
   }).eq("id", id);
 
   if (error) return { success: false, error: error.message };

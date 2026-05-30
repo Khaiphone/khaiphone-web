@@ -109,6 +109,12 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
     inspector: item?.inspector ?? "",
     note: "",
   });
+  const [recheckCriteria, setRecheckCriteria] = useState<{ label: string; stated: string; actual: string; pass: boolean }[]>(
+    item?.inspectionSnapshot?.criteria ?? []
+  );
+  const [recheckFunctional, setRecheckFunctional] = useState<{ label: string; pass: boolean }[]>(
+    item?.inspectionSnapshot?.functionalTests ?? []
+  );
   const [recheckSaving, setRecheckSaving] = useState(false);
   const [recheckErr, setRecheckErr] = useState<string | null>(null);
 
@@ -489,6 +495,54 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                             />
                           </div>
 
+                          {/* ─── ผลการตรวจสอบสภาพจริง ─── */}
+                          {recheckCriteria.length > 0 && (
+                            <div style={{ marginBottom: 14 }}>
+                              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: c.text }}>ผลการตรวจสอบสภาพจริง</p>
+                              <div style={{ border: `1px solid ${c.border}`, borderRadius: 8, overflow: "hidden" }}>
+                                {recheckCriteria.map((cr, i) => (
+                                  <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 8, alignItems: "center", padding: "8px 10px", borderBottom: i < recheckCriteria.length - 1 ? `1px solid ${c.border}` : undefined, background: !cr.pass ? (isDark ? "rgba(239,68,68,0.05)" : "rgba(239,68,68,0.03)") : "transparent" }}>
+                                    <div>
+                                      <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: c.text }}>{cr.label}</p>
+                                      <p style={{ margin: 0, fontSize: 10, color: c.text3 }}>แจ้ง: {cr.stated}</p>
+                                    </div>
+                                    <input
+                                      value={cr.actual}
+                                      onChange={e => setRecheckCriteria(prev => prev.map((x, j) => j === i ? { ...x, actual: e.target.value } : x))}
+                                      placeholder="ผลตรวจจริง"
+                                      style={{ padding: "5px 8px", background: c.bg, border: `1px solid ${c.border2}`, borderRadius: 6, color: c.text, fontSize: 11, width: "100%", boxSizing: "border-box" }}
+                                    />
+                                    <button
+                                      onClick={() => setRecheckCriteria(prev => prev.map((x, j) => j === i ? { ...x, pass: !x.pass } : x))}
+                                      style={{ padding: "5px 10px", borderRadius: 6, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 12, background: cr.pass ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)", color: cr.pass ? "#16a34a" : "#dc2626", whiteSpace: "nowrap" }}
+                                    >
+                                      {cr.pass ? "✓ ผ่าน" : "✗ ไม่ผ่าน"}
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* ─── ผลทดสอบการใช้งานภายใน ─── */}
+                          {recheckFunctional.length > 0 && (
+                            <div style={{ marginBottom: 14 }}>
+                              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: c.text }}>ผลทดสอบการใช้งานภายใน</p>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                {recheckFunctional.map((t, i) => (
+                                  <button
+                                    key={i}
+                                    onClick={() => setRecheckFunctional(prev => prev.map((x, j) => j === i ? { ...x, pass: !x.pass } : x))}
+                                    style={{ fontSize: 11, fontWeight: 600, padding: "5px 12px", borderRadius: 20, cursor: "pointer", border: `1px solid ${t.pass ? "rgba(34,197,94,0.4)" : "rgba(239,68,68,0.4)"}`, background: t.pass ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)", color: t.pass ? "#16a34a" : "#dc2626" }}
+                                  >
+                                    {t.pass ? "✓" : "✗"} {t.label}
+                                  </button>
+                                ))}
+                              </div>
+                              <p style={{ margin: "6px 0 0", fontSize: 10, color: c.text3 }}>กดที่รายการเพื่อสลับ ผ่าน / ไม่ผ่าน</p>
+                            </div>
+                          )}
+
                           {recheckErr && <p style={{ color: "#dc2626", fontSize: 12, margin: "0 0 10px" }}>{recheckErr}</p>}
 
                           <button
@@ -504,6 +558,8 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                                 cycleCount: recheckDraft.cycleCount,
                                 inspector: recheckDraft.inspector.trim(),
                                 note: recheckDraft.note.trim() || undefined,
+                                criteria: recheckCriteria.length > 0 ? recheckCriteria : undefined,
+                                functionalTests: recheckFunctional.length > 0 ? recheckFunctional : undefined,
                               });
                               setRecheckSaving(false);
                               if (!res.success) { setRecheckErr(res.error ?? "เกิดข้อผิดพลาด"); return; }
