@@ -11,7 +11,7 @@ import {
   fetchRequest, updateStatus, addNote,
   updateAppointment, updatePayment, updatePrice,
   markContractSigned, savePaymentSlip, updateDeviceColor,
-  assignRequest, deleteRequest,
+  assignRequest, deleteRequest, updateCustomer, updateDevice,
 } from "@/app/actions/admin-requests";
 import { fetchAdminUsers, fetchMyRole } from "@/app/actions/admin-users";
 import type { AdminUserRow } from "@/app/actions/admin-users";
@@ -124,6 +124,14 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const [editPay,  setEditPay]  = useState(false);
   const [payDraft, setPayDraft] = useState({ method: "cash" as PayMethod, bankName: "", accountName: "", accountNumber: "" });
 
+  // Editable: customer
+  const [editCustomer, setEditCustomer] = useState(false);
+  const [custDraft, setCustDraft] = useState({ name: "", phone: "", email: "" });
+
+  // Editable: device
+  const [editDevice, setEditDevice] = useState(false);
+  const [devDraft, setDevDraft] = useState({ model: "", storage: "", color: "", condition: "", estimatedPrice: "" });
+
   // Inspection
   const [inspSaving, setInspSaving] = useState(false);
   const [showColorError, setShowColorError] = useState(false);
@@ -159,6 +167,8 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         setActualPrice(String(data.device.actualPrice ?? ""));
         setApptDraft({ date: data.appointment.date, time: data.appointment.time, location: data.appointment.location, method: data.appointment.method });
         setPayDraft({ method: data.payment.method, bankName: data.payment.bankName ?? "", accountName: data.payment.accountName ?? "", accountNumber: data.payment.accountNumber ?? "" });
+        setCustDraft({ name: data.customer.name, phone: data.customer.phone, email: data.customer.email ?? "" });
+        setDevDraft({ model: data.device.model, storage: data.device.storage, color: data.device.color ?? "", condition: data.device.condition, estimatedPrice: String(data.device.estimatedPrice) });
         setAssignDraft(data.assignedTo ?? "");
       }
       setLoading(false);
@@ -289,6 +299,34 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
     }
     setSaving(null);
     setEditPay(false);
+  }
+
+  async function saveCustomer() {
+    setSaving("customer");
+    setSaveError(null);
+    const result = await updateCustomer(id, { name: custDraft.name, phone: custDraft.phone, email: custDraft.email || undefined });
+    if (result.success) {
+      setRequest(prev => prev ? { ...prev, customer: { ...prev.customer, name: custDraft.name, phone: custDraft.phone, email: custDraft.email } } : prev);
+    } else {
+      setSaveError("บันทึกข้อมูลลูกค้าไม่สำเร็จ");
+    }
+    setSaving(null);
+    setEditCustomer(false);
+  }
+
+  async function saveDevice() {
+    setSaving("device");
+    setSaveError(null);
+    const estNum = Number(devDraft.estimatedPrice) || request!.device.estimatedPrice;
+    const result = await updateDevice(id, { model: devDraft.model, storage: devDraft.storage, color: devDraft.color || undefined, condition: devDraft.condition, estimatedPrice: estNum });
+    if (result.success) {
+      setRequest(prev => prev ? { ...prev, device: { ...prev.device, model: devDraft.model, storage: devDraft.storage, color: devDraft.color || undefined, condition: devDraft.condition, estimatedPrice: estNum } } : prev);
+      setEstPrice(String(estNum));
+    } else {
+      setSaveError("บันทึกข้อมูลเครื่องไม่สำเร็จ");
+    }
+    setSaving(null);
+    setEditDevice(false);
   }
 
   async function handleArrivalConfirm() {
@@ -539,31 +577,60 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         {/* A. Device */}
         <Card>
           <div style={{ padding: "20px 20px 16px" }}>
-            <SectionLabel>ข้อมูลเครื่อง</SectionLabel>
-            <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
-              <div style={{ width: 80, height: 80, borderRadius: "14px", background: "#F0F0F3", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden", border: `1px solid ${BORDER}` }}>
-                <Image src={deviceImg} alt={request.device.model} width={72} height={72} style={{ objectFit: "contain" }} unoptimized />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ color: TEXT, fontWeight: 700, fontSize: "16px", margin: "0 0 4px", lineHeight: 1.3 }}>{request.device.model}</p>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "6px" }}>
-                  {request.device.storage && <span style={{ background: "#F0F0F3", color: TEXT2, fontSize: "12px", fontWeight: 500, padding: "2px 8px", borderRadius: "6px" }}>{request.device.storage}</span>}
-                  {request.device.color   && <span style={{ background: "#F0F0F3", color: TEXT2, fontSize: "12px", fontWeight: 500, padding: "2px 8px", borderRadius: "6px" }}>{request.device.color}</span>}
-                </div>
-                {request.device.condition && (
-                  <span style={{ fontSize: "12px", fontWeight: 600, color: condColor, background: `${condColor}18`, padding: "2px 8px", borderRadius: "6px" }}>
-                    {request.device.condition}
-                  </span>
-                )}
-              </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+              <SectionLabel>ข้อมูลเครื่อง</SectionLabel>
+              {!editDevice
+                ? <button onClick={() => { setDevDraft({ model: request.device.model, storage: request.device.storage, color: request.device.color ?? "", condition: request.device.condition, estimatedPrice: String(request.device.estimatedPrice) }); setEditDevice(true); }} style={{ background: "none", border: "none", color: TEXT2, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", padding: 0, fontFamily: "inherit", marginTop: "-10px" }}><Pencil size={13} /> แก้ไข</button>
+                : <EditBar onSave={saveDevice} onCancel={() => setEditDevice(false)} isSaving={saving === "device"} />
+              }
             </div>
-            {request.device.conditionDetails && request.device.conditionDetails.length > 0 && (
-              <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: `1px solid ${BORDER}` }}>
-                <SectionLabel>รายละเอียดสภาพเครื่อง</SectionLabel>
-                {request.device.conditionDetails.map((d, i) => (
-                  <p key={i} style={{ color: TEXT2, fontSize: "13px", margin: "0 0 4px" }}>• {d}</p>
-                ))}
-              </div>
+            {!editDevice ? (
+              <>
+                <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
+                  <div style={{ width: 80, height: 80, borderRadius: "14px", background: "#F0F0F3", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden", border: `1px solid ${BORDER}` }}>
+                    <Image src={deviceImg} alt={request.device.model} width={72} height={72} style={{ objectFit: "contain" }} unoptimized />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ color: TEXT, fontWeight: 700, fontSize: "16px", margin: "0 0 4px", lineHeight: 1.3 }}>{request.device.model}</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "6px" }}>
+                      {request.device.storage && <span style={{ background: "#F0F0F3", color: TEXT2, fontSize: "12px", fontWeight: 500, padding: "2px 8px", borderRadius: "6px" }}>{request.device.storage}</span>}
+                      {request.device.color   && <span style={{ background: "#F0F0F3", color: TEXT2, fontSize: "12px", fontWeight: 500, padding: "2px 8px", borderRadius: "6px" }}>{request.device.color}</span>}
+                    </div>
+                    {request.device.condition && (
+                      <span style={{ fontSize: "12px", fontWeight: 600, color: condColor, background: `${condColor}18`, padding: "2px 8px", borderRadius: "6px" }}>
+                        {request.device.condition}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {request.device.conditionDetails && request.device.conditionDetails.length > 0 && (
+                  <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: `1px solid ${BORDER}` }}>
+                    <SectionLabel>รายละเอียดสภาพเครื่อง</SectionLabel>
+                    {request.device.conditionDetails.map((d, i) => (
+                      <p key={i} style={{ color: TEXT2, fontSize: "13px", margin: "0 0 4px" }}>• {d}</p>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <label style={{ color: TEXT2, fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>รุ่นเครื่อง</label>
+                <input value={devDraft.model} onChange={e => setDevDraft(p => ({ ...p, model: e.target.value }))} placeholder="เช่น iPhone 14 Pro Max" style={inputSt} />
+                <label style={{ color: TEXT2, fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>ความจุ</label>
+                <input value={devDraft.storage} onChange={e => setDevDraft(p => ({ ...p, storage: e.target.value }))} placeholder="เช่น 256GB" style={inputSt} />
+                <label style={{ color: TEXT2, fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>สี</label>
+                <input value={devDraft.color} onChange={e => setDevDraft(p => ({ ...p, color: e.target.value }))} placeholder="เช่น Black" style={inputSt} />
+                <label style={{ color: TEXT2, fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>สภาพเครื่อง</label>
+                <select value={devDraft.condition} onChange={e => setDevDraft(p => ({ ...p, condition: e.target.value }))} style={{ ...inputSt, appearance: "none", WebkitAppearance: "none" }}>
+                  <option value="">— เลือกสภาพ —</option>
+                  <option value="สภาพดีมาก">สภาพดีมาก</option>
+                  <option value="สภาพดี">สภาพดี</option>
+                  <option value="สภาพพอใช้">สภาพพอใช้</option>
+                  <option value="สภาพปานกลาง">สภาพปานกลาง</option>
+                </select>
+                <label style={{ color: TEXT2, fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>ราคาประเมิน (บาท)</label>
+                <input type="number" value={devDraft.estimatedPrice} onChange={e => setDevDraft(p => ({ ...p, estimatedPrice: e.target.value }))} style={{ ...inputSt, marginBottom: 0 }} />
+              </>
             )}
           </div>
         </Card>
@@ -630,18 +697,37 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         {/* B. Customer */}
         <Card>
           <div style={{ padding: "16px" }}>
-            <SectionLabel>ข้อมูลลูกค้า</SectionLabel>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
-              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <span style={{ color: GOLD, fontWeight: 700, fontSize: "18px" }}>{request.customer.name.slice(0, 1)}</span>
-              </div>
-              <div>
-                <p style={{ color: TEXT, fontWeight: 700, fontSize: "16px", margin: 0 }}>{request.customer.name}</p>
-                <p style={{ color: TEXT2, fontSize: "13px", margin: "2px 0 0" }}>{request.customer.phone}</p>
-              </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+              <SectionLabel>ข้อมูลลูกค้า</SectionLabel>
+              {!editCustomer
+                ? <button onClick={() => { setCustDraft({ name: request.customer.name, phone: request.customer.phone, email: request.customer.email ?? "" }); setEditCustomer(true); }} style={{ background: "none", border: "none", color: TEXT2, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", padding: 0, fontFamily: "inherit", marginTop: "-10px" }}><Pencil size={13} /> แก้ไข</button>
+                : <EditBar onSave={saveCustomer} onCancel={() => setEditCustomer(false)} isSaving={saving === "customer"} />
+              }
             </div>
-            {request.customer.email && (
-              <p style={{ color: TEXT2, fontSize: "13px", margin: "4px 0 0", paddingTop: "10px", borderTop: `1px solid ${BORDER}` }}>{request.customer.email}</p>
+            {!editCustomer ? (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <span style={{ color: GOLD, fontWeight: 700, fontSize: "18px" }}>{request.customer.name.slice(0, 1)}</span>
+                  </div>
+                  <div>
+                    <p style={{ color: TEXT, fontWeight: 700, fontSize: "16px", margin: 0 }}>{request.customer.name}</p>
+                    <p style={{ color: TEXT2, fontSize: "13px", margin: "2px 0 0" }}>{request.customer.phone}</p>
+                  </div>
+                </div>
+                {request.customer.email && (
+                  <p style={{ color: TEXT2, fontSize: "13px", margin: "4px 0 0", paddingTop: "10px", borderTop: `1px solid ${BORDER}` }}>{request.customer.email}</p>
+                )}
+              </>
+            ) : (
+              <>
+                <label style={{ color: TEXT2, fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>ชื่อ-นามสกุล</label>
+                <input value={custDraft.name} onChange={e => setCustDraft(p => ({ ...p, name: e.target.value }))} placeholder="ชื่อลูกค้า" style={inputSt} />
+                <label style={{ color: TEXT2, fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>เบอร์โทร</label>
+                <input value={custDraft.phone} onChange={e => setCustDraft(p => ({ ...p, phone: e.target.value }))} placeholder="0XX-XXX-XXXX" style={inputSt} type="tel" />
+                <label style={{ color: TEXT2, fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>อีเมล (ไม่บังคับ)</label>
+                <input value={custDraft.email} onChange={e => setCustDraft(p => ({ ...p, email: e.target.value }))} placeholder="example@email.com" style={{ ...inputSt, marginBottom: 0 }} type="email" />
+              </>
             )}
           </div>
         </Card>

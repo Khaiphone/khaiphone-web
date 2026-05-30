@@ -481,6 +481,42 @@ export async function updatePrice(
   return { success: true };
 }
 
+// ─── Update customer info ─────────────────────────────────────────────────────
+export async function updateCustomer(id: string, data: { name: string; phone: string; email?: string }) {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { error } = await supabase
+    .from("requests")
+    .update({
+      customer_name:  data.name.trim(),
+      customer_phone: data.phone.trim(),
+      customer_email: data.email?.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  if (error) return { success: false as const, error: error.message };
+  return { success: true as const };
+}
+
+// ─── Update device info ───────────────────────────────────────────────────────
+export async function updateDevice(id: string, data: { model: string; storage: string; color?: string; condition: string; estimatedPrice?: number }) {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { error } = await supabase
+    .from("requests")
+    .update({
+      device_model:     data.model.trim(),
+      device_storage:   data.storage.trim(),
+      device_color:     data.color?.trim() || null,
+      device_condition: data.condition.trim(),
+      ...(data.estimatedPrice !== undefined ? { estimated_price: data.estimatedPrice } : {}),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  if (error) return { success: false as const, error: error.message };
+  return { success: true as const };
+}
+
 // ─── Update device color ──────────────────────────────────────────────────────
 export async function updateDeviceColor(id: string, color: string) {
   await requireAuth();
