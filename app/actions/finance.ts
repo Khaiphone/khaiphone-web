@@ -31,6 +31,10 @@ export type FinanceDashboard = {
   profitByMonth: { date: string; profit: number }[];
   topModels: { model: string; profit: number }[];
   expenseByCategory: { category: string; amount: number }[];
+  deltaRevenue: number | null;
+  deltaCost: number | null;
+  deltaExpenses: number | null;
+  deltaProfit: number | null;
 };
 
 export type FinanceIncome = {
@@ -98,6 +102,26 @@ function monthLabel(key: string) {
 }
 
 type NormSoldItem = { sell_price: number; sell_date: string; cost: number; model: string };
+
+function getPrevPeriod(dateFrom?: string, dateTo?: string): { prevFrom: string; prevTo: string } {
+  if (dateFrom && dateTo) {
+    const from = new Date(dateFrom + "T00:00:00");
+    const to = new Date(dateTo + "T00:00:00");
+    const durationMs = to.getTime() - from.getTime();
+    const prevTo = new Date(from.getTime() - 86400000);
+    const prevFrom = new Date(prevTo.getTime() - durationMs);
+    return { prevFrom: prevFrom.toISOString().slice(0, 10), prevTo: prevTo.toISOString().slice(0, 10) };
+  }
+  const now = new Date();
+  const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+  return { prevFrom: firstOfLastMonth.toISOString().slice(0, 10), prevTo: lastOfLastMonth.toISOString().slice(0, 10) };
+}
+
+function pct(curr: number, prev: number): number | null {
+  if (prev === 0) return null;
+  return Math.round(((curr - prev) / Math.abs(prev)) * 1000) / 10;
+}
 
 function normFromRequest(r: { sell_price: number; sell_date: string; actual_price?: number; estimated_price?: number; device_model?: string }): NormSoldItem {
   return { sell_price: r.sell_price, sell_date: r.sell_date, cost: r.actual_price ?? r.estimated_price ?? 0, model: r.device_model ?? "Unknown" };
@@ -197,6 +221,14 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
     .slice(0, 5)
     .map(([model, profit]) => ({ model, profit }));
 
+  const { prevFrom, prevTo } = getPrevPeriod(dateFrom, dateTo);
+  const prevSold = allNorm.filter((r) => r.sell_date >= prevFrom && r.sell_date <= prevTo);
+  const prevRevenue = prevSold.reduce((s, r) => s + r.sell_price, 0);
+  const prevCost = prevSold.reduce((s, r) => s + r.cost, 0);
+  const prevApprovedExp = allExpenses.filter((e) => e.status === "approved" && e.date >= prevFrom && e.date <= prevTo);
+  const prevExpenses = prevApprovedExp.reduce((s, e) => s + (e.amount ?? 0), 0);
+  const prevTrueNetProfit = (prevRevenue - prevCost) - prevExpenses;
+
   return {
     totalRevenue,
     totalCost,
@@ -211,6 +243,10 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
     profitByMonth,
     topModels,
     expenseByCategory,
+    deltaRevenue: pct(totalRevenue, prevRevenue),
+    deltaCost: pct(totalCost, prevCost),
+    deltaExpenses: pct(totalExpenses, prevExpenses),
+    deltaProfit: pct(trueNetProfit, prevTrueNetProfit),
   };
 }
 

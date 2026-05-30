@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 type Props = {
   label: string
   value: number
-  delta?: number
+  delta?: number | null
   deltaType?: 'positive' | 'negative'
   format?: 'currency' | 'number' | 'percent'
   size?: 'lg' | 'sm'
@@ -80,7 +80,7 @@ export default function KpiCard({
       >
         {formatValue(display, format)}
       </p>
-      {isLg && delta !== undefined && deltaType !== undefined && (
+      {isLg && delta != null && deltaType !== undefined && (
         <span
           style={{
             display: 'inline-flex',
@@ -90,15 +90,20 @@ export default function KpiCard({
             borderRadius: 20,
             fontSize: 12,
             fontWeight: 600,
-            background:
-              deltaType === 'positive'
-                ? 'rgba(34,197,94,0.15)'
-                : 'rgba(239,68,68,0.15)',
-            color: deltaType === 'positive' ? '#22c55e' : '#ef4444',
+            background: (() => {
+              const isUp = delta >= 0;
+              const isGood = deltaType === 'positive' ? isUp : !isUp;
+              return isGood ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)';
+            })(),
+            color: (() => {
+              const isUp = delta >= 0;
+              const isGood = deltaType === 'positive' ? isUp : !isUp;
+              return isGood ? '#22c55e' : '#ef4444';
+            })(),
             alignSelf: 'flex-start',
           }}
         >
-          {deltaType === 'positive' ? '▲' : '▼'} {delta.toFixed(1)}%
+          {delta >= 0 ? '▲' : '▼'} {Math.abs(delta).toFixed(1)}%
         </span>
       )}
     </div>

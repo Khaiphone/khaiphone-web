@@ -58,10 +58,10 @@ export default function DashboardPage() {
   }
 
   const kpiMain = [
-    { label: 'รายได้รวม',       value: data.totalRevenue,   deltaType: 'positive' as const },
-    { label: 'ต้นทุนเครื่อง',   value: data.totalCost,      deltaType: 'negative' as const },
-    { label: 'ค่าใช้จ่าย',      value: data.totalExpenses,  deltaType: 'negative' as const },
-    { label: 'กำไรสุทธิแท้จริง', value: data.trueNetProfit, deltaType: data.trueNetProfit >= 0 ? 'positive' as const : 'negative' as const },
+    { label: 'รายได้รวม',        value: data.totalRevenue,   delta: data.deltaRevenue,   deltaType: 'positive' as const },
+    { label: 'ต้นทุนเครื่อง',    value: data.totalCost,      delta: data.deltaCost,      deltaType: 'negative' as const },
+    { label: 'ค่าใช้จ่าย',       value: data.totalExpenses,  delta: data.deltaExpenses,  deltaType: 'negative' as const },
+    { label: 'กำไรสุทธิแท้จริง', value: data.trueNetProfit,  delta: data.deltaProfit,    deltaType: 'positive' as const },
   ]
 
   const kpiSecondary = [
@@ -80,7 +80,7 @@ export default function DashboardPage() {
       {/* Main KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
         {kpiMain.map((k) => (
-          <KpiCard key={k.label} label={k.label} value={k.value} delta={0} deltaType={k.deltaType} format="currency" size="lg" />
+          <KpiCard key={k.label} label={k.label} value={k.value} delta={k.delta} deltaType={k.deltaType} format="currency" size="lg" />
         ))}
       </div>
 
