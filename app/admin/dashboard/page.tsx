@@ -209,7 +209,10 @@ export default function DashboardPage() {
             {/* Activity log */}
             {role === "owner" && activity.length > 0 && (
               <div style={{ marginBottom: "20px" }}>
-                <h2 style={{ color: TEXT, fontSize: "17px", fontWeight: 700, margin: "0 0 14px" }}>กิจกรรมล่าสุด</h2>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                  <h2 style={{ color: TEXT, fontSize: "17px", fontWeight: 700, margin: 0 }}>กิจกรรมล่าสุด</h2>
+                  <button onClick={() => router.push("/admin/activity")} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: GOLD, fontSize: "13px", cursor: "pointer", fontFamily: "inherit", padding: 0, fontWeight: 600 }}>ดูทั้งหมด <ArrowRight size={14} /></button>
+                </div>
                 <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "16px", overflow: "hidden" }}>
                   {activity.slice(0, 10).map((log, i) => {
                     const actionColor = log.action === "ลบคำขอ" ? "#EF4444" : log.action === "สร้างคำขอ" ? "#10B981" : GOLD;

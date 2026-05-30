@@ -135,6 +135,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                   { href: "/admin/accounting",     label: "บัญชี"         },
                   { href: "/admin/reports",        label: "รายงาน"        },
                   { href: "/admin/staff",          label: "จัดการทีม"    },
+                  { href: "/admin/activity",       label: "กิจกรรม"       },
                 ].map(({ href, label }) => {
                   const active = pathname.startsWith(href);
                   return (
