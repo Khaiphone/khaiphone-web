@@ -151,6 +151,11 @@ export default function InspectionForm({
   const [serial,         setSerial]         = useState(existing?.serial ?? "");
   const [warrantyExpiry, setWarrantyExpiry] = useState(existing?.warrantyExpiry ?? "");
   const [batteryCycles,  setBatteryCycles]  = useState(existing?.batteryCycles !== undefined ? String(existing.batteryCycles) : "");
+  const [batteryHealth,  setBatteryHealth]  = useState(existing?.batteryHealth !== undefined ? String(existing.batteryHealth) : "");
+
+  const iphoneSeries = (() => { const m = model?.match(/iPhone\s+(\d+)/i); return m ? Number(m[1]) : 0; })();
+  const showCycles = iphoneSeries >= 15;
+  const showHealth = iphoneSeries > 0 && iphoneSeries < 15;
   const [imeiError,   setImeiError]   = useState(false);
   const [serialError, setSerialError] = useState(false);
   const [uploading,    setUploading]   = useState(false);
@@ -394,6 +399,7 @@ export default function InspectionForm({
       serial:         serial.trim() || undefined,
       warrantyExpiry: warrantyExpiry.trim() || undefined,
       batteryCycles:  batteryCycles.trim() ? Number(batteryCycles) : undefined,
+      batteryHealth:  batteryHealth.trim() ? Number(batteryHealth) : undefined,
       extraInspections: extraStates.length > 0 ? extraStates.map(e => ({
         model:          e.model,
         storage:        e.storage,
@@ -567,23 +573,69 @@ export default function InspectionForm({
           })()}
         </div>
         <div>
-          <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>
-            รอบชาร์จ (Battery Cycles)
-          </label>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={9999}
-            placeholder="เช่น 120"
-            value={batteryCycles}
-            onChange={e => setBatteryCycles(e.target.value.replace(/\D/g, "").slice(0, 4))}
-            style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit" }}
-          />
-          {batteryCycles && (
-            <p style={{ fontSize: 11, color: Number(batteryCycles) > 500 ? "#F97316" : TEXT2, margin: "4px 0 0" }}>
-              {Number(batteryCycles) > 500 ? "⚠ รอบชาร์จสูง" : "รอบชาร์จปกติ"}
-            </p>
+          {showCycles && (
+            <>
+              <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>
+                รอบชาร์จ (Battery Cycles)
+              </label>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={9999}
+                placeholder="เช่น 120"
+                value={batteryCycles}
+                onChange={e => setBatteryCycles(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit" }}
+              />
+              {batteryCycles && (
+                <p style={{ fontSize: 11, color: Number(batteryCycles) > 500 ? "#F97316" : TEXT2, margin: "4px 0 0" }}>
+                  {Number(batteryCycles) > 500 ? "⚠ รอบชาร์จสูง" : "รอบชาร์จปกติ"}
+                </p>
+              )}
+            </>
+          )}
+          {showHealth && (
+            <>
+              <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>
+                สุขภาพแบต (%)
+              </label>
+              <div style={{ position: "relative" as const }}>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={100}
+                  placeholder="เช่น 85"
+                  value={batteryHealth}
+                  onChange={e => {
+                    const v = e.target.value.replace(/\D/g, "").slice(0, 3);
+                    if (!v || Number(v) <= 100) setBatteryHealth(v);
+                  }}
+                  style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "9px 32px 9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit" }}
+                />
+                <span style={{ position: "absolute" as const, right: 12, top: "50%", transform: "translateY(-50%)", color: TEXT3, fontSize: 13, pointerEvents: "none" as const }}>%</span>
+              </div>
+              {batteryHealth && (
+                <p style={{ fontSize: 11, color: Number(batteryHealth) < 80 ? "#F97316" : "#059669", margin: "4px 0 0", fontWeight: 600 }}>
+                  {Number(batteryHealth) < 80 ? "⚠ แบตเตอรี่เสื่อม" : "สุขภาพแบตดี"}
+                </p>
+              )}
+            </>
+          )}
+          {!showCycles && !showHealth && (
+            <>
+              <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>
+                สุขภาพแบต / รอบชาร์จ
+              </label>
+              <input
+                type="text"
+                placeholder="เช่น 85% หรือ 120 รอบ"
+                value={batteryHealth || batteryCycles}
+                onChange={e => setBatteryHealth(e.target.value)}
+                style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit" }}
+              />
+            </>
           )}
         </div>
       </div>

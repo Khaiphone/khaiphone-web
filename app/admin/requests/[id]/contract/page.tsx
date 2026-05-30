@@ -388,6 +388,7 @@ export default function ContractPage() {
         functionalTests: (r.inspection?.functionalTests ?? []) as NonNullable<typeof r.inspection>["functionalTests"],
         warrantyExpiry:  r.inspection?.warrantyExpiry,
         batteryCycles:   r.inspection?.batteryCycles,
+        batteryHealth:   r.inspection?.batteryHealth,
       },
       ...(r.extraDevices ?? []).map((d, i) => {
         const ei = extraInspArr[i];
@@ -409,6 +410,7 @@ export default function ContractPage() {
           functionalTests: (ei?.functionalTests ?? []) as NonNullable<typeof r.inspection>["functionalTests"],
           warrantyExpiry:  undefined as string | undefined,
           batteryCycles:   undefined as number | undefined,
+          batteryHealth:   undefined as number | undefined,
         };
       }),
     ];
@@ -493,7 +495,13 @@ export default function ContractPage() {
             <td>${esc(dev.color || "—")}</td>
             <td>${accStr}</td>
           </tr>
-          ${(dev.warrantyExpiry || dev.batteryCycles !== undefined) ? `<tr><th>การรับประกัน</th><th>รอบชาร์จ</th><th colspan="2"></th></tr><tr><td style="${dev.warrantyExpiry === "expired" ? "color:#DC2626;font-weight:600" : ""}">${dev.warrantyExpiry === "expired" ? "ประกันสิ้นสุดแล้ว" : dev.warrantyExpiry ? new Date(dev.warrantyExpiry + "T00:00:00").toLocaleDateString("th-TH",{year:"numeric",month:"long",day:"numeric"}) : "—"}</td><td>${dev.batteryCycles !== undefined ? dev.batteryCycles + " รอบ" : "—"}</td><td colspan="2"></td></tr>` : ""}
+          ${(dev.warrantyExpiry || dev.batteryCycles !== undefined || dev.batteryHealth !== undefined) ? (() => {
+            const batteryLabel = dev.batteryCycles !== undefined ? "รอบชาร์จ" : "สุขภาพแบต";
+            const batteryValue = dev.batteryCycles !== undefined ? dev.batteryCycles + " รอบ" : dev.batteryHealth !== undefined ? dev.batteryHealth + "%" : "—";
+            const warrantyCellStyle = dev.warrantyExpiry === "expired" ? "color:#DC2626;font-weight:600" : "";
+            const warrantyText = dev.warrantyExpiry === "expired" ? "ประกันสิ้นสุดแล้ว" : dev.warrantyExpiry ? new Date(dev.warrantyExpiry + "T00:00:00").toLocaleDateString("th-TH",{year:"numeric",month:"long",day:"numeric"}) : "—";
+            return `<tr><th>การรับประกัน</th><th>${batteryLabel}</th><th colspan="2"></th></tr><tr><td style="${warrantyCellStyle}">${warrantyText}</td><td>${batteryValue}</td><td colspan="2"></td></tr>`;
+          })() : ""}
           <tr><td colspan="3" style="font-weight:700;text-align:right;background:#f5f4f0">ราคา${dev.label || "ซื้อขาย"}</td><td style="font-weight:700;color:#c9a84c">฿${dev.price.toLocaleString("th-TH")}</td></tr>
         </table>`;
       if ((dev.criteria ?? []).length) {
