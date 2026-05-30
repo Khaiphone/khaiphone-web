@@ -329,7 +329,7 @@ export default function StockInventoryPage() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: c.card2 }}>
-                    {["", "รูป", "รหัสสต็อก", "รุ่น", "ความจุ / สี", "IMEI / Serial", "เกรด", "ต้นทุน", "ราคาขาย", "กำไร", "สถานะ", "ช่องทาง", "วันที่", ""].map((h, i) => (
+                    {["", "รูป", "รหัสสต็อก", "รุ่น", "ความจุ / สี", "IMEI / Serial", "เกรด", "ต้นทุน", "ราคาขาย", "กำไร", "สถานะ", "การจัดส่ง", "ช่องทาง", "วันที่", ""].map((h, i) => (
                       <th key={i} style={{ padding: "12px 14px", textAlign: "left", color: c.text3, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
                     ))}
                   </tr>
@@ -398,14 +398,20 @@ export default function StockInventoryPage() {
                             }
                           </td>
                           <td style={{ padding: "10px 14px" }}>
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
-                              <StockStatusBadge status={s.status} />
-                              {s.status === "ขายแล้ว" && s.deliveryStatus === "รอจัดส่ง" && (
-                                <span style={{ fontSize: 10, fontWeight: 700, color: "#f59e0b", background: "rgba(245,158,11,0.12)", padding: "2px 8px", borderRadius: 6, whiteSpace: "nowrap" }}>
-                                  รอจัดส่ง
-                                </span>
-                              )}
-                            </div>
+                            <StockStatusBadge status={s.status} />
+                          </td>
+                          <td style={{ padding: "10px 14px" }}>
+                            {s.status === "ขายแล้ว" && s.deliveryStatus ? (
+                              <span style={{
+                                fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 8, whiteSpace: "nowrap",
+                                color: s.deliveryStatus === "จัดส่งแล้ว" ? "#22c55e" : "#f59e0b",
+                                background: s.deliveryStatus === "จัดส่งแล้ว" ? "rgba(34,197,94,0.12)" : "rgba(245,158,11,0.12)",
+                              }}>
+                                {s.deliveryStatus}
+                              </span>
+                            ) : (
+                              <span style={{ color: c.text3, fontSize: 12 }}>—</span>
+                            )}
                           </td>
                           <td style={{ padding: "10px 14px", color: c.text2, fontSize: 12, whiteSpace: "nowrap" }}>{s.sourceChannel}</td>
                           <td style={{ padding: "10px 14px", whiteSpace: "nowrap" }}>
