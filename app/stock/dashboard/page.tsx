@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Package, TrendingUp, DollarSign, CheckCircle, Clock, ShoppingBag } from "lucide-react";
+import { Package, TrendingUp, DollarSign, CheckCircle, Clock, ShoppingBag, Wallet } from "lucide-react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion } from "framer-motion";
 import StockTopbar from "@/components/stock/Topbar";
@@ -36,6 +36,7 @@ export default function StockDashboard() {
   const readyToSell = stocks.filter(s => s.status === "พร้อมขาย").length;
   const inspecting = stocks.filter(s => s.status === "รอตรวจ").length;
   const noPricedCount = activeStocks.filter(s => s.sellingPrice === 0).length;
+  const totalStockCost = activeStocks.reduce((a, s) => a + s.costPrice + s.shippingCost + s.otherCost, 0);
   const soldToday = stocks.filter(s => {
     if (s.status !== "ขายแล้ว") return false;
     if (s.soldAt && new Date(s.soldAt).toDateString() === todayStr) return true;
@@ -45,7 +46,8 @@ export default function StockDashboard() {
   const recentActivity = stocks.slice(0, 5);
 
   const METRICS = [
-    { icon: DollarSign, label: "มูลค่าสต็อกรวม",        value: `฿${fmt(totalValue)}`,         iconColor: c.gold,    sub: `เฉพาะเครื่องที่กำหนดราคาแล้ว` },
+    { icon: DollarSign, label: "มูลค่าสต็อกรวม",        value: `฿${fmt(totalValue)}`,         iconColor: c.gold,    sub: "เฉพาะเครื่องที่กำหนดราคาแล้ว" },
+    { icon: Wallet,     label: "ต้นทุนสต็อกรวม",        value: `฿${fmt(totalStockCost)}`,     iconColor: "#ef4444", sub: "ต้นทุน + ค่าส่ง + ค่าอื่นๆ" },
     { icon: Package,    label: "จำนวนเครื่องในสต็อก",    value: `${activeStocks.length} เครื่อง`, iconColor: c.info,    sub: noPricedCount > 0 ? `ยังไม่กำหนดราคา ${noPricedCount} เครื่อง` : "ไม่รวมที่ขายแล้ว" },
     { icon: TrendingUp, label: "กำไรคาดการณ์",           value: `฿${fmt(totalCostProfit)}`,    iconColor: "#22c55e", sub: "เฉพาะเครื่องที่กำหนดราคาแล้ว" },
     { icon: CheckCircle,label: "เครื่องพร้อมขาย",        value: `${readyToSell} เครื่อง`,     iconColor: "#22c55e", sub: "สถานะ: พร้อมขาย" },
