@@ -132,7 +132,7 @@ export async function createStockFromRequest(
     cycle_count: insp.batteryCycles ?? 0,
     icloud_status: "", carrier_lock: "", accessories: "",
     physical_checks: [
-      ...(insp.criteria ?? []).map((c: { label: string; pass: boolean }) => ({ label: c.label, condition: c.pass ? "ปกติ" : "มีปัญหา" })),
+      ...(insp.criteria ?? []).map((c: { label: string; pass: boolean; actual?: string }) => ({ label: c.label, condition: c.pass ? "ปกติ" : (c.actual?.trim() || "มีตำหนิ") })),
       ...(insp.functionalTests ?? []).map((t: { label: string; pass: boolean }) => ({ label: t.label, condition: t.pass ? "ปกติ" : "มีปัญหา" })),
     ],
     cost_price:      req.actual_price ?? req.estimated_price ?? 0,

@@ -410,10 +410,12 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
 
                   {(item.physicalChecks ?? []).length > 0 && (() => {
                     const condColor = (cond: string) =>
-                      cond === "ปกติ"        ? { bg: "rgba(34,197,94,0.12)",  text: "#16a34a" } :
-                      cond === "มีตำหนิเล็ก" ? { bg: "rgba(245,158,11,0.12)", text: "#b45309" } :
-                                               { bg: "rgba(239,68,68,0.12)",  text: "#dc2626" };
+                      cond === "ปกติ" ? { bg: "rgba(34,197,94,0.12)", text: "#16a34a" } :
+                      cond === "มีปัญหา" ? { bg: "rgba(239,68,68,0.12)", text: "#dc2626" } :
+                      { bg: "rgba(245,158,11,0.12)", text: "#b45309" };
                     const hasIssues = (item.physicalChecks ?? []).filter(p => p.condition !== "ปกติ");
+                    const hasFunctionalProblems = hasIssues.filter(p => p.condition === "มีปัญหา");
+                    const hasCosmetic = hasIssues.filter(p => p.condition !== "มีปัญหา");
                     return (
                       <Section label="สภาพภายนอก" c={c}>
                         {(item.physicalChecks ?? []).map((p, i) => {
@@ -425,10 +427,18 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                             </div>
                           );
                         })}
-                        {hasIssues.length > 0 && (
+                        {hasCosmetic.length > 0 && (
+                          <div style={{ marginTop: 8, padding: "8px 10px", background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 8 }}>
+                            <p style={{ color: "#b45309", fontSize: 11, fontWeight: 700, margin: "0 0 4px" }}>ตำหนิที่พบ</p>
+                            {hasCosmetic.map((p, i) => (
+                              <p key={i} style={{ color: "#92400e", fontSize: 12, margin: "2px 0 0" }}>• {p.label}: {p.condition}</p>
+                            ))}
+                          </div>
+                        )}
+                        {hasFunctionalProblems.length > 0 && (
                           <div style={{ marginTop: 8, padding: "8px 10px", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8 }}>
                             <p style={{ color: "#dc2626", fontSize: 11, fontWeight: 700, margin: "0 0 4px" }}>⚠ ปัญหาการใช้งาน</p>
-                            {hasIssues.map((p, i) => (
+                            {hasFunctionalProblems.map((p, i) => (
                               <p key={i} style={{ color: "#b91c1c", fontSize: 12, margin: "2px 0 0" }}>• {p.label}: {p.condition}</p>
                             ))}
                           </div>

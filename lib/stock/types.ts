@@ -17,7 +17,7 @@ export type SourceChannel =
   | "Shopee"
   | "โทรศัพท์";
 
-export type PhysicalCondition = "ปกติ" | "มีตำหนิเล็ก" | "มีปัญหา";
+export type PhysicalCondition = string;
 
 export interface PhysicalCheck {
   label: string;
