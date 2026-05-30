@@ -31,6 +31,7 @@ export default function SellModal({ item, onClose, onSuccess }: SellModalProps) 
   const [saleType, setSaleType] = useState<"ขายปลีก" | "ขายส่ง">("ขายปลีก");
   const [partnerName, setPartnerName] = useState("");
   const [newPartner, setNewPartner] = useState("");
+  const [deliveryDone, setDeliveryDone] = useState(true);
   const [deliveryChannel, setDeliveryChannel] = useState<string>("หน้าร้าน");
 
   // Fetched data
@@ -57,10 +58,11 @@ export default function SellModal({ item, onClose, onSuccess }: SellModalProps) 
       sellDate, soldBy || undefined,
       saleType,
       isWholesale ? effectivePartner.trim() : undefined,
-      deliveryChannel,
+      deliveryDone ? deliveryChannel : undefined,
     );
     if (res.success) {
       const soldAtTs = new Date(sellDate + "T12:00:00").toISOString();
+      const effChannel = deliveryDone ? deliveryChannel : undefined;
       onSuccess({
         status: "ขายแล้ว",
         soldPrice: price,
@@ -70,8 +72,8 @@ export default function SellModal({ item, onClose, onSuccess }: SellModalProps) 
         soldBy: soldBy || undefined,
         saleType,
         partnerName: isWholesale ? effectivePartner.trim() : undefined,
-        deliveryChannel,
-        deliveryStatus: deliveryChannel === "หน้าร้าน" ? "จัดส่งแล้ว" : "รอจัดส่ง",
+        deliveryChannel: effChannel,
+        deliveryStatus: !deliveryDone ? "รอจัดส่ง" : effChannel === "หน้าร้าน" ? "จัดส่งแล้ว" : "รอจัดส่ง",
       });
       onClose();
     }
@@ -143,28 +145,56 @@ export default function SellModal({ item, onClose, onSuccess }: SellModalProps) 
           </div>
         </div>
 
-        {/* ช่องทางการรับสินค้า */}
+        {/* สถานะการจัดส่ง */}
         <div style={{ marginBottom: 14 }}>
-          <label style={labelSt}>ช่องทางการรับสินค้า *</label>
+          <label style={labelSt}>สถานะการจัดส่ง *</label>
           <div style={{ display: "flex", gap: 8 }}>
-            {DELIVERY_CHANNELS.map(ch => (
+            {[
+              { done: true,  label: "จัดส่งแล้ว",    color: "#22c55e" },
+              { done: false, label: "ยังไม่จัดส่ง", color: "#f97316" },
+            ].map(opt => (
               <button
-                key={ch.value}
-                onClick={() => setDeliveryChannel(ch.value)}
+                key={String(opt.done)}
+                onClick={() => setDeliveryDone(opt.done)}
                 style={{
-                  flex: 1, padding: "9px 4px", borderRadius: 10, fontSize: 13,
-                  border: `1.5px solid ${deliveryChannel === ch.value ? "#f59e0b" : c.border}`,
-                  background: deliveryChannel === ch.value ? "rgba(245,158,11,0.12)" : c.bg,
-                  color: deliveryChannel === ch.value ? "#f59e0b" : c.text2,
-                  fontWeight: deliveryChannel === ch.value ? 700 : 400,
+                  flex: 1, padding: "10px", borderRadius: 10, fontSize: 13,
+                  border: `1.5px solid ${deliveryDone === opt.done ? opt.color : c.border}`,
+                  background: deliveryDone === opt.done ? `${opt.color}18` : c.bg,
+                  color: deliveryDone === opt.done ? opt.color : c.text2,
+                  fontWeight: deliveryDone === opt.done ? 700 : 400,
                   cursor: "pointer", fontFamily: "inherit",
                 }}
               >
-                {ch.label}
+                {opt.label}
               </button>
             ))}
           </div>
         </div>
+
+        {/* ช่องทางการรับสินค้า — แสดงเมื่อจัดส่งแล้ว */}
+        {deliveryDone && (
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelSt}>ช่องทางการรับสินค้า *</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              {DELIVERY_CHANNELS.map(ch => (
+                <button
+                  key={ch.value}
+                  onClick={() => setDeliveryChannel(ch.value)}
+                  style={{
+                    flex: 1, padding: "9px 4px", borderRadius: 10, fontSize: 13,
+                    border: `1.5px solid ${deliveryChannel === ch.value ? "#f59e0b" : c.border}`,
+                    background: deliveryChannel === ch.value ? "rgba(245,158,11,0.12)" : c.bg,
+                    color: deliveryChannel === ch.value ? "#f59e0b" : c.text2,
+                    fontWeight: deliveryChannel === ch.value ? 700 : 400,
+                    cursor: "pointer", fontFamily: "inherit",
+                  }}
+                >
+                  {ch.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ขายส่ง: เลือกคู่ค้า */}
         {isWholesale && (
