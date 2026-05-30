@@ -160,15 +160,16 @@ export async function verifyStockField(
 }
 
 export async function markStockSold(
-  id: string, soldPrice: number, buyerName: string, buyerPhone: string,
+  id: string, soldPrice: number, buyerName: string, buyerPhone: string, soldAt?: string,
 ): Promise<{ success: boolean; error?: string }> {
   await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
+  const soldAtTs = soldAt ? new Date(soldAt + "T12:00:00").toISOString() : now;
   const { data: current } = await supabase.from("stocks").select("status_log").eq("id", id).single();
-  const newLog = [...(current?.status_log ?? []), { status: "ขายแล้ว", timestamp: now, note: `ขายให้ ${buyerName}`, by: "admin" }];
+  const newLog = [...(current?.status_log ?? []), { status: "ขายแล้ว", timestamp: soldAtTs, note: `ขายให้ ${buyerName}`, by: "admin" }];
   const { error } = await supabase.from("stocks").update({
-    status: "ขายแล้ว", sold_at: now, sold_price: soldPrice,
+    status: "ขายแล้ว", sold_at: soldAtTs, sold_price: soldPrice,
     buyer_name: buyerName, buyer_phone: buyerPhone,
     status_log: newLog, updated_at: now,
   }).eq("id", id);
