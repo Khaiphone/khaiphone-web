@@ -232,6 +232,103 @@ export default function StockDetailPage({ params }: { params: Promise<{ id: stri
               <CrossCheckSection item={item} c={c} verifying={verifying} onVerify={handleVerify} />
             )}
 
+            {/* Inspection 3-layer results */}
+            {(() => {
+              const snap = item.inspectionSnapshot;
+              const criteria = snap?.criteria ?? [];
+              const functionalTests = snap?.functionalTests ?? [];
+              const recheckCrit = snap?.recheckCriteria ?? [];
+              const recheckFn = snap?.recheckFunctionalTests ?? [];
+              const hasRecheck = recheckCrit.length > 0 || recheckFn.length > 0;
+              const issues = snap?.issues ?? [];
+              if (criteria.length === 0 && functionalTests.length === 0) return null;
+              const recheckMap = new Map(recheckCrit.map(r => [r.label, r]));
+              const recheckFnMap = new Map(recheckFn.map(r => [r.label, r]));
+              const thBase: React.CSSProperties = { padding: "8px 12px", fontSize: 11, fontWeight: 700, color: c.text3, textAlign: "left" as const, borderBottom: `1px solid ${c.border}`, background: "transparent" };
+              const tdBase: React.CSSProperties = { padding: "10px 12px", fontSize: 12, borderBottom: `1px solid ${c.border}`, verticalAlign: "middle" as const };
+              return (
+                <div style={{ background: c.card, borderRadius: 20, padding: 24, border: `1px solid ${c.border}`, marginBottom: 20 }}>
+                  <p style={{ color: c.text3, fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.06em", margin: "0 0 16px" }}>
+                    ผลการตรวจสภาพ
+                  </p>
+
+                  {/* Criteria table */}
+                  {criteria.length > 0 && (
+                    <div style={{ overflowX: "auto", marginBottom: 20 }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <thead>
+                          <tr>
+                            <th style={thBase}>รายการ</th>
+                            <th style={{ ...thBase, color: "#6b7280" }}>ลูกค้าแจ้ง</th>
+                            <th style={{ ...thBase, color: "#2563eb" }}>เจ้าหน้าที่หน้างาน</th>
+                            {hasRecheck && <th style={{ ...thBase, color: "#16a34a" }}>ทีมสต็อค</th>}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {criteria.map((cr, i) => {
+                            const rc = recheckMap.get(cr.label);
+                            const fail = hasRecheck ? rc && !rc.pass : !cr.pass;
+                            return (
+                              <tr key={i} style={{ background: fail ? "rgba(239,68,68,0.04)" : i % 2 === 0 ? "transparent" : (c.card2) }}>
+                                <td style={{ ...tdBase, fontWeight: 600, color: c.text }}>{cr.label}</td>
+                                <td style={{ ...tdBase, color: c.text3 }}>{cr.stated || "—"}</td>
+                                <td style={{ ...tdBase, color: cr.pass ? c.text : "#f59e0b", fontWeight: cr.pass ? 400 : 600 }}>
+                                  {cr.actual || "—"}
+                                  {!cr.pass && <span style={{ marginLeft: 6, fontSize: 10, background: "rgba(245,158,11,0.12)", color: "#b45309", padding: "1px 6px", borderRadius: 4 }}>ตำหนิ</span>}
+                                </td>
+                                {hasRecheck && (
+                                  <td style={{ ...tdBase, color: !rc ? c.text3 : rc.pass ? "#16a34a" : "#dc2626", fontWeight: rc && !rc.pass ? 700 : 400 }}>
+                                    {rc ? (rc.stockActual || (rc.pass ? "✓ ผ่าน" : "✗ ไม่ผ่าน")) : <em style={{ color: c.text3 }}>—</em>}
+                                  </td>
+                                )}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {/* Issues */}
+                  {issues.length > 0 && (
+                    <div style={{ marginBottom: 16, padding: "10px 14px", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10 }}>
+                      <p style={{ color: "#dc2626", fontSize: 11, fontWeight: 700, margin: "0 0 4px" }}>ปัญหาที่พบเพิ่มเติม (หน้างาน)</p>
+                      {issues.map((issue, i) => <p key={i} style={{ color: "#b91c1c", fontSize: 13, margin: "2px 0 0" }}>• {issue}</p>)}
+                    </div>
+                  )}
+
+                  {/* Functional tests */}
+                  {functionalTests.length > 0 && (
+                    <div>
+                      <p style={{ color: c.text3, fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.06em", margin: "0 0 10px" }}>
+                        การทำงานภายใน
+                      </p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {functionalTests.map((t, i) => {
+                          const rc = recheckFnMap.get(t.label);
+                          const finalPass = hasRecheck && rc ? rc.pass : t.pass;
+                          const changed = hasRecheck && rc && rc.pass !== t.pass;
+                          return (
+                            <span key={i} title={changed ? `หน้างาน: ${t.pass ? "ผ่าน" : "ไม่ผ่าน"} → สต็อค: ${rc!.pass ? "ผ่าน" : "ไม่ผ่าน"}` : undefined} style={{ fontSize: 12, fontWeight: 600, padding: "5px 12px", borderRadius: 20, background: finalPass ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)", color: finalPass ? "#16a34a" : "#dc2626", border: `1px solid ${finalPass ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`, position: "relative" as const }}>
+                              {finalPass ? "✓" : "✗"} {t.label}
+                              {changed && <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.7 }}>*</span>}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {hasRecheck && snap?.recheckBy && (
+                    <p style={{ margin: "14px 0 0", fontSize: 11, color: c.text3 }}>
+                      รีเช็คโดยทีมสต็อค: <strong style={{ color: c.text2 }}>{snap.recheckBy}</strong>
+                      {snap.recheckAt && ` · ${new Date(snap.recheckAt).toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}`}
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* Timeline */}
             <div style={{ background: c.card, borderRadius: 20, padding: 24, border: `1px solid ${c.border}` }}>
               <p style={{ color: c.text3, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 16px" }}>ประวัติสถานะ</p>

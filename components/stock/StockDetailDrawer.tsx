@@ -109,8 +109,8 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
     inspector: item?.inspector ?? "",
     note: "",
   });
-  const [recheckCriteria, setRecheckCriteria] = useState<{ label: string; stated: string; actual: string; pass: boolean; verified: boolean }[]>(
-    (item?.inspectionSnapshot?.criteria ?? []).map(c => ({ ...c, verified: false }))
+  const [recheckCriteria, setRecheckCriteria] = useState<{ label: string; stated: string; fieldActual: string; stockActual: string; pass: boolean; verified: boolean }[]>(
+    (item?.inspectionSnapshot?.criteria ?? []).map(c => ({ label: c.label, stated: c.stated, fieldActual: c.actual, stockActual: c.actual, pass: c.pass, verified: false }))
   );
   const [recheckFunctional, setRecheckFunctional] = useState<{ label: string; pass: boolean; verified: boolean }[]>(
     (item?.inspectionSnapshot?.functionalTests ?? []).map(t => ({ ...t, verified: false }))
@@ -507,6 +507,12 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                                     </span>
                                   </div>
                                   <div style={{ border: `1px solid ${c.border}`, borderRadius: 8, overflow: "hidden" }}>
+                                    {/* header */}
+                                    <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 1fr auto", gap: 6, padding: "5px 10px", borderBottom: `1px solid ${c.border}`, background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)" }}>
+                                      {["รายการ","ผลหน้างาน","ผลสต็อค",""].map((h,i) => (
+                                        <span key={i} style={{ fontSize: 10, fontWeight: 700, color: c.text3 }}>{h}</span>
+                                      ))}
+                                    </div>
                                     {recheckCriteria.map((cr, i) => {
                                       const btnStyle: React.CSSProperties = cr.verified
                                         ? cr.pass
@@ -514,16 +520,21 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                                           : { background: "#dc2626", color: "#fff", border: "none" }
                                         : { background: "transparent", color: c.text3, border: `1px solid ${c.border2}` };
                                       return (
-                                        <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 8, alignItems: "center", padding: "8px 10px", borderBottom: i < recheckCriteria.length - 1 ? `1px solid ${c.border}` : undefined, background: cr.verified && !cr.pass ? (isDark ? "rgba(239,68,68,0.05)" : "rgba(239,68,68,0.03)") : "transparent" }}>
+                                        <div key={i} style={{ display: "grid", gridTemplateColumns: "80px 1fr 1fr auto", gap: 6, alignItems: "center", padding: "7px 10px", borderBottom: i < recheckCriteria.length - 1 ? `1px solid ${c.border}` : undefined, background: cr.verified && !cr.pass ? (isDark ? "rgba(239,68,68,0.05)" : "rgba(239,68,68,0.03)") : "transparent" }}>
                                           <div>
-                                            <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: c.text }}>{cr.label}</p>
-                                            <p style={{ margin: 0, fontSize: 10, color: c.text3 }}>อ้างอิง: {cr.actual || cr.stated}</p>
+                                            <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: c.text }}>{cr.label}</p>
+                                            <p style={{ margin: 0, fontSize: 9, color: c.text3 }}>แจ้ง: {cr.stated}</p>
                                           </div>
+                                          {/* field staff result — read only */}
+                                          <span style={{ fontSize: 11, color: cr.fieldActual ? c.text2 : c.text3, fontStyle: cr.fieldActual ? "normal" : "italic" }}>
+                                            {cr.fieldActual || "ไม่ระบุ"}
+                                          </span>
+                                          {/* stock team result — editable */}
                                           <input
-                                            value={cr.actual}
-                                            onChange={e => setRecheckCriteria(prev => prev.map((x, j) => j === i ? { ...x, actual: e.target.value } : x))}
-                                            placeholder="บันทึกสภาพจริง"
-                                            style={{ padding: "5px 8px", background: c.bg, border: `1px solid ${c.border2}`, borderRadius: 6, color: c.text, fontSize: 11, width: "100%", boxSizing: "border-box" }}
+                                            value={cr.stockActual}
+                                            onChange={e => setRecheckCriteria(prev => prev.map((x, j) => j === i ? { ...x, stockActual: e.target.value } : x))}
+                                            placeholder="บันทึก..."
+                                            style={{ padding: "4px 7px", background: c.bg, border: `1px solid ${c.border2}`, borderRadius: 6, color: c.text, fontSize: 11, width: "100%", boxSizing: "border-box" }}
                                           />
                                           <button
                                             onClick={() => setRecheckCriteria(prev => prev.map((x, j) => {
@@ -532,7 +543,7 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                                               if (x.pass) return { ...x, pass: false };
                                               return { ...x, verified: false, pass: true };
                                             }))}
-                                            style={{ padding: "5px 10px", borderRadius: 6, cursor: "pointer", fontWeight: 700, fontSize: 11, whiteSpace: "nowrap", ...btnStyle }}
+                                            style={{ padding: "4px 8px", borderRadius: 6, cursor: "pointer", fontWeight: 700, fontSize: 10, whiteSpace: "nowrap", ...btnStyle }}
                                           >
                                             {!cr.verified ? "ยืนยัน" : cr.pass ? "✓ ผ่าน" : "✗ ไม่ผ่าน"}
                                           </button>
@@ -601,8 +612,12 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                                 cycleCount: recheckDraft.cycleCount,
                                 inspector: recheckDraft.inspector.trim(),
                                 note: recheckDraft.note.trim() || undefined,
-                                criteria: recheckCriteria.length > 0 ? recheckCriteria : undefined,
-                                functionalTests: recheckFunctional.length > 0 ? recheckFunctional : undefined,
+                                recheckCriteria: recheckCriteria.length > 0
+                                  ? recheckCriteria.map(cr => ({ label: cr.label, stockActual: cr.stockActual, pass: cr.pass }))
+                                  : undefined,
+                                recheckFunctionalTests: recheckFunctional.length > 0
+                                  ? recheckFunctional.map(t => ({ label: t.label, pass: t.pass }))
+                                  : undefined,
                               });
                               setRecheckSaving(false);
                               if (!res.success) { setRecheckErr(res.error ?? "เกิดข้อผิดพลาด"); return; }
@@ -669,40 +684,58 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                     const tdStyle: React.CSSProperties = { padding: "7px 8px", fontSize: 12, color: c.text2, borderBottom: `1px solid ${c.border}`, verticalAlign: "middle" };
                     return (
                       <>
-                        {hasCriteria && (
-                          <Section label="ผลการตรวจสอบสภาพจริง" c={c}>
-                            <div style={{ overflowX: "auto", margin: "0 -2px" }}>
-                              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                                <thead>
-                                  <tr style={{ background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)" }}>
-                                    <th style={thStyle}>รายการ</th>
-                                    <th style={thStyle}>สภาพที่แจ้ง</th>
-                                    <th style={thStyle}>ผลตรวจจริง</th>
-                                    <th style={{ ...thStyle, textAlign: "center" }}>ผ่าน</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {criteria.map((cr, i) => (
-                                    <tr key={i} style={{ background: !cr.pass ? (isDark ? "rgba(239,68,68,0.05)" : "rgba(239,68,68,0.03)") : "transparent" }}>
-                                      <td style={{ ...tdStyle, fontWeight: 600, color: c.text }}>{cr.label}</td>
-                                      <td style={{ ...tdStyle, color: c.text3 }}>{cr.stated || "—"}</td>
-                                      <td style={{ ...tdStyle, color: cr.pass ? "#16a34a" : "#dc2626", fontWeight: cr.pass ? 400 : 600 }}>{cr.actual || (cr.pass ? "ปกติ" : "—")}</td>
-                                      <td style={{ ...tdStyle, textAlign: "center" }}>{cr.pass ? "✓" : "✗"}</td>
+                        {hasCriteria && (() => {
+                          const recheckCrit = snap?.recheckCriteria ?? [];
+                          const hasRecheck = recheckCrit.length > 0;
+                          const recheckMap = new Map(recheckCrit.map(r => [r.label, r]));
+                          return (
+                            <Section label="ผลการตรวจสอบสภาพจริง" c={c}>
+                              <div style={{ overflowX: "auto", margin: "0 -2px" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                                  <thead>
+                                    <tr style={{ background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)" }}>
+                                      <th style={thStyle}>รายการ</th>
+                                      <th style={thStyle}>ลูกค้าแจ้ง</th>
+                                      <th style={thStyle}>หน้างาน</th>
+                                      {hasRecheck && <th style={thStyle}>ทีมสต็อค</th>}
                                     </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                            {failedCriteria.length > 0 && (
-                              <div style={{ marginTop: 8, padding: "8px 10px", background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 8 }}>
-                                <p style={{ color: "#b45309", fontSize: 11, fontWeight: 700, margin: "0 0 4px" }}>ตำหนิที่พบ</p>
-                                {failedCriteria.map((cr, i) => (
-                                  <p key={i} style={{ color: "#92400e", fontSize: 12, margin: "2px 0 0" }}>• {cr.label}: {cr.actual || "ไม่ผ่าน"}</p>
-                                ))}
+                                  </thead>
+                                  <tbody>
+                                    {criteria.map((cr, i) => {
+                                      const rc = recheckMap.get(cr.label);
+                                      const fail = hasRecheck ? rc && !rc.pass : !cr.pass;
+                                      return (
+                                        <tr key={i} style={{ background: fail ? (isDark ? "rgba(239,68,68,0.05)" : "rgba(239,68,68,0.03)") : "transparent" }}>
+                                          <td style={{ ...tdStyle, fontWeight: 600, color: c.text, fontSize: 11 }}>{cr.label}</td>
+                                          <td style={{ ...tdStyle, color: c.text3, fontSize: 11 }}>{cr.stated || "—"}</td>
+                                          <td style={{ ...tdStyle, color: cr.pass ? c.text2 : "#f59e0b", fontWeight: cr.pass ? 400 : 600, fontSize: 11 }}>{cr.actual || "—"}</td>
+                                          {hasRecheck && (
+                                            <td style={{ ...tdStyle, fontSize: 11, fontWeight: rc && !rc.pass ? 600 : 400, color: !rc ? c.text3 : rc.pass ? "#16a34a" : "#dc2626" }}>
+                                              {rc ? (rc.stockActual || (rc.pass ? "ปกติ" : "ไม่ผ่าน")) : "—"}
+                                            </td>
+                                          )}
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
                               </div>
-                            )}
-                          </Section>
-                        )}
+                              {failedCriteria.length > 0 && !hasRecheck && (
+                                <div style={{ marginTop: 8, padding: "8px 10px", background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 8 }}>
+                                  <p style={{ color: "#b45309", fontSize: 11, fontWeight: 700, margin: "0 0 4px" }}>ตำหนิที่พบ (หน้างาน)</p>
+                                  {failedCriteria.map((cr, i) => (
+                                    <p key={i} style={{ color: "#92400e", fontSize: 12, margin: "2px 0 0" }}>• {cr.label}: {cr.actual || "ไม่ผ่าน"}</p>
+                                  ))}
+                                </div>
+                              )}
+                              {hasRecheck && snap?.recheckBy && (
+                                <p style={{ margin: "6px 0 0", fontSize: 10, color: c.text3 }}>
+                                  ทีมสต็อครีเช็คโดย {snap.recheckBy}{snap.recheckAt ? ` · ${new Date(snap.recheckAt).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })}` : ""}
+                                </p>
+                              )}
+                            </Section>
+                          );
+                        })()}
                         {issues.length > 0 && (
                           <Section label="ปัญหาที่พบเพิ่มเติม" c={c}>
                             <div style={{ padding: "8px 10px", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8 }}>

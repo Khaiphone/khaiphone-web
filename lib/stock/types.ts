@@ -104,6 +104,10 @@ export interface StockItem {
     criteria?: { label: string; stated: string; actual: string; pass: boolean }[];
     functionalTests?: { label: string; pass: boolean }[];
     issues?: string[];
+    recheckCriteria?: { label: string; stockActual: string; pass: boolean }[];
+    recheckFunctionalTests?: { label: string; pass: boolean }[];
+    recheckBy?: string;
+    recheckAt?: string;
   };
 }
 

@@ -247,8 +247,8 @@ export async function confirmStockRecheck(
     cycleCount: number;
     inspector: string;
     note?: string;
-    criteria?: { label: string; stated: string; actual: string; pass: boolean }[];
-    functionalTests?: { label: string; pass: boolean }[];
+    recheckCriteria?: { label: string; stockActual: string; pass: boolean }[];
+    recheckFunctionalTests?: { label: string; pass: boolean }[];
   },
 ): Promise<{ success: boolean; error?: string }> {
   await requireAuth();
@@ -278,19 +278,19 @@ export async function confirmStockRecheck(
     ? [...(current?.notes ?? []), { text: `[รีเช็ค] ${data.note}`, createdAt: now, by: data.inspector }]
     : current?.notes ?? [];
 
-  // Rebuild physical_checks from recheck results
+  // Rebuild physical_checks from stock team recheck (don't touch original criteria)
   const newPhysicalChecks = [
-    ...(data.criteria ?? []).map(c => ({ label: c.label, condition: c.pass ? "ปกติ" : (c.actual?.trim() || "มีตำหนิ") })),
-    ...(data.functionalTests ?? []).map(t => ({ label: t.label, condition: t.pass ? "ปกติ" : "มีปัญหา" })),
+    ...(data.recheckCriteria ?? []).map(c => ({ label: c.label, condition: c.pass ? "ปกติ" : (c.stockActual?.trim() || "มีตำหนิ") })),
+    ...(data.recheckFunctionalTests ?? []).map(t => ({ label: t.label, condition: t.pass ? "ปกติ" : "มีปัญหา" })),
   ];
 
-  // Update inspection_snapshot with recheck results
+  // Keep original criteria/functionalTests untouched; store recheck results separately
   const updatedSnapshot = {
     ...(current?.inspection_snapshot ?? {}),
-    criteria:        data.criteria        ?? current?.inspection_snapshot?.criteria        ?? [],
-    functionalTests: data.functionalTests ?? current?.inspection_snapshot?.functionalTests ?? [],
-    recheckBy:       data.inspector,
-    recheckAt:       now,
+    recheckCriteria:        data.recheckCriteria        ?? [],
+    recheckFunctionalTests: data.recheckFunctionalTests ?? [],
+    recheckBy:              data.inspector,
+    recheckAt:              now,
   };
 
   const { error } = await supabase.from("stocks").update({
