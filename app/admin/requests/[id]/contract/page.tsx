@@ -107,6 +107,10 @@ export default function ContractPage() {
   const [slipSaving, setSlipSaving] = useState(false);
   const slipFileRef = useRef<HTMLInputElement>(null!);
 
+  // Customer-with-product photo
+  const [custProdPhotoDataUrl, setCustProdPhotoDataUrl] = useState<string | null>(null);
+  const custProdFileRef = useRef<HTMLInputElement>(null!);
+
   // Generated HTML
   const contractHTML = useRef("");
   const receiptHTML  = useRef("");
@@ -171,6 +175,18 @@ export default function ContractPage() {
     }
     setSlipSaving(false);
     if (slipFileRef.current) slipFileRef.current.value = "";
+  }
+
+  async function handleCustProdPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.files?.[0];
+    if (!raw) return;
+    const check = validateImageFile(raw);
+    if (!check.valid) { alert(check.error); return; }
+    const file = await compressImage(raw);
+    const reader = new FileReader();
+    reader.onload = ev => setCustProdPhotoDataUrl(ev.target!.result as string);
+    reader.readAsDataURL(file);
+    if (custProdFileRef.current) custProdFileRef.current.value = "";
   }
 
   function applyWatermark(file: File): Promise<string> {
@@ -441,6 +457,9 @@ export default function ContractPage() {
       </div>`;
       if (isFirst && idPhotoDataUrl) {
         p += `<div class="id-photo-wrap"><div class="id-photo-hd">📷 เอกสารยืนยันตัวตนผู้ขาย — สำเนาบัตรประชาชน (มี Watermark)</div><img src="${idPhotoDataUrl}" alt="บัตรประชาชน"></div>`;
+      }
+      if (isFirst && custProdPhotoDataUrl) {
+        p += `<div class="id-photo-wrap"><div class="id-photo-hd">📸 รูปหลักฐาน — ลูกค้าพร้อมสินค้าที่ขาย</div><img src="${custProdPhotoDataUrl}" alt="ลูกค้าพร้อมสินค้า" style="max-height:300px;object-fit:contain"></div>`;
       }
       p += `<div class="sig2">
         <div class="sb"><div class="sa"></div><div class="sl"><strong>ลายมือชื่อผู้ขาย</strong><br>( ${esc(cName)} )<br>วันที่ ${dateShort}</div></div>
@@ -1098,6 +1117,49 @@ export default function ContractPage() {
               )}
             </div>
           </div>
+
+        {/* Customer with product photo */}
+        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, overflow: "hidden", marginBottom: 12 }}>
+          <div style={{ padding: "10px 14px", borderBottom: `1px solid ${BORDER}`, background: "#F9F9F9", display: "flex", alignItems: "center", gap: 8 }}>
+            <Camera size={16} color={DARK} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>รูปหลักฐานลูกค้าพร้อมสินค้า</div>
+              <div style={{ fontSize: 11, color: TEXT2 }}>แนบในสัญญาซื้อขาย — ก่อนลงลายเซ็น</div>
+            </div>
+            {custProdPhotoDataUrl && (
+              <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 600 }}>✓ มีรูปแล้ว</div>
+            )}
+          </div>
+          <div style={{ padding: 14 }}>
+            <input ref={custProdFileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleCustProdPhoto} />
+            {custProdPhotoDataUrl ? (
+              <div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={custProdPhotoDataUrl} alt="ลูกค้าพร้อมสินค้า" style={{ width: "100%", borderRadius: 10, border: `1px solid ${BORDER}`, marginBottom: 8, maxHeight: 300, objectFit: "contain", background: "#F9F9F9" }} />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ flex: 1, background: "#F0FDF4", border: "1px solid #86efac", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: "#15803d", fontWeight: 600 }}>
+                    ✓ รูปพร้อมแนบในสัญญา
+                  </div>
+                  <button
+                    onClick={() => { setCustProdPhotoDataUrl(null); if (custProdFileRef.current) custProdFileRef.current.value = ""; }}
+                    style={{ padding: "8px 14px", borderRadius: 8, border: `1px solid ${BORDER}`, background: "#FAFAFA", color: TEXT2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+                  >
+                    ถ่ายใหม่
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => custProdFileRef.current?.click()}
+                style={{ width: "100%", padding: 16, borderRadius: 12, border: `2px dashed ${BORDER}`, background: "#FAFAFA", color: TEXT2, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}
+              >
+                <Camera size={28} color={TEXT2} />
+                ถ่ายรูปลูกค้าพร้อมสินค้า
+                <span style={{ fontSize: 11, fontWeight: 400 }}>รูปนี้จะแนบในสัญญาก่อนช่องลายเซ็น</span>
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* Generate */}
         <button
