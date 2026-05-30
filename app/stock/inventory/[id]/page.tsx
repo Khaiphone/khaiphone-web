@@ -231,6 +231,9 @@ export default function StockDetailPage({ params }: { params: Promise<{ id: stri
   const [deliveryAddressDraft, setDeliveryAddressDraft] = useState("");
   const [confirmingDelivery, setConfirmingDelivery] = useState(false);
 
+  // Lightbox
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
   // Photo upload
   const [uploading, setUploading] = useState(false);
   const [uploadErr, setUploadErr] = useState<string | null>(null);
@@ -588,7 +591,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ id: stri
             <div style={{ background: c.card, borderRadius: 20, padding: 32, textAlign: "center", border: `1px solid ${c.border}`, marginBottom: 20 }}>
               {item.photos[0] ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={item.photos[0]} alt={item.model} style={{ maxHeight: 240, objectFit: "contain" }} />
+                <img onClick={() => setLightboxIndex(0)} src={item.photos[0]} alt={item.model} style={{ maxHeight: 240, objectFit: "contain", cursor: "zoom-in" }} />
               ) : (
                 <div style={{ fontSize: 80 }}>📱</div>
               )}
@@ -596,7 +599,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ id: stri
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginTop: 16 }}>
                   {item.photos.slice(1).map((url, i) => (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img key={i} src={url} alt="" style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: 10, border: `1px solid ${c.border}` }} />
+                    <img key={i} onClick={() => setLightboxIndex(i + 1)} src={url} alt="" style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: 10, border: `1px solid ${c.border}`, cursor: "zoom-in" }} />
                   ))}
                 </div>
               )}
@@ -1084,6 +1087,43 @@ export default function StockDetailPage({ params }: { params: Promise<{ id: stri
           onClose={() => setShowSellModal(false)}
           onSuccess={async () => { await reload(); }}
         />
+      )}
+
+      {/* ─── Lightbox ─── */}
+      {lightboxIndex !== null && (
+        <div
+          onClick={() => setLightboxIndex(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}
+        >
+          {/* Prev */}
+          {item.photos.length > 1 && (
+            <button
+              onClick={e => { e.stopPropagation(); setLightboxIndex(i => ((i ?? 0) - 1 + item.photos.length) % item.photos.length); }}
+              style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.12)", border: "none", borderRadius: "50%", width: 44, height: 44, fontSize: 22, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            >‹</button>
+          )}
+
+          {/* Image */}
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth: "90vw", maxHeight: "90vh", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={item.photos[lightboxIndex]} alt="" style={{ maxWidth: "90vw", maxHeight: "80vh", objectFit: "contain", borderRadius: 12 }} />
+            <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, margin: 0 }}>{lightboxIndex + 1} / {item.photos.length}</p>
+          </div>
+
+          {/* Next */}
+          {item.photos.length > 1 && (
+            <button
+              onClick={e => { e.stopPropagation(); setLightboxIndex(i => ((i ?? 0) + 1) % item.photos.length); }}
+              style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.12)", border: "none", borderRadius: "50%", width: 44, height: 44, fontSize: 22, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            >›</button>
+          )}
+
+          {/* Close */}
+          <button
+            onClick={() => setLightboxIndex(null)}
+            style={{ position: "absolute", top: 16, right: 16, background: "rgba(255,255,255,0.12)", border: "none", borderRadius: "50%", width: 36, height: 36, fontSize: 18, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+          >×</button>
+        </div>
       )}
     </div>
   );
