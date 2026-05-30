@@ -7,7 +7,7 @@ import {
   LayoutDashboard, TrendingUp, TrendingDown, ShoppingCart, BarChart2,
   Banknote, FileText, GitMerge, ScrollText, Settings, Menu, X,
   Calendar, Search, Bell, Download, MoreHorizontal, Sun, Moon,
-  Clock, Users, Receipt, Target, Scale, Activity,
+  Clock, Users, Receipt, Target, Scale, Activity, Printer,
 } from 'lucide-react'
 
 import { supabase } from '@/lib/supabase'
@@ -34,6 +34,7 @@ const NAV_ITEMS = [
   { label: 'เป้าหมาย',       icon: Target,          href: '/finance/targets' },
   { label: 'Break-even',     icon: Scale,           href: '/finance/breakeven' },
   { label: 'คาดการณ์',       icon: Activity,        href: '/finance/forecast' },
+  { label: 'เอกสาร',         icon: Printer,         href: '/finance/documents' },
   { label: 'รายงาน',         icon: FileText,        href: '/finance/reports' },
   { label: 'Reconcile',      icon: GitMerge,        href: '/finance/reconcile' },
   { label: 'Audit Logs',     icon: ScrollText,      href: '/finance/audit' },
@@ -53,6 +54,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/finance/targets':    'เป้าหมายรายเดือน',
   '/finance/breakeven':  'Break-even Analysis',
   '/finance/forecast':   'คาดการณ์รายได้',
+  '/finance/documents':  'ออกเอกสาร',
   '/finance/reports':    'รายงาน (Reports)',
   '/finance/reconcile':  'Reconcile (กระทบยอด)',
   '/finance/audit':      'Audit Logs',

@@ -1097,3 +1097,138 @@ export async function fetchForecast(): Promise<ForecastData> {
     projected90: avgDailyRevenue * 90,
   };
 }
+
+// ─── Document generation ──────────────────────────────────────────────────────
+
+export type SaleDocument = {
+  refNumber: string;
+  date: string;
+  model: string;
+  storage: string;
+  color: string;
+  grade: string;
+  imei: string;
+  serial: string;
+  amount: number;
+  vatRate: number;
+  vatAmount: number;
+  whtRate: number;
+  whtAmount: number;
+  buyerName: string;
+  buyerPhone: string;
+  soldBy: string;
+  saleType: string;
+  businessName: string;
+  taxId: string;
+  address: string;
+  businessPhone: string;
+};
+
+export type PurchaseDocument = {
+  refNumber: string;
+  date: string;
+  model: string;
+  storage: string;
+  color: string;
+  grade: string;
+  imei: string;
+  serial: string;
+  amount: number;
+  sellerName: string;
+  sellerPhone: string;
+  businessName: string;
+  taxId: string;
+  address: string;
+  businessPhone: string;
+};
+
+export async function fetchSaleDocument(id: string): Promise<SaleDocument | null> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const [{ data: stock }, { data: settings }] = await Promise.all([
+    supabase
+      .from("stocks")
+      .select("id, model, storage, color, grade, imei, serial, sold_price, sold_at, buyer_name, buyer_phone, sold_by, sale_type, request_ref")
+      .eq("id", id)
+      .single(),
+    supabase.from("finance_settings").select("business_name, tax_id, address, phone, vat_enabled, vat_rate, withholding_tax").eq("id", 1).single(),
+  ]);
+  if (!stock) return null;
+
+  const vatEnabled = settings?.vat_enabled ?? false;
+  const vatRate = vatEnabled ? parseFloat(settings?.vat_rate ?? "0") : 0;
+  const whtRate = parseFloat(settings?.withholding_tax ?? "0");
+  const amount = stock.sold_price ?? 0;
+  const vatAmount = Math.round(amount * vatRate / 100);
+  const whtAmount = Math.round(amount * whtRate / 100);
+
+  // If sold via request, pull ref number from requests table
+  let refNumber = stock.id;
+  if (stock.request_ref) {
+    const { data: req } = await supabase.from("requests").select("order_number").eq("order_number", stock.request_ref).single();
+    if (req?.order_number) refNumber = req.order_number;
+  }
+
+  return {
+    refNumber,
+    date: (stock.sold_at ?? "").slice(0, 10),
+    model: stock.model ?? "",
+    storage: stock.storage ?? "",
+    color: stock.color ?? "",
+    grade: stock.grade ?? "",
+    imei: stock.imei ?? "",
+    serial: stock.serial ?? "",
+    amount,
+    vatRate,
+    vatAmount,
+    whtRate,
+    whtAmount,
+    buyerName: stock.buyer_name ?? "",
+    buyerPhone: stock.buyer_phone ?? "",
+    soldBy: stock.sold_by ?? "",
+    saleType: stock.sale_type ?? "ขายปลีก",
+    businessName: settings?.business_name ?? "KHAIPHONE",
+    taxId: settings?.tax_id ?? "",
+    address: settings?.address ?? "",
+    businessPhone: settings?.phone ?? "",
+  };
+}
+
+export async function fetchPurchaseDocument(id: string): Promise<PurchaseDocument | null> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const [{ data: req }, { data: settings }] = await Promise.all([
+    supabase
+      .from("requests")
+      .select("order_number, device_model, device_storage, actual_price, estimated_price, customer_name, customer_phone, created_at")
+      .eq("id", id)
+      .single(),
+    supabase.from("finance_settings").select("business_name, tax_id, address, phone").eq("id", 1).single(),
+  ]);
+  if (!req) return null;
+
+  // Try to get IMEI, color, grade from linked stock
+  const { data: stock } = await supabase
+    .from("stocks")
+    .select("imei, serial, color, grade")
+    .eq("request_ref", req.order_number)
+    .maybeSingle();
+
+  return {
+    refNumber: req.order_number ?? "",
+    date: (req.created_at ?? "").slice(0, 10),
+    model: req.device_model ?? "",
+    storage: req.device_storage ?? "",
+    color: stock?.color ?? "",
+    grade: stock?.grade ?? "",
+    imei: stock?.imei ?? "",
+    serial: stock?.serial ?? "",
+    amount: req.actual_price ?? req.estimated_price ?? 0,
+    sellerName: req.customer_name ?? "",
+    sellerPhone: req.customer_phone ?? "",
+    businessName: settings?.business_name ?? "KHAIPHONE",
+    taxId: settings?.tax_id ?? "",
+    address: settings?.address ?? "",
+    businessPhone: settings?.phone ?? "",
+  };
+}
