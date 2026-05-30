@@ -91,6 +91,7 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
   const [priceDraftModal, setPriceDraftModal] = useState("");
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
   const [trackingDraft, setTrackingDraft] = useState("");
+  const [deliveryChannelDraft, setDeliveryChannelDraft] = useState("หน้าร้าน");
   const [confirmingDelivery, setConfirmingDelivery] = useState(false);
 
   if (!item) return null;
@@ -694,7 +695,7 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
               </div>
               {item.deliveryStatus === "รอจัดส่ง" && (
                 <button
-                  onClick={() => { setTrackingDraft(""); setShowDeliveryModal(true); }}
+                  onClick={() => { setTrackingDraft(""); setDeliveryChannelDraft(item.deliveryChannel ?? "หน้าร้าน"); setShowDeliveryModal(true); }}
                   style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "11px 8px", borderRadius: 10, border: "none", background: "rgba(245,158,11,0.15)", color: "#f59e0b", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginTop: 8 }}
                 >
                   <Truck size={14} />
@@ -746,27 +747,38 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
 
       {showDeliveryModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div style={{ background: c.card, borderRadius: 20, padding: 28, width: "100%", maxWidth: 380, border: `1px solid ${c.border}` }}>
+          <div style={{ background: c.card, borderRadius: 20, padding: 28, width: "100%", maxWidth: 400, border: `1px solid ${c.border}` }}>
             <p style={{ color: c.text, fontSize: 17, fontWeight: 700, margin: "0 0 4px" }}>ยืนยันส่งของ</p>
             <p style={{ color: c.text3, fontSize: 12, margin: "0 0 20px" }}>{item!.model} · {item!.id}</p>
-            {item!.deliveryChannel === "ส่งพัสดุ" && (
-              <div style={{ marginBottom: 20 }}>
+            <label style={{ color: c.text2, fontSize: 12, fontWeight: 600, display: "block", marginBottom: 8 }}>ช่องทางการจัดส่ง *</label>
+            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+              {[
+                { value: "หน้าร้าน", label: "รับที่หน้าร้าน" },
+                { value: "ส่งถึงที่", label: "ส่งถึงที่" },
+                { value: "ส่งพัสดุ", label: "ส่งพัสดุ" },
+              ].map(ch => (
+                <button key={ch.value} onClick={() => setDeliveryChannelDraft(ch.value)} style={{
+                  flex: 1, padding: "9px 4px", borderRadius: 10, fontSize: 12,
+                  border: `1.5px solid ${deliveryChannelDraft === ch.value ? "#f59e0b" : c.border}`,
+                  background: deliveryChannelDraft === ch.value ? "rgba(245,158,11,0.12)" : c.bg,
+                  color: deliveryChannelDraft === ch.value ? "#f59e0b" : c.text2,
+                  fontWeight: deliveryChannelDraft === ch.value ? 700 : 400,
+                  cursor: "pointer", fontFamily: "inherit",
+                }}>{ch.label}</button>
+              ))}
+            </div>
+            {deliveryChannelDraft === "ส่งพัสดุ" && (
+              <div style={{ marginBottom: 16 }}>
                 <label style={{ color: c.text2, fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>เลข Tracking (ถ้ามี)</label>
                 <input
                   value={trackingDraft}
                   onChange={e => setTrackingDraft(e.target.value)}
                   placeholder="TH123456789XX"
-                  autoFocus
                   style={{ width: "100%", padding: "10px 12px", borderRadius: 10, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontSize: 14, fontFamily: "inherit", boxSizing: "border-box" as const, outline: "none" }}
                 />
               </div>
             )}
-            {item!.deliveryChannel !== "ส่งพัสดุ" && (
-              <p style={{ color: c.text2, fontSize: 13, margin: "0 0 20px", background: c.card2, padding: "12px 14px", borderRadius: 10 }}>
-                ยืนยันว่าส่งสินค้าถึงลูกค้าเรียบร้อยแล้ว
-              </p>
-            )}
-            <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
               <button onClick={() => setShowDeliveryModal(false)}
                 style={{ flex: 1, padding: "12px", borderRadius: 12, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
                 ยกเลิก
@@ -775,9 +787,9 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                 disabled={confirmingDelivery}
                 onClick={async () => {
                   setConfirmingDelivery(true);
-                  const res = await confirmDelivery(item!.id, trackingDraft.trim() || undefined);
+                  const res = await confirmDelivery(item!.id, trackingDraft.trim() || undefined, deliveryChannelDraft);
                   if (res.success) {
-                    onUpdate({ ...item!, deliveryStatus: "จัดส่งแล้ว", trackingNumber: trackingDraft.trim() || undefined });
+                    onUpdate({ ...item!, deliveryStatus: "จัดส่งแล้ว", trackingNumber: trackingDraft.trim() || undefined, deliveryChannel: deliveryChannelDraft });
                     setShowDeliveryModal(false);
                   }
                   setConfirmingDelivery(false);

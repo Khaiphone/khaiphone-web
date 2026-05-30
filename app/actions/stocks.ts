@@ -191,23 +191,25 @@ export async function markStockSold(
 }
 
 export async function confirmDelivery(
-  id: string, trackingNumber?: string,
+  id: string, trackingNumber?: string, deliveryChannel?: string,
 ): Promise<{ success: boolean; error?: string }> {
   await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
   const { data: current } = await supabase.from("stocks").select("status_log, audit_log").eq("id", id).single();
-  const note = trackingNumber ? `จัดส่งแล้ว (${trackingNumber})` : "จัดส่งแล้ว";
+  const channelLabel = deliveryChannel === "ส่งพัสดุ" ? "ส่งพัสดุ" : deliveryChannel === "ส่งถึงที่" ? "ส่งถึงที่" : "หน้าร้าน";
+  const note = trackingNumber ? `จัดส่งแล้ว (${trackingNumber})` : `จัดส่งแล้ว · ${channelLabel}`;
   const newStatusLog = [...(current?.status_log ?? []), { status: "ขายแล้ว", timestamp: now, note, by: "admin" }];
   const newAuditLog: AuditEntry[] = [...(current?.audit_log ?? []), {
     action: "ยืนยันจัดส่ง",
-    detail: trackingNumber ? `เลข tracking: ${trackingNumber}` : "จัดส่งถึงลูกค้าแล้ว",
+    detail: [channelLabel, trackingNumber ? `tracking: ${trackingNumber}` : ""].filter(Boolean).join(" · "),
     timestamp: now, by: "admin",
   }];
   const update: Record<string, unknown> = {
     delivery_status: "จัดส่งแล้ว", status_log: newStatusLog, audit_log: newAuditLog, updated_at: now,
   };
   if (trackingNumber) update.tracking_number = trackingNumber;
+  if (deliveryChannel) update.delivery_channel = deliveryChannel;
   const { error } = await supabase.from("stocks").update(update).eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };

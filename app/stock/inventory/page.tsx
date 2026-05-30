@@ -64,6 +64,7 @@ export default function StockInventoryPage() {
   const [sellTarget, setSellTarget] = useState<StockItem | null>(null);
   const [deliveryTarget, setDeliveryTarget] = useState<StockItem | null>(null);
   const [trackingInput, setTrackingInput] = useState("");
+  const [deliveryChannelInput, setDeliveryChannelInput] = useState("หน้าร้าน");
   const [confirmingDelivery, setConfirmingDelivery] = useState(false);
 
   const [filterModel, setFilterModel] = useState("");
@@ -168,17 +169,19 @@ export default function StockInventoryPage() {
   function openDeliveryConfirm(item: StockItem) {
     setDeliveryTarget(item);
     setTrackingInput("");
+    setDeliveryChannelInput(item.deliveryChannel ?? "หน้าร้าน");
     setMoreMenuId(null);
   }
 
   async function handleConfirmDelivery() {
     if (!deliveryTarget) return;
     setConfirmingDelivery(true);
-    const res = await confirmDelivery(deliveryTarget.id, trackingInput.trim() || undefined);
+    const res = await confirmDelivery(deliveryTarget.id, trackingInput.trim() || undefined, deliveryChannelInput);
     if (res.success) {
       const updates: Partial<StockItem> = {
         deliveryStatus: "จัดส่งแล้ว",
         trackingNumber: trackingInput.trim() || undefined,
+        deliveryChannel: deliveryChannelInput,
       };
       setStocks(prev => prev.map(s => s.id === deliveryTarget.id ? { ...s, ...updates } : s));
       setDeliveryTarget(null);
@@ -532,11 +535,28 @@ export default function StockInventoryPage() {
 
       {deliveryTarget && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div style={{ background: c.card, borderRadius: 20, padding: 28, width: "100%", maxWidth: 400, border: `1px solid ${c.border}` }}>
+          <div style={{ background: c.card, borderRadius: 20, padding: 28, width: "100%", maxWidth: 420, border: `1px solid ${c.border}` }}>
             <p style={{ color: c.text, fontSize: 18, fontWeight: 700, margin: "0 0 4px" }}>ยืนยันส่งของ</p>
-            <p style={{ color: c.text3, fontSize: 12, margin: "0 0 22px" }}>{deliveryTarget.model} · {deliveryTarget.storage} · {deliveryTarget.id}</p>
-            {deliveryTarget.deliveryChannel === "ส่งพัสดุ" && (
-              <div style={{ marginBottom: 20 }}>
+            <p style={{ color: c.text3, fontSize: 12, margin: "0 0 20px" }}>{deliveryTarget.model} · {deliveryTarget.storage} · {deliveryTarget.id}</p>
+            <label style={{ color: c.text2, fontSize: 12, fontWeight: 600, display: "block", marginBottom: 8 }}>ช่องทางการจัดส่ง *</label>
+            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+              {[
+                { value: "หน้าร้าน", label: "รับที่หน้าร้าน" },
+                { value: "ส่งถึงที่", label: "ส่งถึงที่" },
+                { value: "ส่งพัสดุ", label: "ส่งพัสดุ" },
+              ].map(ch => (
+                <button key={ch.value} onClick={() => setDeliveryChannelInput(ch.value)} style={{
+                  flex: 1, padding: "9px 4px", borderRadius: 10, fontSize: 12,
+                  border: `1.5px solid ${deliveryChannelInput === ch.value ? "#f59e0b" : c.border}`,
+                  background: deliveryChannelInput === ch.value ? "rgba(245,158,11,0.12)" : c.bg,
+                  color: deliveryChannelInput === ch.value ? "#f59e0b" : c.text2,
+                  fontWeight: deliveryChannelInput === ch.value ? 700 : 400,
+                  cursor: "pointer", fontFamily: "inherit",
+                }}>{ch.label}</button>
+              ))}
+            </div>
+            {deliveryChannelInput === "ส่งพัสดุ" && (
+              <div style={{ marginBottom: 16 }}>
                 <label style={{ color: c.text2, fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>เลข Tracking (ถ้ามี)</label>
                 <input
                   value={trackingInput}
@@ -546,12 +566,7 @@ export default function StockInventoryPage() {
                 />
               </div>
             )}
-            {deliveryTarget.deliveryChannel === "ส่งถึงที่" && (
-              <p style={{ color: c.text2, fontSize: 13, margin: "0 0 22px", background: c.card2, padding: "12px 14px", borderRadius: 10 }}>
-                ยืนยันว่าได้นำสินค้าไปส่งถึงลูกค้าเรียบร้อยแล้ว
-              </p>
-            )}
-            <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
               <button onClick={() => setDeliveryTarget(null)}
                 style={{ flex: 1, padding: "12px", borderRadius: 12, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
                 ยกเลิก
