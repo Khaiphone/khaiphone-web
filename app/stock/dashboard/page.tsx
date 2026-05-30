@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Package, TrendingUp, DollarSign, CheckCircle, Clock, ShoppingBag, Wallet, Truck } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Package, TrendingUp, DollarSign, CheckCircle, Clock, ShoppingBag, Wallet, Truck, BadgeDollarSign } from "lucide-react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion } from "framer-motion";
 import StockTopbar from "@/components/stock/Topbar";
@@ -17,6 +18,7 @@ function fmtDate(s: string) { return new Date(s).toLocaleDateString("th-TH", { m
 
 export default function StockDashboard() {
   const c = useThemeColors();
+  const router = useRouter();
   const [stocks, setStocks] = useState<StockItem[]>([]);
   const [revenueData, setRevenueData] = useState<RevenuePoint[]>([]);
   const [categoryData, setCategoryData] = useState<CategoryPoint[]>([]);
@@ -38,23 +40,32 @@ export default function StockDashboard() {
   const noPricedCount = activeStocks.filter(s => s.sellingPrice === 0).length;
   const totalStockCost = activeStocks.reduce((a, s) => a + s.costPrice + s.shippingCost + s.otherCost, 0);
   const pendingDelivery = stocks.filter(s => s.deliveryStatus === "รอจัดส่ง").length;
-  const soldToday = stocks.filter(s => {
+
+  const isSoldToday = (s: StockItem) => {
     if (s.status !== "ขายแล้ว") return false;
     if (s.soldAt && new Date(s.soldAt).toDateString() === todayStr) return true;
     return s.statusLog.some(l => l.status === "ขายแล้ว" && new Date(l.timestamp).toDateString() === todayStr);
-  }).length;
+  };
+  const soldTodayItems = stocks.filter(isSoldToday);
+  const soldToday = soldTodayItems.length;
+  const revenueToday = soldTodayItems.reduce((a, s) => a + (s.soldPrice ?? 0), 0);
 
-  const recentActivity = stocks.slice(0, 5);
+  const soldItems = stocks.filter(s => s.status === "ขายแล้ว");
+  const realizedRevenue = soldItems.reduce((a, s) => a + (s.soldPrice ?? 0), 0);
+  const realizedProfit = soldItems.reduce((a, s) => a + (s.soldPrice ?? 0) - s.costPrice - s.shippingCost - s.otherCost, 0);
+
+  const recentActivity = stocks.slice(0, 8);
 
   const METRICS = [
-    { icon: DollarSign, label: "มูลค่าสต็อกรวม",        value: `฿${fmt(totalValue)}`,         iconColor: c.gold,    sub: "เฉพาะเครื่องที่กำหนดราคาแล้ว" },
-    { icon: Wallet,     label: "ต้นทุนสต็อกรวม",        value: `฿${fmt(totalStockCost)}`,     iconColor: "#ef4444", sub: "ต้นทุน + ค่าส่ง + ค่าอื่นๆ" },
-    { icon: Package,    label: "จำนวนเครื่องในสต็อก",    value: `${activeStocks.length} เครื่อง`, iconColor: c.info,    sub: noPricedCount > 0 ? `ยังไม่กำหนดราคา ${noPricedCount} เครื่อง` : "ไม่รวมที่ขายแล้ว" },
-    { icon: TrendingUp, label: "กำไรคาดการณ์",           value: `฿${fmt(totalCostProfit)}`,    iconColor: "#22c55e", sub: "เฉพาะเครื่องที่กำหนดราคาแล้ว" },
-    { icon: CheckCircle,label: "เครื่องพร้อมขาย",        value: `${readyToSell} เครื่อง`,     iconColor: "#22c55e", sub: "สถานะ: พร้อมขาย" },
-    { icon: Clock,      label: "เครื่องรอตรวจ",           value: `${inspecting} เครื่อง`,     iconColor: c.orange,  sub: "สถานะ: รอตรวจ" },
-    { icon: ShoppingBag,label: "เครื่องขายแล้ววันนี้",   value: `${soldToday} เครื่อง`,       iconColor: c.info,    sub: "เฉพาะวันนี้" },
-    { icon: Truck,      label: "รอจัดส่ง",               value: `${pendingDelivery} เครื่อง`, iconColor: "#f59e0b", sub: "ขายแล้วยังไม่ได้ส่ง" },
+    { icon: DollarSign,       label: "มูลค่าสต็อกรวม",     value: `฿${fmt(totalValue)}`,            iconColor: c.gold,    sub: "เฉพาะเครื่องที่กำหนดราคาแล้ว" },
+    { icon: Wallet,           label: "ต้นทุนสต็อกรวม",     value: `฿${fmt(totalStockCost)}`,        iconColor: "#ef4444", sub: "ต้นทุน + ค่าส่ง + ค่าอื่นๆ" },
+    { icon: Package,          label: "จำนวนเครื่องในสต็อก", value: `${activeStocks.length} เครื่อง`,  iconColor: c.info,    sub: noPricedCount > 0 ? `ยังไม่กำหนดราคา ${noPricedCount} เครื่อง` : "ไม่รวมที่ขายแล้ว" },
+    { icon: TrendingUp,       label: "กำไรคาดการณ์",        value: `฿${fmt(totalCostProfit)}`,       iconColor: "#22c55e", sub: "เฉพาะเครื่องที่กำหนดราคาแล้ว" },
+    { icon: BadgeDollarSign,  label: "กำไรจริงสะสม",        value: `฿${fmt(realizedProfit)}`,        iconColor: "#a78bfa", sub: `รายได้รวม ฿${fmt(realizedRevenue)}` },
+    { icon: CheckCircle,      label: "เครื่องพร้อมขาย",     value: `${readyToSell} เครื่อง`,         iconColor: "#22c55e", sub: "สถานะ: พร้อมขาย" },
+    { icon: Clock,            label: "เครื่องรอตรวจ",        value: `${inspecting} เครื่อง`,         iconColor: c.orange,  sub: "สถานะ: รอตรวจ" },
+    { icon: ShoppingBag,      label: "เครื่องขายแล้ววันนี้", value: `${soldToday} เครื่อง`,          iconColor: c.info,    sub: soldToday > 0 ? `ยอดรวม ฿${fmt(revenueToday)}` : "เฉพาะวันนี้" },
+    { icon: Truck,            label: "รอจัดส่ง",             value: `${pendingDelivery} เครื่อง`,    iconColor: "#f59e0b", sub: "ขายแล้วยังไม่ได้ส่ง" },
   ];
 
   return (
@@ -125,29 +136,49 @@ export default function StockDashboard() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr>
-                    {["รหัส", "รุ่น", "เกรด", "ราคาขาย", "สถานะ", "ช่องทาง", "วันรับเข้า"].map(h => (
+                    {["รหัส", "รุ่น · ความจุ", "เกรด", "ราคา", "กำไร", "สถานะ", "วันที่"].map(h => (
                       <th key={h} style={{ textAlign: "left", padding: "8px 12px", color: c.text3, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", borderBottom: `1px solid ${c.border}` }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {recentActivity.map((s, i) => (
-                    <motion.tr
-                      key={s.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.05 }}
-                      style={{ borderBottom: `1px solid ${c.border}` }}
-                    >
-                      <td style={{ padding: "12px 12px", color: c.gold, fontSize: 12, fontFamily: "monospace", whiteSpace: "nowrap" }}>{s.id}</td>
-                      <td style={{ padding: "12px 12px", color: c.text, fontSize: 13 }}>{s.model}</td>
-                      <td style={{ padding: "12px 12px" }}><span style={{ color: "#22c55e", fontWeight: 700, fontSize: 13 }}>{s.grade}</span></td>
-                      <td style={{ padding: "12px 12px", color: c.text, fontSize: 13, fontWeight: 600 }}>฿{fmt(s.sellingPrice)}</td>
-                      <td style={{ padding: "12px 12px" }}><StockStatusBadge status={s.status} /></td>
-                      <td style={{ padding: "12px 12px", color: c.text2, fontSize: 12 }}>{s.sourceChannel}</td>
-                      <td style={{ padding: "12px 12px", color: c.text3, fontSize: 12 }}>{fmtDate(s.receivedAt)}</td>
-                    </motion.tr>
-                  ))}
+                  {recentActivity.map((s, i) => {
+                    const isSold = s.status === "ขายแล้ว";
+                    const totalCost = s.costPrice + s.shippingCost + s.otherCost;
+                    const price = isSold ? (s.soldPrice ?? 0) : s.sellingPrice;
+                    const profit = price > 0 ? price - totalCost : null;
+                    const dateLabel = isSold && s.soldAt
+                      ? `ขาย ${fmtDate(s.soldAt)}`
+                      : fmtDate(s.receivedAt);
+                    return (
+                      <motion.tr
+                        key={s.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        onClick={() => router.push(`/stock/inventory/${s.id}`)}
+                        style={{ borderBottom: `1px solid ${c.border}`, cursor: "pointer" }}
+                        onMouseEnter={e => (e.currentTarget.style.background = c.bg)}
+                        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                      >
+                        <td style={{ padding: "12px 12px", color: c.gold, fontSize: 12, fontFamily: "monospace", whiteSpace: "nowrap" }}>{s.id}</td>
+                        <td style={{ padding: "12px 12px", color: c.text, fontSize: 13 }}>
+                          {s.model}
+                          {s.storage && <span style={{ color: c.text3, fontSize: 11, marginLeft: 4 }}>· {s.storage}</span>}
+                        </td>
+                        <td style={{ padding: "12px 12px" }}><span style={{ color: "#22c55e", fontWeight: 700, fontSize: 13 }}>{s.grade}</span></td>
+                        <td style={{ padding: "12px 12px", color: c.text, fontSize: 13, fontWeight: 600 }}>
+                          {price > 0 ? `฿${fmt(price)}` : <span style={{ color: c.text3 }}>—</span>}
+                          {isSold && <span style={{ color: c.text3, fontSize: 10, display: "block", fontWeight: 400 }}>ราคาขายจริง</span>}
+                        </td>
+                        <td style={{ padding: "12px 12px", fontSize: 13, fontWeight: 600, color: profit == null ? c.text3 : profit >= 0 ? "#22c55e" : "#ef4444" }}>
+                          {profit == null ? <span style={{ color: c.text3 }}>—</span> : `฿${fmt(profit)}`}
+                        </td>
+                        <td style={{ padding: "12px 12px" }}><StockStatusBadge status={s.status} /></td>
+                        <td style={{ padding: "12px 12px", color: c.text3, fontSize: 12, whiteSpace: "nowrap" }}>{dateLabel}</td>
+                      </motion.tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
