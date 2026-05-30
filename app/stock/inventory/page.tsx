@@ -118,10 +118,12 @@ export default function StockInventoryPage() {
     return c;
   }, [stocks]);
 
-  const pricedActive = stocks.filter(s => s.sellingPrice > 0 && s.status !== "ขายแล้ว");
+  const INACTIVE = new Set(["ขายแล้ว", "ส่งคืน", "ตีกลับ/ไม่รับซื้อ"]);
+  const activeStocks = stocks.filter(s => !INACTIVE.has(s.status));
+  const pricedActive = activeStocks.filter(s => s.sellingPrice > 0);
   const totalValue  = pricedActive.reduce((a, s) => a + s.sellingPrice, 0);
   const totalProfit = pricedActive.reduce((a, s) => a + (s.sellingPrice - s.costPrice - s.shippingCost - s.otherCost), 0);
-  const noPrice     = stocks.filter(s => s.sellingPrice === 0 && s.status !== "ขายแล้ว" && s.status !== "ส่งคืน" && s.status !== "ตีกลับ/ไม่รับซื้อ").length;
+  const noPrice     = activeStocks.filter(s => s.sellingPrice === 0).length;
   const readyToSell = counts["พร้อมขาย"] ?? 0;
   const inspecting  = counts["รอตรวจ"] ?? 0;
   const listed      = counts["ลงขายแล้ว"] ?? 0;
@@ -129,7 +131,7 @@ export default function StockInventoryPage() {
 
   const METRICS = [
     { icon: DollarSign,  label: "มูลค่าสต็อกรวม",     value: `฿${fmt(totalValue)}`,      iconColor: c.gold,    sub: "เฉพาะเครื่องที่กำหนดราคาแล้ว" },
-    { icon: Package,     label: "เครื่องในสต็อก",      value: `${stocks.length} เครื่อง`, iconColor: c.info,    sub: noPrice > 0 ? `ยังไม่กำหนดราคา ${noPrice} เครื่อง` : "รวมทุกสถานะ" },
+    { icon: Package,     label: "เครื่องในสต็อก",      value: `${activeStocks.length} เครื่อง`, iconColor: c.info,    sub: noPrice > 0 ? `ยังไม่กำหนดราคา ${noPrice} เครื่อง` : "ไม่รวมที่ขายแล้ว" },
     { icon: TrendingUp,  label: "กำไรคาดการณ์",        value: `฿${fmt(totalProfit)}`,     iconColor: "#22c55e", sub: "เฉพาะเครื่องที่กำหนดราคาแล้ว" },
     { icon: CheckCircle, label: "เครื่องพร้อมขาย",     value: `${readyToSell} เครื่อง`,  iconColor: "#22c55e", sub: "สถานะ: พร้อมขาย" },
     { icon: Clock,       label: "รอตรวจ",              value: `${inspecting} เครื่อง`,   iconColor: c.orange,  sub: "ยังไม่ผ่านตรวจ" },
