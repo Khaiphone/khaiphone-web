@@ -459,23 +459,10 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
           </header>
 
           {/* Content */}
-          <main style={{ flex: 1, padding: '24px' }} className="pb-20 md:pb-6">
+          <main style={{ flex: 1, padding: '24px' }}>
             {children}
           </main>
         </div>
-
-        {/* Mobile Bottom Nav */}
-        <nav className="md:hidden" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 30, background: 'var(--f-card)', borderTop: '1px solid var(--f-border)', display: 'flex', height: 60, paddingBottom: 'env(safe-area-inset-bottom)' }}>
-          {MOBILE_TABS.map(({ label, icon: Icon, href }) => {
-            const active = pathname === href || pathname.startsWith(href + '/')
-            return (
-              <Link key={href} href={href} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, color: active ? GOLD : 'var(--f-text2)', textDecoration: 'none', fontSize: 10, fontWeight: active ? 600 : 400 }}>
-                <Icon size={20} strokeWidth={active ? 2.5 : 2} />
-                {label}
-              </Link>
-            )
-          })}
-        </nav>
 
         {/* Search Modal */}
         {showSearch && (
