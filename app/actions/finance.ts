@@ -97,10 +97,20 @@ function monthLabel(key: string) {
   return THAI_MONTHS[month];
 }
 
+type NormSoldItem = { sell_price: number; sell_date: string; cost: number; model: string };
+
+function normFromRequest(r: { sell_price: number; sell_date: string; actual_price?: number; estimated_price?: number; device_model?: string }): NormSoldItem {
+  return { sell_price: r.sell_price, sell_date: r.sell_date, cost: r.actual_price ?? r.estimated_price ?? 0, model: r.device_model ?? "Unknown" };
+}
+
+function normFromStock(s: { sold_price: number; sold_at: string; cost_price?: number; shipping_cost?: number; other_cost?: number; model?: string }): NormSoldItem {
+  return { sell_price: s.sold_price, sell_date: s.sold_at.slice(0, 10), cost: (s.cost_price ?? 0) + (s.shipping_cost ?? 0) + (s.other_cost ?? 0), model: s.model ?? "Unknown" };
+}
+
 export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string): Promise<FinanceDashboard> {
   await requireAuth();
   const supabase = createServerClient();
-  const [{ data }, { data: expenseData }] = await Promise.all([
+  const [{ data }, { data: expenseData }, { data: directSoldStocks }, { data: unsoldStockData }] = await Promise.all([
     supabase
       .from("requests")
       .select("id, device_model, actual_price, estimated_price, sell_price, sell_date, stock_status, created_at")
@@ -108,21 +118,41 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
     supabase
       .from("expenses")
       .select("amount, category, status, date"),
+    supabase
+      .from("stocks")
+      .select("id, model, cost_price, shipping_cost, other_cost, sold_price, sold_at")
+      .eq("status", "ขายแล้ว")
+      .is("request_ref", null)
+      .not("sold_price", "is", null)
+      .not("sold_at", "is", null),
+    supabase
+      .from("stocks")
+      .select("cost_price, shipping_cost, other_cost")
+      .is("request_ref", null)
+      .neq("status", "ขายแล้ว"),
   ]);
 
   const rows = data ?? [];
-  const allSoldItems = rows.filter((r) => r.stock_status === "sold" && r.sell_price != null && r.sell_date != null);
-  const soldItems = allSoldItems.filter((r) => {
+  const fromRequests = rows
+    .filter((r) => r.stock_status === "sold" && r.sell_price != null && r.sell_date != null)
+    .map(normFromRequest);
+  const fromStocks = (directSoldStocks ?? []).map(normFromStock);
+  const allNorm = [...fromRequests, ...fromStocks];
+
+  const soldItems = allNorm.filter((r) => {
     if (dateFrom && r.sell_date < dateFrom) return false;
     if (dateTo && r.sell_date > dateTo) return false;
     return true;
   });
-  const unsoldItems = rows.filter((r) => r.stock_status !== "sold");
 
-  const totalRevenue = soldItems.reduce((s, r) => s + (r.sell_price ?? 0), 0);
-  const totalCost = soldItems.reduce((s, r) => s + (r.actual_price ?? r.estimated_price ?? 0), 0);
+  const unsoldRequests = rows.filter((r) => r.stock_status !== "sold");
+  const stockValueFromRequests = unsoldRequests.reduce((s, r) => s + (r.actual_price ?? r.estimated_price ?? 0), 0);
+  const stockValueFromDirect = (unsoldStockData ?? []).reduce((s, r) => s + (r.cost_price ?? 0) + (r.shipping_cost ?? 0) + (r.other_cost ?? 0), 0);
+
+  const totalRevenue = soldItems.reduce((s, r) => s + r.sell_price, 0);
+  const totalCost = soldItems.reduce((s, r) => s + r.cost, 0);
   const netProfit = totalRevenue - totalCost;
-  const stockValue = unsoldItems.reduce((s, r) => s + (r.actual_price ?? r.estimated_price ?? 0), 0);
+  const stockValue = stockValueFromRequests + stockValueFromDirect;
 
   const allExpenses = expenseData ?? [];
   const approvedExpenses = allExpenses.filter((e) => {
@@ -132,7 +162,12 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
     return true;
   });
   const totalExpenses = approvedExpenses.reduce((s, e) => s + (e.amount ?? 0), 0);
-  const pendingExpensesCount = allExpenses.filter((e) => e.status === "pending").length;
+  const pendingExpensesCount = allExpenses.filter((e) => {
+    if (e.status !== "pending") return false;
+    if (dateFrom && e.date < dateFrom) return false;
+    if (dateTo && e.date > dateTo) return false;
+    return true;
+  }).length;
   const trueNetProfit = netProfit - totalExpenses;
 
   const categoryMap = new Map<string, number>();
@@ -145,12 +180,9 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
 
   const monthMap = new Map<string, { revenue: number; cost: number }>();
   for (const r of soldItems) {
-    const key = monthKey(r.sell_date!);
+    const key = monthKey(r.sell_date);
     const prev = monthMap.get(key) ?? { revenue: 0, cost: 0 };
-    monthMap.set(key, {
-      revenue: prev.revenue + (r.sell_price ?? 0),
-      cost: prev.cost + (r.actual_price ?? r.estimated_price ?? 0),
-    });
+    monthMap.set(key, { revenue: prev.revenue + r.sell_price, cost: prev.cost + r.cost });
   }
   const sortedMonths = Array.from(monthMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   const revenueByMonth = sortedMonths.map(([k, v]) => ({ date: monthLabel(k), revenue: v.revenue, cost: v.cost }));
@@ -158,9 +190,7 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
 
   const modelProfitMap = new Map<string, number>();
   for (const r of soldItems) {
-    const model = r.device_model ?? "Unknown";
-    const profit = (r.sell_price ?? 0) - (r.actual_price ?? r.estimated_price ?? 0);
-    modelProfitMap.set(model, (modelProfitMap.get(model) ?? 0) + profit);
+    modelProfitMap.set(r.model, (modelProfitMap.get(r.model) ?? 0) + r.sell_price - r.cost);
   }
   const topModels = Array.from(modelProfitMap.entries())
     .sort((a, b) => b[1] - a[1])
@@ -176,7 +206,7 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
     pendingExpensesCount,
     stockValue,
     soldCount: soldItems.length,
-    purchaseCount: rows.length,
+    purchaseCount: rows.length + (directSoldStocks?.length ?? 0),
     revenueByMonth,
     profitByMonth,
     topModels,
@@ -187,16 +217,25 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
 export async function fetchFinanceIncome(): Promise<FinanceIncome[]> {
   await requireAuth();
   const supabase = createServerClient();
-  const { data } = await supabase
-    .from("requests")
-    .select("id, order_number, device_model, device_storage, actual_price, estimated_price, sell_price, sell_date, customer_name, source")
-    .eq("status", "completed")
-    .eq("stock_status", "sold")
-    .not("sell_price", "is", null)
-    .not("sell_date", "is", null)
-    .order("sell_date", { ascending: false });
+  const [{ data }, { data: directData }] = await Promise.all([
+    supabase
+      .from("requests")
+      .select("id, order_number, device_model, device_storage, actual_price, estimated_price, sell_price, sell_date, customer_name, source")
+      .eq("status", "completed")
+      .eq("stock_status", "sold")
+      .not("sell_price", "is", null)
+      .not("sell_date", "is", null)
+      .order("sell_date", { ascending: false }),
+    supabase
+      .from("stocks")
+      .select("id, model, storage, cost_price, shipping_cost, other_cost, sold_price, sold_at, buyer_name, sale_type")
+      .eq("status", "ขายแล้ว")
+      .is("request_ref", null)
+      .not("sold_price", "is", null)
+      .not("sold_at", "is", null),
+  ]);
 
-  return (data ?? []).map((row) => {
+  const fromRequests: FinanceIncome[] = (data ?? []).map((row) => {
     const cost = row.actual_price ?? row.estimated_price ?? 0;
     const sell = row.sell_price ?? 0;
     return {
@@ -212,6 +251,25 @@ export async function fetchFinanceIncome(): Promise<FinanceIncome[]> {
       source: row.source ?? "",
     };
   });
+
+  const fromStocks: FinanceIncome[] = (directData ?? []).map((s) => {
+    const cost = (s.cost_price ?? 0) + (s.shipping_cost ?? 0) + (s.other_cost ?? 0);
+    const sell = s.sold_price ?? 0;
+    return {
+      id: s.id,
+      date: s.sold_at.slice(0, 10),
+      refNumber: s.id,
+      model: s.model ?? "",
+      storage: s.storage ?? "",
+      sellPrice: sell,
+      costPrice: cost,
+      profit: sell - cost,
+      customerName: s.buyer_name ?? "",
+      source: s.sale_type ?? "",
+    };
+  });
+
+  return [...fromRequests, ...fromStocks].sort((a, b) => b.date.localeCompare(a.date));
 }
 
 export async function fetchFinancePurchases(): Promise<FinancePurchase[]> {
@@ -243,20 +301,29 @@ export async function fetchFinanceProfitByModel(): Promise<{
 }> {
   await requireAuth();
   const supabase = createServerClient();
-  const { data } = await supabase
-    .from("requests")
-    .select("device_model, actual_price, estimated_price, sell_price")
-    .eq("status", "completed")
-    .eq("stock_status", "sold")
-    .not("sell_price", "is", null);
+  const [{ data }, { data: directData }] = await Promise.all([
+    supabase
+      .from("requests")
+      .select("device_model, actual_price, estimated_price, sell_price")
+      .eq("status", "completed")
+      .eq("stock_status", "sold")
+      .not("sell_price", "is", null),
+    supabase
+      .from("stocks")
+      .select("model, cost_price, shipping_cost, other_cost, sold_price")
+      .eq("status", "ขายแล้ว")
+      .is("request_ref", null)
+      .not("sold_price", "is", null),
+  ]);
 
-  const rows = data ?? [];
+  type Entry = { model: string; cost: number; sell: number };
+  const entries: Entry[] = [
+    ...(data ?? []).map((r) => ({ model: r.device_model ?? "Unknown", cost: r.actual_price ?? r.estimated_price ?? 0, sell: r.sell_price ?? 0 })),
+    ...(directData ?? []).map((s) => ({ model: s.model ?? "Unknown", cost: (s.cost_price ?? 0) + (s.shipping_cost ?? 0) + (s.other_cost ?? 0), sell: s.sold_price ?? 0 })),
+  ];
+
   const modelMap = new Map<string, { costs: number[]; sells: number[] }>();
-
-  for (const row of rows) {
-    const model = row.device_model ?? "Unknown";
-    const cost = row.actual_price ?? row.estimated_price ?? 0;
-    const sell = row.sell_price ?? 0;
+  for (const { model, cost, sell } of entries) {
     if (!modelMap.has(model)) modelMap.set(model, { costs: [], sells: [] });
     const entry = modelMap.get(model)!;
     entry.costs.push(cost);
@@ -276,8 +343,8 @@ export async function fetchFinanceProfitByModel(): Promise<{
     })
     .sort((a, b) => b.totalProfit - a.totalProfit);
 
-  const totalRevenue = rows.reduce((s, r) => s + (r.sell_price ?? 0), 0);
-  const totalCost = rows.reduce((s, r) => s + (r.actual_price ?? r.estimated_price ?? 0), 0);
+  const totalRevenue = entries.reduce((s, r) => s + r.sell, 0);
+  const totalCost = entries.reduce((s, r) => s + r.cost, 0);
   const netProfit = totalRevenue - totalCost;
   const margin = totalRevenue === 0 ? 0 : Math.round((netProfit / totalRevenue) * 1000) / 10;
 
@@ -291,7 +358,7 @@ export async function fetchFinanceCashFlow(): Promise<{
   await requireAuth();
   const supabase = createServerClient();
 
-  const [{ data: purchases }, { data: sales }] = await Promise.all([
+  const [{ data: purchases }, { data: sales }, { data: directBuys }, { data: directSales }] = await Promise.all([
     supabase
       .from("requests")
       .select("id, order_number, device_model, actual_price, estimated_price, customer_name, created_at")
@@ -305,6 +372,18 @@ export async function fetchFinanceCashFlow(): Promise<{
       .not("sell_price", "is", null)
       .not("sell_date", "is", null)
       .order("sell_date", { ascending: true }),
+    supabase
+      .from("stocks")
+      .select("id, model, cost_price, shipping_cost, other_cost, received_at, created_at")
+      .is("request_ref", null)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("stocks")
+      .select("id, model, sold_price, sold_at")
+      .eq("status", "ขายแล้ว")
+      .is("request_ref", null)
+      .not("sold_price", "is", null)
+      .not("sold_at", "is", null),
   ]);
 
   type Raw = { datetime: string; description: string; entryType: "in" | "out"; amount: number; id: string };
@@ -316,12 +395,26 @@ export async function fetchFinanceCashFlow(): Promise<{
       entryType: "out" as const,
       amount: row.actual_price ?? row.estimated_price ?? 0,
     })),
+    ...(directBuys ?? []).map((row) => ({
+      id: `buy-direct-${row.id}`,
+      datetime: row.created_at ?? row.received_at,
+      description: `รับซื้อ ${row.model ?? ""}`,
+      entryType: "out" as const,
+      amount: (row.cost_price ?? 0) + (row.shipping_cost ?? 0) + (row.other_cost ?? 0),
+    })),
     ...(sales ?? []).map((row) => ({
       id: `sell-${row.id}`,
       datetime: row.sell_date + "T12:00:00",
       description: `ขาย ${row.device_model ?? ""} · ${row.order_number ?? ""}`,
       entryType: "in" as const,
       amount: row.sell_price ?? 0,
+    })),
+    ...(directSales ?? []).map((row) => ({
+      id: `sell-direct-${row.id}`,
+      datetime: row.sold_at + "T12:00:00",
+      description: `ขาย ${row.model ?? ""}`,
+      entryType: "in" as const,
+      amount: row.sold_price ?? 0,
     })),
   ].sort((a, b) => a.datetime.localeCompare(b.datetime));
 
