@@ -902,8 +902,7 @@ export async function fetchStaffPerformance(dateFrom?: string, dateTo?: string):
   const { data } = await supabase
     .from("stocks")
     .select("sold_by, sold_price, cost_price, shipping_cost, other_cost, sold_at")
-    .eq("status", "ขายแล้ว")
-    .not("sold_by", "is", null);
+    .eq("status", "ขายแล้ว");
 
   const rows = (data ?? []).filter((r) => {
     if (!r.sold_at) return false;
