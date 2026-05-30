@@ -61,14 +61,13 @@ export default function SellModal({ item, onClose, onSuccess }: SellModalProps) 
       deliveryDone ? deliveryChannel : undefined,
     );
     if (res.success) {
-      const soldAtTs = new Date(sellDate + "T12:00:00").toISOString();
       const effChannel = deliveryDone ? deliveryChannel : undefined;
       onSuccess({
         status: "ขายแล้ว",
         soldPrice: price,
         buyerName: isWholesale ? effectivePartner.trim() : buyerName.trim(),
         buyerPhone: buyerPhone.trim(),
-        soldAt: soldAtTs,
+        soldAt: sellDate,
         soldBy: soldBy || undefined,
         saleType,
         partnerName: isWholesale ? effectivePartner.trim() : undefined,

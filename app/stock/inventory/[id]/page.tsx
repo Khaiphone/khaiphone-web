@@ -36,7 +36,7 @@ interface EditDraft {
 function fmt(n: number) { return n.toLocaleString("th-TH"); }
 function fmtDate(s?: string) {
   if (!s) return "-";
-  return new Date(s).toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  return new Date(s).toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" });
 }
 
 function printPriceTag(item: StockItem) {
