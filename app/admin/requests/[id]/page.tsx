@@ -1097,7 +1097,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
       </div>
 
       {/* Bottom Action Bar */}
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: CARD, borderTop: `1px solid ${BORDER}`, padding: "10px 16px", paddingBottom: "calc(env(safe-area-inset-bottom) + 10px)", zIndex: 20, display: "grid", gridTemplateColumns: "1fr 2fr", gap: "8px" }}>
+      <div className="left-0 md:left-[220px]" style={{ position: "fixed", bottom: 0, right: 0, background: CARD, borderTop: `1px solid ${BORDER}`, padding: "10px 16px", paddingBottom: "calc(env(safe-area-inset-bottom) + 10px)", zIndex: 20, display: "grid", gridTemplateColumns: "1fr 2fr", gap: "8px" }}>
         <a
           href={tel}
           onClick={e => {
