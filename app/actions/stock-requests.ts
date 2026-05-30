@@ -162,14 +162,13 @@ export async function createStockFromRequest(
 export async function fetchStockSummary(): Promise<{ todayRevenue: number; todayProfit: number }> {
   await requireAuth();
   const supabase = createServerClient();
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const todayBangkok = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
 
   const { data } = await supabase
     .from("stocks")
     .select("sold_price, cost_price, shipping_cost, other_cost, sold_at")
     .eq("status", "ขายแล้ว")
-    .gte("sold_at", today.toISOString());
+    .gte("sold_at", todayBangkok);
 
   const rows = data ?? [];
   const todayRevenue = rows.reduce((s, r) => s + (r.sold_price ?? 0), 0);
