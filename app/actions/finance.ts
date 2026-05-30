@@ -746,7 +746,8 @@ export async function saveFinanceSettings(
 ): Promise<{ success: true } | { success: false; error: string }> {
   await requireAuth();
   const supabase = createServerClient();
-  const { error } = await supabase.from("finance_settings").update({
+  const { error } = await supabase.from("finance_settings").upsert({
+    id:                  1,
     business_name:       s.businessName,
     tax_id:              s.taxId,
     address:             s.address,
@@ -764,7 +765,7 @@ export async function saveFinanceSettings(
     notify_low_stock:    s.notifyLowStock,
     notify_large_profit: s.notifyLargeProfit,
     updated_at:          new Date().toISOString(),
-  }).eq("id", 1);
+  }, { onConflict: "id" });
   if (error) return { success: false, error: error.message };
   insertAuditLog({
     action: "บันทึกการตั้งค่าการเงิน",
