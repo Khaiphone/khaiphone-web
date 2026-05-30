@@ -452,6 +452,21 @@ export async function updateDeviceColor(id: string, color: string) {
   return { success: true as const };
 }
 
+// ─── Delete request (owner only) ─────────────────────────────────────────────
+export async function deleteRequest(id: string) {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+  const { data: profile } = await supabase
+    .from("admin_users")
+    .select("role")
+    .eq("user_id", user.id)
+    .single();
+  if (profile?.role !== "owner") return { success: false as const, error: "ไม่มีสิทธิ์ลบคำขอ" };
+  const { error } = await supabase.from("requests").delete().eq("id", id);
+  if (error) return { success: false as const, error: error.message };
+  return { success: true as const };
+}
+
 // ─── Save contract + receipt URLs ────────────────────────────────────────────
 export async function saveContractUrls(
   id: string,

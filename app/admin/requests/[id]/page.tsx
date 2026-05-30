@@ -11,7 +11,7 @@ import {
   fetchRequest, updateStatus, addNote,
   updateAppointment, updatePayment, updatePrice,
   markContractSigned, savePaymentSlip, updateDeviceColor,
-  assignRequest,
+  assignRequest, deleteRequest,
 } from "@/app/actions/admin-requests";
 import { fetchAdminUsers, fetchMyRole } from "@/app/actions/admin-users";
 import type { AdminUserRow } from "@/app/actions/admin-users";
@@ -146,6 +146,11 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const [linkCopied,    setLinkCopied]    = useState(false);
   const slipFileRef = useRef<HTMLInputElement>(null);
 
+  // Delete (owner only)
+  const [isOwner,       setIsOwner]       = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting,      setDeleting]      = useState(false);
+
   useEffect(() => {
     fetchRequest(id).then(data => {
       setRequest(data);
@@ -164,6 +169,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
       if (!authData.user) return;
       const role = await fetchMyRole(authData.user.id);
       if (role === "owner") {
+        setIsOwner(true);
         fetchAdminUsers().then(list => setStaffList(list.filter(u => u.active)));
       }
     });
@@ -479,7 +485,47 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
           {linkCopied ? <><Check size={13} /> คัดลอกแล้ว</> : <><Copy size={13} /> ส่งลูกค้า</>}
         </button>
         <StatusBadge status={request.status} size="sm" />
+        {isOwner && (
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            title="ลบคำขอ"
+            style={{ background: "none", border: "none", color: "#EF4444", cursor: "pointer", padding: "4px", display: "flex", touchAction: "manipulation" }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        )}
       </div>
+
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+          <div style={{ background: CARD, borderRadius: "16px", padding: "24px", width: "100%", maxWidth: "320px" }}>
+            <p style={{ color: TEXT, fontWeight: 700, fontSize: "16px", margin: "0 0 8px" }}>ลบคำขอนี้?</p>
+            <p style={{ color: TEXT2, fontSize: "14px", margin: "0 0 20px" }}>คำขอ {request.orderNumber} จะถูกลบถาวร ไม่สามารถกู้คืนได้</p>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                style={{ flex: 1, padding: "12px", border: `1px solid ${BORDER}`, borderRadius: "10px", background: "none", color: TEXT2, cursor: "pointer", fontFamily: "inherit", fontSize: "15px", fontWeight: 600 }}
+              >ยกเลิก</button>
+              <button
+                disabled={deleting}
+                onClick={async () => {
+                  setDeleting(true);
+                  const res = await deleteRequest(id);
+                  if (res.success) {
+                    router.replace("/admin/requests");
+                  } else {
+                    setSaveError(res.error ?? "ลบไม่สำเร็จ");
+                    setShowDeleteConfirm(false);
+                    setDeleting(false);
+                  }
+                }}
+                style={{ flex: 1, padding: "12px", border: "none", borderRadius: "10px", background: "#EF4444", color: "#fff", cursor: deleting ? "not-allowed" : "pointer", fontFamily: "inherit", fontSize: "15px", fontWeight: 600, opacity: deleting ? 0.7 : 1 }}
+              >{deleting ? "กำลังลบ..." : "ลบ"}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {saveError && (
         <div style={{ background: "#FEF2F2", borderBottom: "1px solid #FECACA", padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
