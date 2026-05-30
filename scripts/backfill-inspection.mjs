@@ -48,6 +48,7 @@ function mapInspection(insp, stock) {
       batteryCycles:   insp.batteryCycles   ?? null,
       criteria:        insp.criteria        ?? [],
       functionalTests: insp.functionalTests ?? [],
+      issues:          insp.issues          ?? [],
     },
   };
 }

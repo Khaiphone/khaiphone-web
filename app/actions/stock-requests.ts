@@ -118,11 +118,12 @@ export async function createStockFromRequest(
     storage:        req.device_storage ?? null,
     color:          req.device_color   ?? null,
     source:         "inspection",
-    result:         insp.result         ?? null,
-    batteryHealth:  insp.batteryHealth  ?? null,
-    batteryCycles:  insp.batteryCycles  ?? null,
-    criteria:       insp.criteria       ?? [],
+    result:          insp.result          ?? null,
+    batteryHealth:   insp.batteryHealth   ?? null,
+    batteryCycles:   insp.batteryCycles   ?? null,
+    criteria:        insp.criteria        ?? [],
     functionalTests: insp.functionalTests ?? [],
+    issues:          insp.issues          ?? [],
   };
 
   const { error: insertErr } = await supabase.from("stocks").insert({

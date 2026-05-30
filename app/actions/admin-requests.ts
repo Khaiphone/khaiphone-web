@@ -320,11 +320,12 @@ export async function updateStatus(
         storage:        current.device_storage ?? null,
         color:          current.device_color   ?? null,
         source:         "inspection",
-        result:         insp.result         ?? null,
-        batteryHealth:  insp.batteryHealth  ?? null,
-        batteryCycles:  insp.batteryCycles  ?? null,
-        criteria:       insp.criteria       ?? [],
+        result:          insp.result          ?? null,
+        batteryHealth:   insp.batteryHealth   ?? null,
+        batteryCycles:   insp.batteryCycles   ?? null,
+        criteria:        insp.criteria        ?? [],
         functionalTests: insp.functionalTests ?? [],
+        issues:          insp.issues          ?? [],
       };
       await supabase.from("stocks").insert({
         id: stockId,

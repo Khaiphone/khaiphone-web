@@ -414,11 +414,12 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                     const snap = item.inspectionSnapshot;
                     const criteria = snap?.criteria ?? [];
                     const functionalTests = snap?.functionalTests ?? [];
+                    const issues = snap?.issues ?? [];
                     const hasCriteria = criteria.length > 0;
                     const hasFunctional = functionalTests.length > 0;
                     const failedCriteria = criteria.filter(c => !c.pass);
                     const failedFunctional = functionalTests.filter(t => !t.pass);
-                    if (!hasCriteria && !hasFunctional) return null;
+                    if (!hasCriteria && !hasFunctional && issues.length === 0) return null;
                     const thStyle: React.CSSProperties = { padding: "6px 8px", fontSize: 11, fontWeight: 700, color: c.text3, textAlign: "left", borderBottom: `1px solid ${c.border}`, whiteSpace: "nowrap" };
                     const tdStyle: React.CSSProperties = { padding: "7px 8px", fontSize: 12, color: c.text2, borderBottom: `1px solid ${c.border}`, verticalAlign: "middle" };
                     return (
@@ -455,6 +456,15 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                                 ))}
                               </div>
                             )}
+                          </Section>
+                        )}
+                        {issues.length > 0 && (
+                          <Section label="ปัญหาที่พบเพิ่มเติม" c={c}>
+                            <div style={{ padding: "8px 10px", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8 }}>
+                              {issues.map((issue, i) => (
+                                <p key={i} style={{ color: "#dc2626", fontSize: 13, fontWeight: 600, margin: i === 0 ? 0 : "4px 0 0" }}>• {issue}</p>
+                              ))}
+                            </div>
                           </Section>
                         )}
                         {hasFunctional && (

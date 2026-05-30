@@ -103,6 +103,7 @@ export interface StockItem {
     batteryCycles?: number;
     criteria?: { label: string; stated: string; actual: string; pass: boolean }[];
     functionalTests?: { label: string; pass: boolean }[];
+    issues?: string[];
   };
 }
 
