@@ -906,8 +906,9 @@ export async function fetchStaffPerformance(dateFrom?: string, dateTo?: string):
 
   const rows = (data ?? []).filter((r) => {
     if (!r.sold_at) return false;
-    if (dateFrom && r.sold_at < dateFrom) return false;
-    if (dateTo && r.sold_at > dateTo) return false;
+    const day = r.sold_at.slice(0, 10);
+    if (dateFrom && day < dateFrom) return false;
+    if (dateTo && day > dateTo) return false;
     return true;
   });
 
@@ -957,8 +958,9 @@ export async function fetchTaxSummary(dateFrom?: string, dateTo?: string): Promi
 
   const filtered = (soldStocks ?? []).filter((r) => {
     if (!r.sold_at) return false;
-    if (dateFrom && r.sold_at < dateFrom) return false;
-    if (dateTo && r.sold_at > dateTo) return false;
+    const day = r.sold_at.slice(0, 10);
+    if (dateFrom && day < dateFrom) return false;
+    if (dateTo && day > dateTo) return false;
     return true;
   });
 
