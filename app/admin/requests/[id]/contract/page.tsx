@@ -173,6 +173,11 @@ export default function ContractPage() {
   const [savedUrls, setSavedUrls] = useState<{ contract: string; receipt: string } | null>(null);
 
   // Form fields
+  const [buyerName, setBuyerName] = useState("");
+  const [payMethod, setPayMethod] = useState<"cash" | "transfer">("cash");
+  const [bankNameDraft, setBankNameDraft] = useState("");
+  const [accountNameDraft, setAccountNameDraft] = useState("");
+  const [accountNumberDraft, setAccountNumberDraft] = useState("");
   const [idNumber, setIdNumber] = useState("");
   const [dob, setDob] = useState("");
   const [address, setAddress] = useState("");
@@ -212,6 +217,11 @@ export default function ContractPage() {
     fetchRequest(id).then(r => {
       setRequest(r);
       if (r) {
+        setBuyerName(r.customer.name);
+        setPayMethod(r.payment.method);
+        setBankNameDraft(r.payment.bankName ?? "");
+        setAccountNameDraft(r.payment.accountName ?? "");
+        setAccountNumberDraft(r.payment.accountNumber ?? "");
         setAddress(r.customer.address ?? "");
         setSerial((r.inspection?.serial ?? "").toUpperCase());
         setImei(r.inspection?.imei ?? "");
@@ -319,12 +329,12 @@ export default function ContractPage() {
     const timeStr   = thTime(now.toISOString());
     const dateShort = shortDate(txDate + "T00:00:00");
 
-    const cName  = r.customer.name;
+    const cName  = buyerName.trim() || r.customer.name;
     const cPhone = r.customer.phone;
     const cId    = idNumber || "—";
     const cAddr  = address   || "—";
     const cEmail = r.customer.email || "—";
-    const payM   = r.payment.method;
+    const payM   = payMethod;
     const payTh  = payM === "cash" ? "เงินสด" : "โอนผ่านธนาคาร";
     const dobStr = dob ? thDate(dob + "T00:00:00") : "";
 
@@ -371,6 +381,8 @@ export default function ContractPage() {
         criteria:        (r.inspection?.criteria      ?? []) as NonNullable<typeof r.inspection>["criteria"],
         issues:          r.inspection?.issues ?? [] as string[],
         functionalTests: (r.inspection?.functionalTests ?? []) as NonNullable<typeof r.inspection>["functionalTests"],
+        warrantyExpiry:  r.inspection?.warrantyExpiry,
+        batteryCycles:   r.inspection?.batteryCycles,
       },
       ...(r.extraDevices ?? []).map((d, i) => {
         const ei = extraInspArr[i];
@@ -390,6 +402,8 @@ export default function ContractPage() {
           criteria:        (ei?.criteria      ?? []) as NonNullable<typeof r.inspection>["criteria"],
           issues:          (ei?.issues        ?? []) as string[],
           functionalTests: (ei?.functionalTests ?? []) as NonNullable<typeof r.inspection>["functionalTests"],
+          warrantyExpiry:  undefined as string | undefined,
+          batteryCycles:   undefined as number | undefined,
         };
       }),
     ];
@@ -450,9 +464,9 @@ export default function ContractPage() {
                 <div class="pay-badge">✓ ${payTh}</div>
                 ${payM === "transfer" ? `
                   <div style="font-size:9.5px;color:#aaa;margin:5px 0 3px">รายละเอียดบัญชีผู้ขาย</div>
-                  <div class="f"><span class="fl">ธนาคาร</span><span class="fv">${esc(r.payment.bankName ?? "—")}</span></div>
-                  <div class="f"><span class="fl">ชื่อบัญชี</span><span class="fv">${esc(r.payment.accountName ?? "—")}</span></div>
-                  <div class="f"><span class="fl">เลขที่บัญชี</span><span class="fv" style="font-family:monospace">${esc(r.payment.accountNumber ?? "—")}</span></div>
+                  <div class="f"><span class="fl">ธนาคาร</span><span class="fv">${esc(bankNameDraft || "—")}</span></div>
+                  <div class="f"><span class="fl">ชื่อบัญชี</span><span class="fv">${esc(accountNameDraft || "—")}</span></div>
+                  <div class="f"><span class="fl">เลขที่บัญชี</span><span class="fv" style="font-family:monospace">${esc(accountNumberDraft || "—")}</span></div>
                 ` : ""}
               </div>
             </div>
@@ -474,6 +488,7 @@ export default function ContractPage() {
             <td>${esc(dev.color || "—")}</td>
             <td>${accStr}</td>
           </tr>
+          ${(dev.warrantyExpiry || dev.batteryCycles !== undefined) ? `<tr><th>วันหมดประกัน</th><th>รอบชาร์จ</th><th colspan="2"></th></tr><tr><td>${dev.warrantyExpiry ? new Date(dev.warrantyExpiry + "T00:00:00").toLocaleDateString("th-TH",{year:"numeric",month:"long",day:"numeric"}) : "—"}</td><td>${dev.batteryCycles !== undefined ? dev.batteryCycles + " รอบ" : "—"}</td><td colspan="2"></td></tr>` : ""}
           <tr><td colspan="3" style="font-weight:700;text-align:right;background:#f5f4f0">ราคา${dev.label || "ซื้อขาย"}</td><td style="font-weight:700;color:#c9a84c">฿${dev.price.toLocaleString("th-TH")}</td></tr>
         </table>`;
       if ((dev.criteria ?? []).length) {
@@ -621,9 +636,9 @@ export default function ContractPage() {
               <div style="padding:10px 12px;font-size:10.5px;line-height:1.8">
                 <div style="display:flex;justify-content:space-between;border-bottom:1px solid #f0f0f0;padding-bottom:4px;margin-bottom:4px"><span style="color:#aaa">วิธีชำระเงิน</span><span style="font-weight:600">${payTh}</span></div>
                 ${payM === "transfer" ? `
-                  <div style="display:flex;justify-content:space-between;border-bottom:1px solid #f0f0f0;padding-bottom:4px;margin-bottom:4px"><span style="color:#aaa">ธนาคาร</span><span style="font-weight:600">${esc(r.payment.bankName ?? "—")}</span></div>
-                  <div style="display:flex;justify-content:space-between;border-bottom:1px solid #f0f0f0;padding-bottom:4px;margin-bottom:4px"><span style="color:#aaa">ชื่อบัญชี</span><span style="font-weight:600">${esc(r.payment.accountName ?? "—")}</span></div>
-                  <div style="display:flex;justify-content:space-between"><span style="color:#aaa">เลขบัญชี</span><span style="font-weight:600;font-family:monospace">${esc(r.payment.accountNumber ?? "—")}</span></div>` : ""}
+                  <div style="display:flex;justify-content:space-between;border-bottom:1px solid #f0f0f0;padding-bottom:4px;margin-bottom:4px"><span style="color:#aaa">ธนาคาร</span><span style="font-weight:600">${esc(bankNameDraft || "—")}</span></div>
+                  <div style="display:flex;justify-content:space-between;border-bottom:1px solid #f0f0f0;padding-bottom:4px;margin-bottom:4px"><span style="color:#aaa">ชื่อบัญชี</span><span style="font-weight:600">${esc(accountNameDraft || "—")}</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#aaa">เลขบัญชี</span><span style="font-weight:600;font-family:monospace">${esc(accountNumberDraft || "—")}</span></div>` : ""}
               </div>
             </div>
             <div style="margin-top:8px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.25);border-radius:6px;padding:8px 10px;font-size:10px;color:#7a6020;text-align:center">
@@ -642,12 +657,13 @@ export default function ContractPage() {
           </div>
         </div>`;
       if (isFirst) {
-        if (payM === "transfer") {
-          p += slipImgSrc
-            ? `<div style="margin:12px 0;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden"><div style="background:#f5f4f0;padding:7px 11px;border-bottom:1px solid #e5e7eb;font-size:10.5px;font-weight:700;color:#333">📎 หลักฐานการโอนเงิน (สลิป)</div><div style="padding:12px;text-align:center;background:#fafafa"><img src="${slipImgSrc}" style="max-width:280px;max-height:380px;border-radius:6px;border:1px solid #e5e7eb;box-shadow:0 2px 8px rgba(0,0,0,0.08)"></div></div>`
-            : `<div style="margin:12px 0;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 13px;font-size:10.5px;color:#92400e">⚠ ยังไม่มีหลักฐานการโอนเงิน</div>`;
-        } else {
+        if (payM !== "transfer") {
           p += `<div style="margin:12px 0;background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;background:#16a34a;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px">💵</div><div><div style="font-size:11px;font-weight:700;color:#15803d;margin-bottom:2px">ชำระเงินสดเรียบร้อยแล้ว</div><div style="font-size:10px;color:#166534">มอบเงินสดจำนวน <strong>${dev.price.toLocaleString("th-TH")} บาท</strong> ให้แก่ผู้ขายโดยตรง ณ วันที่ ${dateStr}</div></div></div>`;
+        }
+        if (slipImgSrc) {
+          p += `<div style="margin:12px 0;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden"><div style="background:#f5f4f0;padding:7px 11px;border-bottom:1px solid #e5e7eb;font-size:10.5px;font-weight:700;color:#333">📎 หลักฐานการรับเงิน</div><div style="padding:12px;text-align:center;background:#fafafa"><img src="${slipImgSrc}" style="max-width:280px;max-height:380px;border-radius:6px;border:1px solid #e5e7eb;box-shadow:0 2px 8px rgba(0,0,0,0.08)"></div></div>`;
+        } else if (payM === "transfer") {
+          p += `<div style="margin:12px 0;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 13px;font-size:10.5px;color:#92400e">⚠ ยังไม่มีหลักฐานการโอนเงิน</div>`;
         }
       }
       p += `<div class="sig2">
@@ -789,11 +805,11 @@ export default function ContractPage() {
           <div style={{ fontSize: 12, fontWeight: 700, color: TEXT2, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>ข้อมูลจากคำขอ</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px" }}>
             {([
-              ["ผู้ขาย", request.customer.name],
+              ["ผู้ขาย", buyerName || request.customer.name],
               ["เบอร์โทร", request.customer.phone],
               ["อุปกรณ์", `${request.device.model} ${request.device.storage}`],
               ["ราคาตกลง", `${price.toLocaleString("th-TH")} บาท`],
-              ["วิธีชำระ", request.payment.method === "cash" ? "เงินสด" : "โอนธนาคาร"],
+              ["วิธีชำระ", payMethod === "cash" ? "เงินสด" : "โอนธนาคาร"],
             ] as [string, string][]).map(([l, v]) => (
               <div key={l}>
                 <div style={{ fontSize: 10, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.5 }}>{l}</div>
@@ -807,6 +823,37 @@ export default function ContractPage() {
         <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, overflow: "hidden", marginBottom: 12 }}>
           <div style={{ padding: "10px 14px", borderBottom: `1px solid ${BORDER}`, background: "#F9F9F9", fontSize: 13, fontWeight: 700, color: TEXT }}>ข้อมูลเพิ่มเติม</div>
           <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 12 }}>
+
+            <div>
+              <label style={labelStyle}>ชื่อ-นามสกุลผู้ขาย (ในสัญญา)</label>
+              <input type="text" value={buyerName} onChange={e => setBuyerName(e.target.value)} placeholder="ชื่อที่จะปรากฏในสัญญา" style={inputStyle} />
+            </div>
+
+            <div>
+              <label style={labelStyle}>วิธีชำระเงิน</label>
+              <select value={payMethod} onChange={e => setPayMethod(e.target.value as "cash" | "transfer")} style={{ ...inputStyle, appearance: "none", WebkitAppearance: "none" }}>
+                <option value="cash">เงินสด</option>
+                <option value="transfer">โอนเงิน</option>
+              </select>
+            </div>
+            {payMethod === "transfer" && (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div>
+                    <label style={labelStyle}>ธนาคาร</label>
+                    <input type="text" value={bankNameDraft} onChange={e => setBankNameDraft(e.target.value)} placeholder="เช่น กสิกรไทย" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>ชื่อบัญชี</label>
+                    <input type="text" value={accountNameDraft} onChange={e => setAccountNameDraft(e.target.value)} style={inputStyle} />
+                  </div>
+                </div>
+                <div>
+                  <label style={labelStyle}>เลขที่บัญชี</label>
+                  <input type="text" value={accountNumberDraft} onChange={e => setAccountNumberDraft(e.target.value)} placeholder="xxx-x-xxxxx-x" style={inputStyle} />
+                </div>
+              </>
+            )}
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
@@ -1086,8 +1133,8 @@ export default function ContractPage() {
             <div style={{ padding: "10px 14px", borderBottom: `1px solid ${BORDER}`, background: "#F9F9F9", display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 16 }}>📎</span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>หลักฐานการโอนเงิน (สลิป)</div>
-                <div style={{ fontSize: 11, color: TEXT2 }}>จะแสดงในใบสำคัญรับเงิน</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>หลักฐานการรับเงิน</div>
+                <div style={{ fontSize: 11, color: TEXT2 }}>สลิป / รูปหลักฐาน — แสดงในใบสำคัญรับเงิน</div>
               </div>
               {(slipDataUrl || request.payment.slipUrl) && (
                 <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 600 }}>✓ มีสลิปแล้ว</div>

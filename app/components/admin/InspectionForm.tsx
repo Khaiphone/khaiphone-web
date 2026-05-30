@@ -147,8 +147,10 @@ export default function InspectionForm({
   const [photos,      setPhotos]      = useState<string[]>(existing?.photos ?? []);
   const [actualPrice, setActualPrice] = useState(String(existing?.actualPrice ?? estimatedPrice));
   const [priceReason, setPriceReason] = useState(existing?.priceReason ?? "");
-  const [imei,        setImei]        = useState(existing?.imei ?? "");
-  const [serial,      setSerial]      = useState(existing?.serial ?? "");
+  const [imei,           setImei]           = useState(existing?.imei ?? "");
+  const [serial,         setSerial]         = useState(existing?.serial ?? "");
+  const [warrantyExpiry, setWarrantyExpiry] = useState(existing?.warrantyExpiry ?? "");
+  const [batteryCycles,  setBatteryCycles]  = useState(existing?.batteryCycles !== undefined ? String(existing.batteryCycles) : "");
   const [imeiError,   setImeiError]   = useState(false);
   const [serialError, setSerialError] = useState(false);
   const [uploading,    setUploading]   = useState(false);
@@ -388,8 +390,10 @@ export default function InspectionForm({
       negotiationRespondedAt: null,
       negotiationRespondedBy: null,
       functionalTests,
-      imei:   imei.trim() || undefined,
-      serial: serial.trim() || undefined,
+      imei:           imei.trim() || undefined,
+      serial:         serial.trim() || undefined,
+      warrantyExpiry: warrantyExpiry.trim() || undefined,
+      batteryCycles:  batteryCycles.trim() ? Number(batteryCycles) : undefined,
       extraInspections: extraStates.length > 0 ? extraStates.map(e => ({
         model:          e.model,
         storage:        e.storage,
@@ -504,7 +508,53 @@ export default function InspectionForm({
         </div>
       </div>
       </div>
-      <div style={{ marginBottom: 20 }} />
+
+      {/* Warranty + Battery Cycles (admin-only) */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20, marginTop: 10 }}>
+        <div>
+          <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>
+            วันหมดประกัน
+          </label>
+          <input
+            type="date"
+            value={warrantyExpiry}
+            onChange={e => setWarrantyExpiry(e.target.value)}
+            style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit" }}
+          />
+          {warrantyExpiry && (() => {
+            const exp = new Date(warrantyExpiry + "T00:00:00");
+            const now = new Date();
+            const diffMs = exp.getTime() - now.getTime();
+            const diffDays = Math.ceil(diffMs / 86400000);
+            const expired = diffDays < 0;
+            return (
+              <p style={{ fontSize: 11, color: expired ? "#DC2626" : "#059669", margin: "4px 0 0", fontWeight: 600 }}>
+                {expired ? `หมดประกันแล้ว ${Math.abs(diffDays)} วัน` : `เหลือ ${diffDays} วัน`}
+              </p>
+            );
+          })()}
+        </div>
+        <div>
+          <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>
+            รอบชาร์จ (Battery Cycles)
+          </label>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={9999}
+            placeholder="เช่น 120"
+            value={batteryCycles}
+            onChange={e => setBatteryCycles(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit" }}
+          />
+          {batteryCycles && (
+            <p style={{ fontSize: 11, color: Number(batteryCycles) > 500 ? "#F97316" : TEXT2, margin: "4px 0 0" }}>
+              {Number(batteryCycles) > 500 ? "⚠ รอบชาร์จสูง" : "รอบชาร์จปกติ"}
+            </p>
+          )}
+        </div>
+      </div>
 
       {/* Quick status banner */}
       <div style={{ marginBottom: 16, padding: "10px 14px", background: allPass && !priceChanged ? "#F0FFF4" : "#FFFBEB", borderRadius: 12, border: `1px solid ${allPass && !priceChanged ? "#BBF7D0" : "#FDE68A"}` }}>

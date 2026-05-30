@@ -86,6 +86,8 @@ export interface InspectionData {
   functionalTests?: FunctionalTest[];
   imei?: string;
   serial?: string;
+  warrantyExpiry?: string;
+  batteryCycles?: number;
   extraInspections?: ExtraDeviceInspection[];
 }
 
