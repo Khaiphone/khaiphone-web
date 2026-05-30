@@ -10,7 +10,8 @@ import MetricCard from "@/components/stock/MetricCard";
 import StockStatusBadge, { GradeBadge } from "@/components/stock/StatusBadge";
 import StockDetailDrawer from "@/components/stock/StockDetailDrawer";
 import { useThemeColors } from "@/components/stock/ThemeContext";
-import { fetchStockItems, deleteStockItem, markStockSold } from "@/app/actions/stocks";
+import { fetchStockItems, deleteStockItem } from "@/app/actions/stocks";
+import SellModal from "@/components/stock/SellModal";
 import { STOCK_STATUS_COLORS } from "@/lib/stock/constants";
 import { getProductImage } from "@/lib/product-image";
 import type { StockItem, StockStatus } from "@/lib/stock/types";
@@ -61,11 +62,6 @@ export default function StockInventoryPage() {
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const [sellTarget, setSellTarget] = useState<StockItem | null>(null);
-  const [selling, setSelling] = useState(false);
-  const [sellPrice, setSellPrice] = useState("");
-  const [buyerName, setBuyerName] = useState("");
-  const [buyerPhone, setBuyerPhone] = useState("");
-  const [sellDate, setSellDate] = useState("");
 
   const [filterModel, setFilterModel] = useState("");
   const [filterGrade, setFilterGrade] = useState("");
@@ -161,27 +157,7 @@ export default function StockInventoryPage() {
 
   function openSellModal(item: StockItem) {
     setSellTarget(item);
-    setSellPrice(item.sellingPrice ? String(item.sellingPrice) : "");
-    setBuyerName("");
-    setBuyerPhone("");
-    setSellDate(new Date().toISOString().slice(0, 10));
     setMoreMenuId(null);
-  }
-
-  async function handleSell() {
-    if (!sellTarget) return;
-    const price = Number(sellPrice.replace(/,/g, ""));
-    if (!price || !buyerName.trim()) return;
-    setSelling(true);
-    const res = await markStockSold(sellTarget.id, price, buyerName.trim(), buyerPhone.trim(), sellDate);
-    if (res.success) {
-      setStocks(prev => prev.map(s => s.id === sellTarget.id
-        ? { ...s, status: "ขายแล้ว" as StockStatus, soldPrice: price, buyerName: buyerName.trim(), buyerPhone: buyerPhone.trim(), soldAt: sellDate }
-        : s
-      ));
-      setSellTarget(null);
-    }
-    setSelling(false);
   }
 
   function copyToClipboard(text: string, label: string) {
@@ -485,43 +461,15 @@ export default function StockInventoryPage() {
         )}
       </div>
 
-      {/* Sell Modal */}
       {sellTarget && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div style={{ background: c.card, borderRadius: 20, padding: 28, width: "100%", maxWidth: 420, border: `1px solid ${c.border}` }}>
-            <p style={{ color: c.text, fontSize: 18, fontWeight: 700, margin: "0 0 4px" }}>บันทึกการขาย</p>
-            <p style={{ color: c.text3, fontSize: 13, margin: "0 0 24px" }}>{sellTarget.model} · {sellTarget.storage} · {sellTarget.id}</p>
-
-            {[
-              { label: "ราคาขายจริง (บาท) *", value: sellPrice, onChange: setSellPrice, type: "number", placeholder: sellTarget.sellingPrice ? String(sellTarget.sellingPrice) : "0" },
-              { label: "ชื่อผู้ซื้อ *", value: buyerName, onChange: setBuyerName, type: "text", placeholder: "ชื่อลูกค้า" },
-              { label: "เบอร์โทรผู้ซื้อ", value: buyerPhone, onChange: setBuyerPhone, type: "tel", placeholder: "08x-xxx-xxxx" },
-            ].map(({ label, value, onChange, type, placeholder }) => (
-              <div key={label} style={{ marginBottom: 16 }}>
-                <p style={{ color: c.text2, fontSize: 12, fontWeight: 600, margin: "0 0 6px" }}>{label}</p>
-                <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-                  style={{ width: "100%", padding: "10px 14px", borderRadius: 10, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontSize: 14, fontFamily: "inherit", boxSizing: "border-box" as const, outline: "none" }} />
-              </div>
-            ))}
-
-            <div style={{ marginBottom: 24 }}>
-              <p style={{ color: c.text2, fontSize: 12, fontWeight: 600, margin: "0 0 6px" }}>วันที่ขาย *</p>
-              <input type="date" value={sellDate} onChange={e => setSellDate(e.target.value)}
-                style={{ width: "100%", padding: "10px 14px", borderRadius: 10, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontSize: 14, fontFamily: "inherit", boxSizing: "border-box" as const, outline: "none" }} />
-            </div>
-
-            <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setSellTarget(null)}
-                style={{ flex: 1, padding: "12px", borderRadius: 12, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
-                ยกเลิก
-              </button>
-              <button onClick={handleSell} disabled={selling || !sellPrice || !buyerName.trim()}
-                style={{ flex: 2, padding: "12px", borderRadius: 12, background: selling || !sellPrice || !buyerName.trim() ? "#666" : "#22c55e", border: "none", color: "#fff", fontSize: 14, fontWeight: 700, cursor: selling ? "wait" : "pointer", fontFamily: "inherit" }}>
-                {selling ? "กำลังบันทึก..." : "ยืนยันการขาย"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <SellModal
+          item={sellTarget}
+          onClose={() => setSellTarget(null)}
+          onSuccess={updates => {
+            setStocks(prev => prev.map(s => s.id === sellTarget.id ? { ...s, ...updates } : s));
+            setSellTarget(null);
+          }}
+        />
       )}
 
       {/* Detail Drawer */}

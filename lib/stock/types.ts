@@ -82,6 +82,9 @@ export interface StockItem {
   soldPrice?: number;
   buyerName?: string;
   buyerPhone?: string;
+  soldBy?: string;
+  saleType?: string;
+  partnerName?: string;
 
   // Original values captured by field staff during inspection — used for cross-checking
   inspectionSnapshot?: {

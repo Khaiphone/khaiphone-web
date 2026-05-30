@@ -49,6 +49,9 @@ function mapRow(row: any): StockItem {
     soldPrice: row.sold_price ?? undefined,
     buyerName: row.buyer_name ?? undefined,
     buyerPhone: row.buyer_phone ?? undefined,
+    soldBy: row.sold_by ?? undefined,
+    saleType: row.sale_type ?? "ขายปลีก",
+    partnerName: row.partner_name ?? undefined,
     inspectionSnapshot: row.inspection_snapshot ?? undefined,
   };
 }
@@ -160,21 +163,44 @@ export async function verifyStockField(
 }
 
 export async function markStockSold(
-  id: string, soldPrice: number, buyerName: string, buyerPhone: string, soldAt?: string,
+  id: string, soldPrice: number, buyerName: string, buyerPhone: string,
+  soldAt?: string, soldBy?: string, saleType?: string, partnerName?: string,
 ): Promise<{ success: boolean; error?: string }> {
   await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
   const soldAtTs = soldAt ? new Date(soldAt + "T12:00:00").toISOString() : now;
   const { data: current } = await supabase.from("stocks").select("status_log").eq("id", id).single();
-  const newLog = [...(current?.status_log ?? []), { status: "ขายแล้ว", timestamp: soldAtTs, note: `ขายให้ ${buyerName}`, by: "admin" }];
+  const note = saleType === "ขายส่ง" && partnerName ? `ขายส่งให้ ${partnerName}` : `ขายให้ ${buyerName}`;
+  const newLog = [...(current?.status_log ?? []), { status: "ขายแล้ว", timestamp: soldAtTs, note, by: soldBy ?? "admin" }];
   const { error } = await supabase.from("stocks").update({
     status: "ขายแล้ว", sold_at: soldAtTs, sold_price: soldPrice,
     buyer_name: buyerName, buyer_phone: buyerPhone,
+    sold_by: soldBy ?? null, sale_type: saleType ?? "ขายปลีก", partner_name: partnerName ?? null,
     status_log: newLog, updated_at: now,
   }).eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };
+}
+
+export async function fetchStockStaff(): Promise<string[]> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data } = await supabase.from("admin_users").select("name").order("name");
+  return (data ?? []).map((r: { name: string }) => r.name).filter(Boolean);
+}
+
+export async function fetchWholesalePartners(): Promise<string[]> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("stocks")
+    .select("partner_name")
+    .eq("sale_type", "ขายส่ง")
+    .not("partner_name", "is", null)
+    .neq("partner_name", "");
+  const names = [...new Set((data ?? []).map((r: { partner_name: string }) => r.partner_name).filter(Boolean))];
+  return (names as string[]).sort();
 }
 
 export interface RevenuePoint { date: string; revenue: number; cost: number; profit: number; }
