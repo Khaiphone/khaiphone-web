@@ -154,6 +154,9 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const [linkCopied,    setLinkCopied]    = useState(false);
   const slipFileRef = useRef<HTMLInputElement>(null);
 
+  // Copy bank info
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
   // Delete (owner only)
   const [isOwner,       setIsOwner]       = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -481,6 +484,18 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const extraActTotal = (request.inspection?.extraInspections ?? []).reduce((s, e) => s + e.actualPrice, 0);
   const inspActual    = request.inspection?.actualPrice;
   const totalActual   = inspActual !== undefined ? inspActual + extraActTotal : request.device.actualPrice;
+
+  async function copyText(text: string, field: string) {
+    try { await navigator.clipboard.writeText(text); }
+    catch {
+      const el = document.createElement("textarea");
+      el.value = text; el.style.position = "fixed"; el.style.opacity = "0";
+      document.body.appendChild(el); el.focus(); el.select();
+      document.execCommand("copy"); document.body.removeChild(el);
+    }
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(f => f === field ? null : f), 2000);
+  }
 
   async function copyTrackingLink() {
     if (!request) return;
@@ -881,13 +896,47 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
             </div>
             {!editPay ? (
               <>
-                <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "6px" }}>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "8px" }}>
                   <CreditCard size={14} color={GOLD} />
                   <span style={{ color: TEXT, fontSize: "14px", fontWeight: 500 }}>{PAY_LABELS[request.payment.method]}</span>
-                  {request.payment.bankName && <span style={{ color: TEXT2, fontSize: "13px" }}>· {request.payment.bankName}</span>}
                 </div>
-                {request.payment.accountName   && <p style={{ color: TEXT2, fontSize: "13px", margin: "0 0 2px" }}>{request.payment.accountName}</p>}
-                {request.payment.accountNumber && <p style={{ color: TEXT3, fontSize: "13px", fontWeight: 600, margin: 0, letterSpacing: "0.03em" }}>{request.payment.accountNumber}</p>}
+                {request.payment.method === "transfer" && (request.payment.bankName || request.payment.accountName || request.payment.accountNumber) && (() => {
+                  const rows: { label: string; value: string; field: string }[] = [
+                    ...(request.payment.bankName    ? [{ label: "ธนาคาร",    value: request.payment.bankName,    field: "bank" }] : []),
+                    ...(request.payment.accountName ? [{ label: "ชื่อบัญชี", value: request.payment.accountName, field: "accName" }] : []),
+                    ...(request.payment.accountNumber ? [{ label: "เลขบัญชี", value: request.payment.accountNumber, field: "accNo" }] : []),
+                  ];
+                  const allText = [
+                    `ธนาคาร: ${request.payment.bankName || "—"}`,
+                    `ชื่อบัญชี: ${request.payment.accountName || "—"}`,
+                    `เลขบัญชี: ${request.payment.accountNumber || "—"}`,
+                    `จำนวนโอน: ฿${(totalActual ?? request.device.estimatedPrice).toLocaleString("th-TH")} บาท`,
+                  ].join("\n");
+                  return (
+                    <div style={{ background: "#F5F5F7", borderRadius: "10px", padding: "10px 12px", marginBottom: "8px" }}>
+                      {rows.map(({ label, value, field }) => (
+                        <div key={field} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                          <div>
+                            <span style={{ color: TEXT3, fontSize: "11px", display: "block" }}>{label}</span>
+                            <span style={{ color: TEXT, fontSize: "13px", fontWeight: field === "accNo" ? 700 : 500, letterSpacing: field === "accNo" ? "0.05em" : undefined, fontFamily: field === "accNo" ? "monospace" : undefined }}>{value}</span>
+                          </div>
+                          <button
+                            onClick={() => copyText(value, field)}
+                            style={{ background: "none", border: `1px solid ${copiedField === field ? "#86efac" : BORDER}`, borderRadius: "6px", padding: "3px 8px", cursor: "pointer", fontSize: "11px", fontWeight: 600, color: copiedField === field ? "#16a34a" : TEXT3, fontFamily: "inherit", transition: "all 0.2s", whiteSpace: "nowrap" }}
+                          >
+                            {copiedField === field ? "✓ คัดลอก" : <><Copy size={11} style={{ display: "inline", marginRight: 3 }} />คัดลอก</>}
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => copyText(allText, "all")}
+                        style={{ width: "100%", marginTop: "4px", padding: "7px", borderRadius: "8px", border: "none", background: copiedField === "all" ? "#D1FAE5" : GOLD, color: copiedField === "all" ? "#065F46" : "#fff", fontSize: "12px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }}
+                      >
+                        {copiedField === "all" ? "✓ คัดลอกทั้งหมดแล้ว" : "คัดลอกข้อมูลโอนเงินทั้งหมด"}
+                      </button>
+                    </div>
+                  );
+                })()}
               </>
             ) : (
               <>
