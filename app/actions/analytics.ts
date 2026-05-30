@@ -123,12 +123,20 @@ function buildFunnel(sessions: Session[], total: number): FunnelStep[] {
   }));
 }
 
+function toBkkDate(isoUtc: string): string {
+  // Convert a UTC ISO timestamp to Bangkok date string (YYYY-MM-DD)
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date(isoUtc));
+}
+
 export async function fetchEstimateAnalytics(days = 30): Promise<EstimateAnalytics> {
   await requireAuth();
   const supabase = createServerClient();
-  const since = new Date();
-  since.setDate(since.getDate() - (days - 1));
-  since.setHours(0, 0, 0, 0);
+
+  // Bangkok midnight as UTC — e.g. "2026-05-31T00:00:00+07:00" = "2026-05-30T17:00:00Z"
+  const bkkToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
+  const bkkMidnightUTC = new Date(bkkToday + "T00:00:00+07:00");
+  // Go back (days-1) full days from Bangkok midnight
+  const since = new Date(bkkMidnightUTC.getTime() - (days - 1) * 24 * 60 * 60 * 1000);
 
   const { data } = await supabase
     .from("estimate_events")
@@ -144,7 +152,7 @@ export async function fetchEstimateAnalytics(days = 30): Promise<EstimateAnalyti
     if (!sessionMap.has(row.session_id)) {
       sessionMap.set(row.session_id, {
         maxStep: -1, submitted: false, priceSeen: false,
-        model: row.model ?? "", date: row.created_at.slice(0, 10),
+        model: row.model ?? "", date: toBkkDate(row.created_at),
       });
     }
     const s = sessionMap.get(row.session_id)!;
@@ -156,11 +164,11 @@ export async function fetchEstimateAnalytics(days = 30): Promise<EstimateAnalyti
   const sessions = Array.from(sessionMap.values());
   const totalStarts = sessions.length;
 
-  // Daily counts
+  // Daily counts — keyed by Bangkok date
   const dailyMap = new Map<string, DailyCount>();
   for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(); d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
+    const dayUTC = new Date(bkkMidnightUTC.getTime() - i * 24 * 60 * 60 * 1000);
+    const key = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(dayUTC);
     dailyMap.set(key, { date: key, starts: 0, priceSeen: 0, submits: 0 });
   }
   for (const s of sessions) {
@@ -251,7 +259,7 @@ export async function fetchEstimateAnalytics(days = 30): Promise<EstimateAnalyti
     }))
     .sort((a, b) => b.count - a.count);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = bkkToday;
   const todayData = dailyMap.get(today) ?? { starts: 0, priceSeen: 0, submits: 0, date: today };
 
   return {
