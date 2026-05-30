@@ -846,3 +846,252 @@ export async function searchFinance(query: string): Promise<FinanceSearchResult[
     })),
   ];
 }
+
+// ─── Stock Aging ──────────────────────────────────────────────────────────────
+
+export type StockAgingItem = {
+  id: string;
+  model: string;
+  storage: string;
+  grade: string;
+  status: string;
+  daysInStock: number;
+  totalCost: number;
+  receivedAt: string;
+};
+
+export async function fetchStockAging(): Promise<StockAgingItem[]> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("stocks")
+    .select("id, model, storage, grade, status, received_at, cost_price, shipping_cost, other_cost")
+    .not("status", "in", '("ขายแล้ว","ส่งคืน","ตีกลับ/ไม่รับซื้อ")')
+    .order("received_at", { ascending: true });
+
+  const today = new Date();
+  return (data ?? []).map((r) => {
+    const received = new Date(r.received_at ?? today.toISOString());
+    const daysInStock = Math.floor((today.getTime() - received.getTime()) / 86400000);
+    return {
+      id: r.id,
+      model: r.model ?? "",
+      storage: r.storage ?? "",
+      grade: r.grade ?? "",
+      status: r.status ?? "",
+      daysInStock,
+      totalCost: (r.cost_price ?? 0) + (r.shipping_cost ?? 0) + (r.other_cost ?? 0),
+      receivedAt: r.received_at ?? "",
+    };
+  });
+}
+
+// ─── Staff Performance ────────────────────────────────────────────────────────
+
+export type StaffPerf = {
+  name: string;
+  count: number;
+  revenue: number;
+  profit: number;
+  avgProfit: number;
+};
+
+export async function fetchStaffPerformance(dateFrom?: string, dateTo?: string): Promise<StaffPerf[]> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("stocks")
+    .select("sold_by, sold_price, cost_price, shipping_cost, other_cost, sold_at")
+    .eq("status", "ขายแล้ว")
+    .not("sold_by", "is", null);
+
+  const rows = (data ?? []).filter((r) => {
+    if (!r.sold_at) return false;
+    if (dateFrom && r.sold_at < dateFrom) return false;
+    if (dateTo && r.sold_at > dateTo) return false;
+    return true;
+  });
+
+  const map = new Map<string, { revenue: number; profit: number; count: number }>();
+  for (const r of rows) {
+    const name = r.sold_by ?? "ไม่ระบุ";
+    const revenue = r.sold_price ?? 0;
+    const profit = revenue - (r.cost_price ?? 0) - (r.shipping_cost ?? 0) - (r.other_cost ?? 0);
+    const prev = map.get(name) ?? { revenue: 0, profit: 0, count: 0 };
+    map.set(name, { revenue: prev.revenue + revenue, profit: prev.profit + profit, count: prev.count + 1 });
+  }
+
+  return Array.from(map.entries())
+    .map(([name, { revenue, profit, count }]) => ({ name, count, revenue, profit, avgProfit: count > 0 ? Math.round(profit / count) : 0 }))
+    .sort((a, b) => b.profit - a.profit);
+}
+
+// ─── Tax Summary ──────────────────────────────────────────────────────────────
+
+export type TaxMonthRow = {
+  month: string;
+  revenue: number;
+  vat: number;
+  withholdingTax: number;
+};
+
+export type TaxSummary = {
+  vatRate: number;
+  whtRate: number;
+  rows: TaxMonthRow[];
+  totalRevenue: number;
+  totalVat: number;
+  totalWht: number;
+};
+
+export async function fetchTaxSummary(dateFrom?: string, dateTo?: string): Promise<TaxSummary> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const [{ data: soldStocks }, { data: settings }] = await Promise.all([
+    supabase.from("stocks").select("sold_price, sold_at").eq("status", "ขายแล้ว").not("sold_at", "is", null),
+    supabase.from("finance_settings").select("vat_enabled, vat_rate, withholding_tax").eq("id", 1).single(),
+  ]);
+
+  const vatEnabled = settings?.vat_enabled ?? false;
+  const vatRate = vatEnabled ? parseFloat(settings?.vat_rate ?? "7") : 0;
+  const whtRate = parseFloat(settings?.withholding_tax ?? "3");
+
+  const filtered = (soldStocks ?? []).filter((r) => {
+    if (!r.sold_at) return false;
+    if (dateFrom && r.sold_at < dateFrom) return false;
+    if (dateTo && r.sold_at > dateTo) return false;
+    return true;
+  });
+
+  const monthMap = new Map<string, number>();
+  for (const r of filtered) {
+    const key = r.sold_at.slice(0, 7);
+    monthMap.set(key, (monthMap.get(key) ?? 0) + (r.sold_price ?? 0));
+  }
+
+  const THAI_MONTHS_FULL = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+  const rows: TaxMonthRow[] = Array.from(monthMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, revenue]) => {
+      const [, m] = key.split("-");
+      return {
+        month: THAI_MONTHS_FULL[parseInt(m) - 1],
+        revenue,
+        vat: Math.round(revenue * vatRate / 100),
+        withholdingTax: Math.round(revenue * whtRate / 100),
+      };
+    });
+
+  const totalRevenue = rows.reduce((s, r) => s + r.revenue, 0);
+  return {
+    vatRate, whtRate, rows,
+    totalRevenue,
+    totalVat: rows.reduce((s, r) => s + r.vat, 0),
+    totalWht: rows.reduce((s, r) => s + r.withholdingTax, 0),
+  };
+}
+
+// ─── Break-even ───────────────────────────────────────────────────────────────
+
+export type BreakevenItem = {
+  model: string;
+  count: number;
+  avgCost: number;
+  avgSellPrice: number;
+  breakevenPrice: number;
+  margin: number;
+  belowBreakeven: boolean;
+};
+
+export async function fetchBreakeven(): Promise<BreakevenItem[]> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("stocks")
+    .select("model, cost_price, shipping_cost, other_cost, selling_price, sold_price, status");
+
+  const modelMap = new Map<string, { costs: number[]; sells: number[] }>();
+  for (const r of data ?? []) {
+    const model = r.model ?? "Unknown";
+    const cost = (r.cost_price ?? 0) + (r.shipping_cost ?? 0) + (r.other_cost ?? 0);
+    const sell = r.status === "ขายแล้ว" ? (r.sold_price ?? r.selling_price ?? 0) : (r.selling_price ?? 0);
+    if (!modelMap.has(model)) modelMap.set(model, { costs: [], sells: [] });
+    const e = modelMap.get(model)!;
+    e.costs.push(cost);
+    if (sell > 0) e.sells.push(sell);
+  }
+
+  const avg = (arr: number[]) => arr.length === 0 ? 0 : Math.round(arr.reduce((s, v) => s + v, 0) / arr.length);
+
+  return Array.from(modelMap.entries()).map(([model, { costs, sells }]) => {
+    const avgCost = avg(costs);
+    const avgSellPrice = avg(sells);
+    const breakevenPrice = Math.round(avgCost * 1.05);
+    const margin = avgSellPrice > 0 ? Math.round(((avgSellPrice - avgCost) / avgSellPrice) * 1000) / 10 : 0;
+    return {
+      model,
+      count: costs.length,
+      avgCost,
+      avgSellPrice,
+      breakevenPrice,
+      margin,
+      belowBreakeven: avgSellPrice > 0 && avgSellPrice < breakevenPrice,
+    };
+  }).sort((a, b) => b.count - a.count);
+}
+
+// ─── Forecast ─────────────────────────────────────────────────────────────────
+
+export type ForecastPoint = { date: string; actual?: number; forecast?: number };
+
+export type ForecastData = {
+  points: ForecastPoint[];
+  avgDailyRevenue: number;
+  projected30: number;
+  projected60: number;
+  projected90: number;
+};
+
+export async function fetchForecast(): Promise<ForecastData> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("stocks")
+    .select("sold_at, sold_price")
+    .eq("status", "ขายแล้ว")
+    .not("sold_at", "is", null)
+    .order("sold_at", { ascending: true });
+
+  const dayMap = new Map<string, number>();
+  for (const r of data ?? []) {
+    const day = r.sold_at.slice(0, 10);
+    dayMap.set(day, (dayMap.get(day) ?? 0) + (r.sold_price ?? 0));
+  }
+
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  const thirtyDaysAgo = new Date(today.getTime() - 30 * 86400000).toISOString().slice(0, 10);
+
+  const recentDays = Array.from(dayMap.entries())
+    .filter(([d]) => d >= thirtyDaysAgo && d <= todayStr);
+  const avgDailyRevenue = recentDays.length > 0
+    ? Math.round(recentDays.reduce((s, [, v]) => s + v, 0) / 30)
+    : 0;
+
+  const points: ForecastPoint[] = [];
+  for (const [date, actual] of Array.from(dayMap.entries()).slice(-30)) {
+    points.push({ date, actual });
+  }
+  for (let i = 1; i <= 30; i++) {
+    const d = new Date(today.getTime() + i * 86400000).toISOString().slice(0, 10);
+    points.push({ date: d, forecast: avgDailyRevenue });
+  }
+
+  return {
+    points,
+    avgDailyRevenue,
+    projected30: avgDailyRevenue * 30,
+    projected60: avgDailyRevenue * 60,
+    projected90: avgDailyRevenue * 90,
+  };
+}

@@ -7,6 +7,7 @@ import {
   LayoutDashboard, TrendingUp, TrendingDown, ShoppingCart, BarChart2,
   Banknote, FileText, GitMerge, ScrollText, Settings, Menu, X,
   Calendar, Search, Bell, Download, MoreHorizontal, Sun, Moon,
+  Clock, Users, Receipt, Target, Scale, Activity,
 } from 'lucide-react'
 
 import { supabase } from '@/lib/supabase'
@@ -27,6 +28,12 @@ const NAV_ITEMS = [
   { label: 'ซื้อเครื่อง',    icon: ShoppingCart,    href: '/finance/purchases' },
   { label: 'กำไร / Margin',  icon: BarChart2,       href: '/finance/profit' },
   { label: 'กระแสเงินสด',    icon: Banknote,        href: '/finance/cashflow' },
+  { label: 'สต็อกค้าง',      icon: Clock,           href: '/finance/aging' },
+  { label: 'ยอดขายพนักงาน',  icon: Users,           href: '/finance/staff' },
+  { label: 'ภาษี',           icon: Receipt,         href: '/finance/tax' },
+  { label: 'เป้าหมาย',       icon: Target,          href: '/finance/targets' },
+  { label: 'Break-even',     icon: Scale,           href: '/finance/breakeven' },
+  { label: 'คาดการณ์',       icon: Activity,        href: '/finance/forecast' },
   { label: 'รายงาน',         icon: FileText,        href: '/finance/reports' },
   { label: 'Reconcile',      icon: GitMerge,        href: '/finance/reconcile' },
   { label: 'Audit Logs',     icon: ScrollText,      href: '/finance/audit' },
@@ -34,16 +41,22 @@ const NAV_ITEMS = [
 ]
 
 const PAGE_TITLES: Record<string, string> = {
-  '/finance/dashboard': 'Dashboard',
-  '/finance/income':    'รายรับ',
-  '/finance/expenses':  'รายจ่าย',
-  '/finance/purchases': 'ซื้อเครื่อง (ต้นทุน)',
-  '/finance/profit':    'กำไร / Margin',
-  '/finance/cashflow':  'กระแสเงินสด (Cash Flow)',
-  '/finance/reports':   'รายงาน (Reports)',
-  '/finance/reconcile': 'Reconcile (กระทบยอด)',
-  '/finance/audit':     'Audit Logs',
-  '/finance/settings':  'ตั้งค่าการเงิน',
+  '/finance/dashboard':  'Dashboard',
+  '/finance/income':     'รายรับ',
+  '/finance/expenses':   'รายจ่าย',
+  '/finance/purchases':  'ซื้อเครื่อง (ต้นทุน)',
+  '/finance/profit':     'กำไร / Margin',
+  '/finance/cashflow':   'กระแสเงินสด (Cash Flow)',
+  '/finance/aging':      'สต็อกค้าง (Stock Aging)',
+  '/finance/staff':      'ยอดขายพนักงาน',
+  '/finance/tax':        'สรุปภาษี',
+  '/finance/targets':    'เป้าหมายรายเดือน',
+  '/finance/breakeven':  'Break-even Analysis',
+  '/finance/forecast':   'คาดการณ์รายได้',
+  '/finance/reports':    'รายงาน (Reports)',
+  '/finance/reconcile':  'Reconcile (กระทบยอด)',
+  '/finance/audit':      'Audit Logs',
+  '/finance/settings':   'ตั้งค่าการเงิน',
 }
 
 const MOBILE_TABS = [
