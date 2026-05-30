@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Download, Printer, Search, X, Eye, Edit2, MoreHorizontal, ChevronLeft, ChevronRight, Trash2, Copy, ExternalLink, ShoppingCart } from "lucide-react";
+import { Plus, Download, Printer, Search, X, Eye, Edit2, MoreHorizontal, ChevronLeft, ChevronRight, Trash2, Copy, ExternalLink, ShoppingCart, Truck } from "lucide-react";
 import { Package, TrendingUp, DollarSign, CheckCircle, Clock, ShoppingBag } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import StockTopbar from "@/components/stock/Topbar";
@@ -10,7 +10,7 @@ import MetricCard from "@/components/stock/MetricCard";
 import StockStatusBadge, { GradeBadge } from "@/components/stock/StatusBadge";
 import StockDetailDrawer from "@/components/stock/StockDetailDrawer";
 import { useThemeColors } from "@/components/stock/ThemeContext";
-import { fetchStockItems, deleteStockItem } from "@/app/actions/stocks";
+import { fetchStockItems, deleteStockItem, confirmDelivery } from "@/app/actions/stocks";
 import SellModal from "@/components/stock/SellModal";
 import { STOCK_STATUS_COLORS } from "@/lib/stock/constants";
 import { getProductImage } from "@/lib/product-image";
@@ -62,6 +62,9 @@ export default function StockInventoryPage() {
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const [sellTarget, setSellTarget] = useState<StockItem | null>(null);
+  const [deliveryTarget, setDeliveryTarget] = useState<StockItem | null>(null);
+  const [trackingInput, setTrackingInput] = useState("");
+  const [confirmingDelivery, setConfirmingDelivery] = useState(false);
 
   const [filterModel, setFilterModel] = useState("");
   const [filterGrade, setFilterGrade] = useState("");
@@ -160,6 +163,27 @@ export default function StockInventoryPage() {
   function openSellModal(item: StockItem) {
     setSellTarget(item);
     setMoreMenuId(null);
+  }
+
+  function openDeliveryConfirm(item: StockItem) {
+    setDeliveryTarget(item);
+    setTrackingInput("");
+    setMoreMenuId(null);
+  }
+
+  async function handleConfirmDelivery() {
+    if (!deliveryTarget) return;
+    setConfirmingDelivery(true);
+    const res = await confirmDelivery(deliveryTarget.id, trackingInput.trim() || undefined);
+    if (res.success) {
+      const updates: Partial<StockItem> = {
+        deliveryStatus: "จัดส่งแล้ว",
+        trackingNumber: trackingInput.trim() || undefined,
+      };
+      setStocks(prev => prev.map(s => s.id === deliveryTarget.id ? { ...s, ...updates } : s));
+      setDeliveryTarget(null);
+    }
+    setConfirmingDelivery(false);
   }
 
   function copyToClipboard(text: string, label: string) {
@@ -373,7 +397,14 @@ export default function StockInventoryPage() {
                               : <span style={{ color: c.text3, fontSize: 12 }}>—</span>
                             }
                           </td>
-                          <td style={{ padding: "10px 14px" }}><StockStatusBadge status={s.status} /></td>
+                          <td style={{ padding: "10px 14px" }}>
+                            <StockStatusBadge status={s.status} />
+                            {s.status === "ขายแล้ว" && s.deliveryStatus === "รอจัดส่ง" && (
+                              <span style={{ display: "block", marginTop: 4, fontSize: 10, fontWeight: 700, color: "#f59e0b", background: "rgba(245,158,11,0.12)", padding: "2px 8px", borderRadius: 6 }}>
+                                รอจัดส่ง
+                              </span>
+                            )}
+                          </td>
                           <td style={{ padding: "10px 14px", color: c.text2, fontSize: 12, whiteSpace: "nowrap" }}>{s.sourceChannel}</td>
                           <td style={{ padding: "10px 14px", color: c.text3, fontSize: 12, whiteSpace: "nowrap" }}>{fmtDate(s.receivedAt)}</td>
                           <td style={{ padding: "10px 14px" }} onClick={e => e.stopPropagation()}>
@@ -412,6 +443,14 @@ export default function StockInventoryPage() {
                                       <div style={{ borderTop: `1px solid ${c.border}` }} />
                                       <button onClick={() => openSellModal(s)} style={{ ...btnMenu, color: "#22c55e", fontWeight: 600 }}>
                                         <ShoppingCart size={13} /> บันทึกการขาย
+                                      </button>
+                                    </>
+                                  )}
+                                  {s.deliveryStatus === "รอจัดส่ง" && (
+                                    <>
+                                      <div style={{ borderTop: `1px solid ${c.border}` }} />
+                                      <button onClick={() => openDeliveryConfirm(s)} style={{ ...btnMenu, color: "#f59e0b", fontWeight: 600 }}>
+                                        <Truck size={13} /> ยืนยันส่งของ
                                       </button>
                                     </>
                                   )}
@@ -472,6 +511,41 @@ export default function StockInventoryPage() {
             setSellTarget(null);
           }}
         />
+      )}
+
+      {deliveryTarget && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: c.card, borderRadius: 20, padding: 28, width: "100%", maxWidth: 400, border: `1px solid ${c.border}` }}>
+            <p style={{ color: c.text, fontSize: 18, fontWeight: 700, margin: "0 0 4px" }}>ยืนยันส่งของ</p>
+            <p style={{ color: c.text3, fontSize: 12, margin: "0 0 22px" }}>{deliveryTarget.model} · {deliveryTarget.storage} · {deliveryTarget.id}</p>
+            {deliveryTarget.deliveryChannel === "ส่งพัสดุ" && (
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ color: c.text2, fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>เลข Tracking (ถ้ามี)</label>
+                <input
+                  value={trackingInput}
+                  onChange={e => setTrackingInput(e.target.value)}
+                  placeholder="TH123456789XX"
+                  style={{ width: "100%", padding: "10px 12px", borderRadius: 10, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontSize: 14, fontFamily: "inherit", boxSizing: "border-box" as const, outline: "none" }}
+                />
+              </div>
+            )}
+            {deliveryTarget.deliveryChannel === "ส่งถึงที่" && (
+              <p style={{ color: c.text2, fontSize: 13, margin: "0 0 22px", background: c.card2, padding: "12px 14px", borderRadius: 10 }}>
+                ยืนยันว่าได้นำสินค้าไปส่งถึงลูกค้าเรียบร้อยแล้ว
+              </p>
+            )}
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setDeliveryTarget(null)}
+                style={{ flex: 1, padding: "12px", borderRadius: 12, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
+                ยกเลิก
+              </button>
+              <button onClick={handleConfirmDelivery} disabled={confirmingDelivery}
+                style={{ flex: 2, padding: "12px", borderRadius: 12, background: "#f59e0b", border: "none", color: "#000", fontSize: 14, fontWeight: 700, cursor: confirmingDelivery ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: confirmingDelivery ? 0.6 : 1 }}>
+                {confirmingDelivery ? "กำลังบันทึก..." : "ยืนยันส่งของ"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Detail Drawer */}

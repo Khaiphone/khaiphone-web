@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Package, TrendingUp, DollarSign, CheckCircle, Clock, ShoppingBag, Wallet } from "lucide-react";
+import { Package, TrendingUp, DollarSign, CheckCircle, Clock, ShoppingBag, Wallet, Truck } from "lucide-react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion } from "framer-motion";
 import StockTopbar from "@/components/stock/Topbar";
@@ -37,6 +37,7 @@ export default function StockDashboard() {
   const inspecting = stocks.filter(s => s.status === "รอตรวจ").length;
   const noPricedCount = activeStocks.filter(s => s.sellingPrice === 0).length;
   const totalStockCost = activeStocks.reduce((a, s) => a + s.costPrice + s.shippingCost + s.otherCost, 0);
+  const pendingDelivery = stocks.filter(s => s.deliveryStatus === "รอจัดส่ง").length;
   const soldToday = stocks.filter(s => {
     if (s.status !== "ขายแล้ว") return false;
     if (s.soldAt && new Date(s.soldAt).toDateString() === todayStr) return true;
@@ -53,6 +54,7 @@ export default function StockDashboard() {
     { icon: CheckCircle,label: "เครื่องพร้อมขาย",        value: `${readyToSell} เครื่อง`,     iconColor: "#22c55e", sub: "สถานะ: พร้อมขาย" },
     { icon: Clock,      label: "เครื่องรอตรวจ",           value: `${inspecting} เครื่อง`,     iconColor: c.orange,  sub: "สถานะ: รอตรวจ" },
     { icon: ShoppingBag,label: "เครื่องขายแล้ววันนี้",   value: `${soldToday} เครื่อง`,       iconColor: c.info,    sub: "เฉพาะวันนี้" },
+    { icon: Truck,      label: "รอจัดส่ง",               value: `${pendingDelivery} เครื่อง`, iconColor: "#f59e0b", sub: "ขายแล้วยังไม่ได้ส่ง" },
   ];
 
   return (

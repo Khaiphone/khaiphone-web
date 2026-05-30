@@ -85,6 +85,9 @@ export interface StockItem {
   soldBy?: string;
   saleType?: string;
   partnerName?: string;
+  deliveryChannel?: string;
+  deliveryStatus?: string;
+  trackingNumber?: string;
 
   // Original values captured by field staff during inspection — used for cross-checking
   inspectionSnapshot?: {

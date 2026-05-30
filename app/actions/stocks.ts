@@ -52,6 +52,9 @@ function mapRow(row: any): StockItem {
     soldBy: row.sold_by ?? undefined,
     saleType: row.sale_type ?? "ขายปลีก",
     partnerName: row.partner_name ?? undefined,
+    deliveryChannel: row.delivery_channel ?? undefined,
+    deliveryStatus: row.delivery_status ?? undefined,
+    trackingNumber: row.tracking_number ?? undefined,
     inspectionSnapshot: row.inspection_snapshot ?? undefined,
   };
 }
@@ -165,6 +168,7 @@ export async function verifyStockField(
 export async function markStockSold(
   id: string, soldPrice: number, buyerName: string, buyerPhone: string,
   soldAt?: string, soldBy?: string, saleType?: string, partnerName?: string,
+  deliveryChannel?: string,
 ): Promise<{ success: boolean; error?: string }> {
   await requireAuth();
   const supabase = createServerClient();
@@ -173,12 +177,38 @@ export async function markStockSold(
   const { data: current } = await supabase.from("stocks").select("status_log").eq("id", id).single();
   const note = saleType === "ขายส่ง" && partnerName ? `ขายส่งให้ ${partnerName}` : `ขายให้ ${buyerName}`;
   const newLog = [...(current?.status_log ?? []), { status: "ขายแล้ว", timestamp: soldAtTs, note, by: soldBy ?? "admin" }];
+  const autoDeliveryStatus = deliveryChannel === "หน้าร้าน" ? "จัดส่งแล้ว" : "รอจัดส่ง";
   const { error } = await supabase.from("stocks").update({
     status: "ขายแล้ว", sold_at: soldAtTs, sold_price: soldPrice,
     buyer_name: buyerName, buyer_phone: buyerPhone,
     sold_by: soldBy ?? null, sale_type: saleType ?? "ขายปลีก", partner_name: partnerName ?? null,
+    delivery_channel: deliveryChannel ?? null,
+    delivery_status: autoDeliveryStatus,
     status_log: newLog, updated_at: now,
   }).eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function confirmDelivery(
+  id: string, trackingNumber?: string,
+): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const now = new Date().toISOString();
+  const { data: current } = await supabase.from("stocks").select("status_log, audit_log").eq("id", id).single();
+  const note = trackingNumber ? `จัดส่งแล้ว (${trackingNumber})` : "จัดส่งแล้ว";
+  const newStatusLog = [...(current?.status_log ?? []), { status: "ขายแล้ว", timestamp: now, note, by: "admin" }];
+  const newAuditLog: AuditEntry[] = [...(current?.audit_log ?? []), {
+    action: "ยืนยันจัดส่ง",
+    detail: trackingNumber ? `เลข tracking: ${trackingNumber}` : "จัดส่งถึงลูกค้าแล้ว",
+    timestamp: now, by: "admin",
+  }];
+  const update: Record<string, unknown> = {
+    delivery_status: "จัดส่งแล้ว", status_log: newStatusLog, audit_log: newAuditLog, updated_at: now,
+  };
+  if (trackingNumber) update.tracking_number = trackingNumber;
+  const { error } = await supabase.from("stocks").update(update).eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };
 }

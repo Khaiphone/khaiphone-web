@@ -12,6 +12,11 @@ interface SellModalProps {
 }
 
 const SALE_TYPES = ["ขายปลีก", "ขายส่ง"] as const;
+const DELIVERY_CHANNELS = [
+  { value: "หน้าร้าน", label: "รับที่หน้าร้าน" },
+  { value: "ส่งถึงที่", label: "เราไปส่งถึงที่" },
+  { value: "ส่งพัสดุ", label: "ส่งพัสดุ" },
+] as const;
 
 export default function SellModal({ item, onClose, onSuccess }: SellModalProps) {
   const c = useThemeColors();
@@ -26,6 +31,7 @@ export default function SellModal({ item, onClose, onSuccess }: SellModalProps) 
   const [saleType, setSaleType] = useState<"ขายปลีก" | "ขายส่ง">("ขายปลีก");
   const [partnerName, setPartnerName] = useState("");
   const [newPartner, setNewPartner] = useState("");
+  const [deliveryChannel, setDeliveryChannel] = useState<string>("หน้าร้าน");
 
   // Fetched data
   const [staff, setStaff] = useState<string[]>([]);
@@ -51,6 +57,7 @@ export default function SellModal({ item, onClose, onSuccess }: SellModalProps) 
       sellDate, soldBy || undefined,
       saleType,
       isWholesale ? effectivePartner.trim() : undefined,
+      deliveryChannel,
     );
     if (res.success) {
       const soldAtTs = new Date(sellDate + "T12:00:00").toISOString();
@@ -63,6 +70,8 @@ export default function SellModal({ item, onClose, onSuccess }: SellModalProps) 
         soldBy: soldBy || undefined,
         saleType,
         partnerName: isWholesale ? effectivePartner.trim() : undefined,
+        deliveryChannel,
+        deliveryStatus: deliveryChannel === "หน้าร้าน" ? "จัดส่งแล้ว" : "รอจัดส่ง",
       });
       onClose();
     }
@@ -129,6 +138,29 @@ export default function SellModal({ item, onClose, onSuccess }: SellModalProps) 
                 }}
               >
                 {type}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ช่องทางการรับสินค้า */}
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelSt}>ช่องทางการรับสินค้า *</label>
+          <div style={{ display: "flex", gap: 8 }}>
+            {DELIVERY_CHANNELS.map(ch => (
+              <button
+                key={ch.value}
+                onClick={() => setDeliveryChannel(ch.value)}
+                style={{
+                  flex: 1, padding: "9px 4px", borderRadius: 10, fontSize: 13,
+                  border: `1.5px solid ${deliveryChannel === ch.value ? "#f59e0b" : c.border}`,
+                  background: deliveryChannel === ch.value ? "rgba(245,158,11,0.12)" : c.bg,
+                  color: deliveryChannel === ch.value ? "#f59e0b" : c.text2,
+                  fontWeight: deliveryChannel === ch.value ? 700 : 400,
+                  cursor: "pointer", fontFamily: "inherit",
+                }}
+              >
+                {ch.label}
               </button>
             ))}
           </div>

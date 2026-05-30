@@ -2,12 +2,12 @@
 
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Edit2, Upload, RefreshCw, Tag, Printer, CheckSquare, Save, ChevronLeft, ExternalLink } from "lucide-react";
+import { X, Edit2, Upload, RefreshCw, Tag, Printer, CheckSquare, Save, ChevronLeft, ExternalLink, Truck } from "lucide-react";
 import { useThemeColors } from "./ThemeContext";
 import StockStatusBadge, { GradeBadge } from "./StatusBadge";
 import type { StockItem, StockStatus } from "@/lib/stock/types";
 import { STOCK_STATUS_COLORS } from "@/lib/stock/constants";
-import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos, updateStockDocuments, logDocumentView } from "@/app/actions/stocks";
+import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos, updateStockDocuments, logDocumentView, confirmDelivery } from "@/app/actions/stocks";
 import SellModal from "./SellModal";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
@@ -89,6 +89,9 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
   const [showSellModal, setShowSellModal] = useState(false);
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [priceDraftModal, setPriceDraftModal] = useState("");
+  const [showDeliveryModal, setShowDeliveryModal] = useState(false);
+  const [trackingDraft, setTrackingDraft] = useState("");
+  const [confirmingDelivery, setConfirmingDelivery] = useState(false);
 
   if (!item) return null;
 
@@ -403,6 +406,25 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                     </div>
                   </Section>
 
+                  {item.status === "ขายแล้ว" && (
+                    <Section label="ข้อมูลการขาย" c={c}>
+                      {item.soldAt && <Row label="วันที่ขาย" value={fmtDate(item.soldAt)} c={c} />}
+                      {item.buyerName && <Row label="ผู้ซื้อ" value={item.buyerName} c={c} />}
+                      {item.buyerPhone && <Row label="เบอร์" value={item.buyerPhone} c={c} />}
+                      {item.soldPrice && <Row label="ราคาขาย" value={`฿${fmt(item.soldPrice)}`} c={c} />}
+                      {item.soldBy && <Row label="พนักงานขาย" value={item.soldBy} c={c} />}
+                      {item.saleType && <Row label="ประเภทการขาย" value={item.saleType} c={c} />}
+                      {item.deliveryChannel && <Row label="ช่องทางรับสินค้า" value={item.deliveryChannel === "หน้าร้าน" ? "รับที่หน้าร้าน" : item.deliveryChannel === "ส่งถึงที่" ? "เราไปส่งถึงที่" : "ส่งพัสดุ"} c={c} />}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: `1px solid ${c.border}` }}>
+                        <span style={{ color: c.text2, fontSize: 13 }}>สถานะการจัดส่ง</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: item.deliveryStatus === "จัดส่งแล้ว" ? "#22c55e" : "#f59e0b", background: item.deliveryStatus === "จัดส่งแล้ว" ? "rgba(34,197,94,0.12)" : "rgba(245,158,11,0.12)", padding: "2px 10px", borderRadius: 8 }}>
+                          {item.deliveryStatus ?? "—"}
+                        </span>
+                      </div>
+                      {item.trackingNumber && <Row label="เลข Tracking" value={item.trackingNumber} c={c} mono />}
+                    </Section>
+                  )}
+
                   <Section label="ข้อมูลรับซื้อ" c={c}>
                     {item.requestRef && <Row label="เลขคำขอ" value={item.requestRef} c={c} mono />}
                     <Row label="ผู้ขาย" value={item.sellerName} c={c} />
@@ -670,6 +692,15 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                   </button>
                 )}
               </div>
+              {item.deliveryStatus === "รอจัดส่ง" && (
+                <button
+                  onClick={() => { setTrackingDraft(""); setShowDeliveryModal(true); }}
+                  style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "11px 8px", borderRadius: 10, border: "none", background: "rgba(245,158,11,0.15)", color: "#f59e0b", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginTop: 8 }}
+                >
+                  <Truck size={14} />
+                  ยืนยันส่งของ
+                </button>
+              )}
             </>
           )}
         </div>
@@ -707,6 +738,52 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                 disabled={saving || !priceDraftModal || parseInt(priceDraftModal) <= 0}
                 style={{ flex: 2, padding: "12px", borderRadius: 12, background: !priceDraftModal || parseInt(priceDraftModal) <= 0 ? "#555" : c.gold, border: "none", color: "#000", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                 {saving ? "กำลังบันทึก..." : "บันทึกราคา"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeliveryModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: c.card, borderRadius: 20, padding: 28, width: "100%", maxWidth: 380, border: `1px solid ${c.border}` }}>
+            <p style={{ color: c.text, fontSize: 17, fontWeight: 700, margin: "0 0 4px" }}>ยืนยันส่งของ</p>
+            <p style={{ color: c.text3, fontSize: 12, margin: "0 0 20px" }}>{item!.model} · {item!.id}</p>
+            {item!.deliveryChannel === "ส่งพัสดุ" && (
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ color: c.text2, fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>เลข Tracking (ถ้ามี)</label>
+                <input
+                  value={trackingDraft}
+                  onChange={e => setTrackingDraft(e.target.value)}
+                  placeholder="TH123456789XX"
+                  autoFocus
+                  style={{ width: "100%", padding: "10px 12px", borderRadius: 10, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontSize: 14, fontFamily: "inherit", boxSizing: "border-box" as const, outline: "none" }}
+                />
+              </div>
+            )}
+            {item!.deliveryChannel !== "ส่งพัสดุ" && (
+              <p style={{ color: c.text2, fontSize: 13, margin: "0 0 20px", background: c.card2, padding: "12px 14px", borderRadius: 10 }}>
+                ยืนยันว่าส่งสินค้าถึงลูกค้าเรียบร้อยแล้ว
+              </p>
+            )}
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setShowDeliveryModal(false)}
+                style={{ flex: 1, padding: "12px", borderRadius: 12, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
+                ยกเลิก
+              </button>
+              <button
+                disabled={confirmingDelivery}
+                onClick={async () => {
+                  setConfirmingDelivery(true);
+                  const res = await confirmDelivery(item!.id, trackingDraft.trim() || undefined);
+                  if (res.success) {
+                    onUpdate({ ...item!, deliveryStatus: "จัดส่งแล้ว", trackingNumber: trackingDraft.trim() || undefined });
+                    setShowDeliveryModal(false);
+                  }
+                  setConfirmingDelivery(false);
+                }}
+                style={{ flex: 2, padding: "12px", borderRadius: 12, background: "#f59e0b", border: "none", color: "#000", fontSize: 14, fontWeight: 700, cursor: confirmingDelivery ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: confirmingDelivery ? 0.6 : 1 }}>
+                {confirmingDelivery ? "กำลังบันทึก..." : "ยืนยัน"}
               </button>
             </div>
           </div>
