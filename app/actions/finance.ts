@@ -35,6 +35,7 @@ export type FinanceDashboard = {
   deltaCost: number | null;
   deltaExpenses: number | null;
   deltaProfit: number | null;
+  prevPeriodLabel: string;
 };
 
 export type FinanceIncome = {
@@ -103,19 +104,21 @@ function monthLabel(key: string) {
 
 type NormSoldItem = { sell_price: number; sell_date: string; cost: number; model: string };
 
-function getPrevPeriod(dateFrom?: string, dateTo?: string): { prevFrom: string; prevTo: string } {
+function getPrevPeriod(dateFrom?: string, dateTo?: string): { prevFrom: string; prevTo: string; label: string } {
   if (dateFrom && dateTo) {
     const from = new Date(dateFrom + "T00:00:00");
     const to = new Date(dateTo + "T00:00:00");
     const durationMs = to.getTime() - from.getTime();
     const prevTo = new Date(from.getTime() - 86400000);
     const prevFrom = new Date(prevTo.getTime() - durationMs);
-    return { prevFrom: prevFrom.toISOString().slice(0, 10), prevTo: prevTo.toISOString().slice(0, 10) };
+    const fmt = (d: Date) => d.toLocaleDateString("th-TH", { day: "numeric", month: "short" });
+    return { prevFrom: prevFrom.toISOString().slice(0, 10), prevTo: prevTo.toISOString().slice(0, 10), label: `${fmt(prevFrom)}–${fmt(prevTo)}` };
   }
   const now = new Date();
   const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const lastOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-  return { prevFrom: firstOfLastMonth.toISOString().slice(0, 10), prevTo: lastOfLastMonth.toISOString().slice(0, 10) };
+  const label = firstOfLastMonth.toLocaleDateString("th-TH", { month: "long" });
+  return { prevFrom: firstOfLastMonth.toISOString().slice(0, 10), prevTo: lastOfLastMonth.toISOString().slice(0, 10), label };
 }
 
 function pct(curr: number, prev: number): number | null {
@@ -221,7 +224,7 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
     .slice(0, 5)
     .map(([model, profit]) => ({ model, profit }));
 
-  const { prevFrom, prevTo } = getPrevPeriod(dateFrom, dateTo);
+  const { prevFrom, prevTo, label: prevPeriodLabel } = getPrevPeriod(dateFrom, dateTo);
   const prevSold = allNorm.filter((r) => r.sell_date >= prevFrom && r.sell_date <= prevTo);
   const prevRevenue = prevSold.reduce((s, r) => s + r.sell_price, 0);
   const prevCost = prevSold.reduce((s, r) => s + r.cost, 0);
@@ -247,6 +250,7 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
     deltaCost: pct(totalCost, prevCost),
     deltaExpenses: pct(totalExpenses, prevExpenses),
     deltaProfit: pct(trueNetProfit, prevTrueNetProfit),
+    prevPeriodLabel,
   };
 }
 

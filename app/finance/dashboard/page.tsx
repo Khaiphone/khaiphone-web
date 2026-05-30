@@ -63,6 +63,7 @@ export default function DashboardPage() {
     { label: 'ค่าใช้จ่าย',       value: data.totalExpenses,  delta: data.deltaExpenses,  deltaType: 'negative' as const },
     { label: 'กำไรสุทธิแท้จริง', value: data.trueNetProfit,  delta: data.deltaProfit,    deltaType: 'positive' as const },
   ]
+  const compareLabel = data.prevPeriodLabel
 
   const kpiSecondary = [
     { label: 'กำไรจากเครื่อง (ก่อนหักค่าใช้จ่าย)', value: data.netProfit, format: 'currency' as const },
@@ -80,7 +81,7 @@ export default function DashboardPage() {
       {/* Main KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
         {kpiMain.map((k) => (
-          <KpiCard key={k.label} label={k.label} value={k.value} delta={k.delta} deltaType={k.deltaType} format="currency" size="lg" />
+          <KpiCard key={k.label} label={k.label} value={k.value} delta={k.delta} deltaType={k.deltaType} compareLabel={compareLabel} format="currency" size="lg" />
         ))}
       </div>
 
