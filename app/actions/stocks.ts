@@ -237,14 +237,8 @@ export async function fetchStockStaff(): Promise<string[]> {
 export async function fetchWholesalePartners(): Promise<string[]> {
   await requireAuth();
   const supabase = createServerClient();
-  const { data } = await supabase
-    .from("stocks")
-    .select("partner_name")
-    .eq("sale_type", "ขายส่ง")
-    .not("partner_name", "is", null)
-    .neq("partner_name", "");
-  const names = [...new Set((data ?? []).map((r: { partner_name: string }) => r.partner_name).filter(Boolean))];
-  return (names as string[]).sort();
+  const { data } = await supabase.from("partners").select("name").order("name");
+  return (data ?? []).map((r: { name: string }) => r.name).filter(Boolean);
 }
 
 export async function confirmStockRecheck(
