@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, FileText, RotateCcw, Check, ExternalLink, Camera } from "lucide-react";
 import { fetchRequest, saveContractUrls, updateStatus, markContractSigned, savePaymentSlip } from "@/app/actions/admin-requests";
+import { fetchAdminUsers } from "@/app/actions/admin-users";
+import type { AdminUserRow } from "@/app/actions/admin-users";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
 import { validateImageFile } from "@/lib/validate-file";
@@ -184,6 +186,7 @@ export default function ContractPage() {
   const [serial, setSerial] = useState("");
   const [imei, setImei] = useState("");
   const [staffName, setStaffName] = useState("");
+  const [staffList, setStaffList] = useState<AdminUserRow[]>([]);
   const [accessories, setAccessories] = useState<string[]>(["ตัวเครื่อง"]);
   const [accessoriesOther, setAccessoriesOther] = useState("");
   const [txDate, setTxDate] = useState(new Date().toISOString().slice(0, 10));
@@ -214,11 +217,13 @@ export default function ContractPage() {
   const receiptHTML  = useRef("");
 
   useEffect(() => {
+    fetchAdminUsers().then(list => setStaffList(list.filter(u => u.active)));
     fetchRequest(id).then(r => {
       setRequest(r);
       if (r) {
         setBuyerName(r.customer.name);
         setPayMethod(r.payment.method);
+        if (r.assignedToName) setStaffName(r.assignedToName);
         setBankNameDraft(r.payment.bankName ?? "");
         setAccountNameDraft(r.payment.accountName ?? "");
         setAccountNumberDraft(r.payment.accountNumber ?? "");
@@ -862,7 +867,22 @@ export default function ContractPage() {
               </div>
               <div>
                 <label style={labelStyle}>พนักงานผู้รับซื้อ</label>
-                <input type="text" placeholder="ชื่อพนักงาน" value={staffName} onChange={e => setStaffName(e.target.value)} style={inputStyle} />
+                {staffList.length > 0 ? (
+                  <select
+                    value={staffList.some(s => s.name === staffName) ? staffName : "__other__"}
+                    onChange={e => { if (e.target.value !== "__other__") setStaffName(e.target.value); else setStaffName(""); }}
+                    style={{ ...inputStyle, appearance: "none", WebkitAppearance: "none" }}
+                  >
+                    <option value="">— เลือกพนักงาน —</option>
+                    {staffList.map(s => <option key={s.user_id} value={s.name}>{s.name}</option>)}
+                    <option value="__other__">อื่นๆ (พิมพ์เอง)</option>
+                  </select>
+                ) : (
+                  <input type="text" placeholder="ชื่อพนักงาน" value={staffName} onChange={e => setStaffName(e.target.value)} style={inputStyle} />
+                )}
+                {staffList.length > 0 && !staffList.some(s => s.name === staffName) && (
+                  <input type="text" placeholder="ระบุชื่อพนักงาน" value={staffName} onChange={e => setStaffName(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} />
+                )}
               </div>
             </div>
 
