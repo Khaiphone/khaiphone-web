@@ -15,7 +15,7 @@ const NAV_BASE = [
   { icon: LayoutDashboard, label: "Dashboard",  href: "/stock/dashboard"  },
   { icon: FileText,        label: "Requests",   href: "/stock/requests",  showBadge: true },
   { icon: Users,           label: "Customers",  href: "/stock/customers"  },
-  { icon: Handshake,       label: "คู่ค้า",     href: "/stock/partners"   },
+  { icon: Handshake,       label: "Partners",   href: "/stock/partners"   },
   { icon: Package,         label: "Stock",      href: "/stock/inventory"  },
   { icon: ShoppingCart,    label: "Sales",      href: "/stock/sales"      },
   { icon: TrendingUp,      label: "Finance",    href: "/stock/finance"    },
