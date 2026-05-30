@@ -109,11 +109,11 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
     inspector: item?.inspector ?? "",
     note: "",
   });
-  const [recheckCriteria, setRecheckCriteria] = useState<{ label: string; stated: string; actual: string; pass: boolean }[]>(
-    item?.inspectionSnapshot?.criteria ?? []
+  const [recheckCriteria, setRecheckCriteria] = useState<{ label: string; stated: string; actual: string; pass: boolean; verified: boolean }[]>(
+    (item?.inspectionSnapshot?.criteria ?? []).map(c => ({ ...c, verified: false }))
   );
-  const [recheckFunctional, setRecheckFunctional] = useState<{ label: string; pass: boolean }[]>(
-    item?.inspectionSnapshot?.functionalTests ?? []
+  const [recheckFunctional, setRecheckFunctional] = useState<{ label: string; pass: boolean; verified: boolean }[]>(
+    (item?.inspectionSnapshot?.functionalTests ?? []).map(t => ({ ...t, verified: false }))
   );
   const [recheckSaving, setRecheckSaving] = useState(false);
   const [recheckErr, setRecheckErr] = useState<string | null>(null);
@@ -496,50 +496,93 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                           </div>
 
                           {/* ─── ผลการตรวจสอบสภาพจริง ─── */}
-                          {recheckCriteria.length > 0 && (
-                            <div style={{ marginBottom: 14 }}>
-                              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: c.text }}>ผลการตรวจสอบสภาพจริง</p>
-                              <div style={{ border: `1px solid ${c.border}`, borderRadius: 8, overflow: "hidden" }}>
-                                {recheckCriteria.map((cr, i) => (
-                                  <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 8, alignItems: "center", padding: "8px 10px", borderBottom: i < recheckCriteria.length - 1 ? `1px solid ${c.border}` : undefined, background: !cr.pass ? (isDark ? "rgba(239,68,68,0.05)" : "rgba(239,68,68,0.03)") : "transparent" }}>
-                                    <div>
-                                      <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: c.text }}>{cr.label}</p>
-                                      <p style={{ margin: 0, fontSize: 10, color: c.text3 }}>แจ้ง: {cr.stated}</p>
-                                    </div>
-                                    <input
-                                      value={cr.actual}
-                                      onChange={e => setRecheckCriteria(prev => prev.map((x, j) => j === i ? { ...x, actual: e.target.value } : x))}
-                                      placeholder="ผลตรวจจริง"
-                                      style={{ padding: "5px 8px", background: c.bg, border: `1px solid ${c.border2}`, borderRadius: 6, color: c.text, fontSize: 11, width: "100%", boxSizing: "border-box" }}
-                                    />
-                                    <button
-                                      onClick={() => setRecheckCriteria(prev => prev.map((x, j) => j === i ? { ...x, pass: !x.pass } : x))}
-                                      style={{ padding: "5px 10px", borderRadius: 6, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 12, background: cr.pass ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)", color: cr.pass ? "#16a34a" : "#dc2626", whiteSpace: "nowrap" }}
-                                    >
-                                      {cr.pass ? "✓ ผ่าน" : "✗ ไม่ผ่าน"}
-                                    </button>
+                          {recheckCriteria.length > 0 && (() => {
+                              const verifiedCount = recheckCriteria.filter(cr => cr.verified).length;
+                              return (
+                                <div style={{ marginBottom: 14 }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+                                    <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: c.text }}>ผลการตรวจสอบสภาพจริง</p>
+                                    <span style={{ fontSize: 10, color: verifiedCount === recheckCriteria.length ? "#16a34a" : c.text3 }}>
+                                      {verifiedCount}/{recheckCriteria.length} ยืนยันแล้ว
+                                    </span>
                                   </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                                  <div style={{ border: `1px solid ${c.border}`, borderRadius: 8, overflow: "hidden" }}>
+                                    {recheckCriteria.map((cr, i) => {
+                                      const btnStyle: React.CSSProperties = cr.verified
+                                        ? cr.pass
+                                          ? { background: "#16a34a", color: "#fff", border: "none" }
+                                          : { background: "#dc2626", color: "#fff", border: "none" }
+                                        : { background: "transparent", color: c.text3, border: `1px solid ${c.border2}` };
+                                      return (
+                                        <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 8, alignItems: "center", padding: "8px 10px", borderBottom: i < recheckCriteria.length - 1 ? `1px solid ${c.border}` : undefined, background: cr.verified && !cr.pass ? (isDark ? "rgba(239,68,68,0.05)" : "rgba(239,68,68,0.03)") : "transparent" }}>
+                                          <div>
+                                            <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: c.text }}>{cr.label}</p>
+                                            <p style={{ margin: 0, fontSize: 10, color: c.text3 }}>อ้างอิง: {cr.actual || cr.stated}</p>
+                                          </div>
+                                          <input
+                                            value={cr.actual}
+                                            onChange={e => setRecheckCriteria(prev => prev.map((x, j) => j === i ? { ...x, actual: e.target.value } : x))}
+                                            placeholder="บันทึกสภาพจริง"
+                                            style={{ padding: "5px 8px", background: c.bg, border: `1px solid ${c.border2}`, borderRadius: 6, color: c.text, fontSize: 11, width: "100%", boxSizing: "border-box" }}
+                                          />
+                                          <button
+                                            onClick={() => setRecheckCriteria(prev => prev.map((x, j) => {
+                                              if (j !== i) return x;
+                                              if (!x.verified) return { ...x, verified: true, pass: true };
+                                              if (x.pass) return { ...x, pass: false };
+                                              return { ...x, verified: false, pass: true };
+                                            }))}
+                                            style={{ padding: "5px 10px", borderRadius: 6, cursor: "pointer", fontWeight: 700, fontSize: 11, whiteSpace: "nowrap", ...btnStyle }}
+                                          >
+                                            {!cr.verified ? "ยืนยัน" : cr.pass ? "✓ ผ่าน" : "✗ ไม่ผ่าน"}
+                                          </button>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                  <p style={{ margin: "5px 0 0", fontSize: 10, color: c.text3 }}>กดปุ่ม "ยืนยัน" เพื่อบันทึกผล · กดซ้ำเพื่อสลับ ผ่าน / ไม่ผ่าน</p>
+                                </div>
+                              );
+                            })()}
 
                           {/* ─── ผลทดสอบการใช้งานภายใน ─── */}
                           {recheckFunctional.length > 0 && (
                             <div style={{ marginBottom: 14 }}>
-                              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: c.text }}>ผลทดสอบการใช้งานภายใน</p>
+                              {(() => {
+                                const verifiedFn = recheckFunctional.filter(t => t.verified).length;
+                                return (
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+                                    <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: c.text }}>ผลทดสอบการใช้งานภายใน</p>
+                                    <span style={{ fontSize: 10, color: verifiedFn === recheckFunctional.length ? "#16a34a" : c.text3 }}>
+                                      {verifiedFn}/{recheckFunctional.length} ยืนยันแล้ว
+                                    </span>
+                                  </div>
+                                );
+                              })()}
                               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                                {recheckFunctional.map((t, i) => (
-                                  <button
-                                    key={i}
-                                    onClick={() => setRecheckFunctional(prev => prev.map((x, j) => j === i ? { ...x, pass: !x.pass } : x))}
-                                    style={{ fontSize: 11, fontWeight: 600, padding: "5px 12px", borderRadius: 20, cursor: "pointer", border: `1px solid ${t.pass ? "rgba(34,197,94,0.4)" : "rgba(239,68,68,0.4)"}`, background: t.pass ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)", color: t.pass ? "#16a34a" : "#dc2626" }}
-                                  >
-                                    {t.pass ? "✓" : "✗"} {t.label}
-                                  </button>
-                                ))}
+                                {recheckFunctional.map((t, i) => {
+                                  const btnStyle: React.CSSProperties = t.verified
+                                    ? t.pass
+                                      ? { background: "#16a34a", color: "#fff", border: "1px solid #16a34a" }
+                                      : { background: "#dc2626", color: "#fff", border: "1px solid #dc2626" }
+                                    : { background: "transparent", color: c.text3, border: `1px solid ${c.border2}` };
+                                  return (
+                                    <button
+                                      key={i}
+                                      onClick={() => setRecheckFunctional(prev => prev.map((x, j) => {
+                                        if (j !== i) return x;
+                                        if (!x.verified) return { ...x, verified: true, pass: true };
+                                        if (x.pass) return { ...x, pass: false };
+                                        return { ...x, verified: false, pass: true };
+                                      }))}
+                                      style={{ fontSize: 11, fontWeight: 600, padding: "5px 12px", borderRadius: 20, cursor: "pointer", ...btnStyle }}
+                                    >
+                                      {!t.verified ? t.label : t.pass ? `✓ ${t.label}` : `✗ ${t.label}`}
+                                    </button>
+                                  );
+                                })}
                               </div>
-                              <p style={{ margin: "6px 0 0", fontSize: 10, color: c.text3 }}>กดที่รายการเพื่อสลับ ผ่าน / ไม่ผ่าน</p>
+                              <p style={{ margin: "6px 0 0", fontSize: 10, color: c.text3 }}>กดครั้งแรก = ผ่าน · กดซ้ำ = ไม่ผ่าน · กดอีกครั้ง = ยกเลิกยืนยัน</p>
                             </div>
                           )}
 
