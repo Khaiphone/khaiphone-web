@@ -36,7 +36,7 @@ export default function SellModal({ item, onClose, onSuccess }: SellModalProps) 
 
   // Fetched data
   const [staff, setStaff] = useState<string[]>([]);
-  const [partners, setPartners] = useState<string[]>([]);
+  const [partners, setPartners] = useState<{ name: string; phone: string }[]>([]);
 
   useEffect(() => {
     fetchStockStaff().then(setStaff);
@@ -200,10 +200,14 @@ export default function SellModal({ item, onClose, onSuccess }: SellModalProps) 
         {isWholesale && (
           <div style={{ marginBottom: 14 }}>
             <label style={labelSt}>คู่ค้า / ผู้รับสินค้า *</label>
-            <select value={partnerName} onChange={e => setPartnerName(e.target.value)}
-              style={{ ...inputSt, cursor: "pointer", color: partnerName ? c.text : c.text3, marginBottom: 8 }}>
+            <select value={partnerName} onChange={e => {
+              const val = e.target.value;
+              setPartnerName(val);
+              const found = partners.find(p => p.name === val);
+              if (found?.phone) setBuyerPhone(found.phone);
+            }} style={{ ...inputSt, cursor: "pointer", color: partnerName ? c.text : c.text3, marginBottom: 8 }}>
               <option value="">— เลือกคู่ค้า —</option>
-              {partners.map(p => <option key={p} value={p}>{p}</option>)}
+              {partners.map(p => <option key={p.name} value={p.name}>{p.name}{p.phone ? ` · ${p.phone}` : ""}</option>)}
               <option value="__new__">+ เพิ่มคู่ค้าใหม่</option>
             </select>
             {partnerName === "__new__" && (

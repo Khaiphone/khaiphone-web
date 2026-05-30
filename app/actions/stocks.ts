@@ -234,11 +234,11 @@ export async function fetchStockStaff(): Promise<string[]> {
   return (data ?? []).map((r: { name: string }) => r.name).filter(Boolean);
 }
 
-export async function fetchWholesalePartners(): Promise<string[]> {
+export async function fetchWholesalePartners(): Promise<{ name: string; phone: string }[]> {
   await requireAuth();
   const supabase = createServerClient();
-  const { data } = await supabase.from("partners").select("name").order("name");
-  return (data ?? []).map((r: { name: string }) => r.name).filter(Boolean);
+  const { data } = await supabase.from("partners").select("name, phone").order("name");
+  return (data ?? []).filter((r: { name: string }) => r.name).map((r: { name: string; phone?: string }) => ({ name: r.name, phone: r.phone ?? "" }));
 }
 
 export async function confirmStockRecheck(
