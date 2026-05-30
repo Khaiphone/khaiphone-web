@@ -408,6 +408,35 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                     </div>
                   </Section>
 
+                  {(item.physicalChecks ?? []).length > 0 && (() => {
+                    const condColor = (cond: string) =>
+                      cond === "ปกติ"        ? { bg: "rgba(34,197,94,0.12)",  text: "#16a34a" } :
+                      cond === "มีตำหนิเล็ก" ? { bg: "rgba(245,158,11,0.12)", text: "#b45309" } :
+                                               { bg: "rgba(239,68,68,0.12)",  text: "#dc2626" };
+                    const hasIssues = (item.physicalChecks ?? []).filter(p => p.condition !== "ปกติ");
+                    return (
+                      <Section label="สภาพภายนอก" c={c}>
+                        {(item.physicalChecks ?? []).map((p, i) => {
+                          const col = condColor(p.condition);
+                          return (
+                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: `1px solid ${c.border}` }}>
+                              <span style={{ color: c.text2, fontSize: 13 }}>{p.label}</span>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: col.text, background: col.bg, padding: "2px 10px", borderRadius: 8 }}>{p.condition}</span>
+                            </div>
+                          );
+                        })}
+                        {hasIssues.length > 0 && (
+                          <div style={{ marginTop: 8, padding: "8px 10px", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8 }}>
+                            <p style={{ color: "#dc2626", fontSize: 11, fontWeight: 700, margin: "0 0 4px" }}>⚠ ปัญหาการใช้งาน</p>
+                            {hasIssues.map((p, i) => (
+                              <p key={i} style={{ color: "#b91c1c", fontSize: 12, margin: "2px 0 0" }}>• {p.label}: {p.condition}</p>
+                            ))}
+                          </div>
+                        )}
+                      </Section>
+                    );
+                  })()}
+
                   {item.status === "ขายแล้ว" && (
                     <Section label="ข้อมูลการขาย" c={c}>
                       {item.soldAt && <Row label="วันที่ขาย" value={fmtDate(item.soldAt)} c={c} />}
