@@ -483,10 +483,11 @@ export default function ContractPage() {
       <div class="footer">
         <div>
           <div style="font-size:11px;font-weight:700;color:#FFD700;margin-bottom:4px">🛡️ การยืนยันเอกสารดิจิทัล</div>
-          <div style="font-size:9px;color:rgba(255,255,255,.5);margin-bottom:5px;max-width:380px">เอกสารบันทึกขึ้นในรูปแบบดิจิทัลและสามารถตรวจสอบความถูกต้องได้ผ่านระบบ ขายไอโฟน.com</div>
           <div class="fv-row"><span class="fv-lbl">Document ID :</span><span class="fv-val">${contractNo}</span></div>
+          <div class="fv-row"><span class="fv-lbl">Request ID :</span><span class="fv-val">${esc(docNo)}</span></div>
           <div class="fv-row"><span class="fv-lbl">Document Generated :</span><span class="fv-val">${genTs}</span></div>
           <div class="fv-row"><span class="fv-lbl">ตรวจสอบเอกสารได้ที่ :</span><span class="fv-val">khaiphone.com/verify</span></div>
+          <div style="margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,.1);font-size:8.5px;color:rgba(255,255,255,.35);max-width:400px;line-height:1.6">เอกสารฉบับนี้ถูกสร้างจากระบบ Khaiphone โดยอัตโนมัติจากข้อมูลการรับซื้อจริง พร้อมหลักฐานประกอบในระบบ และสามารถตรวจสอบความถูกต้องได้ผ่าน Document ID</div>
         </div>
         <div class="footer-logo" style="text-align:right">
           <div class="footer-brand">ขายไอโฟน.com</div>
@@ -617,10 +618,11 @@ export default function ContractPage() {
       <div class="footer">
         <div>
           <div style="font-size:11px;font-weight:700;color:#FFD700;margin-bottom:4px">🛡️ การยืนยันเอกสารดิจิทัล</div>
-          <div style="font-size:9px;color:rgba(255,255,255,.5);margin-bottom:5px;max-width:380px">เอกสารบันทึกขึ้นในรูปแบบดิจิทัลและสามารถตรวจสอบความถูกต้องได้ผ่านระบบ ขายไอโฟน.com</div>
           <div class="fv-row"><span class="fv-lbl">Document ID :</span><span class="fv-val">${receiptNo}</span></div>
+          <div class="fv-row"><span class="fv-lbl">Request ID :</span><span class="fv-val">${esc(docNo)}</span></div>
           <div class="fv-row"><span class="fv-lbl">Document Generated :</span><span class="fv-val">${genTs}</span></div>
           <div class="fv-row"><span class="fv-lbl">ตรวจสอบเอกสารได้ที่ :</span><span class="fv-val">khaiphone.com/verify</span></div>
+          <div style="margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,.1);font-size:8.5px;color:rgba(255,255,255,.35);max-width:400px;line-height:1.6">เอกสารฉบับนี้ถูกสร้างจากระบบ Khaiphone โดยอัตโนมัติจากข้อมูลการรับซื้อจริง พร้อมหลักฐานประกอบในระบบ และสามารถตรวจสอบความถูกต้องได้ผ่าน Document ID</div>
         </div>
         <div class="footer-logo" style="text-align:right">
           <div class="footer-brand">ขายไอโฟน.com</div>
