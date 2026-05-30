@@ -92,8 +92,13 @@ export default function SellModal({ item, onClose, onSuccess }: SellModalProps) 
 
         {/* วันที่ขาย */}
         <div style={{ marginBottom: 14 }}>
-          <label style={labelSt}>วันที่ขาย *</label>
-          <input type="date" value={sellDate} onChange={e => setSellDate(e.target.value)} style={inputSt} />
+          <label style={labelSt}>วันที่ขาย * <span style={{ color: c.text3, fontWeight: 400 }}>(เลือกย้อนหลังได้)</span></label>
+          <input
+            type="date"
+            value={sellDate}
+            onChange={e => setSellDate(e.target.value)}
+            style={{ ...inputSt, colorScheme: "auto" }}
+          />
         </div>
 
         {/* พนักงานขาย */}
