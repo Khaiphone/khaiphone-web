@@ -98,6 +98,11 @@ export interface StockItem {
     storage: string | null;
     color:   string | null;
     source:  string;
+    result?: string;
+    batteryHealth?: number;
+    batteryCycles?: number;
+    criteria?: { label: string; stated: string; actual: string; pass: boolean }[];
+    functionalTests?: { label: string; pass: boolean }[];
   };
 }
 

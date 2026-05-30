@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Edit2, Upload, RefreshCw, Tag, Printer, CheckSquare, Save, ChevronLeft, ExternalLink, Truck } from "lucide-react";
-import { useThemeColors } from "./ThemeContext";
+import { useThemeColors, useStockTheme } from "./ThemeContext";
 import StockStatusBadge, { GradeBadge } from "./StatusBadge";
 import type { StockItem, StockStatus } from "@/lib/stock/types";
 import { STOCK_STATUS_COLORS } from "@/lib/stock/constants";
@@ -73,6 +73,8 @@ function printPriceTag(item: StockItem) {
 
 export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
   const c = useThemeColors();
+  const { theme } = useStockTheme();
+  const isDark = theme === "dark";
   const [tab, setTab] = useState<Tab>("รายละเอียด");
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [editPrice, setEditPrice] = useState(false);
@@ -408,42 +410,73 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                     </div>
                   </Section>
 
-                  {(item.physicalChecks ?? []).length > 0 && (() => {
-                    const condColor = (cond: string) =>
-                      cond === "ปกติ" ? { bg: "rgba(34,197,94,0.12)", text: "#16a34a" } :
-                      cond === "มีปัญหา" ? { bg: "rgba(239,68,68,0.12)", text: "#dc2626" } :
-                      { bg: "rgba(245,158,11,0.12)", text: "#b45309" };
-                    const hasIssues = (item.physicalChecks ?? []).filter(p => p.condition !== "ปกติ");
-                    const hasFunctionalProblems = hasIssues.filter(p => p.condition === "มีปัญหา");
-                    const hasCosmetic = hasIssues.filter(p => p.condition !== "มีปัญหา");
+                  {(() => {
+                    const snap = item.inspectionSnapshot;
+                    const criteria = snap?.criteria ?? [];
+                    const functionalTests = snap?.functionalTests ?? [];
+                    const hasCriteria = criteria.length > 0;
+                    const hasFunctional = functionalTests.length > 0;
+                    const failedCriteria = criteria.filter(c => !c.pass);
+                    const failedFunctional = functionalTests.filter(t => !t.pass);
+                    if (!hasCriteria && !hasFunctional) return null;
+                    const thStyle: React.CSSProperties = { padding: "6px 8px", fontSize: 11, fontWeight: 700, color: c.text3, textAlign: "left", borderBottom: `1px solid ${c.border}`, whiteSpace: "nowrap" };
+                    const tdStyle: React.CSSProperties = { padding: "7px 8px", fontSize: 12, color: c.text2, borderBottom: `1px solid ${c.border}`, verticalAlign: "middle" };
                     return (
-                      <Section label="สภาพภายนอก" c={c}>
-                        {(item.physicalChecks ?? []).map((p, i) => {
-                          const col = condColor(p.condition);
-                          return (
-                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: `1px solid ${c.border}` }}>
-                              <span style={{ color: c.text2, fontSize: 13 }}>{p.label}</span>
-                              <span style={{ fontSize: 11, fontWeight: 700, color: col.text, background: col.bg, padding: "2px 10px", borderRadius: 8 }}>{p.condition}</span>
+                      <>
+                        {hasCriteria && (
+                          <Section label="ผลการตรวจสอบสภาพจริง" c={c}>
+                            <div style={{ overflowX: "auto", margin: "0 -2px" }}>
+                              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                                <thead>
+                                  <tr style={{ background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)" }}>
+                                    <th style={thStyle}>รายการ</th>
+                                    <th style={thStyle}>สภาพที่แจ้ง</th>
+                                    <th style={thStyle}>ผลตรวจจริง</th>
+                                    <th style={{ ...thStyle, textAlign: "center" }}>ผ่าน</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {criteria.map((cr, i) => (
+                                    <tr key={i} style={{ background: !cr.pass ? (isDark ? "rgba(239,68,68,0.05)" : "rgba(239,68,68,0.03)") : "transparent" }}>
+                                      <td style={{ ...tdStyle, fontWeight: 600, color: c.text }}>{cr.label}</td>
+                                      <td style={{ ...tdStyle, color: c.text3 }}>{cr.stated || "—"}</td>
+                                      <td style={{ ...tdStyle, color: cr.pass ? "#16a34a" : "#dc2626", fontWeight: cr.pass ? 400 : 600 }}>{cr.actual || (cr.pass ? "ปกติ" : "—")}</td>
+                                      <td style={{ ...tdStyle, textAlign: "center" }}>{cr.pass ? "✓" : "✗"}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
                             </div>
-                          );
-                        })}
-                        {hasCosmetic.length > 0 && (
-                          <div style={{ marginTop: 8, padding: "8px 10px", background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 8 }}>
-                            <p style={{ color: "#b45309", fontSize: 11, fontWeight: 700, margin: "0 0 4px" }}>ตำหนิที่พบ</p>
-                            {hasCosmetic.map((p, i) => (
-                              <p key={i} style={{ color: "#92400e", fontSize: 12, margin: "2px 0 0" }}>• {p.label}: {p.condition}</p>
-                            ))}
-                          </div>
+                            {failedCriteria.length > 0 && (
+                              <div style={{ marginTop: 8, padding: "8px 10px", background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 8 }}>
+                                <p style={{ color: "#b45309", fontSize: 11, fontWeight: 700, margin: "0 0 4px" }}>ตำหนิที่พบ</p>
+                                {failedCriteria.map((cr, i) => (
+                                  <p key={i} style={{ color: "#92400e", fontSize: 12, margin: "2px 0 0" }}>• {cr.label}: {cr.actual || "ไม่ผ่าน"}</p>
+                                ))}
+                              </div>
+                            )}
+                          </Section>
                         )}
-                        {hasFunctionalProblems.length > 0 && (
-                          <div style={{ marginTop: 8, padding: "8px 10px", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8 }}>
-                            <p style={{ color: "#dc2626", fontSize: 11, fontWeight: 700, margin: "0 0 4px" }}>⚠ ปัญหาการใช้งาน</p>
-                            {hasFunctionalProblems.map((p, i) => (
-                              <p key={i} style={{ color: "#b91c1c", fontSize: 12, margin: "2px 0 0" }}>• {p.label}: {p.condition}</p>
-                            ))}
-                          </div>
+                        {hasFunctional && (
+                          <Section label="ผลทดสอบการใช้งานภายใน" c={c}>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                              {functionalTests.map((t, i) => (
+                                <span key={i} style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 20, background: t.pass ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)", color: t.pass ? "#16a34a" : "#dc2626", border: `1px solid ${t.pass ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}` }}>
+                                  {t.pass ? "✓" : "✗"} {t.label}
+                                </span>
+                              ))}
+                            </div>
+                            {failedFunctional.length > 0 && (
+                              <div style={{ marginTop: 8, padding: "8px 10px", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8 }}>
+                                <p style={{ color: "#dc2626", fontSize: 11, fontWeight: 700, margin: "0 0 4px" }}>⚠ ปัญหาการใช้งาน</p>
+                                {failedFunctional.map((t, i) => (
+                                  <p key={i} style={{ color: "#b91c1c", fontSize: 12, margin: "2px 0 0" }}>• {t.label}</p>
+                                ))}
+                              </div>
+                            )}
+                          </Section>
                         )}
-                      </Section>
+                      </>
                     );
                   })()}
 

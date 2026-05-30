@@ -112,12 +112,17 @@ export async function createStockFromRequest(
   // Snapshot from inspection — staff-entered values for cross-checking later
   const insp = req.inspection ?? {};
   const snapshot = {
-    imei:    insp.imei    ?? null,
-    serial:  insp.serial  ?? null,
-    model:   req.device_model   ?? null,
-    storage: req.device_storage ?? null,
-    color:   req.device_color   ?? null,
-    source:  "inspection",
+    imei:           insp.imei    ?? null,
+    serial:         insp.serial  ?? null,
+    model:          req.device_model   ?? null,
+    storage:        req.device_storage ?? null,
+    color:          req.device_color   ?? null,
+    source:         "inspection",
+    result:         insp.result         ?? null,
+    batteryHealth:  insp.batteryHealth  ?? null,
+    batteryCycles:  insp.batteryCycles  ?? null,
+    criteria:       insp.criteria       ?? [],
+    functionalTests: insp.functionalTests ?? [],
   };
 
   const { error: insertErr } = await supabase.from("stocks").insert({

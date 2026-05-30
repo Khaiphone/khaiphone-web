@@ -314,12 +314,17 @@ export async function updateStatus(
       const now = new Date().toISOString();
       const insp = current.inspection ?? {};
       const snapshot = {
-        imei:    insp.imei    ?? null,
-        serial:  insp.serial  ?? null,
-        model:   current.device_model   ?? null,
-        storage: current.device_storage ?? null,
-        color:   current.device_color   ?? null,
-        source:  "inspection",
+        imei:           insp.imei    ?? null,
+        serial:         insp.serial  ?? null,
+        model:          current.device_model   ?? null,
+        storage:        current.device_storage ?? null,
+        color:          current.device_color   ?? null,
+        source:         "inspection",
+        result:         insp.result         ?? null,
+        batteryHealth:  insp.batteryHealth  ?? null,
+        batteryCycles:  insp.batteryCycles  ?? null,
+        criteria:       insp.criteria       ?? [],
+        functionalTests: insp.functionalTests ?? [],
       };
       await supabase.from("stocks").insert({
         id: stockId,

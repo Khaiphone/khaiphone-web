@@ -26,7 +26,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-function mapInspection(insp) {
+function mapInspection(insp, stock) {
   return {
     grade: insp.result === "matched" ? "A" : insp.result === "adjusted" ? "B" : "A",
     battery_health: insp.batteryHealth ?? 0,
@@ -41,6 +41,14 @@ function mapInspection(insp) {
         condition: t.pass ? "ปกติ" : "มีปัญหา",
       })),
     ],
+    inspection_snapshot: {
+      ...(stock.inspection_snapshot ?? {}),
+      result:          insp.result          ?? null,
+      batteryHealth:   insp.batteryHealth   ?? null,
+      batteryCycles:   insp.batteryCycles   ?? null,
+      criteria:        insp.criteria        ?? [],
+      functionalTests: insp.functionalTests ?? [],
+    },
   };
 }
 
@@ -48,7 +56,7 @@ async function run() {
   // 1. Fetch all stocks that have a request_ref
   const { data: stocks, error: stockErr } = await supabase
     .from("stocks")
-    .select("id, request_ref, grade, battery_health, cycle_count, physical_checks")
+    .select("id, request_ref, grade, battery_health, cycle_count, physical_checks, inspection_snapshot")
     .not("request_ref", "is", null);
 
   if (stockErr) {
@@ -83,7 +91,7 @@ async function run() {
       continue;
     }
 
-    const patch = mapInspection(insp);
+    const patch = mapInspection(insp, stock);
 
     const { error: updateErr } = await supabase
       .from("stocks")
