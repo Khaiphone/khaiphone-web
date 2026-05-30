@@ -15,6 +15,7 @@ function fmt(n: number) { return '฿' + n.toLocaleString('th-TH') }
 
 function monthKey(offset = 0) {
   const d = new Date()
+  d.setDate(1)
   d.setMonth(d.getMonth() + offset)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }

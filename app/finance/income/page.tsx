@@ -61,7 +61,7 @@ export default function IncomePage() {
     <motion.div {...fadeUp} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Header bar */}
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 12px', flex: 1, minWidth: 180 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--f-input-bg)', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 12px', flex: 1, minWidth: 180 }}>
           <Search size={14} color={TEXT3} />
           <input
             type="text"
@@ -118,7 +118,7 @@ export default function IncomePage() {
                   <tr
                     key={r.id}
                     style={{ borderBottom: idx < paged.length - 1 ? `1px solid ${BORDER}` : 'none' }}
-                    onMouseEnter={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.02)')}
+                    onMouseEnter={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = 'var(--f-hover)')}
                     onMouseLeave={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = 'transparent')}
                   >
                     <td style={{ padding: '12px 16px', color: TEXT2, fontSize: 13, whiteSpace: 'nowrap' }}>{formatDate(r.date)}</td>
@@ -153,11 +153,11 @@ export default function IncomePage() {
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-              style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: page === 1 ? TEXT3 : TEXT2, fontSize: 13, cursor: page === 1 ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+              style={{ padding: '6px 14px', borderRadius: 8, background: 'var(--f-hover)', border: `1px solid ${BORDER}`, color: page === 1 ? TEXT3 : TEXT2, fontSize: 13, cursor: page === 1 ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
               ก่อนหน้า
             </button>
             <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-              style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: page === totalPages ? TEXT3 : TEXT2, fontSize: 13, cursor: page === totalPages ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+              style={{ padding: '6px 14px', borderRadius: 8, background: 'var(--f-hover)', border: `1px solid ${BORDER}`, color: page === totalPages ? TEXT3 : TEXT2, fontSize: 13, cursor: page === totalPages ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
               ถัดไป
             </button>
           </div>

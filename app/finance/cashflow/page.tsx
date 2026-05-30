@@ -104,7 +104,7 @@ export default function CashFlowPage() {
                   <tr
                     key={e.id}
                     style={{ borderBottom: idx < filtered.length - 1 ? `1px solid ${BORDER}` : 'none' }}
-                    onMouseEnter={(ev) => ((ev.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.02)')}
+                    onMouseEnter={(ev) => ((ev.currentTarget as HTMLTableRowElement).style.background = 'var(--f-hover)')}
                     onMouseLeave={(ev) => ((ev.currentTarget as HTMLTableRowElement).style.background = 'transparent')}
                   >
                     <td style={{ padding: '12px 16px', color: TEXT2, fontSize: 13, whiteSpace: 'nowrap' }}>{e.datetime}</td>

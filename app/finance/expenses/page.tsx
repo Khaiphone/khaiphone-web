@@ -126,19 +126,19 @@ export default function ExpensesPage() {
   const paged = filtered.slice((page - 1) * perPage, page * perPage)
   const totalAmount = filtered.reduce((s, r) => s + r.amount, 0)
 
-  const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: 'var(--f-text1)', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }
+  const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', borderRadius: 8, background: 'var(--f-input-bg)', border: `1px solid ${BORDER}`, color: 'var(--f-text1)', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }
   const labelStyle: React.CSSProperties = { display: 'block', color: TEXT2, fontSize: 12, fontWeight: 600, marginBottom: 5 }
 
   return (
     <motion.div {...fadeUp} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Header */}
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 12px', flex: 1, minWidth: 180 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--f-input-bg)', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 12px', flex: 1, minWidth: 180 }}>
           <Search size={14} color={TEXT3} />
           <input type="text" placeholder="ค้นหา รายการ / หมวดหมู่..." value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
             style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--f-text1)', fontSize: 13, width: '100%', fontFamily: 'inherit' }} />
         </div>
-        <button onClick={load} title="รีเฟรช" style={{ display: 'flex', alignItems: 'center', padding: '9px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT2, cursor: 'pointer' }}>
+        <button onClick={load} title="รีเฟรช" style={{ display: 'flex', alignItems: 'center', padding: '9px', borderRadius: 8, background: 'var(--f-hover)', border: `1px solid ${BORDER}`, color: TEXT2, cursor: 'pointer' }}>
           <RefreshCw size={15} />
         </button>
         <button onClick={openAdd} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, background: GOLD, border: 'none', color: 'var(--f-text1)', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
@@ -179,7 +179,7 @@ export default function ExpensesPage() {
                 </td></tr>
               ) : paged.map((r, idx) => (
                 <tr key={r.id} style={{ borderBottom: idx < paged.length - 1 ? `1px solid ${BORDER}` : 'none' }}
-                  onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.02)'}
+                  onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'var(--f-hover)'}
                   onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                   <td style={{ padding: '12px 16px', color: TEXT2, fontSize: 13, whiteSpace: 'nowrap' }}>{fmt(r.date)}</td>
                   <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}><span style={{ color: GOLD, fontSize: 13, fontWeight: 600 }}>{r.refNumber}</span></td>
@@ -187,7 +187,7 @@ export default function ExpensesPage() {
                     <div>{r.product}</div>
                     {r.notes && <div style={{ color: TEXT3, fontSize: 11, marginTop: 2 }}>{r.notes}</div>}
                   </td>
-                  <td style={{ padding: '12px 16px' }}><span style={{ padding: '2px 10px', borderRadius: 20, background: 'rgba(255,255,255,0.06)', color: TEXT2, fontSize: 12 }}>{r.category}</span></td>
+                  <td style={{ padding: '12px 16px' }}><span style={{ padding: '2px 10px', borderRadius: 20, background: 'var(--f-hover)', color: TEXT2, fontSize: 12 }}>{r.category}</span></td>
                   <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}><span style={{ color: '#ef4444', fontWeight: 700, fontSize: 14 }}>฿{r.amount.toLocaleString('th-TH')}</span></td>
                   <td style={{ padding: '12px 16px' }}>
                     <span style={{ padding: '3px 10px', borderRadius: 6, background: STATUS_COLORS[r.status].bg, color: STATUS_COLORS[r.status].text, fontSize: 12, fontWeight: 600 }}>{STATUS_LABELS[r.status]}</span>
@@ -206,8 +206,8 @@ export default function ExpensesPage() {
         <div style={{ padding: '12px 20px', borderTop: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ color: TEXT3, fontSize: 13 }}>แสดง {filtered.length === 0 ? 0 : (page - 1) * perPage + 1}–{Math.min(page * perPage, filtered.length)} จาก {filtered.length} รายการ</span>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: page === 1 ? TEXT3 : TEXT2, fontSize: 13, cursor: page === 1 ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>ก่อนหน้า</button>
-            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: page === totalPages ? TEXT3 : TEXT2, fontSize: 13, cursor: page === totalPages ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>ถัดไป</button>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '6px 14px', borderRadius: 8, background: 'var(--f-hover)', border: `1px solid ${BORDER}`, color: page === 1 ? TEXT3 : TEXT2, fontSize: 13, cursor: page === 1 ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>ก่อนหน้า</button>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: '6px 14px', borderRadius: 8, background: 'var(--f-hover)', border: `1px solid ${BORDER}`, color: page === totalPages ? TEXT3 : TEXT2, fontSize: 13, cursor: page === totalPages ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>ถัดไป</button>
           </div>
         </div>
       </div>
@@ -218,7 +218,7 @@ export default function ExpensesPage() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-              style={{ background: '#111', border: `1px solid ${BORDER}`, borderRadius: 20, padding: 28, width: '100%', maxWidth: 480 }}>
+              style={{ background: 'var(--f-card)', border: `1px solid ${BORDER}`, borderRadius: 20, padding: 28, width: '100%', maxWidth: 480 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
                 <p style={{ margin: 0, color: 'var(--f-text1)', fontWeight: 700, fontSize: 16 }}>{modal === 'add' ? 'เพิ่มรายจ่าย' : 'แก้ไขรายจ่าย'}</p>
                 <button onClick={() => setModal(null)} style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', padding: 4, display: 'flex' }}><X size={20} /></button>
@@ -259,7 +259,7 @@ export default function ExpensesPage() {
                 {errorMsg && <p style={{ color: '#ef4444', fontSize: 13, margin: 0 }}>{errorMsg}</p>}
               </div>
               <div style={{ display: 'flex', gap: 10, marginTop: 24, justifyContent: 'flex-end' }}>
-                <button onClick={() => setModal(null)} disabled={saving} style={{ padding: '10px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT2, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>ยกเลิก</button>
+                <button onClick={() => setModal(null)} disabled={saving} style={{ padding: '10px 20px', borderRadius: 8, background: 'var(--f-hover)', border: `1px solid ${BORDER}`, color: TEXT2, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>ยกเลิก</button>
                 <button onClick={handleSubmit} disabled={saving} style={{ padding: '10px 24px', borderRadius: 8, background: GOLD, border: 'none', color: 'var(--f-text1)', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: saving ? 0.7 : 1 }}>
                   {saving ? 'กำลังบันทึก...' : modal === 'add' ? 'เพิ่มรายการ' : 'บันทึก'}
                 </button>
@@ -275,11 +275,11 @@ export default function ExpensesPage() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-              style={{ background: '#111', border: `1px solid ${BORDER}`, borderRadius: 20, padding: 28, width: '100%', maxWidth: 360, textAlign: 'center' }}>
+              style={{ background: 'var(--f-card)', border: `1px solid ${BORDER}`, borderRadius: 20, padding: 28, width: '100%', maxWidth: 360, textAlign: 'center' }}>
               <p style={{ margin: '0 0 8px', color: 'var(--f-text1)', fontWeight: 700, fontSize: 16 }}>ลบรายการ?</p>
               <p style={{ margin: '0 0 24px', color: TEXT2, fontSize: 14 }}>การกระทำนี้ไม่สามารถย้อนกลับได้</p>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-                <button onClick={() => setDeleteId(null)} disabled={saving} style={{ padding: '10px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT2, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>ยกเลิก</button>
+                <button onClick={() => setDeleteId(null)} disabled={saving} style={{ padding: '10px 20px', borderRadius: 8, background: 'var(--f-hover)', border: `1px solid ${BORDER}`, color: TEXT2, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>ยกเลิก</button>
                 <button onClick={() => handleDelete(deleteId)} disabled={saving} style={{ padding: '10px 20px', borderRadius: 8, background: '#ef4444', border: 'none', color: 'var(--f-text1)', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: saving ? 0.7 : 1 }}>
                   {saving ? 'กำลังลบ...' : 'ลบ'}
                 </button>

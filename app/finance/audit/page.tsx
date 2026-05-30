@@ -86,7 +86,7 @@ export default function AuditPage() {
               ) : (
                 filtered.map((log, idx) => (
                   <tr key={log.id} style={{ borderBottom: idx < filtered.length - 1 ? `1px solid ${BORDER}` : 'none' }}
-                    onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.02)'}
+                    onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'var(--f-hover)'}
                     onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                     <td style={{ padding: '12px 16px', color: TEXT2, fontSize: 13, whiteSpace: 'nowrap' }}>{fmtDT(log.datetime)}</td>
                     <td style={{ padding: '12px 16px', color: 'var(--f-text1)', fontSize: 13, whiteSpace: 'nowrap' }}>{log.user}</td>

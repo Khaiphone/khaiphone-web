@@ -24,7 +24,7 @@ const DEFAULT: FinanceSettings = {
 }
 
 function inputStyle(extra?: React.CSSProperties): React.CSSProperties {
-  return { width: '100%', padding: '10px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER}`, color: 'var(--f-text1)', fontSize: 14, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', ...extra }
+  return { width: '100%', padding: '10px 14px', borderRadius: 10, background: 'var(--f-input-bg)', border: `1px solid ${BORDER}`, color: 'var(--f-text1)', fontSize: 14, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', ...extra }
 }
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -33,7 +33,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
-    <button onClick={() => onChange(!value)} style={{ width: 48, height: 26, borderRadius: 13, border: 'none', background: value ? GOLD : 'rgba(255,255,255,0.15)', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+    <button onClick={() => onChange(!value)} style={{ width: 48, height: 26, borderRadius: 13, border: 'none', background: value ? GOLD : 'var(--f-border)', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
       <span style={{ position: 'absolute', top: 3, left: value ? 24 : 3, width: 20, height: 20, borderRadius: '50%', background: '#FFF', transition: 'left 0.2s' }} />
     </button>
   )
@@ -129,7 +129,7 @@ export default function SettingsPage() {
             {/* Tax tab */}
             {activeTab === 1 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderRadius: 12, background: 'var(--f-input-bg)', border: `1px solid ${BORDER}` }}>
                   <div>
                     <p style={{ margin: 0, color: 'var(--f-text1)', fontSize: 14, fontWeight: 600 }}>เปิดใช้งาน VAT</p>
                     <p style={{ margin: 0, color: TEXT2, fontSize: 12, marginTop: 2 }}>ระบบจะคำนวณ VAT อัตโนมัติในทุกรายการ</p>
@@ -190,7 +190,7 @@ export default function SettingsPage() {
                   { key: 'notifyLowStock' as const,    label: 'แจ้งเตือนสต็อกต่ำ',  desc: 'รับการแจ้งเตือนเมื่อสต็อกเหลือน้อยกว่า 5 เครื่อง' },
                   { key: 'notifyLargeProfit' as const, label: 'แจ้งเตือนกำไรสูง',   desc: 'รับการแจ้งเตือนเมื่อมีรายการกำไรเกิน ฿5,000' },
                 ].map(item => (
-                  <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}` }}>
+                  <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderRadius: 12, background: 'var(--f-input-bg)', border: `1px solid ${BORDER}` }}>
                     <div>
                       <p style={{ margin: 0, color: 'var(--f-text1)', fontSize: 14, fontWeight: 600 }}>{item.label}</p>
                       <p style={{ margin: 0, color: TEXT2, fontSize: 12, marginTop: 2 }}>{item.desc}</p>

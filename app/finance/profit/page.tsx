@@ -89,7 +89,7 @@ export default function ProfitPage() {
                     <tr
                       key={m.model}
                       style={{ borderBottom: idx < byModel.length - 1 ? `1px solid ${BORDER}` : 'none' }}
-                      onMouseEnter={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.02)')}
+                      onMouseEnter={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = 'var(--f-hover)')}
                       onMouseLeave={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = 'transparent')}
                     >
                       <td style={{ padding: '12px 16px', color: 'var(--f-text1)', fontSize: 13, fontWeight: 500 }}>{m.model}</td>
@@ -103,7 +103,7 @@ export default function ProfitPage() {
                       </td>
                       <td style={{ padding: '12px 16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                          <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--f-border)', overflow: 'hidden' }}>
                             <div style={{ width: `${Math.max(0, Math.min(100, m.margin))}%`, height: '100%', background: '#B8860B', borderRadius: 3 }} />
                           </div>
                           <span style={{ color: '#B8860B', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap' }}>{m.margin.toFixed(1)}%</span>

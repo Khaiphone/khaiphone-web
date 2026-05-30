@@ -104,7 +104,7 @@ export default function DashboardPage() {
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={data.revenueByMonth} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <CartesianGrid stroke="var(--f-grid)" vertical={false} />
                 <XAxis dataKey="date" tick={{ fill: TEXT3, fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: TEXT3, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `฿${(v / 1000).toFixed(0)}K`} width={52} />
                 <Tooltip
@@ -142,7 +142,7 @@ export default function DashboardPage() {
                     <stop offset="95%" stopColor={GOLD} stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <CartesianGrid stroke="var(--f-grid)" vertical={false} />
                 <XAxis dataKey="date" tick={{ fill: TEXT3, fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: TEXT3, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `฿${(v / 1000).toFixed(0)}K`} width={52} />
                 <Tooltip

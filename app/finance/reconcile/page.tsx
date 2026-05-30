@@ -105,7 +105,7 @@ export default function ReconcilePage() {
   const unmatchedBank = bankList.filter(b => !b.matched).length
   const unmatchedSys = sysList.filter(s => !s.matched).length
 
-  const inputStyle: React.CSSProperties = { width: '100%', padding: '8px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: 'var(--f-text1)', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }
+  const inputStyle: React.CSSProperties = { width: '100%', padding: '8px 12px', borderRadius: 8, background: 'var(--f-input-bg)', border: `1px solid ${BORDER}`, color: 'var(--f-text1)', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }
 
   return (
     <motion.div {...fadeUp} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -140,7 +140,7 @@ export default function ReconcilePage() {
               <p style={{ margin: 0, color: 'var(--f-text1)', fontWeight: 700, fontSize: 14 }}>รายการธนาคาร</p>
               <p style={{ margin: '2px 0 0', color: TEXT2, fontSize: 12 }}>เพิ่มรายการจากสเตทเมนต์ธนาคาร</p>
             </div>
-            <button onClick={() => setShowAddBank(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: `1px solid ${BORDER}`, color: TEXT2, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <button onClick={() => setShowAddBank(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: 'var(--f-hover)', border: `1px solid ${BORDER}`, color: TEXT2, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
               <Plus size={13} /> เพิ่ม
             </button>
           </div>
@@ -171,7 +171,7 @@ export default function ReconcilePage() {
 
         {/* Match icon */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 60 }}>
-          <div style={{ width: 40, height: 40, borderRadius: '50%', background: selectedBank && selectedSys ? GOLD : 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}>
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: selectedBank && selectedSys ? GOLD : 'var(--f-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}>
             <Link2 size={18} color={selectedBank && selectedSys ? '#fff' : TEXT3} />
           </div>
         </div>
@@ -211,7 +211,7 @@ export default function ReconcilePage() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-              style={{ background: '#111', border: `1px solid ${BORDER}`, borderRadius: 20, padding: 28, width: '100%', maxWidth: 400 }}>
+              style={{ background: 'var(--f-card)', border: `1px solid ${BORDER}`, borderRadius: 20, padding: 28, width: '100%', maxWidth: 400 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                 <p style={{ margin: 0, color: 'var(--f-text1)', fontWeight: 700, fontSize: 15 }}>เพิ่มรายการธนาคาร</p>
                 <button onClick={() => setShowAddBank(false)} style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', padding: 4, display: 'flex' }}><X size={18} /></button>
@@ -231,7 +231,7 @@ export default function ReconcilePage() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
-                <button onClick={() => setShowAddBank(false)} style={{ padding: '9px 18px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT2, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>ยกเลิก</button>
+                <button onClick={() => setShowAddBank(false)} style={{ padding: '9px 18px', borderRadius: 8, background: 'var(--f-hover)', border: `1px solid ${BORDER}`, color: TEXT2, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>ยกเลิก</button>
                 <button onClick={addBankTx} style={{ padding: '9px 20px', borderRadius: 8, background: GOLD, border: 'none', color: 'var(--f-text1)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>เพิ่ม</button>
               </div>
             </motion.div>
