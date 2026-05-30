@@ -232,6 +232,9 @@ export default function ContractPage() {
     const dateStr   = thDate(txDate + "T00:00:00");
     const timeStr   = thTime(now.toISOString());
     const dateShort = shortDate(txDate + "T00:00:00");
+    const genTs     = `${String(now.getDate()).padStart(2,"0")}/${String(now.getMonth()+1).padStart(2,"0")}/${now.getFullYear()} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}:${String(now.getSeconds()).padStart(2,"0")}`;
+    const staffIdx  = staffList.findIndex(s => s.name === staffName);
+    const officerId = staffIdx >= 0 ? `EMP-${String(staffIdx + 1).padStart(3, "0")}` : "";
 
     const cName  = buyerName.trim() || r.customer.name;
     const cPhone = r.customer.phone;
@@ -344,6 +347,7 @@ export default function ContractPage() {
               <div style="font-size:10px;color:#666;line-height:1.5;margin-bottom:8px">ประกอบธุรกิจรับซื้อ-ขายโทรศัพท์มือถือ<br>และอุปกรณ์อิเล็กทรอนิกส์มือสอง</div>
               <div class="shop-row">📞 โทรศัพท์: 095-553-5167</div><div class="shop-row">💬 LINE: @khaiphone</div><div class="shop-row">🌐 เว็บไซต์: khaiphone.com</div>
               <div style="margin-top:8px;padding:5px 8px;background:#f5f4f0;border-radius:5px;font-size:9.5px;color:#666;border-left:3px solid #c9a84c">ต่อไปในสัญญานี้เรียกว่า <strong>"ผู้รับซื้อ"</strong></div>
+              ${officerId || staffName ? `<div style="margin-top:7px;padding:6px 9px;background:#1a1a2e;border-radius:6px"><div style="font-size:8px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">เจ้าหน้าที่ผู้ดำเนินการ</div>${officerId ? `<div style="font-size:10px;font-weight:800;color:#FFD700;font-family:monospace;letter-spacing:.5px">${esc(officerId)}</div>` : ""}<div style="font-size:11px;font-weight:600;color:#fff;margin-top:1px">${esc(staffName || "—")}</div></div>` : ""}
             </div>
           </div>
           <div class="icard">
@@ -451,7 +455,7 @@ export default function ContractPage() {
           <ol class="terms-ol">
             <li>สัญญานี้อยู่ภายใต้กฎหมายไทย</li>
             <li>หากข้อความใดในสัญญานี้ไม่มีผลในโมงหรือใช้บังคับไม่ได้ ให้ถือว่าส่วนอื่นยังคงมีผลบังคับ</li>
-            <li>คู่สัญญาทั้งสองฝ่ายได้อ่านและเข้าใจข้อความทั้งหมดโดยละเอียดแล้ว และยืนยอมผูกพันตามสัญญานี้ทุกประการ</li>
+            <li>เอกสารฉบับนี้จัดทำขึ้นจากข้อมูลที่ผู้ขายให้ไว้ และจากการส่งมอบอุปกรณ์ต่อหน้าเจ้าหน้าที่ ผู้ขายได้ตรวจสอบรายละเอียดรุ่นอุปกรณ์ IMEI Serial Number สภาพเครื่อง และราคาซื้อขายแล้ว</li>
           </ol>
         </div>
       </div>`;
@@ -461,12 +465,27 @@ export default function ContractPage() {
       if (isFirst && custProdPhotoDataUrl) {
         p += `<div class="id-photo-wrap"><div class="id-photo-hd">📸 รูปหลักฐาน — ลูกค้าพร้อมสินค้าที่ขาย</div><img src="${custProdPhotoDataUrl}" alt="ลูกค้าพร้อมสินค้า" style="max-height:300px;object-fit:contain"></div>`;
       }
+      if (isFirst) {
+        const evItems = [
+          { label: "สำเนาบัตรประชาชน",       ok: !!idPhotoDataUrl },
+          { label: "รูปลูกค้าพร้อมสินค้า",   ok: !!custProdPhotoDataUrl },
+          { label: "หลักฐานการโอนเงิน",      ok: !!slipImgSrc },
+          { label: "ผลตรวจสภาพเครื่อง",      ok: (dev.criteria ?? []).length > 0 },
+        ];
+        p += `<div style="margin:10px 0;padding:9px 13px;border:1px solid #e5e7eb;border-radius:8px;background:#fafafa">
+          <div style="font-size:9.5px;font-weight:700;color:#1a1a2e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📎 หลักฐานที่แนบในระบบ</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 16px">
+            ${evItems.map(e => `<div style="font-size:10px;${e.ok ? "color:#065f46;font-weight:600" : "color:#aaa"}">${e.ok ? "✓" : "—"} ${e.label}</div>`).join("")}
+          </div>
+        </div>`;
+      }
       p += `</div>
       <div class="footer">
         <div>
           <div style="font-size:11px;font-weight:700;color:#FFD700;margin-bottom:4px">🛡️ การยืนยันเอกสารดิจิทัล</div>
           <div style="font-size:9px;color:rgba(255,255,255,.5);margin-bottom:5px;max-width:380px">เอกสารบันทึกขึ้นในรูปแบบดิจิทัลและสามารถตรวจสอบความถูกต้องได้ผ่านระบบ ขายไอโฟน.com</div>
           <div class="fv-row"><span class="fv-lbl">Document ID :</span><span class="fv-val">${contractNo}</span></div>
+          <div class="fv-row"><span class="fv-lbl">Document Generated :</span><span class="fv-val">${genTs}</span></div>
           <div class="fv-row"><span class="fv-lbl">ตรวจสอบเอกสารได้ที่ :</span><span class="fv-val">khaiphone.com/verify</span></div>
         </div>
         <div class="footer-logo" style="text-align:right">
@@ -565,7 +584,7 @@ export default function ContractPage() {
           </div>
           <div style="background:#fffbeb;border:1.5px solid #fcd34d;border-radius:8px;padding:12px 14px">
             <div style="font-size:10.5px;font-weight:700;color:#92400e;margin-bottom:6px">📝 หมายเหตุ</div>
-            <div style="font-size:10.5px;color:#78350f;line-height:1.7">ทำ ณ วันที่ <strong>${dateStr}</strong> เวลา <strong>${timeStr} น.</strong><br>ผู้ดำเนินการ: <strong>${esc(staffName || "—")}</strong><br>ใบรับเงินนี้เป็นหลักฐานการได้รับเงินครบถ้วนสมบูรณ์</div>
+            <div style="font-size:10.5px;color:#78350f;line-height:1.7">ทำ ณ วันที่ <strong>${dateStr}</strong> เวลา <strong>${timeStr} น.</strong><br>ผู้ดำเนินการ: <strong>${officerId ? `${esc(officerId)} ` : ""}${esc(staffName || "—")}</strong><br>ใบรับเงินนี้เป็นหลักฐานการได้รับเงินครบถ้วนสมบูรณ์</div>
           </div>
         </div>`;
       if (isFirst) {
@@ -600,6 +619,7 @@ export default function ContractPage() {
           <div style="font-size:11px;font-weight:700;color:#FFD700;margin-bottom:4px">🛡️ การยืนยันเอกสารดิจิทัล</div>
           <div style="font-size:9px;color:rgba(255,255,255,.5);margin-bottom:5px;max-width:380px">เอกสารบันทึกขึ้นในรูปแบบดิจิทัลและสามารถตรวจสอบความถูกต้องได้ผ่านระบบ ขายไอโฟน.com</div>
           <div class="fv-row"><span class="fv-lbl">Document ID :</span><span class="fv-val">${receiptNo}</span></div>
+          <div class="fv-row"><span class="fv-lbl">Document Generated :</span><span class="fv-val">${genTs}</span></div>
           <div class="fv-row"><span class="fv-lbl">ตรวจสอบเอกสารได้ที่ :</span><span class="fv-val">khaiphone.com/verify</span></div>
         </div>
         <div class="footer-logo" style="text-align:right">
