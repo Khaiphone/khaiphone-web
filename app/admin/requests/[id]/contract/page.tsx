@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, FileText, RotateCcw, Check, ExternalLink, Camera } from "lucide-react";
+import { ArrowLeft, FileText, ExternalLink, Camera } from "lucide-react";
 import { fetchRequest, saveContractUrls, updateStatus, markContractSigned, savePaymentSlip } from "@/app/actions/admin-requests";
 import { fetchAdminUsers } from "@/app/actions/admin-users";
 import type { AdminUserRow } from "@/app/actions/admin-users";
@@ -67,103 +67,6 @@ function bahtWords(amount: number): string {
   return `(${mil > 0 ? chunk(mil) + "ล้าน" : ""}${rem > 0 ? chunk(rem) : ""}บาทถ้วน)`;
 }
 
-type SigState = "empty" | "confirmed";
-
-interface SigCanvasProps {
-  canvasRef: React.RefObject<HTMLCanvasElement>;
-  sigState: SigState;
-  onConfirm: () => void;
-  onClear: () => void;
-  label: string;
-  sub: string;
-}
-
-function SigCanvas({ canvasRef, sigState, onConfirm, onClear, label, sub }: SigCanvasProps) {
-  const drawing = useRef(false);
-  const lastPos = useRef<{ x: number; y: number } | null>(null);
-
-  function getPos(e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    if ("touches" in e) {
-      const t = e.touches[0];
-      return { x: (t.clientX - rect.left) * scaleX, y: (t.clientY - rect.top) * scaleY };
-    }
-    return { x: ((e as React.MouseEvent).clientX - rect.left) * scaleX, y: ((e as React.MouseEvent).clientY - rect.top) * scaleY };
-  }
-
-  function startDraw(e: React.MouseEvent | React.TouchEvent) {
-    if (sigState === "confirmed") return;
-    e.preventDefault();
-    drawing.current = true;
-    lastPos.current = getPos(e, canvasRef.current!);
-  }
-
-  function draw(e: React.MouseEvent | React.TouchEvent) {
-    if (!drawing.current || sigState === "confirmed") return;
-    e.preventDefault();
-    const canvas = canvasRef.current!;
-    const ctx = canvas.getContext("2d")!;
-    const pos = getPos(e, canvas);
-    ctx.beginPath();
-    ctx.strokeStyle = "#1a1a2e";
-    ctx.lineWidth = 2.5;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    if (lastPos.current) {
-      ctx.moveTo(lastPos.current.x, lastPos.current.y);
-      ctx.lineTo(pos.x, pos.y);
-      ctx.stroke();
-    }
-    lastPos.current = pos;
-  }
-
-  function endDraw() { drawing.current = false; lastPos.current = null; }
-
-  function clear() {
-    const ctx = canvasRef.current!.getContext("2d")!;
-    ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
-    onClear();
-  }
-
-  const confirmed = sigState === "confirmed";
-
-  return (
-    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, overflow: "hidden", marginBottom: 12 }}>
-      <div style={{ padding: "10px 14px", borderBottom: `1px solid ${BORDER}`, background: "#F9F9F9", display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ width: 24, height: 24, background: DARK, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 13, color: "#FFD700" }}>✍</div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{label}</div>
-          <div style={{ fontSize: 11, color: TEXT2 }}>{sub}</div>
-        </div>
-        {confirmed && <div style={{ display: "flex", alignItems: "center", gap: 4, color: "#16a34a", fontSize: 12, fontWeight: 600 }}><Check size={14} /> บันทึกแล้ว</div>}
-      </div>
-      <div style={{ padding: 14 }}>
-        <canvas
-          ref={canvasRef}
-          width={660} height={120}
-          style={{ width: "100%", height: 120, background: confirmed ? "#f0fdf4" : "#FAFAFA", border: `1px solid ${confirmed ? "#86efac" : BORDER}`, borderRadius: 8, cursor: confirmed ? "default" : "crosshair", touchAction: "none", display: "block" }}
-          onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
-          onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}
-        />
-        <p style={{ fontSize: 11, color: TEXT2, textAlign: "center", marginTop: 4 }}>{confirmed ? "ลายเซ็นบันทึกแล้ว" : "เซ็นชื่อด้วยนิ้วหรือ Apple Pencil"}</p>
-        {!confirmed ? (
-          <div style={{ display: "flex", gap: 7, marginTop: 4 }}>
-            <button onClick={clear} style={{ flex: 1, padding: "8px 11px", borderRadius: 8, border: `1px solid ${BORDER}`, background: "#FAFAFA", color: TEXT, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-              <RotateCcw size={13} style={{ marginRight: 4, verticalAlign: "middle" }} />ล้าง
-            </button>
-            <button onClick={onConfirm} style={{ flex: 1, padding: "8px 11px", borderRadius: 8, border: "none", background: DARK, color: "#FFD700", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-              <Check size={13} style={{ marginRight: 4, verticalAlign: "middle" }} />ยืนยัน
-            </button>
-          </div>
-        ) : (
-          <button onClick={clear} style={{ width: "100%", marginTop: 4, padding: "8px", borderRadius: 8, border: `1px solid ${BORDER}`, background: "#FAFAFA", color: TEXT2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>เซ็นใหม่</button>
-        )}
-      </div>
-    </div>
-  );
-}
 
 export default function ContractPage() {
   const { id } = useParams<{ id: string }>();
@@ -204,14 +107,6 @@ export default function ContractPage() {
   const [slipSaving, setSlipSaving] = useState(false);
   const slipFileRef = useRef<HTMLInputElement>(null!);
 
-  // Signatures
-  const sigBuyerRef  = useRef<HTMLCanvasElement>(null!);
-  const sigSellerRef = useRef<HTMLCanvasElement>(null!);
-  const [sigBuyerState,  setSigBuyerState]  = useState<SigState>("empty");
-  const [sigSellerState, setSellerState]    = useState<SigState>("empty");
-  const sigBuyerImg  = useRef("");
-  const sigSellerImg = useRef("");
-
   // Generated HTML
   const contractHTML = useRef("");
   const receiptHTML  = useRef("");
@@ -241,18 +136,6 @@ export default function ContractPage() {
       setLoading(false);
     });
   }, [id]);
-
-  function confirmSig(who: "buyer" | "seller") {
-    const canvas = who === "buyer" ? sigBuyerRef.current : sigSellerRef.current;
-    const img = canvas.toDataURL("image/png");
-    if (who === "buyer") { sigBuyerImg.current = img; setSigBuyerState("confirmed"); }
-    else { sigSellerImg.current = img; setSellerState("confirmed"); }
-  }
-
-  function clearSig(who: "buyer" | "seller") {
-    if (who === "buyer") { sigBuyerImg.current = ""; setSigBuyerState("empty"); }
-    else { sigSellerImg.current = ""; setSellerState("empty"); }
-  }
 
   function formatIdNumber(raw: string) {
     const d = raw.replace(/\D/g, "").slice(0, 13);
@@ -560,8 +443,8 @@ export default function ContractPage() {
         p += `<div class="id-photo-wrap"><div class="id-photo-hd">📷 เอกสารยืนยันตัวตนผู้ขาย — สำเนาบัตรประชาชน (มี Watermark)</div><img src="${idPhotoDataUrl}" alt="บัตรประชาชน"></div>`;
       }
       p += `<div class="sig2">
-        <div class="sb"><div class="sa">${sigBuyerImg.current ? `<img src="${sigBuyerImg.current}" style="max-height:54px;max-width:100%;object-fit:contain">` : ""}</div><div class="sl"><strong>ลายมือชื่อผู้ขาย</strong><br>( ${esc(cName)} )<br>วันที่ ${dateShort}</div></div>
-        <div class="sb"><div class="sa">${sigSellerImg.current ? `<img src="${sigSellerImg.current}" style="max-height:54px;max-width:100%;object-fit:contain">` : ""}</div><div class="sl"><strong>ลายมือชื่อผู้รับซื้อ</strong><br>( ขายไอโฟน.com )<br>วันที่ ${dateShort}</div></div>
+        <div class="sb"><div class="sa"></div><div class="sl"><strong>ลายมือชื่อผู้ขาย</strong><br>( ${esc(cName)} )<br>วันที่ ${dateShort}</div></div>
+        <div class="sb"><div class="sa"></div><div class="sl"><strong>ลายมือชื่อผู้รับซื้อ</strong><br>( ขายไอโฟน.com )<br>วันที่ ${dateShort}</div></div>
       </div></div>
       <div class="footer">
         <div>
@@ -680,8 +563,8 @@ export default function ContractPage() {
         }
       }
       p += `<div class="sig2">
-          <div class="sb"><div class="sa">${sigBuyerImg.current ? `<img src="${sigBuyerImg.current}" style="max-height:54px;max-width:100%;object-fit:contain">` : ""}</div><div class="sl"><strong>ลายมือชื่อผู้รับเงิน (ผู้ขาย)</strong><br>( ${esc(cName)} )<br>วันที่ ${dateShort}</div></div>
-          <div class="sb"><div class="sa">${sigSellerImg.current ? `<img src="${sigSellerImg.current}" style="max-height:54px;max-width:100%;object-fit:contain">` : ""}</div><div class="sl"><strong>ลายมือชื่อผู้จ่ายเงิน (ผู้รับซื้อ)</strong><br>( ขายไอโฟน.com )<br>วันที่ ${dateShort}</div></div>
+          <div class="sb"><div class="sa"></div><div class="sl"><strong>ลายมือชื่อผู้รับเงิน (ผู้ขาย)</strong><br>( ${esc(cName)} )<br>วันที่ ${dateShort}</div></div>
+          <div class="sb"><div class="sa"></div><div class="sl"><strong>ลายมือชื่อผู้จ่ายเงิน (ผู้รับซื้อ)</strong><br>( ขายไอโฟน.com )<br>วันที่ ${dateShort}</div></div>
         </div>
         <div style="margin-top:14px;border-top:1px solid #e5e7eb;padding-top:12px">
           <div style="display:grid;grid-template-columns:1fr auto;gap:14px;align-items:start">
@@ -1215,10 +1098,6 @@ export default function ContractPage() {
               )}
             </div>
           </div>
-
-        {/* Signatures */}
-        <SigCanvas canvasRef={sigBuyerRef} sigState={sigBuyerState} onConfirm={() => confirmSig("buyer")} onClear={() => clearSig("buyer")} label="ลายมือชื่อผู้ขาย" sub="ให้ผู้ขายเซ็นชื่อด้วยตนเอง" />
-        <SigCanvas canvasRef={sigSellerRef} sigState={sigSellerState} onConfirm={() => confirmSig("seller")} onClear={() => clearSig("seller")} label="ลายมือชื่อผู้ซื้อ / พนักงาน" sub="พนักงานที่ดำเนินการเซ็นกำกับ" />
 
         {/* Generate */}
         <button
