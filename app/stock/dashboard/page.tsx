@@ -27,23 +27,26 @@ export default function StockDashboard() {
     fetchCategoryData().then(setCategoryData);
   }, []);
 
-  // Only count stocks with a selling price set (> 0) to avoid negative phantom profit
-  const pricedStocks = stocks.filter(s => s.sellingPrice > 0 && s.status !== "ขายแล้ว");
+  const todayStr = new Date().toDateString();
+  const INACTIVE = new Set(["ขายแล้ว", "ส่งคืน", "ตีกลับ/ไม่รับซื้อ"]);
+  const activeStocks = stocks.filter(s => !INACTIVE.has(s.status));
+  const pricedStocks = activeStocks.filter(s => s.sellingPrice > 0);
   const totalValue = pricedStocks.reduce((a, s) => a + s.sellingPrice, 0);
   const totalCostProfit = pricedStocks.reduce((a, s) => a + (s.sellingPrice - s.costPrice - s.shippingCost - s.otherCost), 0);
   const readyToSell = stocks.filter(s => s.status === "พร้อมขาย").length;
   const inspecting = stocks.filter(s => s.status === "รอตรวจ").length;
-  const noPricedCount = stocks.filter(s => s.sellingPrice === 0 && s.status !== "ขายแล้ว" && s.status !== "ส่งคืน" && s.status !== "ตีกลับ/ไม่รับซื้อ").length;
+  const noPricedCount = activeStocks.filter(s => s.sellingPrice === 0).length;
   const soldToday = stocks.filter(s => {
-    if (s.status !== "ขายแล้ว" || !s.soldAt) return false;
-    return new Date(s.soldAt).toDateString() === new Date().toDateString();
+    if (s.status !== "ขายแล้ว") return false;
+    if (s.soldAt && new Date(s.soldAt).toDateString() === todayStr) return true;
+    return s.statusLog.some(l => l.status === "ขายแล้ว" && new Date(l.timestamp).toDateString() === todayStr);
   }).length;
 
   const recentActivity = stocks.slice(0, 5);
 
   const METRICS = [
     { icon: DollarSign, label: "มูลค่าสต็อกรวม",        value: `฿${fmt(totalValue)}`,         iconColor: c.gold,    sub: `เฉพาะเครื่องที่กำหนดราคาแล้ว` },
-    { icon: Package,    label: "จำนวนเครื่องในสต็อก",    value: `${stocks.length} เครื่อง`,    iconColor: c.info,    sub: noPricedCount > 0 ? `ยังไม่กำหนดราคา ${noPricedCount} เครื่อง` : "รวมทุกสถานะ" },
+    { icon: Package,    label: "จำนวนเครื่องในสต็อก",    value: `${activeStocks.length} เครื่อง`, iconColor: c.info,    sub: noPricedCount > 0 ? `ยังไม่กำหนดราคา ${noPricedCount} เครื่อง` : "ไม่รวมที่ขายแล้ว" },
     { icon: TrendingUp, label: "กำไรคาดการณ์",           value: `฿${fmt(totalCostProfit)}`,    iconColor: "#22c55e", sub: "เฉพาะเครื่องที่กำหนดราคาแล้ว" },
     { icon: CheckCircle,label: "เครื่องพร้อมขาย",        value: `${readyToSell} เครื่อง`,     iconColor: "#22c55e", sub: "สถานะ: พร้อมขาย" },
     { icon: Clock,      label: "เครื่องรอตรวจ",           value: `${inspecting} เครื่อง`,     iconColor: c.orange,  sub: "สถานะ: รอตรวจ" },
