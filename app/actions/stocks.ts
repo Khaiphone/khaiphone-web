@@ -237,6 +237,63 @@ export async function fetchWholesalePartners(): Promise<string[]> {
   return (names as string[]).sort();
 }
 
+export async function confirmStockRecheck(
+  id: string,
+  data: {
+    imei: string;
+    serial: string;
+    grade: string;
+    batteryHealth: number;
+    cycleCount: number;
+    inspector: string;
+    note?: string;
+  },
+): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const now = new Date().toISOString();
+
+  const { data: current } = await supabase
+    .from("stocks")
+    .select("status_log, audit_log, notes")
+    .eq("id", id)
+    .single();
+
+  const newStatusLog = [
+    ...(current?.status_log ?? []),
+    { status: "พร้อมขาย", timestamp: now, note: `ผ่านการรีเช็คโดย ${data.inspector}`, by: data.inspector },
+  ];
+  const newAuditLog: AuditEntry[] = [
+    ...(current?.audit_log ?? []),
+    {
+      action: "รีเช็คสินค้า",
+      detail: `เกรด ${data.grade} · Battery ${data.batteryHealth}% · Cycles ${data.cycleCount}${data.note ? ` · ${data.note}` : ""}`,
+      timestamp: now,
+      by: data.inspector,
+    },
+  ];
+  const newNotes = data.note
+    ? [...(current?.notes ?? []), { text: `[รีเช็ค] ${data.note}`, createdAt: now, by: data.inspector }]
+    : current?.notes ?? [];
+
+  const { error } = await supabase.from("stocks").update({
+    imei:           data.imei,
+    serial:         data.serial,
+    grade:          data.grade,
+    battery_health: data.batteryHealth,
+    cycle_count:    data.cycleCount,
+    inspector:      data.inspector,
+    status:         "พร้อมขาย",
+    status_log:     newStatusLog,
+    audit_log:      newAuditLog,
+    notes:          newNotes,
+    updated_at:     now,
+  }).eq("id", id);
+
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
 export interface RevenuePoint { date: string; revenue: number; cost: number; profit: number; }
 export interface CategoryPoint { name: string; count: number; value: number; }
 

@@ -7,7 +7,7 @@ import { useThemeColors, useStockTheme } from "./ThemeContext";
 import StockStatusBadge, { GradeBadge } from "./StatusBadge";
 import type { StockItem, StockStatus } from "@/lib/stock/types";
 import { STOCK_STATUS_COLORS } from "@/lib/stock/constants";
-import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos, updateStockDocuments, logDocumentView, confirmDelivery } from "@/app/actions/stocks";
+import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos, updateStockDocuments, logDocumentView, confirmDelivery, confirmStockRecheck } from "@/app/actions/stocks";
 import SellModal from "./SellModal";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
@@ -96,6 +96,21 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
   const [deliveryChannelDraft, setDeliveryChannelDraft] = useState("หน้าร้าน");
   const [deliveryAddressDraft, setDeliveryAddressDraft] = useState("");
   const [confirmingDelivery, setConfirmingDelivery] = useState(false);
+  const [showRecheck, setShowRecheck] = useState(false);
+  const [recheckDraft, setRecheckDraft] = useState<{
+    imei: string; serial: string; grade: string;
+    batteryHealth: number; cycleCount: number; inspector: string; note: string;
+  }>({
+    imei: item?.imei ?? "",
+    serial: item?.serial ?? "",
+    grade: item?.grade ?? "A",
+    batteryHealth: item?.batteryHealth ?? 0,
+    cycleCount: item?.cycleCount ?? 0,
+    inspector: item?.inspector ?? "",
+    note: "",
+  });
+  const [recheckSaving, setRecheckSaving] = useState(false);
+  const [recheckErr, setRecheckErr] = useState<string | null>(null);
 
   if (!item) return null;
 
@@ -373,6 +388,137 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
             <>
               {tab === "รายละเอียด" && (
                 <div>
+                  {/* ─── Re-check banner (รอตรวจ only) ─── */}
+                  {item.status === "รอตรวจ" && (
+                    <div style={{ marginBottom: 16 }}>
+                      {!showRecheck ? (
+                        <button
+                          onClick={() => setShowRecheck(true)}
+                          style={{ width: "100%", padding: "14px 16px", background: "linear-gradient(135deg,#1d4ed8,#2563eb)", border: "none", borderRadius: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", color: "#fff" }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <span style={{ fontSize: 20 }}>🔍</span>
+                            <div style={{ textAlign: "left" }}>
+                              <p style={{ margin: 0, fontSize: 13, fontWeight: 700 }}>รีเช็คสินค้า</p>
+                              <p style={{ margin: 0, fontSize: 11, opacity: 0.8 }}>ยืนยันสภาพ · อัปเดตเกรด · เปลี่ยนเป็นพร้อมขาย</p>
+                            </div>
+                          </div>
+                          <span style={{ fontSize: 18, opacity: 0.7 }}>›</span>
+                        </button>
+                      ) : (
+                        <div style={{ background: c.card2, border: `1px solid ${c.border2}`, borderRadius: 12, padding: 16 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: c.text }}>🔍 รีเช็คสินค้า</p>
+                            <button onClick={() => { setShowRecheck(false); setRecheckErr(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: c.text3, fontSize: 18, padding: 0 }}>×</button>
+                          </div>
+
+                          {/* IMEI + Serial */}
+                          {item.inspectionSnapshot && (
+                            <div style={{ marginBottom: 12, padding: "8px 10px", background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)", borderRadius: 8, fontSize: 11, color: c.text3 }}>
+                              <p style={{ margin: "0 0 2px", fontWeight: 600 }}>ข้อมูลอ้างอิงจากการตรวจรับ</p>
+                              <p style={{ margin: 0 }}>IMEI: <span style={{ fontFamily: "monospace", color: c.text2 }}>{item.inspectionSnapshot.imei ?? "—"}</span></p>
+                              <p style={{ margin: 0 }}>Serial: <span style={{ fontFamily: "monospace", color: c.text2 }}>{item.inspectionSnapshot.serial ?? "—"}</span></p>
+                            </div>
+                          )}
+
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                            {[
+                              { label: "IMEI", key: "imei", mono: true },
+                              { label: "Serial Number", key: "serial", mono: true },
+                            ].map(({ label, key, mono }) => (
+                              <div key={key}>
+                                <p style={{ margin: "0 0 4px", fontSize: 11, color: c.text3 }}>{label}</p>
+                                <input
+                                  value={recheckDraft[key as keyof typeof recheckDraft] as string}
+                                  onChange={e => setRecheckDraft(d => ({ ...d, [key]: e.target.value }))}
+                                  style={{ width: "100%", padding: "7px 10px", background: c.bg, border: `1px solid ${c.border2}`, borderRadius: 8, color: c.text, fontSize: 12, fontFamily: mono ? "monospace" : undefined, boxSizing: "border-box" }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
+                            <div>
+                              <p style={{ margin: "0 0 4px", fontSize: 11, color: c.text3 }}>เกรด</p>
+                              <select
+                                value={recheckDraft.grade}
+                                onChange={e => setRecheckDraft(d => ({ ...d, grade: e.target.value }))}
+                                style={{ width: "100%", padding: "7px 8px", background: c.bg, border: `1px solid ${c.border2}`, borderRadius: 8, color: c.text, fontSize: 12 }}
+                              >
+                                {["A", "A-", "B+", "B", "B-", "C"].map(g => <option key={g} value={g}>{g}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <p style={{ margin: "0 0 4px", fontSize: 11, color: c.text3 }}>Battery %</p>
+                              <input
+                                type="number" min={0} max={100}
+                                value={recheckDraft.batteryHealth}
+                                onChange={e => setRecheckDraft(d => ({ ...d, batteryHealth: Number(e.target.value) }))}
+                                style={{ width: "100%", padding: "7px 10px", background: c.bg, border: `1px solid ${c.border2}`, borderRadius: 8, color: c.text, fontSize: 12, boxSizing: "border-box" }}
+                              />
+                            </div>
+                            <div>
+                              <p style={{ margin: "0 0 4px", fontSize: 11, color: c.text3 }}>Cycle Count</p>
+                              <input
+                                type="number" min={0}
+                                value={recheckDraft.cycleCount}
+                                onChange={e => setRecheckDraft(d => ({ ...d, cycleCount: Number(e.target.value) }))}
+                                style={{ width: "100%", padding: "7px 10px", background: c.bg, border: `1px solid ${c.border2}`, borderRadius: 8, color: c.text, fontSize: 12, boxSizing: "border-box" }}
+                              />
+                            </div>
+                          </div>
+
+                          <div style={{ marginBottom: 10 }}>
+                            <p style={{ margin: "0 0 4px", fontSize: 11, color: c.text3 }}>ผู้ตรวจ</p>
+                            <input
+                              value={recheckDraft.inspector}
+                              onChange={e => setRecheckDraft(d => ({ ...d, inspector: e.target.value }))}
+                              placeholder="ชื่อผู้ตรวจ"
+                              style={{ width: "100%", padding: "7px 10px", background: c.bg, border: `1px solid ${c.border2}`, borderRadius: 8, color: c.text, fontSize: 12, boxSizing: "border-box" }}
+                            />
+                          </div>
+
+                          <div style={{ marginBottom: 14 }}>
+                            <p style={{ margin: "0 0 4px", fontSize: 11, color: c.text3 }}>หมายเหตุ (ไม่บังคับ)</p>
+                            <textarea
+                              value={recheckDraft.note}
+                              onChange={e => setRecheckDraft(d => ({ ...d, note: e.target.value }))}
+                              placeholder="บันทึกเพิ่มเติม..."
+                              rows={2}
+                              style={{ width: "100%", padding: "7px 10px", background: c.bg, border: `1px solid ${c.border2}`, borderRadius: 8, color: c.text, fontSize: 12, resize: "vertical", boxSizing: "border-box" }}
+                            />
+                          </div>
+
+                          {recheckErr && <p style={{ color: "#dc2626", fontSize: 12, margin: "0 0 10px" }}>{recheckErr}</p>}
+
+                          <button
+                            disabled={recheckSaving || !recheckDraft.inspector.trim()}
+                            onClick={async () => {
+                              setRecheckSaving(true);
+                              setRecheckErr(null);
+                              const res = await confirmStockRecheck(item.id, {
+                                imei: recheckDraft.imei.trim(),
+                                serial: recheckDraft.serial.trim(),
+                                grade: recheckDraft.grade,
+                                batteryHealth: recheckDraft.batteryHealth,
+                                cycleCount: recheckDraft.cycleCount,
+                                inspector: recheckDraft.inspector.trim(),
+                                note: recheckDraft.note.trim() || undefined,
+                              });
+                              setRecheckSaving(false);
+                              if (!res.success) { setRecheckErr(res.error ?? "เกิดข้อผิดพลาด"); return; }
+                              setShowRecheck(false);
+                              onUpdate({ ...item, status: "พร้อมขาย", imei: recheckDraft.imei.trim(), serial: recheckDraft.serial.trim(), grade: recheckDraft.grade as StockItem["grade"], batteryHealth: recheckDraft.batteryHealth, cycleCount: recheckDraft.cycleCount, inspector: recheckDraft.inspector.trim() });
+                            }}
+                            style={{ width: "100%", padding: "10px 0", background: recheckSaving || !recheckDraft.inspector.trim() ? c.border : "#16a34a", border: "none", borderRadius: 8, color: "#fff", fontWeight: 700, fontSize: 13, cursor: recheckSaving || !recheckDraft.inspector.trim() ? "not-allowed" : "pointer" }}
+                          >
+                            {recheckSaving ? "กำลังบันทึก..." : "✓ ยืนยันและเปลี่ยนเป็นพร้อมขาย"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div style={{ background: c.card2, borderRadius: 16, padding: 16, marginBottom: 16, textAlign: "center" }}>
                     {(() => {
                       const src = item.photos[0] || getProductImage(item.model);
