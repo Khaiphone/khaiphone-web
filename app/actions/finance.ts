@@ -1145,30 +1145,77 @@ export type PurchaseDocument = {
 export async function fetchSaleDocument(id: string): Promise<SaleDocument | null> {
   await requireAuth();
   const supabase = createServerClient();
-  const [{ data: stock }, { data: settings }] = await Promise.all([
-    supabase
-      .from("stocks")
-      .select("id, model, storage, color, grade, imei, serial, sold_price, sold_at, buyer_name, buyer_phone, sold_by, sale_type, request_ref")
-      .eq("id", id)
-      .single(),
-    supabase.from("finance_settings").select("business_name, tax_id, address, phone, vat_enabled, vat_rate, withholding_tax").eq("id", 1).single(),
-  ]);
-  if (!stock) return null;
+
+  const { data: settings } = await supabase
+    .from("finance_settings")
+    .select("business_name, tax_id, address, phone, vat_enabled, vat_rate, withholding_tax")
+    .eq("id", 1)
+    .single();
 
   const vatEnabled = settings?.vat_enabled ?? false;
   const vatRate = vatEnabled ? parseFloat(settings?.vat_rate ?? "0") : 0;
   const whtRate = parseFloat(settings?.withholding_tax ?? "0");
+
+  // Try stocks table first (direct stock sale — id is stock id like STK-... or KP-...)
+  let { data: stock } = await supabase
+    .from("stocks")
+    .select("id, model, storage, color, grade, imei, serial, sold_price, sold_at, buyer_name, buyer_phone, sold_by, sale_type, request_ref")
+    .eq("id", id)
+    .maybeSingle();
+
+  let refNumber = "";
+
+  if (stock) {
+    refNumber = stock.request_ref ?? stock.id;
+  } else {
+    // id is a requests table UUID — look up the request then find linked stock
+    const { data: req } = await supabase
+      .from("requests")
+      .select("order_number, device_model, device_storage, sell_price, sell_date, source, actual_price, estimated_price")
+      .eq("id", id)
+      .maybeSingle();
+    if (!req) return null;
+
+    refNumber = req.order_number ?? id;
+
+    // Find linked stock for extra details
+    const { data: linkedStock } = await supabase
+      .from("stocks")
+      .select("id, color, grade, imei, serial, buyer_name, buyer_phone, sold_by, sale_type")
+      .eq("request_ref", req.order_number)
+      .maybeSingle();
+
+    const amount = req.sell_price ?? 0;
+    const vatAmount = Math.round(amount * vatRate / 100);
+    const whtAmount = Math.round(amount * whtRate / 100);
+    return {
+      refNumber,
+      date: (req.sell_date ?? "").slice(0, 10),
+      model: req.device_model ?? "",
+      storage: req.device_storage ?? "",
+      color: linkedStock?.color ?? "",
+      grade: linkedStock?.grade ?? "",
+      imei: linkedStock?.imei ?? "",
+      serial: linkedStock?.serial ?? "",
+      amount,
+      vatRate,
+      vatAmount,
+      whtRate,
+      whtAmount,
+      buyerName: linkedStock?.buyer_name ?? "",
+      buyerPhone: linkedStock?.buyer_phone ?? "",
+      soldBy: linkedStock?.sold_by ?? "",
+      saleType: linkedStock?.sale_type ?? req.source ?? "ขายปลีก",
+      businessName: settings?.business_name ?? "KHAIPHONE",
+      taxId: settings?.tax_id ?? "",
+      address: settings?.address ?? "",
+      businessPhone: settings?.phone ?? "",
+    };
+  }
+
   const amount = stock.sold_price ?? 0;
   const vatAmount = Math.round(amount * vatRate / 100);
   const whtAmount = Math.round(amount * whtRate / 100);
-
-  // If sold via request, pull ref number from requests table
-  let refNumber = stock.id;
-  if (stock.request_ref) {
-    const { data: req } = await supabase.from("requests").select("order_number").eq("order_number", stock.request_ref).single();
-    if (req?.order_number) refNumber = req.order_number;
-  }
-
   return {
     refNumber,
     date: (stock.sold_at ?? "").slice(0, 10),
