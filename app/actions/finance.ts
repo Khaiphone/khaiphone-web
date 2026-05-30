@@ -217,10 +217,10 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
 export async function fetchFinanceIncome(): Promise<FinanceIncome[]> {
   await requireAuth();
   const supabase = createServerClient();
-  const [{ data }, { data: directData }] = await Promise.all([
+  const [{ data }, { data: directData }, { data: buyerData }] = await Promise.all([
     supabase
       .from("requests")
-      .select("id, order_number, device_model, device_storage, actual_price, estimated_price, sell_price, sell_date, customer_name, source")
+      .select("id, order_number, device_model, device_storage, actual_price, estimated_price, sell_price, sell_date, source")
       .eq("status", "completed")
       .eq("stock_status", "sold")
       .not("sell_price", "is", null)
@@ -233,7 +233,14 @@ export async function fetchFinanceIncome(): Promise<FinanceIncome[]> {
       .is("request_ref", null)
       .not("sold_price", "is", null)
       .not("sold_at", "is", null),
+    supabase
+      .from("stocks")
+      .select("request_ref, buyer_name")
+      .not("request_ref", "is", null)
+      .eq("status", "ขายแล้ว"),
   ]);
+
+  const buyerMap = new Map((buyerData ?? []).map((s) => [s.request_ref as string, s.buyer_name as string ?? ""]));
 
   const fromRequests: FinanceIncome[] = (data ?? []).map((row) => {
     const cost = row.actual_price ?? row.estimated_price ?? 0;
@@ -247,7 +254,7 @@ export async function fetchFinanceIncome(): Promise<FinanceIncome[]> {
       sellPrice: sell,
       costPrice: cost,
       profit: sell - cost,
-      customerName: row.customer_name ?? "",
+      customerName: buyerMap.get(row.order_number) ?? "",
       source: row.source ?? "",
     };
   });
