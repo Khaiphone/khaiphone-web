@@ -45,12 +45,13 @@ const MODEL_COLORS: Record<string, string[]> = {
   "iPhone 11":          ["Black", "White", "Green", "Yellow", "Purple", "(PRODUCT)RED"],
 };
 
-const INSPECT_KEYS  = ["body", "screen", "display", "battery", "icloud", "accessories"] as const;
+const INSPECT_KEYS  = ["body", "screen", "display", "battery", "warranty", "icloud", "accessories"] as const;
 const INSPECT_LABELS: Record<string, string> = {
   body:        "ตัวเครื่อง",
   screen:      "หน้าจอ",
   display:     "ภาพหน้าจอ",
   battery:     "แบตเตอรี่",
+  warranty:    "การรับประกัน",
   icloud:      "iCloud",
   accessories: "อุปกรณ์เสริม",
 };
