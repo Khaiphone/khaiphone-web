@@ -512,24 +512,56 @@ export default function InspectionForm({
       {/* Warranty + Battery Cycles (admin-only) */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20, marginTop: 10 }}>
         <div>
-          <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>
+          <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 6 }}>
             วันหมดประกัน
           </label>
-          <input
-            type="date"
-            value={warrantyExpiry}
-            onChange={e => setWarrantyExpiry(e.target.value)}
-            style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit" }}
-          />
-          {warrantyExpiry && (() => {
+          {/* Quick-select chips */}
+          <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+            <button
+              type="button"
+              onClick={() => setWarrantyExpiry("expired")}
+              style={{
+                flex: 1, padding: "6px 0", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                cursor: "pointer", fontFamily: "inherit", border: "none",
+                background: warrantyExpiry === "expired" ? "#FEE2E2" : "#F5F5F7",
+                color: warrantyExpiry === "expired" ? "#DC2626" : TEXT2,
+                outline: warrantyExpiry === "expired" ? "1.5px solid #DC2626" : "none",
+              }}
+            >
+              หมดแล้ว
+            </button>
+            <button
+              type="button"
+              onClick={() => { if (warrantyExpiry === "expired") setWarrantyExpiry(""); }}
+              style={{
+                flex: 1, padding: "6px 0", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                cursor: "pointer", fontFamily: "inherit", border: "none",
+                background: warrantyExpiry && warrantyExpiry !== "expired" ? "#D1FAE5" : "#F5F5F7",
+                color: warrantyExpiry && warrantyExpiry !== "expired" ? "#059669" : TEXT2,
+                outline: warrantyExpiry && warrantyExpiry !== "expired" ? "1.5px solid #059669" : "none",
+              }}
+            >
+              ระบุวันที่
+            </button>
+          </div>
+          {warrantyExpiry === "expired" ? (
+            <div style={{ padding: "8px 12px", borderRadius: 10, background: "#FEE2E2", border: "1px solid #FECACA", fontSize: 12, color: "#DC2626", fontWeight: 600 }}>
+              ✗ ประกันสิ้นสุดแล้ว
+            </div>
+          ) : (
+            <input
+              type="date"
+              value={warrantyExpiry}
+              onChange={e => setWarrantyExpiry(e.target.value)}
+              style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit" }}
+            />
+          )}
+          {warrantyExpiry && warrantyExpiry !== "expired" && (() => {
             const exp = new Date(warrantyExpiry + "T00:00:00");
-            const now = new Date();
-            const diffMs = exp.getTime() - now.getTime();
-            const diffDays = Math.ceil(diffMs / 86400000);
-            const expired = diffDays < 0;
+            const diffDays = Math.ceil((exp.getTime() - Date.now()) / 86400000);
             return (
-              <p style={{ fontSize: 11, color: expired ? "#DC2626" : "#059669", margin: "4px 0 0", fontWeight: 600 }}>
-                {expired ? `หมดประกันแล้ว ${Math.abs(diffDays)} วัน` : `เหลือ ${diffDays} วัน`}
+              <p style={{ fontSize: 11, color: diffDays < 0 ? "#DC2626" : "#059669", margin: "4px 0 0", fontWeight: 600 }}>
+                {diffDays < 0 ? `หมดประกันแล้ว ${Math.abs(diffDays)} วัน` : `เหลือ ${diffDays} วัน`}
               </p>
             );
           })()}
