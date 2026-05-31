@@ -123,7 +123,8 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
   if (!item) return null;
 
   const totalCost = item.costPrice + item.shippingCost + item.otherCost;
-  const profit = item.sellingPrice - totalCost;
+  const effectivePrice = (item.status === "ขายแล้ว" && item.soldPrice) ? item.soldPrice : item.sellingPrice;
+  const profit = effectivePrice - totalCost;
   const margin = totalCost > 0 ? ((profit / totalCost) * 100).toFixed(2) : "0";
 
   function openEdit() {
@@ -879,10 +880,12 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                             </div>
                           ) : (
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <p style={{ color: c.gold, fontSize: 18, fontWeight: 800, margin: 0 }}>฿{fmt(item.sellingPrice)}</p>
-                              <button onClick={() => { setPriceDraft(String(item.sellingPrice)); setEditPrice(true); }} style={{ background: "none", border: "none", cursor: "pointer", color: c.text3, display: "flex", padding: 0 }}>
-                                <Edit2 size={14} />
-                              </button>
+                              <p style={{ color: c.gold, fontSize: 18, fontWeight: 800, margin: 0 }}>฿{fmt(effectivePrice)}</p>
+                              {item.status !== "ขายแล้ว" && (
+                                <button onClick={() => { setPriceDraft(String(item.sellingPrice)); setEditPrice(true); }} style={{ background: "none", border: "none", cursor: "pointer", color: c.text3, display: "flex", padding: 0 }}>
+                                  <Edit2 size={14} />
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
