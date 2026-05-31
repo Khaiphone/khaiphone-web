@@ -41,6 +41,7 @@ function mapRow(row: any): StockItem {
     receivedAt: row.received_at ?? "",
     inspector: row.inspector ?? "",
     photos: row.photos ?? [],
+    slipUrls: row.slip_urls ?? [],
     documents: row.documents ?? [],
     notes: row.notes ?? [],
     statusLog: row.status_log ?? [],
@@ -169,7 +170,7 @@ export async function verifyStockField(
 export async function markStockSold(
   id: string, soldPrice: number, buyerName: string, buyerPhone: string,
   soldAt?: string, soldBy?: string, saleType?: string, partnerName?: string,
-  deliveryChannel?: string,
+  deliveryChannel?: string, slipUrls?: string[],
 ): Promise<{ success: boolean; error?: string }> {
   await requireAuth();
   const supabase = createServerClient();
@@ -185,6 +186,7 @@ export async function markStockSold(
     sold_by: soldBy ?? null, sale_type: saleType ?? "ขายปลีก", partner_name: partnerName ?? null,
     delivery_channel: deliveryChannel ?? null,
     delivery_status: autoDeliveryStatus,
+    slip_urls: slipUrls && slipUrls.length > 0 ? slipUrls : undefined,
     status_log: newLog, updated_at: now,
   }).eq("id", id);
   if (error) return { success: false, error: error.message };
@@ -681,6 +683,19 @@ export async function updateStockDocuments(id: string, documents: string[]): Pro
   await requireAuth();
   const supabase = createServerClient();
   const { error } = await supabase.from("stocks").update({ documents, updated_at: new Date().toISOString() }).eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function addStockSlips(id: string, newUrls: string[]): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data: current } = await supabase.from("stocks").select("slip_urls, audit_log").eq("id", id).single();
+  const existing: string[] = current?.slip_urls ?? [];
+  const merged = [...existing, ...newUrls];
+  const now = new Date().toISOString();
+  const newAuditLog = [...(current?.audit_log ?? []), { ts: now, action: "เพิ่มสลิปการขาย", detail: `${newUrls.length} รูป`, by: "admin" }];
+  const { error } = await supabase.from("stocks").update({ slip_urls: merged, audit_log: newAuditLog, updated_at: now }).eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useThemeColors } from "./ThemeContext";
 import { markStockSold, fetchStockStaff, fetchWholesalePartners } from "@/app/actions/stocks";
+import { supabase } from "@/lib/supabase";
 import type { StockItem } from "@/lib/stock/types";
 
 interface SellModalProps {
@@ -34,6 +35,11 @@ export default function SellModal({ item, onClose, onSuccess }: SellModalProps) 
   const [deliveryDone, setDeliveryDone] = useState(true);
   const [deliveryChannel, setDeliveryChannel] = useState<string>("หน้าร้าน");
 
+  // Slip upload
+  const slipInputRef = useRef<HTMLInputElement>(null);
+  const [slipUrls, setSlipUrls] = useState<string[]>([]);
+  const [slipUploading, setSlipUploading] = useState(false);
+
   // Fetched data
   const [staff, setStaff] = useState<string[]>([]);
   const [partners, setPartners] = useState<{ name: string; phone: string }[]>([]);
@@ -59,6 +65,7 @@ export default function SellModal({ item, onClose, onSuccess }: SellModalProps) 
       saleType,
       isWholesale ? effectivePartner.trim() : undefined,
       deliveryDone ? deliveryChannel : undefined,
+      slipUrls.length > 0 ? slipUrls : undefined,
     );
     if (res.success) {
       const effChannel = deliveryDone ? deliveryChannel : undefined;
@@ -77,6 +84,22 @@ export default function SellModal({ item, onClose, onSuccess }: SellModalProps) 
       onClose();
     }
     setSelling(false);
+  }
+
+  async function handleSlipUpload(files: FileList) {
+    if (!files.length) return;
+    setSlipUploading(true);
+    const urls: string[] = [...slipUrls];
+    for (const file of Array.from(files)) {
+      const path = `slips/${item.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+      const { data, error } = await supabase.storage.from("stock-photos").upload(path, file, { upsert: true });
+      if (!error && data) {
+        const { data: { publicUrl } } = supabase.storage.from("stock-photos").getPublicUrl(data.path);
+        urls.push(publicUrl);
+      }
+    }
+    setSlipUrls(urls);
+    setSlipUploading(false);
   }
 
   const inputSt: React.CSSProperties = {
@@ -240,6 +263,30 @@ export default function SellModal({ item, onClose, onSuccess }: SellModalProps) 
               placeholder="08x-xxx-xxxx" style={inputSt} />
           </div>
         )}
+
+        {/* Slip upload — optional */}
+        <div style={{ marginBottom: 18, padding: "12px 14px", borderRadius: 12, background: c.bg, border: `1px dashed ${c.border}` }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: slipUrls.length > 0 ? 10 : 0 }}>
+            <span style={{ color: c.text2, fontSize: 12, fontWeight: 600 }}>📎 สลิปการชำระเงิน <span style={{ color: c.text3, fontWeight: 400 }}>(ไม่บังคับ)</span></span>
+            <button onClick={() => slipInputRef.current?.click()} disabled={slipUploading}
+              style={{ padding: "5px 12px", borderRadius: 8, background: "transparent", border: `1px solid ${c.border}`, color: c.text2, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
+              {slipUploading ? "กำลังอัปโหลด..." : "+ แนบสลิป"}
+            </button>
+          </div>
+          {slipUrls.length > 0 && (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {slipUrls.map((url, i) => (
+                <div key={i} style={{ position: "relative" }}>
+                  <img src={url} alt="slip" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 8, border: `1px solid ${c.border}` }} />
+                  <button onClick={() => setSlipUrls(prev => prev.filter((_, j) => j !== i))}
+                    style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: "50%", background: "#ef4444", border: "none", color: "#fff", fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>×</button>
+                </div>
+              ))}
+            </div>
+          )}
+          <input ref={slipInputRef} type="file" accept="image/*" multiple style={{ display: "none" }}
+            onChange={e => e.target.files && handleSlipUpload(e.target.files)} />
+        </div>
 
         <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
           <button onClick={onClose}

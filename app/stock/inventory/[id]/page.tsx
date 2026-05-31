@@ -12,7 +12,7 @@ import { useThemeColors } from "@/components/stock/ThemeContext";
 import {
   fetchStockItem, verifyStockField,
   updateStockItem, updateStockStatus, updateStockPrice,
-  updateStockPhotos, confirmStockRecheck, confirmDelivery,
+  updateStockPhotos, confirmStockRecheck, confirmDelivery, addStockSlips,
 } from "@/app/actions/stocks";
 import SellModal from "@/components/stock/SellModal";
 import type { StockItem, StockStatus } from "@/lib/stock/types";
@@ -239,6 +239,11 @@ export default function StockDetailPage({ params }: { params: Promise<{ id: stri
   const [uploadErr, setUploadErr] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
+  // Slip upload
+  const [slipUploading, setSlipUploading] = useState(false);
+  const [lightboxSlip, setLightboxSlip] = useState<string | null>(null);
+  const slipInputRef = useRef<HTMLInputElement>(null);
+
   // Recheck
   const [showRecheck, setShowRecheck] = useState(false);
   const [recheckDraft, setRecheckDraft] = useState<{
@@ -345,6 +350,25 @@ export default function StockDetailPage({ params }: { params: Promise<{ id: stri
     await updateStockPhotos(item.id, urls);
     await reload();
     setUploading(false);
+  }
+
+  async function handleSlipUpload(files: FileList) {
+    if (!files.length || !item) return;
+    setSlipUploading(true);
+    const urls: string[] = [];
+    for (const file of Array.from(files)) {
+      const path = `slips/${item.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+      const { data, error } = await supabase.storage.from("stock-photos").upload(path, file, { upsert: true });
+      if (!error && data) {
+        const { data: { publicUrl } } = supabase.storage.from("stock-photos").getPublicUrl(data.path);
+        urls.push(publicUrl);
+      }
+    }
+    if (urls.length > 0) {
+      await addStockSlips(item.id, urls);
+      await reload();
+    }
+    setSlipUploading(false);
   }
 
   if (loading) return <div style={{ background: c.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: c.text3 }}>กำลังโหลด...</div>;
@@ -864,6 +888,31 @@ export default function StockDetailPage({ params }: { params: Promise<{ id: stri
               </div>
             )}
 
+            {/* Slip evidence — shown when sold */}
+            {item.status === "ขายแล้ว" && (
+              <div style={{ background: c.card, borderRadius: 20, padding: 24, border: `1px solid ${c.border}`, marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                  <p style={{ color: c.text3, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>หลักฐานการขาย (สลิป)</p>
+                  <button onClick={() => slipInputRef.current?.click()} disabled={slipUploading}
+                    style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 8, background: "transparent", border: `1px solid ${c.border}`, color: c.text2, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
+                    {slipUploading ? "กำลังอัปโหลด..." : "+ แนบสลิป"}
+                  </button>
+                  <input ref={slipInputRef} type="file" accept="image/*" multiple style={{ display: "none" }}
+                    onChange={e => e.target.files && handleSlipUpload(e.target.files)} />
+                </div>
+                {( item.slipUrls ?? [] ).length === 0 ? (
+                  <p style={{ color: c.text3, fontSize: 12, margin: 0, textAlign: "center", padding: "16px 0" }}>ยังไม่มีสลิป — กด "+ แนบสลิป" เพื่อเพิ่ม</p>
+                ) : (
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    {(item.slipUrls ?? []).map((url, i) => (
+                      <img key={i} src={url} alt={`slip-${i + 1}`} onClick={() => setLightboxSlip(url)}
+                        style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 10, border: `1px solid ${c.border}`, cursor: "pointer" }} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Purchase Info */}
             <div style={{ background: c.card, borderRadius: 20, padding: 24, border: `1px solid ${c.border}` }}>
               <p style={{ color: c.text3, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 16px" }}>ข้อมูลรับซื้อ</p>
@@ -1123,6 +1172,16 @@ export default function StockDetailPage({ params }: { params: Promise<{ id: stri
             onClick={() => setLightboxIndex(null)}
             style={{ position: "absolute", top: 16, right: 16, background: "rgba(255,255,255,0.12)", border: "none", borderRadius: "50%", width: 36, height: 36, fontSize: 18, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
           >×</button>
+        </div>
+      )}
+
+      {/* Slip lightbox */}
+      {lightboxSlip && (
+        <div onClick={() => setLightboxSlip(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-out" }}>
+          <img src={lightboxSlip} alt="slip" style={{ maxWidth: "92vw", maxHeight: "88vh", objectFit: "contain", borderRadius: 12 }} onClick={e => e.stopPropagation()} />
+          <button onClick={() => setLightboxSlip(null)}
+            style={{ position: "absolute", top: 16, right: 16, background: "rgba(255,255,255,0.12)", border: "none", borderRadius: "50%", width: 36, height: 36, fontSize: 18, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
         </div>
       )}
     </div>
