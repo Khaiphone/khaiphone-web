@@ -7,7 +7,7 @@ import { useThemeColors, useStockTheme } from "./ThemeContext";
 import StockStatusBadge, { GradeBadge } from "./StatusBadge";
 import type { StockItem, StockStatus } from "@/lib/stock/types";
 import { STOCK_STATUS_COLORS } from "@/lib/stock/constants";
-import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos, updateStockDocuments, logDocumentView, confirmDelivery, confirmStockRecheck } from "@/app/actions/stocks";
+import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos, updateStockDocuments, logDocumentView, confirmDelivery, confirmStockRecheck, addStockSlips } from "@/app/actions/stocks";
 import SellModal from "./SellModal";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
@@ -117,6 +117,8 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
   );
   const [recheckSaving, setRecheckSaving] = useState(false);
   const [recheckErr, setRecheckErr] = useState<string | null>(null);
+  const [slipUploading, setSlipUploading] = useState(false);
+  const slipInputRef = useRef<HTMLInputElement>(null);
 
   if (!item) return null;
 
@@ -227,6 +229,25 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
     await updateStockDocuments(item!.id, urls);
     onUpdate({ ...item!, documents: urls });
     setUploadingDoc(false);
+  }
+
+  async function handleSlipUpload(files: FileList) {
+    if (!files.length) return;
+    setSlipUploading(true);
+    const newUrls: string[] = [];
+    for (const file of Array.from(files)) {
+      const path = `slips/${item!.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+      const { data, error } = await supabase.storage.from("stock-photos").upload(path, file, { upsert: true });
+      if (!error && data) {
+        const { data: { publicUrl } } = supabase.storage.from("stock-photos").getPublicUrl(data.path);
+        newUrls.push(publicUrl);
+      }
+    }
+    if (newUrls.length > 0) {
+      await addStockSlips(item!.id, newUrls);
+      onUpdate({ ...item!, slipUrls: [...(item!.slipUrls ?? []), ...newUrls] });
+    }
+    setSlipUploading(false);
   }
 
   async function handleDocumentDelete(url: string) {
@@ -786,6 +807,37 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                       {item.deliveryAddress && <Row label="ที่อยู่จัดส่ง" value={item.deliveryAddress} c={c} />}
                       {item.trackingNumber && <Row label="เลข Tracking" value={item.trackingNumber} c={c} mono />}
                     </Section>
+                  )}
+
+                  {item.status === "ขายแล้ว" && (
+                    <div style={{ marginBottom: 20 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                        <p style={{ color: c.text3, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>หลักฐานการขาย (สลิป)</p>
+                        <button
+                          onClick={() => slipInputRef.current?.click()}
+                          disabled={slipUploading}
+                          style={{ padding: "4px 10px", borderRadius: 8, background: "transparent", border: `1px solid ${c.border}`, color: c.text2, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
+                        >
+                          {slipUploading ? "กำลังอัปโหลด..." : "+ แนบสลิป"}
+                        </button>
+                        <input ref={slipInputRef} type="file" accept="image/*" multiple style={{ display: "none" }}
+                          onChange={e => e.target.files && handleSlipUpload(e.target.files)} />
+                      </div>
+                      {(item.slipUrls ?? []).length === 0 ? (
+                        <div style={{ background: c.card2, borderRadius: 12, padding: "16px", textAlign: "center" }}>
+                          <p style={{ color: c.text3, fontSize: 12, margin: 0 }}>ยังไม่มีสลิป — กด "+ แนบสลิป" เพื่อเพิ่ม</p>
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          {(item.slipUrls ?? []).map((url, i) => (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <a key={i} href={url} target="_blank" rel="noreferrer">
+                              <img src={url} alt={`slip-${i + 1}`} style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 10, border: `1px solid ${c.border}` }} />
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   <Section label="ข้อมูลรับซื้อ" c={c}>
