@@ -1064,6 +1064,22 @@ export async function fetchBreakeven(months: 1 | 3 = 3): Promise<BreakevenResult
   return { items, overheadPerUnit, totalExpenses, unitsSold, months };
 }
 
+export async function fetchOverheadPerUnit(months: 1 | 3 = 3): Promise<number> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const since = new Date();
+  since.setDate(1);
+  since.setMonth(since.getMonth() - (months - 1));
+  const sinceStr = since.toISOString().slice(0, 10);
+  const [{ data: expenseData }, { data: soldData }] = await Promise.all([
+    supabase.from("expenses").select("amount").gte("date", sinceStr),
+    supabase.from("stocks").select("id").eq("status", "ขายแล้ว").gte("sold_at", sinceStr),
+  ]);
+  const totalExpenses = (expenseData ?? []).reduce((s, r) => s + (r.amount ?? 0), 0);
+  const unitsSold = (soldData ?? []).length;
+  return unitsSold > 0 ? Math.round(totalExpenses / unitsSold) : 0;
+}
+
 // ─── Forecast ─────────────────────────────────────────────────────────────────
 
 export type ForecastPoint = { date: string; actual?: number; forecast?: number };

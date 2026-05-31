@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Edit2, Upload, RefreshCw, Tag, Printer, CheckSquare, Save, ChevronLeft, ExternalLink, Truck } from "lucide-react";
 import { useThemeColors, useStockTheme } from "./ThemeContext";
@@ -8,6 +8,7 @@ import StockStatusBadge, { GradeBadge } from "./StatusBadge";
 import type { StockItem, StockStatus } from "@/lib/stock/types";
 import { STOCK_STATUS_COLORS } from "@/lib/stock/constants";
 import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos, updateStockDocuments, logDocumentView, confirmDelivery, confirmStockRecheck, addStockSlips } from "@/app/actions/stocks";
+import { fetchOverheadPerUnit } from "@/app/actions/finance";
 import SellModal from "./SellModal";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
@@ -119,6 +120,11 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
   const [recheckErr, setRecheckErr] = useState<string | null>(null);
   const [slipUploading, setSlipUploading] = useState(false);
   const slipInputRef = useRef<HTMLInputElement>(null);
+  const [overheadPerUnit, setOverheadPerUnit] = useState(0);
+
+  useEffect(() => {
+    fetchOverheadPerUnit(3).then(setOverheadPerUnit);
+  }, []);
 
   if (!item) return null;
 
@@ -866,6 +872,25 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                           </div>
                         ))}
                       </div>
+                      {overheadPerUnit > 0 && (() => {
+                        const breakeven = totalCost + overheadPerUnit;
+                        const isBelowBreakeven = item.status !== "ขายแล้ว" && effectivePrice > 0 && effectivePrice < breakeven;
+                        return (
+                          <div style={{ margin: "10px 0", padding: "10px 12px", borderRadius: 10, background: isBelowBreakeven ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.06)", border: `1px solid ${isBelowBreakeven ? "rgba(239,68,68,0.25)" : "rgba(34,197,94,0.2)"}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <div>
+                                <p style={{ margin: 0, fontSize: 11, color: isBelowBreakeven ? "#ef4444" : "#16a34a", fontWeight: 700 }}>
+                                  {isBelowBreakeven ? "⚠ ต่ำกว่า Break-even" : "✓ สูงกว่า Break-even"}
+                                </p>
+                                <p style={{ margin: "2px 0 0", fontSize: 10, color: c.text3 }}>ต้นทุน {fmt(totalCost)} + overhead {fmt(overheadPerUnit)}</p>
+                              </div>
+                              <p style={{ margin: 0, fontSize: 16, fontWeight: 800, color: isBelowBreakeven ? "#ef4444" : "#16a34a" }}>
+                                {fmt(breakeven)}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })()}
                       <div style={{ borderTop: `1px solid ${c.border}`, paddingTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div>
                           <p style={{ color: c.text3, fontSize: 11, margin: "0 0 2px" }}>ราคาขาย</p>
