@@ -1005,15 +1005,35 @@ export type BreakevenItem = {
   belowBreakeven: boolean;
 };
 
-export async function fetchBreakeven(): Promise<BreakevenItem[]> {
+export type BreakevenResult = {
+  items: BreakevenItem[];
+  overheadPerUnit: number;
+  totalExpenses: number;
+  unitsSold: number;
+  months: 1 | 3;
+};
+
+export async function fetchBreakeven(months: 1 | 3 = 3): Promise<BreakevenResult> {
   await requireAuth();
   const supabase = createServerClient();
-  const { data } = await supabase
-    .from("stocks")
-    .select("model, cost_price, shipping_cost, other_cost, selling_price, sold_price, status");
+
+  const since = new Date();
+  since.setDate(1);
+  since.setMonth(since.getMonth() - (months - 1));
+  const sinceStr = since.toISOString().slice(0, 10);
+
+  const [{ data: stockData }, { data: expenseData }, { data: soldData }] = await Promise.all([
+    supabase.from("stocks").select("model, cost_price, shipping_cost, other_cost, selling_price, sold_price, status"),
+    supabase.from("expenses").select("amount").gte("date", sinceStr),
+    supabase.from("stocks").select("id").eq("status", "ขายแล้ว").gte("sold_at", sinceStr),
+  ]);
+
+  const totalExpenses = (expenseData ?? []).reduce((s, r) => s + (r.amount ?? 0), 0);
+  const unitsSold = (soldData ?? []).length;
+  const overheadPerUnit = unitsSold > 0 ? Math.round(totalExpenses / unitsSold) : 0;
 
   const modelMap = new Map<string, { costs: number[]; sells: number[] }>();
-  for (const r of data ?? []) {
+  for (const r of stockData ?? []) {
     const model = r.model ?? "Unknown";
     const cost = (r.cost_price ?? 0) + (r.shipping_cost ?? 0) + (r.other_cost ?? 0);
     const sell = r.status === "ขายแล้ว" ? (r.sold_price ?? r.selling_price ?? 0) : (r.selling_price ?? 0);
@@ -1025,11 +1045,11 @@ export async function fetchBreakeven(): Promise<BreakevenItem[]> {
 
   const avg = (arr: number[]) => arr.length === 0 ? 0 : Math.round(arr.reduce((s, v) => s + v, 0) / arr.length);
 
-  return Array.from(modelMap.entries()).map(([model, { costs, sells }]) => {
+  const items = Array.from(modelMap.entries()).map(([model, { costs, sells }]) => {
     const avgCost = avg(costs);
     const avgSellPrice = avg(sells);
-    const breakevenPrice = Math.round(avgCost * 1.05);
-    const margin = avgSellPrice > 0 ? Math.round(((avgSellPrice - avgCost) / avgSellPrice) * 1000) / 10 : 0;
+    const breakevenPrice = avgCost + overheadPerUnit;
+    const margin = avgSellPrice > 0 ? Math.round(((avgSellPrice - breakevenPrice) / avgSellPrice) * 1000) / 10 : 0;
     return {
       model,
       count: costs.length,
@@ -1040,6 +1060,8 @@ export async function fetchBreakeven(): Promise<BreakevenItem[]> {
       belowBreakeven: avgSellPrice > 0 && avgSellPrice < breakevenPrice,
     };
   }).sort((a, b) => b.count - a.count);
+
+  return { items, overheadPerUnit, totalExpenses, unitsSold, months };
 }
 
 // ─── Forecast ─────────────────────────────────────────────────────────────────
