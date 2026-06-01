@@ -323,6 +323,7 @@ export async function updateStatus(
         result:          insp.result          ?? null,
         batteryHealth:   insp.batteryHealth   ?? null,
         batteryCycles:   insp.batteryCycles   ?? null,
+        warrantyExpiry:  insp.warrantyExpiry  ?? null,
         criteria:        insp.criteria        ?? [],
         functionalTests: insp.functionalTests ?? [],
         issues:          insp.issues          ?? [],

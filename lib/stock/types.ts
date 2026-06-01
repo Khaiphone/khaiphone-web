@@ -102,6 +102,7 @@ export interface StockItem {
     result?: string;
     batteryHealth?: number;
     batteryCycles?: number;
+    warrantyExpiry?: string | null;
     criteria?: { label: string; stated: string; actual: string; pass: boolean }[];
     functionalTests?: { label: string; pass: boolean }[];
     issues?: string[];

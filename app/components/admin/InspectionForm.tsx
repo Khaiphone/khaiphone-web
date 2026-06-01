@@ -156,7 +156,7 @@ export default function InspectionForm({
 
   const iphoneSeries = (() => { const m = model?.match(/iPhone\s+(\d+)/i); return m ? Number(m[1]) : 0; })();
   const showCycles = iphoneSeries >= 15;
-  const showHealth = iphoneSeries > 0 && iphoneSeries < 15;
+  const showHealth = iphoneSeries > 0; // all iPhones have battery health; 15+ also shows cycles
   const [imeiError,   setImeiError]   = useState(false);
   const [serialError, setSerialError] = useState(false);
   const [uploading,    setUploading]   = useState(false);

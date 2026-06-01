@@ -855,6 +855,15 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                     <Row label="ช่องทาง" value={item.sourceChannel} c={c} />
                     <Row label="วันที่รับเข้า" value={fmtDate(item.receivedAt)} c={c} />
                     {item.inspector && <Row label="ผู้ตรวจ" value={item.inspector} c={c} />}
+                    {item.inspectionSnapshot?.warrantyExpiry && item.inspectionSnapshot.warrantyExpiry !== "expired" && (
+                      <Row label="ประกันถึง" value={new Date(item.inspectionSnapshot.warrantyExpiry + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })} c={c} />
+                    )}
+                    {item.inspectionSnapshot?.warrantyExpiry === "expired" && (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: `1px solid ${c.border}` }}>
+                        <span style={{ color: c.text2, fontSize: 13 }}>ประกัน</span>
+                        <span style={{ color: "#ef4444", fontSize: 12, fontWeight: 700 }}>หมดประกันแล้ว</span>
+                      </div>
+                    )}
                   </Section>
 
                   <Section label="ต้นทุน / กำไร" c={c}>
