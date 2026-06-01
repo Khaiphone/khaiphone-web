@@ -13,6 +13,7 @@ export type ProductRow = {
   category: string;
   active: boolean;
   deductions: PricingGroup[] | null;
+  floor_pct: number | null;
   updated_at: string;
   updated_by: string | null;
 };
@@ -245,6 +246,26 @@ export async function syncStorageFromLib() {
 
   if (failed > 0) return { success: false as const, error: `อัปเดต ${failed} รุ่นไม่สำเร็จ`, updated };
   return { success: true as const, updated };
+}
+
+export async function updateProductFloor(
+  id: string,
+  floor_pct: number | null,
+  updatedBy?: string,
+) {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { error } = await supabase
+    .from("products")
+    .update({
+      floor_pct,
+      updated_at: new Date().toISOString(),
+      ...(updatedBy ? { updated_by: updatedBy } : {}),
+    })
+    .eq("id", id);
+
+  if (error) return { success: false as const, error: error.message };
+  return { success: true as const };
 }
 
 export async function deleteProduct(id: string) {

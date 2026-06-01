@@ -752,6 +752,7 @@ function SellModelPageContent() {
       setFloorPct(cfg.floorPct);
       const match = dbProducts.find(d => toSlug(d.model) === modelSlug);
       setStoragePrices(match?.storage_prices ?? null);
+      if (match?.floor_pct != null) setFloorPct(match.floor_pct);
       const customDed = !!(match?.deductions && match.deductions.length > 0);
       setHasCustomDed(customDed);
       if (customDed) {

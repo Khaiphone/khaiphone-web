@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { ChevronLeft, Check, RotateCcw } from "lucide-react";
 import {
   fetchProductById, updateProduct,
-  updateProductStoragePrices, updateProductDeductions,
+  updateProductStoragePrices, updateProductDeductions, updateProductFloor,
 } from "@/app/actions/products";
 import { fetchPricingConfig } from "@/app/actions/pricing-config";
 import { DEFAULT_PRICING_CONFIG, getModelTypeOpts } from "@/lib/pricing-defaults";
@@ -51,6 +51,9 @@ export default function ProductDetailPage() {
   const [groups, setGroups]             = useState<PricingGroup[]>(deepClone(DEFAULT_PRICING_CONFIG.groups));
   const [dedInputs, setDedInputs]       = useState<Record<string, string>>({});
 
+  const [useCustomFloor, setUseCustomFloor] = useState(false);
+  const [floorInput, setFloorInput]         = useState("60");
+
   const [saving, setSaving] = useState(false);
   const [saved, setSaved]   = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -83,6 +86,15 @@ export default function ProductDetailPage() {
       setUseCustomDed(!!(p.deductions && p.deductions.length > 0));
       setGroups(initGroups);
       setDedInputs(groupsToDedInputs(initGroups));
+
+      // Init floor
+      if (p.floor_pct != null) {
+        setUseCustomFloor(true);
+        setFloorInput(String(Math.round(p.floor_pct * 100)));
+      } else {
+        setUseCustomFloor(false);
+        setFloorInput(String(Math.round(cfg.floorPct * 100)));
+      }
       setLoading(false);
     });
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -154,15 +166,19 @@ export default function ProductDetailPage() {
       productUpdates.price_good = storagePricesMap[firstStorage] ?? product.price_good;
     }
 
-    const [r1, r2, r3] = await Promise.all([
+    const parsedFloor = parseFloat(floorInput) / 100;
+    const floorToSave = useCustomFloor && !isNaN(parsedFloor) ? parsedFloor : null;
+
+    const [r1, r2, r3, r4] = await Promise.all([
       updateProduct(product.id, productUpdates, currentUserEmail),
       updateProductStoragePrices(product.id, hasExplicit ? storagePricesMap : null, currentUserEmail),
       updateProductDeductions(product.id, useCustomDed ? finalGroups : null, currentUserEmail),
+      updateProductFloor(product.id, floorToSave, currentUserEmail),
     ]);
 
     setSaving(false);
 
-    const err = (!r1.success && r1.error) || (!r2.success && r2.error) || (!r3.success && r3.error);
+    const err = (!r1.success && r1.error) || (!r2.success && r2.error) || (!r3.success && r3.error) || (!r4.success && r4.error);
     if (err) {
       setSaveError(err);
       return;
@@ -316,6 +332,59 @@ export default function ProductDetailPage() {
                 <div>
                   <p style={{ color: TEXT, fontSize: 13, fontWeight: 600, margin: "0 0 2px" }}>{label}</p>
                   <p style={{ color: TEXT3, fontSize: 11, margin: 0 }}>{sub}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Floor price */}
+        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 16, marginBottom: 14 }}>
+          <p style={{ color: TEXT, fontSize: 14, fontWeight: 700, margin: "0 0 14px" }}>ราคาต่ำสุด (Floor)</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {[
+              { val: false, label: "ใช้ค่ามาตรฐาน",         sub: "ตามที่ตั้งไว้ใน \"ตั้งค่าคำนวณ\""        },
+              { val: true,  label: "กำหนดเองสำหรับรุ่นนี้", sub: "ราคาต่ำสุดเฉพาะรุ่น " + product.model },
+            ].map(({ val, label, sub }) => (
+              <label
+                key={String(val)}
+                style={{
+                  display: "flex", alignItems: "flex-start", gap: 12,
+                  padding: "12px 14px", borderRadius: 10, cursor: "pointer",
+                  border: `1px solid ${useCustomFloor === val ? GOLD : BORDER}`,
+                  background: useCustomFloor === val ? `${GOLD}08` : BG,
+                }}
+              >
+                <input
+                  type="radio"
+                  checked={useCustomFloor === val}
+                  onChange={() => setUseCustomFloor(val)}
+                  style={{ marginTop: 2, accentColor: GOLD, flexShrink: 0 }}
+                />
+                <div style={{ flex: 1 }}>
+                  <p style={{ color: TEXT, fontSize: 13, fontWeight: 600, margin: "0 0 2px" }}>{label}</p>
+                  <p style={{ color: TEXT3, fontSize: 11, margin: 0 }}>{sub}</p>
+                  {val && useCustomFloor && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={floorInput}
+                        onChange={e => setFloorInput(e.target.value)}
+                        onFocus={e => e.target.select()}
+                        style={{
+                          width: 72, textAlign: "center",
+                          padding: "7px 10px", border: `1px solid ${GOLD}`,
+                          borderRadius: 8, fontSize: 15, fontWeight: 700,
+                          color: TEXT, background: `${GOLD}08`,
+                          fontFamily: "inherit", outline: "none",
+                        }}
+                      />
+                      <span style={{ color: TEXT2, fontSize: 13 }}>% ของราคาฐาน</span>
+                    </div>
+                  )}
                 </div>
               </label>
             ))}
