@@ -121,9 +121,17 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
   const [slipUploading, setSlipUploading] = useState(false);
   const slipInputRef = useRef<HTMLInputElement>(null);
   const [overheadPerUnit, setOverheadPerUnit] = useState(0);
+  const [currentUserName, setCurrentUserName] = useState("");
 
   useEffect(() => {
     fetchOverheadPerUnit(3).then(setOverheadPerUnit);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const name = (session.user.email ?? "").split("@")[0] || "Admin";
+        setCurrentUserName(name);
+        setRecheckDraft(d => d.inspector ? d : { ...d, inspector: name });
+      }
+    });
   }, []);
 
   if (!item) return null;
