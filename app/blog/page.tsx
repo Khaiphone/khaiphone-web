@@ -6,7 +6,7 @@ import { blogPosts } from "@/lib/blogData";
 import BlogSearch from "./BlogSearch";
 
 export const metadata: Metadata = {
-  title: "บทความและความรู้ | ขายไอโฟน.com",
+  title: "บทความและความรู้ | Khaiphone.com",
   description:
     "รวมบทความ ข่าวสาร และเทคนิคการขาย iPhone iPad MacBook มือสอง อัปเดตทุกสัปดาห์",
 };

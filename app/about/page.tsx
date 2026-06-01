@@ -4,19 +4,19 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 
 export const metadata: Metadata = {
-  title: "เกี่ยวกับเรา | ขายไอโฟน.com รับซื้อ Apple มือสองรังสิต",
+  title: "เกี่ยวกับเรา | Khaiphone.com รับซื้อ Apple มือสองรังสิต",
   description:
-    "ขายไอโฟน.com ร้านรับซื้อ iPhone iPad MacBook Apple Watch มือสอง ให้ราคาสูง จ่ายเงินสดทันที บริการรับถึงที่ทั่ว กทม. และปริมณฑล",
+    "Khaiphone.com ร้านรับซื้อ iPhone iPad MacBook Apple Watch มือสอง ให้ราคาสูง จ่ายเงินสดทันที บริการรับถึงที่ทั่ว กทม. และปริมณฑล",
   alternates: { canonical: "https://khaiphone.com/about" },
   openGraph: {
     type: "website",
     locale: "th_TH",
-    siteName: "ขายไอโฟน.com",
-    title: "เกี่ยวกับเรา | ขายไอโฟน.com",
+    siteName: "Khaiphone.com",
+    title: "เกี่ยวกับเรา | Khaiphone.com",
     description:
       "ร้านรับซื้อ Apple มือสองที่รังสิต ปทุมธานี ให้ราคาสูง จ่ายเงินสดทันที บริการรับถึงที่",
     url: "https://khaiphone.com/about",
-    images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: "ขายไอโฟน.com" }],
+    images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: "Khaiphone.com" }],
   },
 };
 
@@ -86,7 +86,7 @@ export default function AboutPage() {
             className="text-sm md:text-base leading-relaxed max-w-2xl mx-auto"
             style={{ color: "#6B7280" }}
           >
-            ขายไอโฟน.com คือร้านรับซื้อ Apple มือสองที่รังสิต ปทุมธานี
+            Khaiphone.com คือร้านรับซื้อ Apple มือสองที่รังสิต ปทุมธานี
             ให้ราคาสูง จ่ายเงินสดทันที พร้อมบริการรับถึงที่ทั่ว กทม. และปริมณฑล
           </p>
         </div>

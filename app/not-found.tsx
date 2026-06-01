@@ -46,7 +46,7 @@ export default async function NotFound() {
         <Link href="/" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 10 }}>
           <Image src="/logo-icon.webp" alt="logo" width={36} height={36} style={{ borderRadius: 8 }} />
           <div>
-            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#111" }}>ขายไอโฟน.com</p>
+            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#111" }}>Khaiphone.com</p>
             <p style={{ margin: 0, fontSize: 11, color: "#B8860B" }}>รับซื้อ Apple ให้ราคาสูง</p>
           </div>
         </Link>
@@ -145,7 +145,7 @@ export default async function NotFound() {
       {/* Footer note */}
       <div style={{ textAlign: "center", padding: "16px", borderTop: "1px solid #E5E5E5", background: "#fff" }}>
         <p style={{ margin: 0, fontSize: 12, color: "#6B7280" }}>
-          © {new Date().getFullYear()} ขายไอโฟน.com — รับซื้อ Apple ให้ราคาสูง จ่ายเงินสดทันที
+          © {new Date().getFullYear()} Khaiphone.com — รับซื้อ Apple ให้ราคาสูง จ่ายเงินสดทันที
         </p>
       </div>
 

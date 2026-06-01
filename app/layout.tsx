@@ -23,7 +23,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://khaiphone.com";
 const localBusinessSchema = {
   "@context": "https://schema.org",
   "@type": "LocalBusiness",
-  name: "ขายไอโฟน.com",
+  name: "Khaiphone.com",
   alternateName: "KhaiPhone",
   description: "รับซื้อ iPhone, iPad, MacBook, Apple Watch ทุกรุ่น ให้ราคาสูง ประเมินราคาออนไลน์ฟรี จ่ายเงินสดทันที",
   url: SITE_URL,
@@ -39,13 +39,13 @@ const localBusinessSchema = {
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "ขายไอโฟน.com — รับซื้อ iPhone, iPad, MacBook ให้ราคาสูง จ่ายเงินสดทันที",
-    template: "%s | ขายไอโฟน.com",
+    default: "Khaiphone.com — รับซื้อ iPhone, iPad, MacBook ให้ราคาสูง จ่ายเงินสดทันที",
+    template: "%s | Khaiphone.com",
   },
   description:
     "ประเมินราคาออนไลน์ฟรี ไม่ผูกมัด ขายง่าย ได้เงินไว รับซื้อ iPhone, iPad, MacBook, Apple Watch, AirPods ทุกรุ่น ให้ราคาสูงกว่าที่อื่น",
   keywords: ["ขายไอโฟน", "รับซื้อ iPhone", "ขาย iPhone", "ประเมินราคา iPhone", "รับซื้อ iPad", "รับซื้อ MacBook", "ขายมือถือ"],
-  authors: [{ name: "ขายไอโฟน.com" }],
+  authors: [{ name: "Khaiphone.com" }],
   robots: { index: true, follow: true },
   manifest: "/manifest.json",
   icons: {
@@ -64,14 +64,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "th_TH",
-    siteName: "ขายไอโฟน.com",
-    title: "ขายไอโฟน.com — รับซื้อ iPhone, iPad, MacBook ให้ราคาสูง",
+    siteName: "Khaiphone.com",
+    title: "Khaiphone.com — รับซื้อ iPhone, iPad, MacBook ให้ราคาสูง",
     description: "ประเมินราคาออนไลน์ฟรี ไม่ผูกมัด รับซื้อ iPhone, iPad, MacBook, Apple Watch ทุกรุ่น จ่ายเงินสดทันที",
-    images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: "ขายไอโฟน.com" }],
+    images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: "Khaiphone.com" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "ขายไอโฟน.com — รับซื้อ iPhone ให้ราคาสูง",
+    title: "Khaiphone.com — รับซื้อ iPhone ให้ราคาสูง",
     description: "ประเมินราคาออนไลน์ฟรี ไม่ผูกมัด จ่ายเงินสดทันที",
     images: ["/og-image.jpg"],
   },

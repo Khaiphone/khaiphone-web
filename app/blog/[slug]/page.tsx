@@ -21,18 +21,18 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const post = blogPosts.find((p) => p.slug === slug);
-  if (!post) return { title: "ไม่พบบทความ | ขายไอโฟน.com" };
+  if (!post) return { title: "ไม่พบบทความ | Khaiphone.com" };
   const canonical = `${SITE_URL}/blog/${post.slug}`;
   const ogImage = `${SITE_URL}${post.image}`;
   return {
-    title: `${post.title} | ขายไอโฟน.com`,
+    title: `${post.title} | Khaiphone.com`,
     description: post.excerpt,
     keywords: post.keywords,
     alternates: { canonical },
     openGraph: {
       type: "article",
       locale: "th_TH",
-      siteName: "ขายไอโฟน.com",
+      siteName: "Khaiphone.com",
       title: post.title,
       description: post.excerpt,
       url: canonical,
@@ -239,8 +239,8 @@ export default async function BlogPostPage({
     datePublished: post.date,
     image: `${SITE_URL}${post.image}`,
     url: canonical,
-    author: { "@type": "Organization", name: "ขายไอโฟน.com", url: SITE_URL },
-    publisher: { "@type": "Organization", name: "ขายไอโฟน.com", url: SITE_URL },
+    author: { "@type": "Organization", name: "Khaiphone.com", url: SITE_URL },
+    publisher: { "@type": "Organization", name: "Khaiphone.com", url: SITE_URL },
   };
 
   const breadcrumbSchema = {

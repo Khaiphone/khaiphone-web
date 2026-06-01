@@ -99,9 +99,9 @@ export default function Header() {
       <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <a href="/" className="flex items-center gap-0">
-            <Image src="/logo-icon.webp" alt="khaiphone.com" width={40} height={40} className="flex-shrink-0 md:mr-1 rounded-lg" style={{ width: 40, height: 40 }} />
+            <Image src="/logo-icon.webp" alt="Khaiphone.com" width={40} height={40} className="flex-shrink-0 md:mr-1 rounded-lg" style={{ width: 40, height: 40 }} />
             <div>
-              <div className="font-bold text-lg leading-none text-black">khaiphone.com</div>
+              <div className="font-bold text-lg leading-none text-black">Khaiphone.com</div>
               <div className="text-xs text-gray-500">รับซื้อ-ขาย Apple มือสอง</div>
             </div>
           </a>
@@ -202,9 +202,9 @@ export default function Header() {
           {/* Drawer header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <div className="flex items-center gap-0">
-              <Image src="/logo-icon.webp" alt="khaiphone.com" width={40} height={40} className="flex-shrink-0 rounded-lg" style={{ width: 40, height: 40 }} />
+              <Image src="/logo-icon.webp" alt="Khaiphone.com" width={40} height={40} className="flex-shrink-0 rounded-lg" style={{ width: 40, height: 40 }} />
               <div>
-                <div className="font-bold text-base leading-none text-black">khaiphone.com</div>
+                <div className="font-bold text-base leading-none text-black">Khaiphone.com</div>
                 <div className="text-xs text-gray-500">รับซื้อ-ขาย Apple มือสอง</div>
               </div>
             </div>

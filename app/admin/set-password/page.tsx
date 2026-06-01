@@ -61,7 +61,7 @@ export default function SetPasswordPage() {
             <KeyRound size={26} color={GOLD} />
           </div>
           <h1 style={{ color: TEXT, fontSize: 22, fontWeight: 700, margin: "0 0 6px" }}>ตั้งรหัสผ่าน</h1>
-          <p style={{ color: TEXT2, fontSize: 14, margin: 0 }}>ขายไอโฟน.com Admin</p>
+          <p style={{ color: TEXT2, fontSize: 14, margin: 0 }}>Khaiphone.com Admin</p>
         </div>
 
         <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 20, padding: 24 }}>

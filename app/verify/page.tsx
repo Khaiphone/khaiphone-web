@@ -58,7 +58,7 @@ export default async function VerifyPage({
           ขาย<br />iPhone
         </div>
         <div>
-          <div style={{ color: GOLD, fontSize: 16, fontWeight: 800 }}>ขายไอโฟน.com</div>
+          <div style={{ color: GOLD, fontSize: 16, fontWeight: 800 }}>Khaiphone.com</div>
           <div style={{ color: "rgba(255,255,255,.55)", fontSize: 11, marginTop: 1 }}>ตรวจสอบความถูกต้องเอกสาร</div>
         </div>
         <ShieldCheck size={22} color={GOLD} style={{ marginLeft: "auto", flexShrink: 0 }} />

@@ -210,7 +210,7 @@ export default function ContractPage() {
           ctx.textAlign = "center";
           ctx.translate(canvas.width / 2, canvas.height / 2);
           ctx.rotate(-22 * Math.PI / 180);
-          ctx.fillText("ใช้สำหรับขายโทรศัพท์ให้ ขายไอโฟน.com เท่านั้น", 0, 0);
+          ctx.fillText("ใช้สำหรับขายโทรศัพท์ให้ Khaiphone.com เท่านั้น", 0, 0);
           ctx.font = `${Math.floor(fs * 0.75)}px Arial, sans-serif`;
           ctx.fillText(`วันที่ ${thDate(txDate + "T00:00:00")}`, 0, fs * 1.4);
           ctx.restore();
@@ -325,12 +325,12 @@ export default function ContractPage() {
       let p = `<div class="header">
         <div class="logo-area">
           <img src="${logoSrc}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0">
-          <div><div class="logo-name">ขายไอโฟน.com</div><div class="logo-sub">รับซื้อ-ขาย Apple มือสอง</div></div>
+          <div><div class="logo-name">Khaiphone.com</div><div class="logo-sub">รับซื้อ-ขาย Apple มือสอง</div></div>
         </div>
         <div class="title-center">
           <h1>สัญญาซื้อขายโทรศัพท์มือถือมือสอง</h1>
           ${dev.label ? `<div style="color:#FFD700;font-size:12px;font-weight:700;margin-top:2px">${dev.label}</div>` : ""}
-          <div class="between">ระหว่าง <strong>ผู้ขาย</strong> และ <strong style="color:#FFD700">ขายไอโฟน.com</strong></div>
+          <div class="between">ระหว่าง <strong>ผู้ขาย</strong> และ <strong style="color:#FFD700">Khaiphone.com</strong></div>
         </div>
         <div class="cno-box">
           <div class="cno-label">เลขที่สัญญา (CONTRACT NO.)</div>
@@ -343,7 +343,7 @@ export default function ContractPage() {
           <div class="icard">
             <div class="icard-hd"><div class="hd-num">1</div> ผู้รับซื้อ</div>
             <div class="icard-body">
-              <div style="font-weight:700;font-size:13px;color:#1a1a2e;margin-bottom:5px">ขายไอโฟน.com</div>
+              <div style="font-weight:700;font-size:13px;color:#1a1a2e;margin-bottom:5px">Khaiphone.com</div>
               <div style="font-size:10px;color:#666;line-height:1.5;margin-bottom:8px">ประกอบธุรกิจรับซื้อ-ขายโทรศัพท์มือถือ<br>และอุปกรณ์อิเล็กทรอนิกส์มือสอง</div>
               <div class="shop-row">📞 โทรศัพท์: 095-553-5167</div><div class="shop-row">💬 LINE: @khaiphone</div><div class="shop-row">🌐 เว็บไซต์: khaiphone.com</div>
               <div style="margin-top:8px;padding:5px 8px;background:#f5f4f0;border-radius:5px;font-size:9.5px;color:#666;border-left:3px solid #c9a84c">ต่อไปในสัญญานี้เรียกว่า <strong>"ผู้รับซื้อ"</strong></div>
@@ -490,7 +490,7 @@ export default function ContractPage() {
           <div style="margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,.1);font-size:8.5px;color:rgba(255,255,255,.35);max-width:400px;line-height:1.6">เอกสารฉบับนี้ถูกสร้างจากระบบ Khaiphone โดยอัตโนมัติจากข้อมูลการรับซื้อจริง พร้อมหลักฐานประกอบในระบบ และสามารถตรวจสอบความถูกต้องได้ผ่าน Document ID</div>
         </div>
         <div class="footer-logo" style="text-align:right">
-          <div class="footer-brand">ขายไอโฟน.com</div>
+          <div class="footer-brand">Khaiphone.com</div>
           <div class="footer-info">รับซื้อ-ขาย Apple มือสอง<br>📞 095-553-5167 &nbsp;💬 LINE: @khaiphone<br>🌐 khaiphone.com</div>
         </div>
       </div>`;
@@ -504,7 +504,7 @@ export default function ContractPage() {
       let p = `<div class="header">
         <div class="logo-area">
           <img src="${logoSrc}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0">
-          <div><div class="logo-name">ขายไอโฟน.com</div><div class="logo-sub">รับซื้อ-ขาย Apple มือสอง</div></div>
+          <div><div class="logo-name">Khaiphone.com</div><div class="logo-sub">รับซื้อ-ขาย Apple มือสอง</div></div>
         </div>
         <div class="title-center">
           <h1>ใบสำคัญรับเงิน</h1>
@@ -535,7 +535,7 @@ export default function ContractPage() {
           <div class="icard">
             <div class="icard-hd"><div class="hd-num">2</div> ผู้จ่ายเงิน (ผู้รับซื้อ)</div>
             <div class="icard-body">
-              <div style="font-weight:700;font-size:13px;color:#1a1a2e;margin-bottom:5px">ขายไอโฟน.com</div>
+              <div style="font-weight:700;font-size:13px;color:#1a1a2e;margin-bottom:5px">Khaiphone.com</div>
               <div style="font-size:10px;color:#666;line-height:1.5;margin-bottom:8px">ประกอบธุรกิจรับซื้อ-ขายโทรศัพท์มือถือ<br>และอุปกรณ์อิเล็กทรอนิกส์มือสอง</div>
               <div class="shop-row">📞 โทรศัพท์: 095-553-5167</div><div class="shop-row">💬 LINE: @khaiphone</div><div class="shop-row">🌐 เว็บไซต์: khaiphone.com</div>
             </div>
@@ -581,7 +581,7 @@ export default function ContractPage() {
         <div class="two-col" style="margin-bottom:12px">
           <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:12px 14px">
             <div style="font-size:10.5px;font-weight:700;color:#15803d;margin-bottom:6px">✅ ข้าพเจ้าขอรับรองว่า</div>
-            <div style="font-size:10.5px;color:#166534;line-height:1.7">ข้าพเจ้า <strong>${esc(cName)}</strong> ได้รับเงินจำนวน <strong>${dev.price.toLocaleString("th-TH")} บาทถ้วน</strong> จาก <strong>${esc(staffName || "ขายไอโฟน.com")}</strong> เป็นค่าขาย${dev.label ? dev.label + " " : ""}โทรศัพท์มือถือ <strong>${esc(dev.model)} ${esc(dev.storage)}</strong> ตามสัญญาเลขที่ <strong>${receiptNo}</strong> เรียบร้อยแล้ว โดยสมัครใจ</div>
+            <div style="font-size:10.5px;color:#166534;line-height:1.7">ข้าพเจ้า <strong>${esc(cName)}</strong> ได้รับเงินจำนวน <strong>${dev.price.toLocaleString("th-TH")} บาทถ้วน</strong> จาก <strong>${esc(staffName || "Khaiphone.com")}</strong> เป็นค่าขาย${dev.label ? dev.label + " " : ""}โทรศัพท์มือถือ <strong>${esc(dev.model)} ${esc(dev.storage)}</strong> ตามสัญญาเลขที่ <strong>${receiptNo}</strong> เรียบร้อยแล้ว โดยสมัครใจ</div>
           </div>
           <div style="background:#fffbeb;border:1.5px solid #fcd34d;border-radius:8px;padding:12px 14px">
             <div style="font-size:10.5px;font-weight:700;color:#92400e;margin-bottom:6px">📝 หมายเหตุ</div>
@@ -643,7 +643,7 @@ export default function ContractPage() {
           <div style="margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,.1);font-size:8.5px;color:rgba(255,255,255,.35);max-width:400px;line-height:1.6">เอกสารฉบับนี้ถูกสร้างจากระบบ Khaiphone โดยอัตโนมัติจากข้อมูลการรับซื้อจริง พร้อมหลักฐานประกอบในระบบ และสามารถตรวจสอบความถูกต้องได้ผ่าน Document ID</div>
         </div>
         <div class="footer-logo" style="text-align:right">
-          <div class="footer-brand">ขายไอโฟน.com</div>
+          <div class="footer-brand">Khaiphone.com</div>
           <div class="footer-info">รับซื้อ-ขาย Apple มือสอง<br>📞 095-553-5167 &nbsp;💬 LINE: @khaiphone<br>🌐 khaiphone.com</div>
         </div>
       </div>`;
@@ -1032,7 +1032,7 @@ export default function ContractPage() {
             <div style={{ background: "#FFFBEB", border: "1px solid #FCD34D", borderRadius: 10, padding: "10px 13px", marginBottom: 12 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "#92400E", marginBottom: 6 }}>การยินยอม PDPA</div>
               <div style={{ fontSize: 11, color: "#78350F", lineHeight: 1.7, marginBottom: 8 }}>
-                ผู้ขายยินยอมแนบสำเนาบัตรประชาชนเพื่อใช้ประกอบธุรกรรมซื้อขายโทรศัพท์มือถือ และเพื่อการยืนยันตัวตนตามกฎหมาย ขายไอโฟน.com จะเก็บรักษาข้อมูลตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562
+                ผู้ขายยินยอมแนบสำเนาบัตรประชาชนเพื่อใช้ประกอบธุรกรรมซื้อขายโทรศัพท์มือถือ และเพื่อการยืนยันตัวตนตามกฎหมาย Khaiphone.com จะเก็บรักษาข้อมูลตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562
               </div>
               <label style={{ display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer" }}>
                 <input

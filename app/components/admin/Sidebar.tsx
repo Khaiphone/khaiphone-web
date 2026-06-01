@@ -141,14 +141,14 @@ export default function Sidebar() {
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <Image
             src="/logo-icon.webp"
-            alt="ขายไอโฟน"
+            alt="Khaiphone"
             width={32}
             height={32}
             style={{ borderRadius: "6px" }}
           />
           <div>
             <p style={{ color: "#ffffff", fontSize: "13px", fontWeight: 700, margin: 0, lineHeight: 1.3 }}>
-              ขายไอโฟน.com
+              Khaiphone.com
             </p>
             <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "10px", margin: 0, lineHeight: 1.3 }}>
               Admin Dashboard

@@ -118,7 +118,7 @@ export default function PrivacyPage() {
             className="text-xs font-semibold uppercase tracking-widest mb-3"
             style={{ color: GOLD }}
           >
-            ขายไอโฟน.COM
+            Khaiphone.com
           </p>
           <h1 className="text-3xl md:text-4xl font-bold text-black mb-4">
             นโยบายความเป็นส่วนตัว
@@ -152,7 +152,7 @@ export default function PrivacyPage() {
             <div className="flex items-center gap-2">
               <CheckCircle size={16} color={GOLD} strokeWidth={1.75} />
               <span className="text-sm" style={{ color: "#4B5563" }}>
-                สำหรับบริการทั้งหมดของ ขายไอโฟน.com
+                สำหรับบริการทั้งหมดของ Khaiphone.com
               </span>
             </div>
           </div>
@@ -245,7 +245,7 @@ export default function PrivacyPage() {
             {/* Section 1 */}
             <section id="section-1">
               <H2 num={1} title="ข้อมูลที่เราเก็บรวบรวม" />
-              <BodyText>ขายไอโฟน.com อาจเก็บข้อมูลส่วนบุคคลดังต่อไปนี้:</BodyText>
+              <BodyText>Khaiphone.com อาจเก็บข้อมูลส่วนบุคคลดังต่อไปนี้:</BodyText>
 
               <H3 title="ข้อมูลระบุตัวตน" />
               <ul className="flex flex-col gap-1.5 mb-4">
@@ -420,7 +420,7 @@ export default function PrivacyPage() {
                 </BodyText>
                 <ul className="flex flex-col gap-1.5">
                   {[
-                    "ขายไอโฟน.com",
+                    "Khaiphone.com",
                     "Email: privacy@khaiphone.com",
                     "โทรศัพท์: 095-553-5167",
                     "LINE: @khaiphone",

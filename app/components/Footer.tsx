@@ -44,9 +44,9 @@ export default function Footer() {
           {/* Column 1 — Brand */}
           <div>
             <div className="flex items-center gap-2.5 mb-4">
-              <Image src="/logo-icon.webp" alt="khaiphone.com" width={36} height={36} className="rounded-lg" style={{ width: 36, height: 36 }} />
+              <Image src="/logo-icon.webp" alt="Khaiphone.com" width={36} height={36} className="rounded-lg" style={{ width: 36, height: 36 }} />
               <div>
-                <p className="font-bold text-white text-sm leading-snug">khaiphone.com</p>
+                <p className="font-bold text-white text-sm leading-snug">Khaiphone.com</p>
                 <p className="text-xs leading-snug" style={{ color: "#9CA3AF" }}>รับซื้อ Apple มือสอง</p>
               </div>
             </div>
@@ -129,7 +129,7 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
           <p className="text-xs" style={{ color: "#9CA3AF" }}>
-            © 2025 khaiphone.com สงวนลิขสิทธิ์
+            © 2025 Khaiphone.com สงวนลิขสิทธิ์
           </p>
           <div className="flex items-center gap-5">
             {bottomLinks.map(({ label, href }) => (

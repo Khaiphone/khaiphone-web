@@ -5,9 +5,9 @@ import { CheckCircle2, Clock, ShieldCheck, Banknote } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "วิธีขาย iPhone กับเรา",
-  description: "ขั้นตอนการขาย iPhone iPad MacBook กับขายไอโฟน.com ง่ายแค่ 4 ขั้นตอน ประเมินออนไลน์ นัดหมาย ตรวจสภาพ รับเงินสด",
+  description: "ขั้นตอนการขาย iPhone iPad MacBook กับKhaiphone.com ง่ายแค่ 4 ขั้นตอน ประเมินออนไลน์ นัดหมาย ตรวจสภาพ รับเงินสด",
   alternates: { canonical: "/how-to-sell" },
-  openGraph: { title: "วิธีขาย iPhone กับเรา | ขายไอโฟน.com", description: "ง่ายแค่ 4 ขั้นตอน ประเมินออนไลน์ นัดหมาย ตรวจสภาพ รับเงินสด", url: "/how-to-sell" },
+  openGraph: { title: "วิธีขาย iPhone กับเรา | Khaiphone.com", description: "ง่ายแค่ 4 ขั้นตอน ประเมินออนไลน์ นัดหมาย ตรวจสภาพ รับเงินสด", url: "/how-to-sell" },
 };
 
 const steps = [

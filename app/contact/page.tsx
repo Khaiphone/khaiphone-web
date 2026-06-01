@@ -7,9 +7,9 @@ import { Phone, MapPin, Zap, Banknote, Lock, Star, MessageCircle } from "lucide-
 import Image from "next/image";
 
 export const metadata: Metadata = {
-  title: "ติดต่อเรา | ขายไอโฟน.com",
+  title: "ติดต่อเรา | Khaiphone.com",
   description:
-    "ติดต่อขายไอโฟน.com รับซื้อ iPhone iPad MacBook LINE @khaiphone โทร 095-553-5167 เปิดทุกวัน",
+    "ติดต่อKhaiphone.com รับซื้อ iPhone iPad MacBook LINE @khaiphone โทร 095-553-5167 เปิดทุกวัน",
 };
 
 const GOLD = "#B8860B";

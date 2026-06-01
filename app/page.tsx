@@ -11,17 +11,17 @@ import { blogPosts } from "@/lib/blogData";
 import { fetchPublicActiveProducts } from "@/app/actions/products";
 
 export const metadata: Metadata = {
-  title: "ขายไอโฟน.com — รับซื้อ iPhone iPad MacBook ให้ราคาสูง",
+  title: "Khaiphone.com — รับซื้อ iPhone iPad MacBook ให้ราคาสูง",
   description: "รับซื้อ iPhone, iPad, MacBook, Apple Watch ทุกรุ่น ให้ราคาสูง จ่ายเงินสดทันที ประเมินราคาฟรี ไม่ผูกมัด รับถึงที่ทั่ว กทม.",
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     locale: "th_TH",
-    siteName: "ขายไอโฟน.com",
-    title: "ขายไอโฟน.com — รับซื้อ iPhone iPad MacBook ให้ราคาสูง",
+    siteName: "Khaiphone.com",
+    title: "Khaiphone.com — รับซื้อ iPhone iPad MacBook ให้ราคาสูง",
     description: "รับซื้อ iPhone, iPad, MacBook, Apple Watch ทุกรุ่น ให้ราคาสูง จ่ายเงินสดทันที ประเมินราคาฟรี ไม่ผูกมัด",
     url: "/",
-    images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: "ขายไอโฟน.com" }],
+    images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: "Khaiphone.com" }],
   },
 };
 
@@ -388,7 +388,7 @@ export default async function Home() {
       <section className="py-8 md:py-16 px-4 bg-gray-50">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold text-left md:text-center text-black mb-2">
-            ทำไมต้องเลือก <span style={{ color: "#B8860B" }}>ขายไอโฟน.com</span>?
+            ทำไมต้องเลือก <span style={{ color: "#B8860B" }}>Khaiphone.com</span>?
           </h2>
           <p className="text-sm md:text-base text-left md:text-center mb-8 md:mb-10" style={{ color: "#6B7280" }}>
             เปรียบเทียบกับช่องทางอื่น
@@ -401,7 +401,7 @@ export default async function Home() {
               <div className="bg-gray-100 px-2 py-4 text-left pl-4" style={{ color: "#6B7280" }}>เปรียบเทียบ</div>
               <div className="px-2 py-4 text-white" style={{ background: "#111" }}>
                 <div className="text-xs mb-0.5" style={{ color: "#B8860B" }}>●</div>
-                ขายไอโฟน.com
+                Khaiphone.com
               </div>
               <div className="bg-gray-100 px-2 py-4 leading-snug" style={{ color: "#374151" }}>Trade-in<br/>กับศูนย์</div>
               <div className="bg-gray-100 px-2 py-4 leading-snug" style={{ color: "#374151" }}>ขาย<br/>ออนไลน์เอง</div>

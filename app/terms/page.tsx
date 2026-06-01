@@ -121,7 +121,7 @@ export default function TermsPage() {
             className="text-xs font-semibold uppercase tracking-widest mb-3"
             style={{ color: GOLD }}
           >
-            ขายไอโฟน.COM
+            Khaiphone.com
           </p>
           <h1 className="text-3xl md:text-4xl font-bold text-black mb-4">
             เงื่อนไขการให้บริการ
@@ -155,7 +155,7 @@ export default function TermsPage() {
             <div className="flex items-center gap-2">
               <CheckCircle size={16} color={GOLD} strokeWidth={1.75} />
               <span className="text-sm" style={{ color: "#4B5563" }}>
-                ครอบคลุมบริการรับซื้อ Apple มือสองทั้งหมดของ ขายไอโฟน.com
+                ครอบคลุมบริการรับซื้อ Apple มือสองทั้งหมดของ Khaiphone.com
               </span>
             </div>
           </div>
@@ -252,7 +252,7 @@ export default function TermsPage() {
             <section id="section-1">
               <H2 num={1} title="การยอมรับเงื่อนไข" />
               <BodyText>
-                การใช้งานเว็บไซต์ ขายไอโฟน.com หรือช่องทางบริการอื่นของบริษัท ถือว่าท่านได้อ่าน เข้าใจ
+                การใช้งานเว็บไซต์ Khaiphone.com หรือช่องทางบริการอื่นของบริษัท ถือว่าท่านได้อ่าน เข้าใจ
                 และยอมรับเงื่อนไขการให้บริการทั้งหมดนี้
               </BodyText>
               <BodyText>
@@ -265,7 +265,7 @@ export default function TermsPage() {
             <section id="section-2">
               <H2 num={2} title="ขอบเขตการให้บริการ" />
               <BodyText>
-                ขายไอโฟน.com ให้บริการรับซื้ออุปกรณ์ Apple มือสอง เช่น:
+                Khaiphone.com ให้บริการรับซื้ออุปกรณ์ Apple มือสอง เช่น:
               </BodyText>
               <ul className="flex flex-col gap-1.5 mb-4">
                 {[

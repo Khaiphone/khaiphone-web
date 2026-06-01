@@ -215,7 +215,7 @@ export async function generateMetadata({
   if (!loc) return {};
 
   const title = `รับซื้อ iPhone ${loc.name} ราคาสูง จ่ายสดทันที`;
-  const description = `รับซื้อ iPhone, iPad, MacBook, Apple Watch ในพื้นที่${loc.fullName} รับถึงที่ฟรี ประเมินราคาออนไลน์ฟรี ไม่ผูกมัด จ่ายเงินสดทันที ขายง่าย ได้เงินไว — ขายไอโฟน.com`;
+  const description = `รับซื้อ iPhone, iPad, MacBook, Apple Watch ในพื้นที่${loc.fullName} รับถึงที่ฟรี ประเมินราคาออนไลน์ฟรี ไม่ผูกมัด จ่ายเงินสดทันที ขายง่าย ได้เงินไว — Khaiphone.com`;
   const canonical = `${SITE_URL}/area/${loc.slug}`;
 
   return {
@@ -231,12 +231,12 @@ export async function generateMetadata({
       `รับซื้อ Apple Watch ${loc.name}`,
     ],
     openGraph: {
-      title: `${title} | ขายไอโฟน.com`,
+      title: `${title} | Khaiphone.com`,
       description,
       url: canonical,
       type: "website",
       locale: "th_TH",
-      siteName: "ขายไอโฟน.com",
+      siteName: "Khaiphone.com",
     },
     twitter: { card: "summary_large_image", title, description },
   };
@@ -279,7 +279,7 @@ export default async function LocationPage({
   const localBusinessSchema = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
-    name: "ขายไอโฟน.com",
+    name: "Khaiphone.com",
     alternateName: "KhaiPhone",
     description: `รับซื้อ iPhone iPad MacBook Apple Watch ในพื้นที่${loc.fullName} ให้ราคาสูง จ่ายเงินสดทันที`,
     url: SITE_URL,
@@ -384,7 +384,7 @@ export default async function LocationPage({
       <section className="bg-gray-50 border-y border-gray-100 px-4 py-10">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-lg font-bold text-black mb-6 text-center">
-            ทำไมต้องขายกับ ขายไอโฟน.com ใน{loc.name}?
+            ทำไมต้องขายกับ Khaiphone.com ใน{loc.name}?
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
             {trustPoints.map(({ icon, title, desc }) => (

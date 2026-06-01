@@ -511,9 +511,9 @@ function FocusHeader({ backHref }: { backHref: string }) {
             className="flex-1 flex items-center justify-start gap-1 bg-transparent border-none"
             style={{ cursor: "pointer" }}
           >
-            <Image src="/logo-icon.webp" alt="ขายไอโฟน.com" width={32} height={32} className="flex-shrink-0 rounded-lg" style={{ width: 32, height: 32 }} />
+            <Image src="/logo-icon.webp" alt="Khaiphone.com" width={32} height={32} className="flex-shrink-0 rounded-lg" style={{ width: 32, height: 32 }} />
             <div className="flex flex-col text-left">
-              <p className="font-bold text-sm text-black leading-tight">ขายไอโฟน.com</p>
+              <p className="font-bold text-sm text-black leading-tight">Khaiphone.com</p>
               <p className="text-xs leading-tight" style={{ color: "#6B7280" }}>รับซื้อ Apple มือสอง</p>
             </div>
           </button>

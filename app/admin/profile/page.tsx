@@ -182,7 +182,7 @@ export default function ProfilePage() {
         </button>
 
         <p style={{ color: TEXT3, fontSize: 12, textAlign: "center", marginTop: 24 }}>
-          ขายไอโฟน.com Admin v1.0.0
+          Khaiphone.com Admin v1.0.0
         </p>
 
       </div>

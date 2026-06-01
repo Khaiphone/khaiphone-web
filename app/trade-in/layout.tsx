@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "ราคารับซื้อ iPhone iPad MacBook | ขายไอโฟน.com",
+  title: "ราคารับซื้อ iPhone iPad MacBook | Khaiphone.com",
   description:
     "ตารางราคารับซื้อ iPhone iPad MacBook Apple Watch ทุกรุ่น อัปเดตทุกวัน ให้ราคาสูงสุด",
 };

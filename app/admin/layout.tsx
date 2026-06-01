@@ -97,7 +97,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
           }}
         >
           <div style={{ padding: "0 20px 24px", borderBottom: `1px solid ${sidebarBorder}` }}>
-            <p style={{ color: sidebarText, fontWeight: 700, fontSize: "15px", margin: 0 }}>ขายไอโฟน.com</p>
+            <p style={{ color: sidebarText, fontWeight: 700, fontSize: "15px", margin: 0 }}>Khaiphone.com</p>
             <p style={{ color: sidebarText2, fontSize: "12px", margin: "2px 0 0" }}>
               Admin · {role === "owner" ? "เจ้าของ" : "พนักงาน"}
             </p>

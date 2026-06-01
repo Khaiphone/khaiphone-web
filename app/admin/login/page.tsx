@@ -55,7 +55,7 @@ export default function AdminLoginPage() {
           <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
             <Image
               src="/logo-icon.webp"
-              alt="ขายไอโฟน"
+              alt="Khaiphone"
               width={56}
               height={56}
               style={{ borderRadius: "12px" }}
@@ -69,7 +69,7 @@ export default function AdminLoginPage() {
               margin: "0 0 6px",
             }}
           >
-            ขายไอโฟน.com Admin
+            Khaiphone.com Admin
           </h1>
           <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "14px", margin: 0 }}>
             เข้าสู่ระบบจัดการ

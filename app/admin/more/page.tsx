@@ -107,7 +107,7 @@ export default function MorePage() {
         </button>
 
         <p style={{ color: TEXT3, fontSize: "12px", textAlign: "center", marginTop: "24px" }}>
-          ขายไอโฟน.com Admin v1.0.0
+          Khaiphone.com Admin v1.0.0
         </p>
       </div>
     </div>

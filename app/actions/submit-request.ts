@@ -187,7 +187,7 @@ async function sendNotificationEmail(data: SubmissionData, uuid?: string) {
   `;
 
   await resend.emails.send({
-    from:    "ขายไอโฟน <noreply@khaiphone.com>",
+    from:    "Khaiphone <noreply@Khaiphone.com>",
     to:      "panupan@khaiphone.com",
     subject: `[คำขอใหม่] ${data.orderNumber} — ${data.model} ${data.storage} (${formatPrice(data.estimatedPrice)})`,
     html,

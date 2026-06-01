@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: Omit<Props, "children">): Pro
       : "";
 
   const title = `ขาย ${decoded}${priceText}`;
-  const description = `รับซื้อ ${decoded} ทุกความจุ${priceText} ประเมินราคาออนไลน์ฟรี รู้ราคาทันที ไม่ผูกมัด จ่ายเงินสดทันที ขายง่าย ได้เงินไว — ขายไอโฟน.com`;
+  const description = `รับซื้อ ${decoded} ทุกความจุ${priceText} ประเมินราคาออนไลน์ฟรี รู้ราคาทันที ไม่ผูกมัด จ่ายเงินสดทันที ขายง่าย ได้เงินไว — Khaiphone.com`;
 
   const canonicalUrl = `${SITE_URL}/sell/${modelSlug}`;
 
@@ -57,12 +57,12 @@ export async function generateMetadata({ params }: Omit<Props, "children">): Pro
     description,
     alternates: { canonical: canonicalUrl },
     openGraph: {
-      title: `${title} | ขายไอโฟน.com`,
+      title: `${title} | Khaiphone.com`,
       description,
       url: canonicalUrl,
       type: "website",
       locale: "th_TH",
-      siteName: "ขายไอโฟน.com",
+      siteName: "Khaiphone.com",
     },
     twitter: {
       card: "summary_large_image",
@@ -105,7 +105,7 @@ export default async function ModelLayout({ params, children }: Props) {
             offerCount: variants.length,
             seller: {
               "@type": "LocalBusiness",
-              name: "ขายไอโฟน.com",
+              name: "Khaiphone.com",
               url: SITE_URL,
             },
           },
