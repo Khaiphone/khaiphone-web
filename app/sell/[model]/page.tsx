@@ -108,12 +108,6 @@ function getProductImage(model: string): string | null {
 
 // ─── Product data ─────────────────────────────────────────────────────────────
 
-type PriceBands = {
-  premium: { min: number; max: number };
-  good:    { min: number; max: number };
-  fair:    { min: number; max: number };
-  heavy:   { min: number; max: number };
-};
 
 
 interface Product { model: string; storage: string; priceGood: number }
@@ -738,7 +732,6 @@ function SellModelPageContent() {
   const [storageMultiplier, setStorageMultiplier] = useState(0.12);
   const [storagePrices, setStoragePrices] = useState<Record<string, number> | null>(null);
   const [hasCustomDed, setHasCustomDed]   = useState(false);
-  const [priceBands, setPriceBands]       = useState<PriceBands | null>(null);
   const [pricesLoaded, setPricesLoaded]   = useState(false);
 
   useEffect(() => {
@@ -755,7 +748,6 @@ function SellModelPageContent() {
       setStorageMultiplier(cfg.storageMultiplier);
       const match = dbProducts.find(d => toSlug(d.model) === modelSlug);
       setStoragePrices(match?.storage_prices ?? null);
-      setPriceBands(match?.price_bands ?? null);
       const customDed = !!(match?.deductions && match.deductions.length > 0);
       setHasCustomDed(customDed);
       if (customDed) {
@@ -786,7 +778,6 @@ function SellModelPageContent() {
     })
   );
 
-  const bandMode = priceBands !== null && pricesLoaded;
   const isWizardDone = step >= TOTAL_STEPS;
   const isWizard     = !isWizardDone;
   const isResultPhase = isWizardDone && searchParams.get("r") === "1";
@@ -1232,45 +1223,8 @@ function SellModelPageContent() {
     ? [getModelTypeOpts(product.model, groupOptions[0]) ?? groupOptions[0], ...groupOptions.slice(1)]
     : groupOptions;
 
-  // Scale band prices for selected storage vs mid-storage reference
-  function getBandRange(bandKey: keyof PriceBands): { min: number; max: number } {
-    if (!priceBands || !product) return { min: 0, max: 0 };
-    const band = priceBands[bandKey];
-    const storeList = product.storage.split(" / ");
-    const midIdx2 = Math.floor((storeList.length - 1) / 2);
-    const midStorage = storeList[midIdx2];
-    const midBase = storagePrices?.[midStorage] ?? product.priceGood;
-    const selIdx = picks[0] ?? midIdx2;
-    const selStorage = storeList[selIdx];
-    const selBase = storagePrices?.[selStorage]
-      ?? Math.round(product.priceGood * (1 + (selIdx - midIdx2) * storageMultiplier));
-    const ratio = midBase > 0 ? selBase / midBase : 1;
-    return {
-      min: Math.round(band.min * ratio / 100) * 100,
-      max: Math.round(band.max * ratio / 100) * 100,
-    };
-  }
-
-  // Determine tier from calculated price vs base price
-  function autoTier(calcedPrice: number, basePrice: number): keyof PriceBands | null {
-    if (!priceBands || basePrice <= 0) return null;
-    const r = calcedPrice / basePrice;
-    const premRatio = priceBands.premium.min / basePrice;
-    const goodRatio = priceBands.good.min / basePrice;
-    const fairRatio = priceBands.fair.min / basePrice;
-    if (r >= premRatio) return "premium";
-    if (r >= goodRatio) return "good";
-    if (r >= fairRatio) return "fair";
-    return "heavy";
-  }
-
   const price = (product && pricesLoaded) ? calcPrice(product, picks, effectiveGroupOptions, storageMultiplier, storagePrices) : 0;
-
-  // When wizard is done and model uses price bands, override price range with band range
-  const activeTier = (bandMode && isWizardDone && product)
-    ? autoTier(price, storagePrices?.[product.storage.split(" / ")[picks[0] ?? Math.floor((product.storage.split(" / ").length - 1) / 2)]] ?? product.priceGood)
-    : null;
-  const { min: priceMin, max: priceMax } = activeTier ? getBandRange(activeTier) : calcPriceRange(price);
+  const { min: priceMin, max: priceMax } = calcPriceRange(price);
   const summaryRows = product ? buildSummaryRows(picks, storages, effectiveGroupOptions[0]) : [];
   const totalBundlePrice = price + extraDevices.reduce((sum, d) => sum + d.estimatedPrice, 0);
 
