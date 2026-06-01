@@ -454,22 +454,24 @@ function calcPrice(
   groups: PricingOption[][],
   storageMultiplier: number,
   storagePrices: Record<string, number> | null,
+  floorPct: number,
 ) {
   const storages = product.storage.split(" / ");
   const storageIdx = picks[0] ?? Math.floor((storages.length - 1) / 2);
   const selectedStorage = storages[storageIdx];
-  let price: number;
+  let basePrice: number;
   if (storagePrices && storagePrices[selectedStorage] !== undefined) {
-    price = storagePrices[selectedStorage];
+    basePrice = storagePrices[selectedStorage];
   } else {
     const midIdx = Math.floor((storages.length - 1) / 2);
-    price = Math.round(product.priceGood * (1 + (storageIdx - midIdx) * storageMultiplier));
+    basePrice = Math.round(product.priceGood * (1 + (storageIdx - midIdx) * storageMultiplier));
   }
+  let price = basePrice;
   groups.forEach((g, i) => {
     const idx = picks[i + 1];
     if (idx !== null && g[idx]) price += g[idx].ded;
   });
-  return Math.max(500, price);
+  return Math.max(Math.round(basePrice * floorPct), price);
 }
 
 function shortenModelLabel(label: string) {
@@ -730,6 +732,7 @@ function SellModelPageContent() {
     DEFAULT_PRICING_CONFIG.groups.map(g => g.options),
   );
   const [storageMultiplier, setStorageMultiplier] = useState(0.12);
+  const [floorPct, setFloorPct] = useState(0.60);
   const [storagePrices, setStoragePrices] = useState<Record<string, number> | null>(null);
   const [hasCustomDed, setHasCustomDed]   = useState(false);
   const [pricesLoaded, setPricesLoaded]   = useState(false);
@@ -746,6 +749,7 @@ function SellModelPageContent() {
         );
       }
       setStorageMultiplier(cfg.storageMultiplier);
+      setFloorPct(cfg.floorPct);
       const match = dbProducts.find(d => toSlug(d.model) === modelSlug);
       setStoragePrices(match?.storage_prices ?? null);
       const customDed = !!(match?.deductions && match.deductions.length > 0);
@@ -837,7 +841,7 @@ function SellModelPageContent() {
     } else if (step >= TOTAL_STEPS && pricesLoaded && !trackedStepsRef.current.has(TOTAL_STEPS)) {
       trackedStepsRef.current.add(TOTAL_STEPS);
       const selectedStorage = picks[0] !== null ? storages[picks[0]] : undefined;
-      const estPrice = calcPrice(product, picks, effectiveGroupOptions, storageMultiplier, storagePrices);
+      const estPrice = calcPrice(product, picks, effectiveGroupOptions, storageMultiplier, storagePrices, floorPct);
       trackEstimateEvent({ sessionId: sid, event: "price_seen", model: product.model, storage: selectedStorage, price: estPrice });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1223,7 +1227,7 @@ function SellModelPageContent() {
     ? [getModelTypeOpts(product.model, groupOptions[0]) ?? groupOptions[0], ...groupOptions.slice(1)]
     : groupOptions;
 
-  const price = (product && pricesLoaded) ? calcPrice(product, picks, effectiveGroupOptions, storageMultiplier, storagePrices) : 0;
+  const price = (product && pricesLoaded) ? calcPrice(product, picks, effectiveGroupOptions, storageMultiplier, storagePrices, floorPct) : 0;
   const { min: priceMin, max: priceMax } = calcPriceRange(price);
   const summaryRows = product ? buildSummaryRows(picks, storages, effectiveGroupOptions[0]) : [];
   const totalBundlePrice = price + extraDevices.reduce((sum, d) => sum + d.estimatedPrice, 0);

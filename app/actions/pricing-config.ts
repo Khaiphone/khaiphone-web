@@ -40,6 +40,7 @@ async function _fetchPricingConfig(): Promise<PricingConfig> {
 
   return {
     storageMultiplier: db.storageMultiplier ?? DEFAULT_PRICING_CONFIG.storageMultiplier,
+    floorPct: db.floorPct ?? DEFAULT_PRICING_CONFIG.floorPct,
     groups,
   };
 }

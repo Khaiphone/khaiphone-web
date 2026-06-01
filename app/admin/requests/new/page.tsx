@@ -163,7 +163,7 @@ export default function NewRequestPage() {
         if (opt) totalDed += opt.ded;
       }
     });
-    const price = Math.max(500, basePrice + totalDed);
+    const price = Math.max(Math.round(basePrice * (pricingCfg.floorPct ?? 0.60)), basePrice + totalDed);
     const lo = Math.max(0, price - 500);
     const hi = price + 500;
     return {

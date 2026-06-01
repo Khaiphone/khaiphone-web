@@ -1,6 +1,6 @@
 export type PricingOption = { label: string; sub?: string; ded: number };
 export type PricingGroup  = { key: string; title: string; options: PricingOption[] };
-export type PricingConfig = { storageMultiplier: number; groups: PricingGroup[] };
+export type PricingConfig = { storageMultiplier: number; floorPct: number; groups: PricingGroup[] };
 
 // Returns iPhone-generation-specific labels with deductions from configOpts (DB).
 // Returns null for non-iPhone — callers use configOpts directly.
@@ -26,6 +26,7 @@ export function getModelTypeOpts(model: string, configOpts: PricingOption[]): Pr
 
 export const DEFAULT_PRICING_CONFIG: PricingConfig = {
   storageMultiplier: 0.12,
+  floorPct: 0.60,
   groups: [
     {
       key: "model_type", title: "Model ของเครื่อง",

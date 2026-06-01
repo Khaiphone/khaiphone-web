@@ -33,6 +33,11 @@ export default function DeductionsPage() {
     if (!isNaN(n)) setConfig(c => ({ ...c, storageMultiplier: n / 100 }));
   }
 
+  function setFloorPct(val: string) {
+    const n = parseFloat(val);
+    if (!isNaN(n)) setConfig(c => ({ ...c, floorPct: n / 100 }));
+  }
+
   function setDed(groupIdx: number, optIdx: number, val: string) {
     const n = parseInt(val, 10);
     setConfig(prev => {
@@ -102,6 +107,32 @@ export default function DeductionsPage() {
                   }}
                 />
                 <span style={{ color: TEXT2, fontSize: 14 }}>% ต่อขั้น</span>
+              </div>
+            </div>
+
+            {/* Floor price */}
+            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 16, marginBottom: 14 }}>
+              <p style={{ color: TEXT, fontSize: 14, fontWeight: 700, margin: "0 0 4px" }}>ราคาต่ำสุด (Floor)</p>
+              <p style={{ color: TEXT3, fontSize: 12, margin: "0 0 14px" }}>
+                ราคารับซื้อจะไม่ต่ำกว่า ___% ของราคาฐานของ storage นั้น ไม่ว่าลูกค้าจะเลือกสภาพแย่แค่ไหน<br />
+                เช่น ราคาฐาน 5,000 ฿ · floor 60% → ราคาต่ำสุด 3,000 ฿
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={Math.round((config.floorPct ?? 0.60) * 100)}
+                  onChange={e => setFloorPct(e.target.value)}
+                  style={{
+                    width: 80, textAlign: "center",
+                    padding: "8px 10px", border: `1px solid ${BORDER}`,
+                    borderRadius: 8, fontSize: 16, fontWeight: 700,
+                    color: TEXT, fontFamily: "inherit", outline: "none",
+                  }}
+                />
+                <span style={{ color: TEXT2, fontSize: 14 }}>% ของราคาฐาน</span>
               </div>
             </div>
 
