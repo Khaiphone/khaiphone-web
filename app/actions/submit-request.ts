@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
 import { Resend } from "resend";
 
@@ -96,8 +97,8 @@ export async function submitRequest(data: SubmissionData) {
     return { success: false, error: error.message };
   }
 
-  // Send notification email — fire-and-forget (don't block the response)
-  sendNotificationEmail(data, inserted?.id).catch(e => console.error("email error:", e));
+  // Send notification email after response is returned
+  after(() => sendNotificationEmail(data, inserted?.id).catch(e => console.error("email error:", e)));
 
   return { success: true };
 }

@@ -4,12 +4,20 @@ import { createServerClient } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/require-auth";
 import type { PricingGroup } from "@/lib/pricing-defaults";
 
+export type PriceBands = {
+  premium: { min: number; max: number };
+  good:    { min: number; max: number };
+  fair:    { min: number; max: number };
+  heavy:   { min: number; max: number };
+};
+
 export type ProductRow = {
   id: string;
   model: string;
   storage: string;
   price_good: number;
   storage_prices: Record<string, number> | null;
+  price_bands: PriceBands | null;
   category: string;
   active: boolean;
   deductions: PricingGroup[] | null;
@@ -97,6 +105,26 @@ export async function updateProductStoragePrices(
     .from("products")
     .update({
       storage_prices,
+      updated_at: new Date().toISOString(),
+      ...(updatedBy ? { updated_by: updatedBy } : {}),
+    })
+    .eq("id", id);
+
+  if (error) return { success: false as const, error: error.message };
+  return { success: true as const };
+}
+
+export async function updateProductBands(
+  id: string,
+  price_bands: PriceBands | null,
+  updatedBy?: string,
+) {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { error } = await supabase
+    .from("products")
+    .update({
+      price_bands,
       updated_at: new Date().toISOString(),
       ...(updatedBy ? { updated_by: updatedBy } : {}),
     })
