@@ -18,10 +18,10 @@ export function middleware(request: NextRequest) {
 
   // ── admin.khaiphone.com/* → rewrite to /admin/* ───────────────────
   if (subdomain && subdomain in SUBDOMAIN_MAP) {
-    const base = SUBDOMAIN_MAP[subdomain];
-    const url  = request.nextUrl.clone();
-    url.pathname = pathname === "/" ? base : `${base}${pathname}`;
-    return NextResponse.rewrite(url);
+    const base        = SUBDOMAIN_MAP[subdomain];
+    const newPathname = pathname === "/" ? base : `${base}${pathname}`;
+    const rewriteUrl  = new URL(newPathname + request.nextUrl.search, request.url);
+    return NextResponse.rewrite(rewriteUrl);
   }
 
   // ── khaiphone.com/admin → redirect to admin.khaiphone.com ────────
