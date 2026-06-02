@@ -64,16 +64,15 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         if (permission !== "granted") return;
 
         const existing = await reg.pushManager.getSubscription();
+        if (existing) return; // already subscribed, no need to re-save
+
         const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
         if (!vapidKey) return;
 
         // PushManager requires Uint8Array, not raw base64url string
         const key = Uint8Array.from(atob(vapidKey.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
 
-        const sub = existing ?? await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: key,
-        });
+        const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
 
         const json = sub.toJSON();
         if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
