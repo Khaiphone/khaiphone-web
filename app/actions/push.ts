@@ -7,7 +7,7 @@ function getWebPush() {
   const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const priv = process.env.VAPID_PRIVATE_KEY;
   if (!pub || !priv) throw new Error("VAPID keys not configured");
-  webpush.setVapidDetails("mailto:panupan@khaiphone.com", pub, priv);
+  webpush.setVapidDetails("mailto:panupan@khaiphone.com", pub.replace(/=+$/, ""), priv.replace(/=+$/, ""));
   return webpush;
 }
 
