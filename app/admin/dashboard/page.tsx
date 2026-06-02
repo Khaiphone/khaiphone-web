@@ -173,8 +173,36 @@ export default function DashboardPage() {
             {role === "owner" && notifStatus === "granted" && (
               <button
                 onClick={async () => {
+                  // Ensure subscription exists on this device first
+                  if ("serviceWorker" in navigator && "PushManager" in window) {
+                    try {
+                      const reg = await navigator.serviceWorker.register("/sw.js");
+                      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+                      if (vapidKey) {
+                        const b64 = vapidKey.replace(/-/g, "+").replace(/_/g, "/");
+                        const padded = b64 + "=".repeat((4 - b64.length % 4) % 4);
+                        const key = Uint8Array.from(atob(padded), c => c.charCodeAt(0));
+                        let existing = await reg.pushManager.getSubscription();
+                        if (existing) {
+                          const buf = existing.options.applicationServerKey;
+                          if (!buf || !new Uint8Array(buf).every((v, i) => v === key[i])) {
+                            await existing.unsubscribe();
+                            existing = null;
+                          }
+                        }
+                        if (!existing) {
+                          const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+                          const json = sub.toJSON();
+                          if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
+                            await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth } });
+                          }
+                        }
+                      }
+                    } catch (e) { alert("Subscribe error: " + String(e)); return; }
+                  }
                   const r = await sendTestPush();
                   if (!r.ok) alert("ส่งไม่ได้: " + r.error);
+                  else alert("ส่งแล้ว รอดูการแจ้งเตือน");
                 }}
                 title="ทดสอบ push"
                 style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "9px 11px", cursor: "pointer", display: "flex", color: TEXT2, touchAction: "manipulation", fontSize: 16 }}
