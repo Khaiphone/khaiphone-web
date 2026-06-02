@@ -85,10 +85,22 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLogin) { setReady(true); return; }
 
+    // Optimistic: use cached role to skip black-screen flash on return visits
+    const cached = localStorage.getItem("kp_admin_role") as AdminRole | null;
+    if (cached) {
+      setRole(cached);
+      setReady(true);
+    }
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) { router.replace("/admin/login"); return; }
+      if (!session) {
+        localStorage.removeItem("kp_admin_role");
+        router.replace("/admin/login");
+        return;
+      }
 
       const r = await fetchMyRole(session.user.id);
+      if (r) localStorage.setItem("kp_admin_role", r);
       setRole(r);
 
       if (r === "staff") {
@@ -103,7 +115,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         if (!allowed) { router.replace("/admin/dashboard"); return; }
       }
 
-      setReady(true);
+      if (!cached) setReady(true);
     });
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -213,7 +225,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
               {dark ? "Light Mode" : "Dark Mode"}
             </button>
             <button
-              onClick={() => { supabase.auth.signOut().then(() => router.push("/admin/login")); }}
+              onClick={() => { localStorage.removeItem("kp_admin_role"); supabase.auth.signOut().then(() => router.push("/admin/login")); }}
               style={{
                 width: "100%", padding: "9px 12px", borderRadius: "10px",
                 background: "transparent", border: `1px solid ${sidebarBorder}`,
