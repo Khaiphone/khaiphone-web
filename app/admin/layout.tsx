@@ -42,6 +42,22 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const { dark, toggle }  = useAdminTheme();
 
   useEffect(() => {
+    // PWA: swap manifest + add iOS meta tags for admin.khaiphone.com
+    const link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+    if (link) link.href = "/admin-manifest.json";
+
+    const setMeta = (name: string, content: string) => {
+      let el = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
+      if (!el) { el = document.createElement("meta"); el.name = name; document.head.appendChild(el); }
+      el.content = content;
+    };
+    setMeta("apple-mobile-web-app-capable", "yes");
+    setMeta("apple-mobile-web-app-status-bar-style", "black-translucent");
+    setMeta("apple-mobile-web-app-title", "KP Admin");
+    setMeta("theme-color", "#B8860B");
+  }, []);
+
+  useEffect(() => {
     if (isLogin) { setReady(true); return; }
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
