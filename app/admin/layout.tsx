@@ -63,14 +63,20 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         const permission = await Notification.requestPermission();
         if (permission !== "granted") return;
 
-        const existing = await reg.pushManager.getSubscription();
-        if (existing) return; // already subscribed, no need to re-save
-
         const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
         if (!vapidKey) return;
 
         // PushManager requires Uint8Array, not raw base64url string
         const key = Uint8Array.from(atob(vapidKey.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+
+        const existing = await reg.pushManager.getSubscription();
+        if (existing) {
+          // If VAPID key changed, unsubscribe old and create a new one
+          const existingKey = new Uint8Array(existing.options.applicationServerKey!);
+          const keyMatches = key.length === existingKey.length && key.every((v, i) => v === existingKey[i]);
+          if (keyMatches) return; // same key, subscription is still valid
+          await existing.unsubscribe();
+        }
 
         const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
 
