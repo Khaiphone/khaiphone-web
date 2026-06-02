@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -131,9 +132,12 @@ function SidebarContent({ onClose, userName, avatarLetter }: {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ padding: '24px 20px 16px', borderBottom: '1px solid var(--f-border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <p style={{ color: 'var(--f-text1)', fontWeight: 700, fontSize: 16, margin: 0 }}>KHAIPHONE</p>
-            <p style={{ color: GOLD, fontSize: 11, margin: '2px 0 0', fontWeight: 500 }}>Finance &amp; Accounting</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Image src="/logo-icon.webp" alt="Khaiphone" width={32} height={32} style={{ borderRadius: 8, flexShrink: 0 }} />
+            <div>
+              <p style={{ color: 'var(--f-text1)', fontWeight: 700, fontSize: 16, margin: 0 }}>KHAIPHONE</p>
+              <p style={{ color: GOLD, fontSize: 11, margin: '2px 0 0', fontWeight: 500 }}>Finance &amp; Accounting</p>
+            </div>
           </div>
           {onClose && (
             <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--f-text2)', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}>

@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import {
   LayoutDashboard, Package, ShoppingCart, Users, BarChart2,
   Settings, Bell, TrendingUp, FileText, UserCog, Tag,
@@ -63,9 +64,7 @@ export default function StockSidebar() {
       {/* Logo */}
       <div style={{ padding: "20px 20px 16px", borderBottom: `1px solid ${c.border}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: c.goldBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: 18 }}>K</span>
-          </div>
+          <Image src="/logo-icon.webp" alt="Khaiphone" width={36} height={36} style={{ borderRadius: 10, flexShrink: 0 }} />
           <div>
             <p style={{ color: c.gold, fontSize: 14, fontWeight: 800, margin: 0, letterSpacing: "0.05em" }}>KHAIPHONE</p>
             <p style={{ color: c.text3, fontSize: 10, margin: 0 }}>Stock Management</p>
