@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, ArrowRight, Phone, CalendarPlus, ClipboardList, Tag, SlidersHorizontal, PlusCircle, Moon, Sun } from "lucide-react";
 import { fetchDashboardData, fetchRequests, fetchRecentActivity } from "@/app/actions/admin-requests";
+import { saveSubscription } from "@/app/actions/push";
 import { supabase } from "@/lib/supabase";
 import { useAdminTheme } from "@/lib/admin-theme";
 import type { AdminRequest } from "@/lib/types/admin";
@@ -40,8 +41,9 @@ export default function DashboardPage() {
   const [loading,     setLoading]     = useState(true);
   const [role,        setRole]        = useState<AdminRole | null>(null);
   const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [activity,    setActivity]    = useState<Awaited<ReturnType<typeof fetchRecentActivity>>>([]);
+  const [unreadCount,  setUnreadCount]  = useState(0);
+  const [activity,     setActivity]     = useState<Awaited<ReturnType<typeof fetchRecentActivity>>>([]);
+  const [notifStatus,  setNotifStatus]  = useState<"default" | "granted" | "denied" | "unsupported" | "loading">("loading");
   const staffUserIdRef  = useRef<string | undefined>(undefined);
   const lastRefetchRef  = useRef(0);
   const { dark, toggle } = useAdminTheme();
@@ -101,6 +103,34 @@ export default function DashboardPage() {
     .sort((a, b) => getLastActivity(b).localeCompare(getLastActivity(a)))
     .slice(0, 5);
 
+  useEffect(() => {
+    if (!("PushManager" in window) || !("Notification" in window)) {
+      setNotifStatus("unsupported");
+      return;
+    }
+    setNotifStatus(Notification.permission as "default" | "granted" | "denied");
+  }, []);
+
+  async function enableNotifications() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    const permission = await Notification.requestPermission();
+    setNotifStatus(permission as "default" | "granted" | "denied");
+    if (permission !== "granted") return;
+    try {
+      const reg = await navigator.serviceWorker.register("/sw.js");
+      const existing = await reg.pushManager.getSubscription();
+      if (existing) return;
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidKey) return;
+      const key = Uint8Array.from(atob(vapidKey.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+      const json = sub.toJSON();
+      if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
+        await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth } });
+      }
+    } catch (e) { console.error("push setup error:", e); }
+  }
+
   const canManagePrices = role === "owner" || permissions.includes("manage_prices");
 
   const quickActions = [
@@ -159,6 +189,23 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
+
+        {/* Notification permission banner */}
+        {notifStatus === "default" && (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(184,134,11,0.1)", border: "1px solid rgba(184,134,11,0.3)", borderRadius: 14, padding: "12px 16px", marginBottom: 20 }}>
+            <Bell size={20} color={GOLD} style={{ flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <p style={{ color: TEXT, fontSize: 13, fontWeight: 600, margin: 0 }}>เปิดการแจ้งเตือน</p>
+              <p style={{ color: TEXT2, fontSize: 12, margin: "2px 0 0" }}>รับแจ้งทันทีเมื่อมีคำขอใหม่</p>
+            </div>
+            <button
+              onClick={enableNotifications}
+              style={{ background: GOLD, border: "none", borderRadius: 10, padding: "8px 14px", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", touchAction: "manipulation" }}
+            >
+              เปิด
+            </button>
+          </div>
+        )}
 
         {loading ? (
           <div className="animate-pulse">
