@@ -42,7 +42,13 @@ export function proxy(req: NextRequest) {
     // Pass through if path already starts with any known base (e.g. /admin/login after auth redirect)
     const alreadyRouted = Object.values(SUBDOMAIN_MAP).some(b => pathname.startsWith(b));
     if (alreadyRouted) return NextResponse.next();
-    const newPathname = pathname === "/" ? base : `${base}${pathname}`;
+    // Redirect "/" so the browser URL actually changes — keeps usePathname() correct
+    // and prevents the public MobileNav from flashing before the admin layout renders
+    if (pathname === "/") {
+      const home = subdomain === "admin" ? `${base}/dashboard` : base;
+      return NextResponse.redirect(new URL(home, req.url));
+    }
+    const newPathname = `${base}${pathname}`;
     return NextResponse.rewrite(new URL(newPathname + req.nextUrl.search, req.url));
   }
 
