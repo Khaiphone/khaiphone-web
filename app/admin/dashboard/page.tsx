@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, ArrowRight, Phone, CalendarPlus, ClipboardList, Tag, SlidersHorizontal, PlusCircle, Moon, Sun } from "lucide-react";
 import { fetchDashboardData, fetchRequests, fetchRecentActivity } from "@/app/actions/admin-requests";
-import { saveSubscription } from "@/app/actions/push";
+import { saveSubscription, sendTestPush } from "@/app/actions/push";
 import { supabase } from "@/lib/supabase";
 import { useAdminTheme } from "@/lib/admin-theme";
 import type { AdminRequest } from "@/lib/types/admin";
@@ -170,6 +170,18 @@ export default function DashboardPage() {
             >
               {dark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
+            {role === "owner" && notifStatus === "granted" && (
+              <button
+                onClick={async () => {
+                  const r = await sendTestPush();
+                  if (!r.ok) alert("ส่งไม่ได้: " + r.error);
+                }}
+                title="ทดสอบ push"
+                style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "9px 11px", cursor: "pointer", display: "flex", color: TEXT2, touchAction: "manipulation", fontSize: 16 }}
+              >
+                🔔
+              </button>
+            )}
             <button
               onClick={() => router.push("/admin/notifications")}
               style={{ position: "relative", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "9px 11px", cursor: "pointer", display: "flex", color: TEXT2, touchAction: "manipulation" }}

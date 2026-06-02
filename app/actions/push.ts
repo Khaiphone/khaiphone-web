@@ -45,6 +45,7 @@ export async function sendPushToAll(payload: {
       wp.sendNotification(
         { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
         JSON.stringify(payload),
+        { TTL: 86400, urgency: "high" },
       ),
     ),
   );
@@ -56,5 +57,19 @@ export async function sendPushToAll(payload: {
 
   if (expired.length) {
     await supabase.from("push_subscriptions").delete().in("endpoint", expired);
+  }
+}
+
+export async function sendTestPush(): Promise<{ ok: boolean; error?: string }> {
+  try {
+    await sendPushToAll({
+      title: "ทดสอบการแจ้งเตือน",
+      body: "ระบบแจ้งเตือนทำงานปกติ ✓",
+      url: "/admin/dashboard",
+      tag: "test",
+    });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: String(e) };
   }
 }
