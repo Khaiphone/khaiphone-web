@@ -39,8 +39,9 @@ export function proxy(req: NextRequest) {
 
   if (subdomain && subdomain in SUBDOMAIN_MAP) {
     const base = SUBDOMAIN_MAP[subdomain];
-    // Already on correct internal path (e.g. /admin/login after auth redirect) — pass through
-    if (pathname.startsWith(base)) return NextResponse.next();
+    // Pass through if path already starts with any known base (e.g. /admin/login after auth redirect)
+    const alreadyRouted = Object.values(SUBDOMAIN_MAP).some(b => pathname.startsWith(b));
+    if (alreadyRouted) return NextResponse.next();
     const newPathname = pathname === "/" ? base : `${base}${pathname}`;
     return NextResponse.rewrite(new URL(newPathname + req.nextUrl.search, req.url));
   }
