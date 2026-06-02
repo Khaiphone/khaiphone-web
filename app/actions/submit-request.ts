@@ -3,6 +3,7 @@
 import { after } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
 import { Resend } from "resend";
+import { sendPushToAll } from "./push";
 
 interface ExtraDevice {
   model: string;
@@ -97,8 +98,16 @@ export async function submitRequest(data: SubmissionData) {
     return { success: false, error: error.message };
   }
 
-  // Send notification email after response is returned
-  after(() => sendNotificationEmail(data, inserted?.id).catch(e => console.error("email error:", e)));
+  // Send email + push notification after response is returned
+  after(() => Promise.all([
+    sendNotificationEmail(data, inserted?.id).catch(e => console.error("email error:", e)),
+    sendPushToAll({
+      title: `คำขอใหม่ — ${data.model} ${data.storage}`,
+      body:  `${data.customer.name} · ฿${data.estimatedPrice.toLocaleString("th-TH")}`,
+      url:   `/admin/requests/${inserted?.id ?? ""}`,
+      tag:   "new-request",
+    }).catch(e => console.error("push error:", e)),
+  ]));
 
   return { success: true };
 }

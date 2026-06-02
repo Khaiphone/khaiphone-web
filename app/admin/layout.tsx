@@ -9,6 +9,7 @@ import {
 import BottomTabNav from "../components/admin/BottomTabNav";
 import { supabase } from "@/lib/supabase";
 import { fetchMyRole, fetchMyProfile } from "@/app/actions/admin-users";
+import { saveSubscription } from "@/app/actions/push";
 import { AdminRoleProvider } from "./role-context";
 import { AdminThemeProvider, useAdminTheme, adminCssVars } from "@/lib/admin-theme";
 import type { AdminRole } from "@/app/actions/admin-users";
@@ -55,6 +56,25 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     setMeta("apple-mobile-web-app-status-bar-style", "black-translucent");
     setMeta("apple-mobile-web-app-title", "KP Admin");
     setMeta("theme-color", "#B8860B");
+
+    // Register service worker + subscribe to push notifications
+    if ("serviceWorker" in navigator && "PushManager" in window) {
+      navigator.serviceWorker.register("/sw.js").then(async (reg) => {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") return;
+
+        const existing = await reg.pushManager.getSubscription();
+        const sub = existing ?? await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+        });
+
+        const json = sub.toJSON();
+        if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
+          await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth } });
+        }
+      });
+    }
   }, []);
 
   useEffect(() => {
