@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// In-memory store: ip -> [timestamp, ...] (best-effort; resets on cold start)
+// ── Rate limiting ─────────────────────────────────────────────────────────────
 const store = new Map<string, number[]>();
-const WINDOW_MS = 60_000; // 1 minute
-const MAX_REQUESTS = 30;  // max 30 requests per minute per IP
+const WINDOW_MS    = 60_000;
+const MAX_REQUESTS = 30;
 
 function getIp(req: NextRequest): string {
   return (
@@ -14,20 +14,48 @@ function getIp(req: NextRequest): string {
 }
 
 function isRateLimited(ip: string): boolean {
-  const now = Date.now();
+  const now        = Date.now();
   const timestamps = (store.get(ip) ?? []).filter(t => now - t < WINDOW_MS);
   timestamps.push(now);
   store.set(ip, timestamps);
   return timestamps.length > MAX_REQUESTS;
 }
 
-// Only rate-limit public-facing submit and estimate event paths
-const RATE_LIMITED_PATHS = ["/api/", "/_next/"];
+// ── Subdomain → internal path map ────────────────────────────────────────────
+const SUBDOMAIN_MAP: Record<string, string> = {
+  admin:   "/admin",
+  finance: "/finance",
+  stock:   "/stock",
+};
 
 export function proxy(req: NextRequest) {
+  const host     = req.headers.get("host") ?? "";
   const { pathname } = req.nextUrl;
+  const isDev    = process.env.NODE_ENV === "development";
 
-  // Rate limit only POST to server action routes (Next.js App Router uses POST for actions)
+  // ── admin.khaiphone.com/* → rewrite to /admin/* ───────────────────
+  const parts    = host.split(".");
+  const subdomain = parts.length >= 3 ? parts[0] : null;
+
+  if (subdomain && subdomain in SUBDOMAIN_MAP) {
+    const base        = SUBDOMAIN_MAP[subdomain];
+    const newPathname = pathname === "/" ? base : `${base}${pathname}`;
+    return NextResponse.rewrite(new URL(newPathname + req.nextUrl.search, req.url));
+  }
+
+  // ── khaiphone.com/admin → redirect to admin.khaiphone.com ────────
+  if (!isDev) {
+    for (const [sub, base] of Object.entries(SUBDOMAIN_MAP)) {
+      if (pathname === base || pathname.startsWith(`${base}/`)) {
+        const url      = req.nextUrl.clone();
+        url.host       = `${sub}.${host.replace(/^www\./, "")}`;
+        url.pathname   = pathname.slice(base.length) || "/";
+        return NextResponse.redirect(url, 301);
+      }
+    }
+  }
+
+  // ── Rate limit POST requests ──────────────────────────────────────
   if (req.method === "POST") {
     const ip = getIp(req);
     if (isRateLimited(ip)) {
@@ -42,6 +70,5 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  // Apply only to sell submit and public pages, not to static assets or admin
-  matcher: ["/sell/:path*", "/api/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon\\.ico|.*\\.\\w+$).*)"],
 };
