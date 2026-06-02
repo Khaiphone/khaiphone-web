@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { fetchMyRole } from "@/app/actions/admin-users";
+import { fetchMyProfile } from "@/app/actions/admin-users";
 import { StockThemeProvider, useThemeColors } from "@/components/stock/ThemeContext";
 import StockSidebar from "@/components/stock/Sidebar";
 import MobileBottomNav from "@/components/stock/MobileBottomNav";
@@ -31,8 +31,9 @@ export default function StockLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) { router.replace("/admin/login"); return; }
-      const role = await fetchMyRole(session.user.id);
-      if (role !== "owner") {
+      const profile = await fetchMyProfile(session.user.id);
+      const canAccess = profile?.role === "owner" || (profile?.permissions ?? []).includes("view_stock");
+      if (!canAccess) {
         const host = window.location.host;
         const adminHost = host.replace(/^stock\./, "admin.");
         window.location.href = `${window.location.protocol}//${adminHost}/admin/dashboard`;

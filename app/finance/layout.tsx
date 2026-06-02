@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { fetchMyRole } from '@/app/actions/admin-users'
+import { fetchMyProfile } from '@/app/actions/admin-users'
 import FinanceLayout from '@/app/components/finance/FinanceLayout'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -13,8 +13,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) { router.replace('/admin/login'); return }
-      const role = await fetchMyRole(session.user.id)
-      if (role !== 'owner') {
+      const profile = await fetchMyProfile(session.user.id)
+      const canAccess = profile?.role === 'owner' || (profile?.permissions ?? []).includes('view_finance')
+      if (!canAccess) {
         const host = window.location.host
         const adminHost = host.replace(/^finance\./, 'admin.')
         window.location.href = `${window.location.protocol}//${adminHost}/admin/dashboard`

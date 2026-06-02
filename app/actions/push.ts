@@ -80,6 +80,27 @@ export async function sendPushToOwners(payload: PushPayload) {
   await sendToSubs(subs, payload);
 }
 
+// Send to owners + staff who have the receive_new_requests permission
+export async function sendPushToNewRequestReceivers(payload: PushPayload) {
+  const supabase = createServerClient();
+  const { data: recipients } = await supabase
+    .from("admin_users")
+    .select("user_id")
+    .eq("active", true)
+    .or('role.eq.owner,permissions.cs.{"receive_new_requests"}');
+  const recipientIds = (recipients ?? []).map((r: { user_id: string }) => r.user_id).filter(Boolean);
+
+  let query = supabase.from("push_subscriptions").select("endpoint, p256dh, auth");
+  if (recipientIds.length) {
+    query = query.or(`user_id.in.(${recipientIds.join(",")}),user_id.is.null`);
+  } else {
+    query = query.is("user_id", null);
+  }
+  const { data: subs } = await query;
+  if (!subs?.length) return;
+  await sendToSubs(subs, payload);
+}
+
 // Send to a specific user's subscriptions
 export async function sendPushToUser(userId: string, payload: PushPayload) {
   const supabase = createServerClient();

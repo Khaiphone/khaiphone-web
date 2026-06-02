@@ -140,8 +140,9 @@ export async function fetchDashboardData(userId: string): Promise<{
   const role = (profileRes.data?.role ?? "owner") as AdminRole;
   const permissions = (profileRes.data?.permissions ?? []) as Permission[];
   const isStaff = role === "staff";
+  const canSeeAll = !isStaff || permissions.includes("receive_new_requests");
   const all = (reqRes.data ?? []).map(mapRow);
-  const requests = isStaff ? all.filter(r => r.assignedTo === userId) : all;
+  const requests = canSeeAll ? all : all.filter(r => r.assignedTo === userId);
 
   return { role, permissions, requests, staffUserId: isStaff ? userId : undefined };
 }
@@ -220,8 +221,18 @@ export async function createRequest(data: {
 
 // ─── Assign request to staff ──────────────────────────────────────────────────
 export async function assignRequest(id: string, userId: string | null, name: string | null) {
-  await requireAuth();
+  const caller = await requireAuth();
   const supabase = createServerClient();
+  const { data: callerProfile } = await supabase
+    .from("admin_users")
+    .select("role, permissions")
+    .eq("user_id", caller.id)
+    .single();
+  const callerRole = callerProfile?.role as AdminRole | undefined;
+  const callerPerms = (callerProfile?.permissions ?? []) as Permission[];
+  if (callerRole === "staff" && !callerPerms.includes("assign_requests")) {
+    return { success: false as const, error: "ไม่มีสิทธิ์มอบหมายงาน" };
+  }
   const { error } = await supabase
     .from("requests")
     .update({ assigned_to: userId, assigned_to_name: name, updated_at: new Date().toISOString() })
