@@ -130,12 +130,10 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
               <>
                 <div style={{ height: 1, background: sidebarBorder, margin: "8px 4px" }} />
                 {[
-                  { href: "/admin/price-settings", label: "ตั้งค่าราคา"  },
-                  { href: "/admin/stock",          label: "สต็อคเครื่อง" },
-                  { href: "/admin/accounting",     label: "บัญชี"         },
-                  { href: "/admin/reports",        label: "รายงาน"        },
-                  { href: "/admin/staff",          label: "จัดการทีม"    },
-                  { href: "/admin/activity",       label: "กิจกรรม"       },
+                  { href: "/admin/price-settings", label: "ตั้งค่าราคา" },
+                  { href: "/admin/reports",        label: "รายงาน"       },
+                  { href: "/admin/staff",          label: "จัดการทีม"   },
+                  { href: "/admin/activity",       label: "กิจกรรม"      },
                 ].map(({ href, label }) => {
                   const active = pathname.startsWith(href);
                   return (
