@@ -25,7 +25,14 @@ export default function AdminLoginPage() {
       setError("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
       setLoading(false);
     } else {
-      router.push("/admin/dashboard");
+      // On subdomains (finance.khaiphone.com, stock.khaiphone.com) redirect to /
+      // so the proxy can rewrite to the correct section. Fall back to /admin/dashboard in dev.
+      const isSubdomain = window.location.hostname.split(".").length >= 3;
+      if (isSubdomain) {
+        window.location.href = "/";
+      } else {
+        router.push("/admin/dashboard");
+      }
     }
   }
 
