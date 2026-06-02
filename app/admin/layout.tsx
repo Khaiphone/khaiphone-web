@@ -108,7 +108,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     });
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!ready) return <div style={{ minHeight: "100vh", background: dark ? "#0F0F11" : "#F5F5F7" }} />;
+  if (!ready) return <div suppressHydrationWarning style={{ minHeight: "100vh", background: "#0F0F11" }} />;
   if (isLogin) return <AdminRoleProvider>{children}</AdminRoleProvider>;
 
   const hideBottomNav = /^\/admin\/(requests|prices)\/[^/]+$/.test(pathname);

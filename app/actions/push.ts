@@ -3,11 +3,13 @@
 import webpush from "web-push";
 import { createServerClient } from "@/lib/supabase-server";
 
-webpush.setVapidDetails(
-  "mailto:panupan@khaiphone.com",
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!,
-);
+function getWebPush() {
+  const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const priv = process.env.VAPID_PRIVATE_KEY;
+  if (!pub || !priv) throw new Error("VAPID keys not configured");
+  webpush.setVapidDetails("mailto:panupan@khaiphone.com", pub, priv);
+  return webpush;
+}
 
 export async function saveSubscription(subscription: {
   endpoint: string;
@@ -37,9 +39,10 @@ export async function sendPushToAll(payload: {
   const { data: subs } = await supabase.from("push_subscriptions").select("endpoint, p256dh, auth");
   if (!subs?.length) return;
 
+  const wp = getWebPush();
   const results = await Promise.allSettled(
     subs.map((s) =>
-      webpush.sendNotification(
+      wp.sendNotification(
         { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
         JSON.stringify(payload),
       ),
