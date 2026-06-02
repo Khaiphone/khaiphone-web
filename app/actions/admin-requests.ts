@@ -1,11 +1,23 @@
 "use server";
 
+import { after } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/require-auth";
 import { broadcastRequestUpdate } from "@/lib/broadcast";
+import { sendPushToOwners, sendPushToUser } from "@/app/actions/push";
 import type { AdminRequest, RequestStatus, SellMethod, PayMethod } from "@/lib/types/admin";
 import type { Permission } from "@/lib/admin-permissions";
 import type { AdminRole } from "@/app/actions/admin-users";
+
+const STATUS_LABEL: Record<string, string> = {
+  new:       "คำขอใหม่",
+  pending:   "รอดำเนินการ",
+  contacted: "ติดต่อแล้ว",
+  confirmed: "ยืนยันนัดหมาย",
+  completed: "เสร็จสิ้น",
+  cancelled: "ยกเลิก",
+  no_show:   "ไม่มาตามนัด",
+};
 
 // ─── Activity log helper ──────────────────────────────────────────────────────
 async function logActivity(opts: {
@@ -215,6 +227,22 @@ export async function assignRequest(id: string, userId: string | null, name: str
     .update({ assigned_to: userId, assigned_to_name: name, updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
+
+  // Notify the assigned staff member
+  if (userId) {
+    const { data: req } = await supabase
+      .from("requests")
+      .select("order_number, device_model")
+      .eq("id", id)
+      .single();
+    after(() => sendPushToUser(userId, {
+      title: "มีงานมอบหมายใหม่",
+      body:  `${req?.order_number ?? ""} · ${req?.device_model ?? ""}`,
+      url:   `/admin/requests/${id}`,
+      tag:   `assign-${id}`,
+    }).catch(console.error));
+  }
+
   return { success: true as const };
 }
 
@@ -273,7 +301,7 @@ export async function updateStatus(
   // Get current status_log + request data (needed for auto-stock on completion)
   const { data: current } = await supabase
     .from("requests")
-    .select("status_log, order_number, source, device_model, device_storage, device_color, actual_price, estimated_price, customer_name, customer_phone, inspection")
+    .select("status_log, order_number, source, device_model, device_storage, device_color, actual_price, estimated_price, customer_name, customer_phone, inspection, assigned_to")
     .eq("id", id)
     .single();
 
@@ -361,6 +389,21 @@ export async function updateStatus(
   }
 
   broadcastRequestUpdate(id);
+
+  // Push notification: owners always get notified, assigned staff also gets notified
+  after(async () => {
+    const pushPayload = {
+      title: `สถานะเปลี่ยน → ${STATUS_LABEL[status] ?? status}`,
+      body:  `${current?.order_number ?? ""} · ${current?.device_model ?? ""}`,
+      url:   `/admin/requests/${id}`,
+      tag:   `status-${id}`,
+    };
+    await sendPushToOwners(pushPayload).catch(console.error);
+    if (current?.assigned_to && current.assigned_to !== user.id) {
+      await sendPushToUser(current.assigned_to, pushPayload).catch(console.error);
+    }
+  });
+
   return { success: true, statusLog: newLog };
 }
 

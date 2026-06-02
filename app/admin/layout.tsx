@@ -85,7 +85,8 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
         const json = sub.toJSON();
         if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
-          await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth } });
+          const { data: { session } } = await supabase.auth.getSession();
+          await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, userId: session?.user?.id });
         }
       }).catch(e => console.error("SW registration error:", e));
     }

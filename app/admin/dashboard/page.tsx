@@ -194,7 +194,8 @@ export default function DashboardPage() {
                           const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
                           const json = sub.toJSON();
                           if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
-                            await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth } });
+                            const { data: { session } } = await supabase.auth.getSession();
+                            await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, userId: session?.user?.id });
                           }
                         }
                       }
