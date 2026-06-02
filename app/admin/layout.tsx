@@ -71,10 +71,13 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
         const existing = await reg.pushManager.getSubscription();
         if (existing) {
-          // If VAPID key changed, unsubscribe old and create a new one
-          const existingKey = new Uint8Array(existing.options.applicationServerKey!);
-          const keyMatches = key.length === existingKey.length && key.every((v, i) => v === existingKey[i]);
-          if (keyMatches) return; // same key, subscription is still valid
+          // If VAPID key changed (or key not readable on iOS), unsubscribe and resubscribe
+          const existingKeyBuf = existing.options.applicationServerKey;
+          if (existingKeyBuf) {
+            const existingKey = new Uint8Array(existingKeyBuf);
+            const keyMatches = key.length === existingKey.length && key.every((v, i) => v === existingKey[i]);
+            if (keyMatches) return; // same key, subscription is still valid
+          }
           await existing.unsubscribe();
         }
 
