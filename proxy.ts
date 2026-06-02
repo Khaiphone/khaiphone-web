@@ -38,7 +38,9 @@ export function proxy(req: NextRequest) {
   const subdomain = parts.length >= 3 ? parts[0] : null;
 
   if (subdomain && subdomain in SUBDOMAIN_MAP) {
-    const base        = SUBDOMAIN_MAP[subdomain];
+    const base = SUBDOMAIN_MAP[subdomain];
+    // Already on correct internal path (e.g. /admin/login after auth redirect) — pass through
+    if (pathname.startsWith(base)) return NextResponse.next();
     const newPathname = pathname === "/" ? base : `${base}${pathname}`;
     return NextResponse.rewrite(new URL(newPathname + req.nextUrl.search, req.url));
   }
