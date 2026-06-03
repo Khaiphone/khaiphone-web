@@ -10,7 +10,7 @@ const BG     = "#0B0B0D";
 const CARD   = "#1A1A1C";
 const CARD2  = "#222224";
 const BORDER = "#2C2C2E";
-const GOLD   = "#D4A843";
+const ACCENT = "#4ADE80";
 const GREEN  = "#30D158";
 const RED    = "#FF453A";
 const TEXT   = "#F2F2F7";
@@ -43,7 +43,7 @@ export default function HistoryPage() {
 
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 300 }}>
-      <div style={{ width: 32, height: 32, borderRadius: "50%", border: "3px solid #2C2C2E", borderTopColor: GOLD, animation: "spin 0.8s linear infinite" }} />
+      <div style={{ width: 32, height: 32, borderRadius: "50%", border: "3px solid #2C2C2E", borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
@@ -58,7 +58,7 @@ export default function HistoryPage() {
           {[
             { label: "งานสำเร็จ", value: stats.completedJobs, color: GREEN },
             { label: "ยกเลิก",    value: stats.cancelledJobs, color: RED   },
-            { label: "รายได้",    value: `฿${fmt(stats.totalEarnings)}`, color: GOLD, small: true },
+            { label: "รายได้",    value: `฿${fmt(stats.totalEarnings)}`, color: ACCENT, small: true },
           ].map(({ label, value, color, small }) => (
             <div key={label} style={{ background: CARD2, borderRadius: 12, padding: "12px 10px", textAlign: "center" }}>
               <p style={{ margin: 0, fontSize: small ? 14 : 24, fontWeight: 800, color }}>{value}</p>
@@ -94,7 +94,7 @@ export default function HistoryPage() {
                         <p style={{ margin: 0, fontSize: 11, color: TEXT2 }}>{fmtDate(job.createdAt)}</p>
                       </div>
                     </div>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: isCompleted ? GOLD : TEXT2 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: isCompleted ? ACCENT : TEXT2 }}>
                       {isCompleted ? `฿${fmt(price)}` : "ยกเลิก"}
                     </span>
                   </div>

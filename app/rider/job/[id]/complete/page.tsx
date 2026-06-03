@@ -9,7 +9,7 @@ import type { AdminRequest } from "@/lib/types/admin";
 const BG     = "#0B0B0D";
 const CARD   = "#1A1A1C";
 const BORDER = "#2C2C2E";
-const GOLD   = "#D4A843";
+const ACCENT = "#4ADE80";
 const GREEN  = "#30D158";
 const TEXT   = "#F2F2F7";
 const TEXT2  = "#8E8E93";
@@ -48,7 +48,7 @@ export default function CompletePage() {
           ].map(({ label, value, gold }) => (
             <div key={label} style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ fontSize: 13, color: TEXT2 }}>{label}</span>
-              <span style={{ fontSize: 13, color: gold ? GOLD : TEXT, fontWeight: gold ? 700 : 400 }}>{value}</span>
+              <span style={{ fontSize: 13, color: gold ? ACCENT : TEXT, fontWeight: gold ? 700 : 400 }}>{value}</span>
             </div>
           ))}
         </div>
@@ -72,7 +72,7 @@ export default function CompletePage() {
         <button
           onClick={() => router.replace("/rider")}
           style={{
-            padding: 16, borderRadius: 14, background: GOLD, border: "none",
+            padding: 16, borderRadius: 14, background: ACCENT, border: "none",
             fontSize: 16, fontWeight: 700, color: "#000", cursor: "pointer", fontFamily: "inherit",
           }}
         >

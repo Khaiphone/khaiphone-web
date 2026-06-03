@@ -10,7 +10,7 @@ const BG     = "#0B0B0D";
 const CARD   = "#1A1A1C";
 const CARD2  = "#222224";
 const BORDER = "#2C2C2E";
-const GOLD   = "#D4A843";
+const ACCENT = "#4ADE80";
 const GREEN  = "#30D158";
 const RED    = "#FF453A";
 const TEXT   = "#F2F2F7";
@@ -36,13 +36,13 @@ function StepBar({ current }: { current: number }) {
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
             <div style={{
               width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-              background: i < current ? GREEN : i === current ? GOLD : BORDER,
+              background: i < current ? GREEN : i === current ? ACCENT : BORDER,
               fontSize: 10, fontWeight: 700, color: i <= current ? "#000" : TEXT2,
               flexShrink: 0,
             }}>
               {i < current ? "✓" : i + 1}
             </div>
-            <span style={{ fontSize: 9, color: i === current ? GOLD : TEXT2, whiteSpace: "nowrap", fontWeight: i === current ? 600 : 400 }}>{label}</span>
+            <span style={{ fontSize: 9, color: i === current ? ACCENT : TEXT2, whiteSpace: "nowrap", fontWeight: i === current ? 600 : 400 }}>{label}</span>
           </div>
           {i < STEPS.length - 1 && (
             <div style={{ flex: 1, height: 2, background: i < current ? GREEN : BORDER, margin: "0 4px", marginBottom: 14 }} />
@@ -57,12 +57,12 @@ function Row({ label, value, gold }: { label: string; value: string; gold?: bool
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
       <span style={{ fontSize: 13, color: TEXT2, flexShrink: 0 }}>{label}</span>
-      <span style={{ fontSize: 13, color: gold ? GOLD : TEXT, fontWeight: gold ? 700 : 400, textAlign: "right" }}>{value}</span>
+      <span style={{ fontSize: 13, color: gold ? ACCENT : TEXT, fontWeight: gold ? 700 : 400, textAlign: "right" }}>{value}</span>
     </div>
   );
 }
 
-function BigBtn({ label, color = GOLD, textColor = "#000", onClick, loading, outline }: {
+function BigBtn({ label, color = ACCENT, textColor = "#000", onClick, loading, outline }: {
   label: string; color?: string; textColor?: string; onClick: () => void; loading?: boolean; outline?: boolean;
 }) {
   return (
@@ -93,7 +93,7 @@ export default function JobDetailPage() {
 
   if (loading) return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 32, height: 32, borderRadius: "50%", border: "3px solid #2C2C2E", borderTopColor: GOLD, animation: "spin 0.8s linear infinite" }} />
+      <div style={{ width: 32, height: 32, borderRadius: "50%", border: "3px solid #2C2C2E", borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
@@ -156,14 +156,14 @@ export default function JobDetailPage() {
         {/* Location */}
         <div style={{ background: CARD, borderRadius: 14, overflow: "hidden" }}>
           <div style={{ padding: "14px 16px", borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", gap: 8 }}>
-            <MapPin size={15} color={GOLD} />
+            <MapPin size={15} color={ACCENT} />
             <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>ที่อยู่ลูกค้า</span>
           </div>
           <div style={{ padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
             <p style={{ margin: 0, fontSize: 14, color: TEXT, flex: 1 }}>{job.appointment.location || "ไม่ระบุที่อยู่"}</p>
             {job.appointment.location && (
               <a href={mapsUrl} target="_blank" rel="noreferrer" style={{
-                background: GOLD, borderRadius: 10, padding: "8px 14px", fontSize: 13, fontWeight: 700,
+                background: ACCENT, borderRadius: 10, padding: "8px 14px", fontSize: 13, fontWeight: 700,
                 color: "#000", textDecoration: "none", whiteSpace: "nowrap", flexShrink: 0,
               }}>นำทาง ↗</a>
             )}
@@ -177,7 +177,7 @@ export default function JobDetailPage() {
         {/* Device */}
         <div style={{ background: CARD, borderRadius: 14, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-            <Package size={15} color={GOLD} />
+            <Package size={15} color={ACCENT} />
             <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>เครื่องที่รับซื้อ</span>
           </div>
           <Row label="รุ่น"       value={`${job.device.model} ${job.device.storage}`} />

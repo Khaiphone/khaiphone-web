@@ -3,24 +3,24 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { Home, Clock, Wallet, UserCircle } from "lucide-react";
+import { Home, Clock, Wallet, UserCircle, Bell, Menu } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { fetchMyProfile } from "@/app/actions/admin-users";
-import { setRiderOnlineStatus, fetchRiderOnlineStatus } from "@/app/actions/rider";
+import { fetchRiderOnlineStatus } from "@/app/actions/rider";
 
 const BG     = "#0B0B0D";
 const CARD   = "#1A1A1C";
 const BORDER = "#2C2C2E";
-const GOLD   = "#D4A843";
+const ACCENT = "#4ADE80";
 const GREEN  = "#30D158";
 const TEXT   = "#F2F2F7";
 const TEXT2  = "#8E8E93";
 
 const NAV = [
-  { href: "/rider",          label: "งานวันนี้", icon: Home       },
+  { href: "/rider",          label: "หน้าแรก",   icon: Home       },
   { href: "/rider/earnings", label: "รายได้",    icon: Wallet     },
-  { href: "/rider/history",  label: "ประวัติ",   icon: Clock      },
-  { href: "/rider/account",  label: "บัญชี",     icon: UserCircle },
+  { href: "/rider/history",  label: "งานของฉัน", icon: Clock      },
+  { href: "/rider/account",  label: "โปรไฟล์",   icon: UserCircle },
 ] as const;
 
 export default function RiderLayout({ children }: { children: React.ReactNode }) {
@@ -30,7 +30,6 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
   const [riderName, setRiderName] = useState("");
   const [userId, setUserId]     = useState<string>("");
   const [isOnline, setIsOnline] = useState(false);
-  const [togglingOnline, setTogglingOnline] = useState(false);
 
   useEffect(() => {
     const setMeta = (name: string, content: string) => {
@@ -60,17 +59,18 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
     });
   }, [router]);
 
-  async function toggleOnline() {
-    setTogglingOnline(true);
-    const next = !isOnline;
-    setIsOnline(next);
-    await setRiderOnlineStatus(next);
-    setTogglingOnline(false);
-  }
+  // Listen for online status changes from home/account pages
+  useEffect(() => {
+    const handler = (e: Event) => {
+      setIsOnline((e as CustomEvent<boolean>).detail);
+    };
+    window.addEventListener("rider-online-change", handler);
+    return () => window.removeEventListener("rider-online-change", handler);
+  }, []);
 
   if (!ready) return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 36, height: 36, borderRadius: "50%", border: `3px solid ${BORDER}`, borderTopColor: GOLD, animation: "spin 0.8s linear infinite" }} />
+      <div style={{ width: 36, height: 36, borderRadius: "50%", border: `3px solid ${BORDER}`, borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
@@ -84,36 +84,29 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
       {!isJobPage && (
         <header style={{
           background: CARD, borderBottom: `1px solid ${BORDER}`,
-          padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between",
           position: "sticky", top: 0, zIndex: 10,
         }}>
-          <div>
-            <p style={{ margin: 0, fontSize: 11, color: TEXT2, letterSpacing: 1, textTransform: "uppercase" }}>Khaiphone Rider</p>
-            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: TEXT }}>{riderName}</p>
+          {/* Left: hamburger placeholder */}
+          <button style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: TEXT2, display: "flex" }}>
+            <Menu size={22} color={TEXT2} />
+          </button>
+
+          {/* Center: greeting */}
+          <div style={{ textAlign: "center" }}>
+            <p style={{ margin: 0, fontSize: 11, color: TEXT2, letterSpacing: 0.5 }}>สวัสดีครับ,</p>
+            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: TEXT }}>{riderName}</p>
           </div>
 
-          {/* Online / Offline toggle */}
-          <button
-            onClick={toggleOnline}
-            disabled={togglingOnline}
-            style={{
-              display: "flex", alignItems: "center", gap: 8,
-              padding: "8px 16px", borderRadius: 999,
-              background: isOnline ? "rgba(48,209,88,0.15)" : "rgba(142,142,147,0.15)",
-              border: `1.5px solid ${isOnline ? GREEN : BORDER}`,
-              cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s",
-              opacity: togglingOnline ? 0.6 : 1,
-            }}
-          >
+          {/* Right: online dot + bell */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{
-              width: 8, height: 8, borderRadius: "50%",
-              background: isOnline ? GREEN : TEXT2,
+              width: 9, height: 9, borderRadius: "50%",
+              background: isOnline ? GREEN : BORDER,
               boxShadow: isOnline ? `0 0 6px ${GREEN}` : "none",
             }} />
-            <span style={{ fontSize: 13, fontWeight: 700, color: isOnline ? GREEN : TEXT2 }}>
-              {isOnline ? "พร้อมรับงาน" : "ออฟไลน์"}
-            </span>
-          </button>
+            <Bell size={22} color={TEXT2} />
+          </div>
         </header>
       )}
 
@@ -136,7 +129,7 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
               <Link key={href} href={href} style={{
                 flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
                 padding: "10px 0", gap: 3, textDecoration: "none",
-                color: active ? GOLD : TEXT2,
+                color: active ? ACCENT : TEXT2,
               }}>
                 <Icon size={21} strokeWidth={active ? 2.5 : 1.8} />
                 <span style={{ fontSize: 10, fontWeight: active ? 600 : 400 }}>{label}</span>

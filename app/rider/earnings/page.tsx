@@ -9,7 +9,7 @@ const BG     = "#0B0B0D";
 const CARD   = "#1A1A1C";
 const CARD2  = "#222224";
 const BORDER = "#2C2C2E";
-const GOLD   = "#D4A843";
+const ACCENT = "#4ADE80";
 const GREEN  = "#30D158";
 const TEXT   = "#F2F2F7";
 const TEXT2  = "#8E8E93";
@@ -36,14 +36,14 @@ export default function EarningsPage() {
 
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 300 }}>
-      <div style={{ width: 32, height: 32, borderRadius: "50%", border: "3px solid #2C2C2E", borderTopColor: GOLD, animation: "spin 0.8s linear infinite" }} />
+      <div style={{ width: 32, height: 32, borderRadius: "50%", border: "3px solid #2C2C2E", borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 
   const periods = [
     { label: "วันนี้",    data: data?.today,  color: GREEN },
-    { label: "สัปดาห์นี้", data: data?.week,   color: GOLD  },
+    { label: "สัปดาห์นี้", data: data?.week,   color: ACCENT  },
     { label: "เดือนนี้",  data: data?.month,  color: "#0A84FF" },
   ] as const;
 
@@ -88,7 +88,7 @@ export default function EarningsPage() {
               <div key={i} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: CARD2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <Package size={16} color={GOLD} />
+                    <Package size={16} color={ACCENT} />
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -97,7 +97,7 @@ export default function EarningsPage() {
                     <p style={{ margin: 0, fontSize: 11, color: TEXT2 }}>{fmtDate((job as any).created_at)}</p>
                   </div>
                 </div>
-                <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: GOLD, flexShrink: 0, marginLeft: 12 }}>
+                <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: ACCENT, flexShrink: 0, marginLeft: 12 }}>
                   ฿{fmt((job as any).actual_price ?? (job as any).estimated_price ?? 0)}
                 </p>
               </div>

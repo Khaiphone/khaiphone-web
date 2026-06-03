@@ -6,15 +6,28 @@ import { requireAuth } from "@/lib/require-auth";
 import { sendPushToOwners, sendPushToUser } from "@/app/actions/push";
 import type { AdminRequest } from "@/lib/types/admin";
 
-// ─── Fetch assigned jobs for a rider ─────────────────────────────────────────
+// ─── Fetch pending jobs (assigned by admin, awaiting rider acceptance) ────────
+export async function fetchPendingRiderJobs(riderId: string): Promise<AdminRequest[]> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("requests")
+    .select("*")
+    .eq("rider_id", riderId)
+    .in("status", ["confirmed", "pickup_scheduled"])
+    .order("appt_date", { ascending: true });
+  return (data ?? []).map(mapRow);
+}
+
+// ─── Fetch active jobs (rider already en_route or further) ───────────────────
 export async function fetchRiderJobs(riderId: string): Promise<AdminRequest[]> {
   await requireAuth();
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from("requests")
     .select("*")
-    .eq("assigned_to", riderId)
-    .not("status", "in", '("completed","cancelled","rejected")')
+    .eq("rider_id", riderId)
+    .in("status", ["en_route", "inspecting", "price_negotiation", "contracting"])
     .order("appt_date", { ascending: true });
   if (error) { console.error("fetchRiderJobs:", error); return []; }
   return (data ?? []).map(mapRow);
@@ -39,11 +52,41 @@ export async function fetchRiderHistory(riderId: string, months = 3): Promise<Ad
   const { data } = await supabase
     .from("requests")
     .select("*")
-    .eq("assigned_to", riderId)
+    .eq("rider_id", riderId)
     .in("status", ["completed", "cancelled", "rejected"])
     .gte("created_at", since.toISOString())
     .order("created_at", { ascending: false });
   return (data ?? []).map(mapRow);
+}
+
+// ─── Accept job (confirmed → en_route) ───────────────────────────────────────
+export async function riderAcceptJob(id: string) {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+  const now = new Date().toISOString();
+
+  const { data: req } = await supabase
+    .from("requests").select("status_log, order_number, device_model").eq("id", id).single();
+
+  const newLog = [
+    ...(req?.status_log ?? []),
+    { status: "en_route", timestamp: now, note: "ไรเดอร์รับงานและออกเดินทางแล้ว" },
+  ];
+
+  const { error } = await supabase
+    .from("requests")
+    .update({ status: "en_route", status_log: newLog, updated_at: now })
+    .eq("id", id);
+  if (error) return { success: false as const, error: error.message };
+
+  after(() => sendPushToOwners({
+    title: `ไรเดอร์รับงาน — ${req?.order_number ?? ""}`,
+    body: `${req?.device_model ?? ""} · กำลังเดินทางไปหาลูกค้า`,
+    url: `/admin/requests/${id}`,
+    tag: `en-route-${id}`,
+  }).catch(console.error));
+
+  return { success: true as const };
 }
 
 // ─── Start job (en_route) ─────────────────────────────────────────────────────
@@ -396,7 +439,7 @@ export async function fetchRiderStats(riderId: string) {
   const { data } = await supabase
     .from("requests")
     .select("status, actual_price, estimated_price, appt_date")
-    .eq("assigned_to", riderId)
+    .eq("rider_id", riderId)
     .gte("created_at", startOfMonth);
 
   const jobs = data ?? [];
@@ -426,7 +469,7 @@ export async function fetchRiderEarnings(riderId: string) {
   const { data } = await supabase
     .from("requests")
     .select("status, actual_price, estimated_price, created_at, device_model, device_storage, order_number")
-    .eq("assigned_to", riderId)
+    .eq("rider_id", riderId)
     .eq("status", "completed")
     .gte("created_at", monthStart)
     .order("created_at", { ascending: false });
@@ -493,6 +536,7 @@ function mapRow(row: any) {
     source:        row.source         ?? "website",
     assignedTo:    row.assigned_to    ?? null,
     assignedToName: row.assigned_to_name ?? null,
+    riderId:       row.rider_id       ?? null,
   };
 }
 

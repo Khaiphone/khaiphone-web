@@ -10,7 +10,7 @@ import type { AdminRequest } from "@/lib/types/admin";
 const BG     = "#0B0B0D";
 const CARD   = "#1A1A1C";
 const BORDER = "#2C2C2E";
-const GOLD   = "#D4A843";
+const ACCENT = "#4ADE80";
 const GREEN  = "#30D158";
 const BLUE   = "#0A84FF";
 const TEXT   = "#F2F2F7";
@@ -42,7 +42,7 @@ export default function PaymentPage() {
 
   if (!job) return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 32, height: 32, borderRadius: "50%", border: "3px solid #2C2C2E", borderTopColor: GOLD, animation: "spin 0.8s linear infinite" }} />
+      <div style={{ width: 32, height: 32, borderRadius: "50%", border: "3px solid #2C2C2E", borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
@@ -103,7 +103,7 @@ export default function PaymentPage() {
               {isCash ? "เงินสด" : "โอนเงิน"}
             </span>
           </div>
-          <p style={{ margin: 0, fontSize: 40, fontWeight: 800, color: GOLD }}>฿{fmt(price)}</p>
+          <p style={{ margin: 0, fontSize: 40, fontWeight: 800, color: ACCENT }}>฿{fmt(price)}</p>
           <p style={{ margin: "4px 0 0", fontSize: 13, color: TEXT2 }}>{job.device.model} {job.device.storage}</p>
         </div>
 

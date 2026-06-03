@@ -10,7 +10,7 @@ import type { AdminRequest } from "@/lib/types/admin";
 const BG     = "#0B0B0D";
 const CARD   = "#1A1A1C";
 const BORDER = "#2C2C2E";
-const GOLD   = "#D4A843";
+const ACCENT = "#4ADE80";
 const GREEN  = "#30D158";
 const RED    = "#FF453A";
 const TEXT   = "#F2F2F7";
@@ -53,7 +53,7 @@ function PhotoBox({ label, url, onCapture, required }: { label: string; url?: st
         {label}{required && <span style={{ color: RED }}> *</span>}
       </p>
       <button onClick={() => ref.current?.click()} style={{
-        width: "100%", aspectRatio: "16/9", background: CARD, border: `1.5px dashed ${url ? GOLD : BORDER}`,
+        width: "100%", aspectRatio: "16/9", background: CARD, border: `1.5px dashed ${url ? ACCENT : BORDER}`,
         borderRadius: 12, cursor: "pointer", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", position: "relative",
       }}>
         {url ? (
@@ -244,7 +244,7 @@ export default function InspectPage() {
       {/* Save button */}
       <div style={{ padding: "16px 20px", paddingBottom: "calc(16px + env(safe-area-inset-bottom))", background: BG, borderTop: `1px solid ${BORDER}` }}>
         <button onClick={handleSave} disabled={saving || uploading} style={{
-          width: "100%", padding: 16, borderRadius: 14, background: GOLD, border: "none",
+          width: "100%", padding: 16, borderRadius: 14, background: ACCENT, border: "none",
           fontSize: 16, fontWeight: 700, color: "#000", cursor: "pointer", fontFamily: "inherit",
           opacity: (saving || uploading) ? 0.6 : 1,
         }}>

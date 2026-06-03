@@ -9,7 +9,7 @@ import type { AdminRequest } from "@/lib/types/admin";
 const BG     = "#0B0B0D";
 const CARD   = "#1A1A1C";
 const BORDER = "#2C2C2E";
-const GOLD   = "#D4A843";
+const ACCENT = "#4ADE80";
 const GREEN  = "#30D158";
 const RED    = "#FF453A";
 const TEXT   = "#F2F2F7";
@@ -47,7 +47,7 @@ export default function PricePage() {
 
   if (!job) return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 32, height: 32, borderRadius: "50%", border: "3px solid #2C2C2E", borderTopColor: GOLD, animation: "spin 0.8s linear infinite" }} />
+      <div style={{ width: 32, height: 32, borderRadius: "50%", border: "3px solid #2C2C2E", borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
@@ -99,7 +99,7 @@ export default function PricePage() {
         {/* Price display */}
         <div style={{ background: CARD, borderRadius: 16, padding: 24, textAlign: "center" }}>
           <p style={{ margin: "0 0 4px", fontSize: 13, color: TEXT2 }}>ราคาที่ตกลงไว้</p>
-          <p style={{ margin: 0, fontSize: 36, fontWeight: 800, color: GOLD }}>฿{fmt(agreedPrice)}</p>
+          <p style={{ margin: 0, fontSize: 36, fontWeight: 800, color: ACCENT }}>฿{fmt(agreedPrice)}</p>
           <p style={{ margin: "4px 0 0", fontSize: 13, color: TEXT2 }}>{job.device.model} {job.device.storage}</p>
         </div>
 
@@ -137,7 +137,7 @@ export default function PricePage() {
                 value={newPrice}
                 onChange={e => setNewPrice(e.target.value)}
                 placeholder="กรอกราคาใหม่"
-                style={{ width: "100%", background: "none", border: "none", color: GOLD, fontSize: 28, fontWeight: 700, fontFamily: "inherit", outline: "none" }}
+                style={{ width: "100%", background: "none", border: "none", color: ACCENT, fontSize: 28, fontWeight: 700, fontFamily: "inherit", outline: "none" }}
               />
             </div>
 
@@ -146,8 +146,8 @@ export default function PricePage() {
               {ADJUST_REASONS.map((r, i) => (
                 <label key={r} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderTop: `1px solid ${BORDER}`, cursor: "pointer" }}>
                   <div style={{
-                    width: 18, height: 18, borderRadius: "50%", border: `2px solid ${reason === r ? GOLD : BORDER}`,
-                    background: reason === r ? GOLD : "transparent", flexShrink: 0,
+                    width: 18, height: 18, borderRadius: "50%", border: `2px solid ${reason === r ? ACCENT : BORDER}`,
+                    background: reason === r ? ACCENT : "transparent", flexShrink: 0,
                   }} />
                   <span style={{ fontSize: 14, color: TEXT }}>{r}</span>
                   <input type="radio" value={r} checked={reason === r} onChange={() => setReason(r)} style={{ display: "none" }} />
@@ -167,7 +167,7 @@ export default function PricePage() {
             {error && <p style={{ margin: 0, fontSize: 13, color: RED }}>{error}</p>}
 
             <button onClick={handleAdjust} disabled={busy} style={{
-              padding: 16, borderRadius: 14, background: GOLD, border: "none", fontSize: 16,
+              padding: 16, borderRadius: 14, background: ACCENT, border: "none", fontSize: 16,
               fontWeight: 700, color: "#000", cursor: "pointer", fontFamily: "inherit", opacity: busy ? 0.6 : 1,
             }}>
               {busy ? "กำลังส่ง..." : "แจ้งลูกค้าและรอยืนยัน →"}
@@ -184,7 +184,7 @@ export default function PricePage() {
         {mode === "waiting" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ background: "rgba(212,168,67,0.08)", border: "1px solid rgba(212,168,67,0.2)", borderRadius: 14, padding: 20, textAlign: "center" }}>
-              <AlertCircle size={32} color={GOLD} style={{ marginBottom: 10 }} />
+              <AlertCircle size={32} color={ACCENT} style={{ marginBottom: 10 }} />
               <p style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 700, color: TEXT }}>รอลูกค้ายืนยันราคา</p>
               <p style={{ margin: 0, fontSize: 13, color: TEXT2 }}>เสนอราคา ฿{fmt(Number(newPrice) || job.device.actualPrice || 0)}</p>
             </div>

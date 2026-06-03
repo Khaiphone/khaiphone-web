@@ -10,7 +10,7 @@ import { setRiderOnlineStatus, fetchRiderOnlineStatus } from "@/app/actions/ride
 const BG     = "#0B0B0D";
 const CARD   = "#1A1A1C";
 const BORDER = "#2C2C2E";
-const GOLD   = "#D4A843";
+const ACCENT = "#4ADE80";
 const GREEN  = "#30D158";
 const RED    = "#FF453A";
 const TEXT   = "#F2F2F7";
@@ -55,13 +55,13 @@ export default function AccountPage() {
 
       {/* Profile card */}
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 24, display: "flex", alignItems: "center", gap: 16 }}>
-        <div style={{ width: 56, height: 56, borderRadius: "50%", background: GOLD, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <div style={{ width: 56, height: 56, borderRadius: "50%", background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <UserCircle size={30} color="#000" />
         </div>
         <div>
           <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: TEXT }}>{profile?.name ?? "..."}</p>
           <p style={{ margin: "2px 0 0", fontSize: 13, color: TEXT2 }}>{profile?.email}</p>
-          <p style={{ margin: "4px 0 0", fontSize: 11, fontWeight: 600, color: GOLD, textTransform: "uppercase", letterSpacing: 0.5 }}>
+          <p style={{ margin: "4px 0 0", fontSize: 11, fontWeight: 600, color: ACCENT, textTransform: "uppercase", letterSpacing: 0.5 }}>
             {profile?.role === "owner" ? "เจ้าของ" : "พนักงาน / ไรเดอร์"}
           </p>
         </div>
