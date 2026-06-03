@@ -271,7 +271,8 @@ export default function InspectPage() {
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: 20, display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+        <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 24 }}>
 
         <section>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
@@ -427,6 +428,7 @@ export default function InspectPage() {
             <p style={{ margin: 0, fontSize: 13, color: RED }}>{error}</p>
           </div>
         )}
+        </div>
       </div>
 
       <div style={{ padding: "16px 20px", paddingBottom: "calc(16px + env(safe-area-inset-bottom))", background: BG, borderTop: `1px solid ${BORDER}` }}>

@@ -111,7 +111,8 @@ export default function PaymentPage() {
         <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: TEXT }}>ชำระเงิน</p>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: 20, display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+        <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 20 }}>
 
         <div style={{ background: CARD, borderRadius: 16, padding: 24, textAlign: "center" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 8 }}>
@@ -259,6 +260,7 @@ export default function PaymentPage() {
             )}
           </>
         )}
+        </div>
       </div>
 
       {isCash && signed && (

@@ -156,7 +156,8 @@ export default function PricePage() {
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+        <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
 
         {/* Price card */}
         <div style={{ background: CARD, borderRadius: 16, padding: "20px 20px 16px", textAlign: "center" }}>
@@ -318,6 +319,7 @@ export default function PricePage() {
             }}>ลูกค้าปฏิเสธ — ยกเลิกงาน</button>
           </div>
         )}
+        </div>
 
       </div>
     </div>

@@ -235,7 +235,8 @@ export default function JobDetailPage() {
       <StepBar current={step} c={tc} />
 
       {/* Body */}
-      <div style={{ flex: 1, minHeight: 0, padding: 20, display: "flex", flexDirection: "column", gap: 14, overflowY: "auto" }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+        <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
 
         {/* Location */}
         <div style={{ background: CARD, borderRadius: 14, overflow: "hidden" }}>
@@ -316,6 +317,7 @@ export default function JobDetailPage() {
             <p style={{ margin: 0, fontSize: 13, color: TEXT }}>{job.customerNotes}</p>
           </div>
         )}
+        </div>
       </div>
 
       {/* Action buttons */}

@@ -470,7 +470,8 @@ export default function RiderContractPage() {
         <FileText size={20} color={ACCENT} />
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+        <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
 
         {done ? (
           /* ── Success state ── */
@@ -610,6 +611,7 @@ export default function RiderContractPage() {
             )}
           </>
         )}
+        </div>
       </div>
 
       {!done && (
