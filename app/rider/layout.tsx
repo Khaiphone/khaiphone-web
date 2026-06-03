@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { Home, Clock, Wallet, UserCircle, Bell, Menu } from "lucide-react";
+import Image from "next/image";
+import { Home, Clock, Wallet, UserCircle, Bell } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { fetchMyProfile } from "@/app/actions/admin-users";
-import { fetchRiderOnlineStatus } from "@/app/actions/rider";
+import { fetchRiderOnlineStatus, fetchRiderNotifications } from "@/app/actions/rider";
 import { saveSubscription } from "@/app/actions/push";
 
 const BG     = "#0B0B0D";
 const CARD   = "#1A1A1C";
+const CARD2  = "#222224";
 const BORDER = "#2C2C2E";
 const ACCENT = "#4ADE80";
 const GREEN  = "#30D158";
@@ -24,13 +26,41 @@ const NAV = [
   { href: "/rider/account",  label: "โปรไฟล์",   icon: UserCircle },
 ] as const;
 
+type Notif = { id: string; requestId: string; orderId: string; title: string; body: string; timestamp: string };
+
+function fmtTime(iso: string) {
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffH  = Math.floor(diffMs / 3600000);
+  const diffD  = Math.floor(diffMs / 86400000);
+  if (diffH < 1)  return "เมื่อกี้";
+  if (diffH < 24) return `${diffH} ชม. ที่แล้ว`;
+  if (diffD < 7)  return `${diffD} วันที่แล้ว`;
+  return d.toLocaleDateString("th-TH", { day: "numeric", month: "short" });
+}
+
 export default function RiderLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
-  const [ready, setReady]       = useState(false);
+  const [ready, setReady]         = useState(false);
   const [riderName, setRiderName] = useState("");
-  const [userId, setUserId]     = useState<string>("");
-  const [isOnline, setIsOnline] = useState(false);
+  const [userId, setUserId]       = useState<string>("");
+  const [isOnline, setIsOnline]   = useState(false);
+
+  // Notifications
+  const [notifs, setNotifs]           = useState<Notif[]>([]);
+  const [showNotifs, setShowNotifs]   = useState(false);
+  const [lastRead, setLastRead]       = useState<string>(() =>
+    typeof window !== "undefined" ? (localStorage.getItem("rider-notif-read") ?? "") : ""
+  );
+
+  const unreadCount = notifs.filter(n => n.timestamp > lastRead).length;
+
+  const loadNotifs = useCallback(async (uid: string) => {
+    const data = await fetchRiderNotifications(uid);
+    setNotifs(data);
+  }, []);
 
   useEffect(() => {
     const setMeta = (name: string, content: string) => {
@@ -43,13 +73,11 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
     setMeta("apple-mobile-web-app-title", "KP Rider");
     setMeta("theme-color", "#4ADE80");
 
-    // Prevent iOS rubber-band / pull-to-refresh overscroll
     document.documentElement.style.overscrollBehavior = "none";
     document.body.style.overscrollBehavior = "none";
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
 
-    // Rider PWA manifest + apple touch icon
     let manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
     if (!manifestLink) { manifestLink = document.createElement("link"); manifestLink.rel = "manifest"; document.head.appendChild(manifestLink); }
     manifestLink.href = "/rider-manifest.json";
@@ -58,17 +86,13 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
     if (!appleIcon) { appleIcon = document.createElement("link"); appleIcon.rel = "apple-touch-icon"; document.head.appendChild(appleIcon); }
     appleIcon.href = "/rider-apple-touch-icon.png";
 
-    // Register service worker + subscribe to push notifications
     if ("serviceWorker" in navigator && "PushManager" in window) {
       navigator.serviceWorker.register("/sw.js").then(async (reg) => {
         const permission = await Notification.requestPermission();
         if (permission !== "granted") return;
-
         const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
         if (!vapidKey) return;
-
         const key = Uint8Array.from(atob(vapidKey.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
-
         const existing = await reg.pushManager.getSubscription();
         if (existing) {
           const existingKeyBuf = existing.options.applicationServerKey;
@@ -78,7 +102,6 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
           }
           await existing.unsubscribe();
         }
-
         const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
         const json = sub.toJSON();
         if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
@@ -104,17 +127,34 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
       setUserId(session.user.id);
       setIsOnline(online);
       setReady(true);
+      loadNotifs(session.user.id);
     });
-  }, [router]);
+  }, [router, loadNotifs]);
 
-  // Listen for online status changes from home/account pages
+  // Refresh notifications when a job status changes (realtime)
   useEffect(() => {
-    const handler = (e: Event) => {
-      setIsOnline((e as CustomEvent<boolean>).detail);
-    };
+    if (!userId) return;
+    const ch = supabase
+      .channel("rider-notif-refresh")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "requests" },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (payload: any) => { if (payload.new?.rider_id === userId) loadNotifs(userId); })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [userId, loadNotifs]);
+
+  useEffect(() => {
+    const handler = (e: Event) => { setIsOnline((e as CustomEvent<boolean>).detail); };
     window.addEventListener("rider-online-change", handler);
     return () => window.removeEventListener("rider-online-change", handler);
   }, []);
+
+  function openNotifs() {
+    const now = new Date().toISOString();
+    setLastRead(now);
+    localStorage.setItem("rider-notif-read", now);
+    setShowNotifs(true);
+  }
 
   if (!ready) return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -132,34 +172,53 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
       {!isJobPage && (
         <header style={{
           background: CARD, borderBottom: `1px solid ${BORDER}`,
-          padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between",
-          position: "sticky", top: 0, zIndex: 10,
+          padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between",
+          position: "sticky", top: 0, zIndex: 10, flexShrink: 0,
         }}>
-          {/* Left: hamburger placeholder */}
-          <button style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: TEXT2, display: "flex" }}>
-            <Menu size={22} color={TEXT2} />
-          </button>
+          {/* Left: logo */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Image
+              src="/rider-apple-touch-icon.png"
+              alt="KP Rider"
+              width={32} height={32}
+              style={{ borderRadius: 8 }}
+              unoptimized
+            />
+            <span style={{ fontSize: 13, fontWeight: 700, color: ACCENT, letterSpacing: 0.3 }}>KP Rider</span>
+          </div>
 
           {/* Center: greeting */}
           <div style={{ textAlign: "center" }}>
             <p style={{ margin: 0, fontSize: 11, color: TEXT2, letterSpacing: 0.5 }}>สวัสดีครับ,</p>
-            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: TEXT }}>{riderName}</p>
+            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: TEXT }}>{riderName}</p>
           </div>
 
           {/* Right: online dot + bell */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{
               width: 9, height: 9, borderRadius: "50%",
               background: isOnline ? GREEN : BORDER,
               boxShadow: isOnline ? `0 0 6px ${GREEN}` : "none",
             }} />
-            <Bell size={22} color={TEXT2} />
+            <button onClick={openNotifs} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, position: "relative", display: "flex" }}>
+              <Bell size={22} color={unreadCount > 0 ? ACCENT : TEXT2} />
+              {unreadCount > 0 && (
+                <span style={{
+                  position: "absolute", top: -4, right: -4,
+                  background: "#FF453A", borderRadius: "50%",
+                  width: 16, height: 16, fontSize: 9, fontWeight: 700, color: "#fff",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </button>
           </div>
         </header>
       )}
 
       {/* Content */}
-      <main style={{ paddingBottom: isJobPage ? 0 : "calc(64px + env(safe-area-inset-bottom))" }}>
+      <main style={{ paddingBottom: isJobPage ? 0 : "calc(64px + env(safe-area-inset-bottom))", flex: 1, overflowY: "auto" }}>
         {children}
       </main>
 
@@ -185,6 +244,62 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
             );
           })}
         </nav>
+      )}
+
+      {/* Notification bottom sheet */}
+      {showNotifs && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 50, display: "flex", alignItems: "flex-end" }}
+          onClick={() => setShowNotifs(false)}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: "100%", background: CARD, borderRadius: "20px 20px 0 0",
+              maxHeight: "75vh", display: "flex", flexDirection: "column",
+              paddingBottom: "env(safe-area-inset-bottom)",
+            }}
+          >
+            {/* Sheet header */}
+            <div style={{ padding: "16px 20px 12px", borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: TEXT }}>การแจ้งเตือน</p>
+              <button onClick={() => setShowNotifs(false)} style={{ background: "none", border: "none", color: TEXT2, cursor: "pointer", fontSize: 22, lineHeight: 1, padding: 0 }}>×</button>
+            </div>
+
+            {/* Notification list */}
+            <div style={{ overflowY: "auto", flex: 1 }}>
+              {notifs.length === 0 ? (
+                <div style={{ padding: 40, textAlign: "center" }}>
+                  <Bell size={32} color={BORDER} style={{ marginBottom: 12 }} />
+                  <p style={{ margin: 0, fontSize: 14, color: TEXT2 }}>ยังไม่มีการแจ้งเตือน</p>
+                </div>
+              ) : notifs.map((n, i) => {
+                const isUnread = n.timestamp > lastRead;
+                return (
+                  <div
+                    key={n.id}
+                    onClick={() => { setShowNotifs(false); router.push(`/rider/job/${n.requestId}`); }}
+                    style={{
+                      padding: "14px 20px", borderBottom: i < notifs.length - 1 ? `1px solid ${BORDER}` : "none",
+                      background: isUnread ? "rgba(74,222,128,0.05)" : "transparent",
+                      cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start",
+                    }}
+                  >
+                    <div style={{
+                      width: 8, height: 8, borderRadius: "50%", marginTop: 5, flexShrink: 0,
+                      background: isUnread ? ACCENT : "transparent",
+                    }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: "0 0 2px", fontSize: 14, fontWeight: isUnread ? 700 : 400, color: TEXT }}>{n.title}</p>
+                      <p style={{ margin: "0 0 4px", fontSize: 12, color: TEXT2 }}>{n.body}</p>
+                      <p style={{ margin: 0, fontSize: 11, color: TEXT2 }}>{fmtTime(n.timestamp)}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

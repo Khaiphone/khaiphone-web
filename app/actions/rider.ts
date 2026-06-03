@@ -634,6 +634,51 @@ export async function fetchRiderOnlineStatus(userId: string): Promise<boolean> {
   return data?.is_online ?? false;
 }
 
+// ─── Recent notifications for rider bell ─────────────────────────────────────
+export async function fetchRiderNotifications(riderId: string) {
+  await requireAuth();
+  const supabase = createServerClient();
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(); // last 7 days
+
+  const { data } = await supabase
+    .from("requests")
+    .select("id, order_number, device_model, status_log")
+    .eq("rider_id", riderId)
+    .gte("updated_at", since);
+
+  const RELEVANT = new Set(["pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting", "completed", "cancelled"]);
+  const LABELS: Record<string, string> = {
+    pickup_scheduled:  "รับงานแล้ว",
+    en_route:          "ออกเดินทางแล้ว",
+    inspecting:        "เริ่มตรวจเครื่อง",
+    price_negotiation: "รอลูกค้ายืนยันราคา",
+    contracting:       "กำลังทำสัญญา",
+    completed:         "งานเสร็จสิ้น",
+    cancelled:         "งานถูกยกเลิก",
+  };
+
+  type Notif = { id: string; orderId: string; requestId: string; title: string; body: string; timestamp: string };
+  const notifs: Notif[] = [];
+
+  for (const req of data ?? []) {
+    const logs: { status: string; timestamp: string; note?: string }[] = req.status_log ?? [];
+    for (const log of logs) {
+      if (!RELEVANT.has(log.status)) continue;
+      if (log.timestamp < since) continue;
+      notifs.push({
+        id:        `${req.id}-${log.timestamp}`,
+        requestId: req.id,
+        orderId:   req.order_number,
+        title:     LABELS[log.status] ?? log.status,
+        body:      `${req.order_number} · ${req.device_model}`,
+        timestamp: log.timestamp,
+      });
+    }
+  }
+
+  return notifs.sort((a, b) => b.timestamp.localeCompare(a.timestamp)).slice(0, 30);
+}
+
 // ─── Monthly stats ────────────────────────────────────────────────────────────
 export async function fetchRiderStats(riderId: string) {
   await requireAuth();
