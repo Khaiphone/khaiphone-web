@@ -447,6 +447,7 @@ export default function RiderContractPage() {
     width: "100%", padding: "10px 12px", borderRadius: 10,
     border: `1px solid ${BORDER}`, background: CARD,
     fontSize: 14, color: TEXT, fontFamily: "inherit", outline: "none",
+    boxSizing: "border-box",
   };
 
   const labelSt: React.CSSProperties = {
@@ -536,11 +537,11 @@ export default function RiderContractPage() {
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <label style={labelSt}>วันเดือนปีเกิด</label>
                   <input type="date" value={dob} onChange={e => setDob(e.target.value)} style={inputSt} />
                 </div>
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <label style={labelSt}>วันที่ทำสัญญา</label>
                   <input type="date" value={txDate} onChange={e => setTxDate(e.target.value)} style={inputSt} />
                 </div>
