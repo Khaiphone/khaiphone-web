@@ -158,6 +158,7 @@ export interface AdminRequest {
   assignedToName?: string | null;
   riderId?: string | null;
   riderName?: string | null;
+  distanceKm?: number | null;
 }
 
 export interface AdminNotification {

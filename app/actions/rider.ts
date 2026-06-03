@@ -537,6 +537,7 @@ function mapRow(row: any) {
     assignedTo:    row.assigned_to    ?? null,
     assignedToName: row.assigned_to_name ?? null,
     riderId:       row.rider_id       ?? null,
+    distanceKm:    row.distance_km    ?? null,
   };
 }
 

@@ -174,6 +174,9 @@ export default function RiderHomePage() {
                         <p style={{ margin: 0, fontSize: 13, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {job.appointment.location || "ไม่ระบุที่อยู่"}
                         </p>
+                        {job.distanceKm != null && (
+                          <p style={{ margin: "2px 0 0", fontSize: 11, color: TEXT2 }}>{job.distanceKm} กม.</p>
+                        )}
                       </div>
                       <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: ACCENT, flexShrink: 0, marginLeft: 8 }}>฿{fmt(price)}</p>
                     </div>

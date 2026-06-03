@@ -107,7 +107,7 @@ export default function JobDetailPage() {
   const step    = stepFromStatus(job.status);
   const isCash  = job.payment.method === "cash";
   const price   = job.device.actualPrice ?? job.device.estimatedPrice;
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.appointment.location)}`;
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent("เดอะแพลนท์ วงแหวน-รังสิต อำเภอธัญบุรี ปทุมธานี 12110")}&destination=${encodeURIComponent(job.appointment.location)}`;
 
   async function handleStart() {
     setBusy(true);
@@ -171,6 +171,9 @@ export default function JobDetailPage() {
           <div style={{ padding: "0 16px 14px", display: "flex", gap: 16 }}>
             <Row label="วันที่" value={job.appointment.date} />
             <Row label="เวลา"  value={job.appointment.time}  />
+            {job.distanceKm != null && (
+              <Row label="ระยะทาง" value={`${job.distanceKm} กม.`} />
+            )}
           </div>
         </div>
 

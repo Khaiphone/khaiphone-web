@@ -108,6 +108,7 @@ function mapRow(row: any): AdminRequest {
     assignedToName: row.assigned_to_name ?? null,
     riderId:        row.rider_id         ?? null,
     riderName:      row.rider_name       ?? null,
+    distanceKm:     row.distance_km      ?? null,
   };
 }
 
@@ -259,6 +260,23 @@ export async function assignRequest(id: string, userId: string | null, name: str
   return { success: true as const };
 }
 
+const STORE_ADDRESS = "เดอะแพลนท์ วงแหวน-รังสิต อำเภอธัญบุรี ปทุมธานี 12110";
+
+async function fetchDistanceKm(destination: string): Promise<number | null> {
+  const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+  if (!key || !destination) return null;
+  try {
+    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(STORE_ADDRESS)}&destinations=${encodeURIComponent(destination)}&key=${key}&mode=driving&language=th`;
+    const res  = await fetch(url, { cache: "no-store" });
+    const data = await res.json();
+    const el   = data?.rows?.[0]?.elements?.[0];
+    if (el?.status === "OK" && el?.distance?.value) {
+      return Math.round(el.distance.value / 100) / 10; // meters → km (1 decimal)
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
 // ─── Assign rider to request ──────────────────────────────────────────────────
 export async function assignRider(id: string, riderId: string | null, riderName: string | null) {
   const caller = await requireAuth();
@@ -273,27 +291,36 @@ export async function assignRider(id: string, riderId: string | null, riderName:
   if (callerRole === "staff" && !callerPerms.includes("assign_requests")) {
     return { success: false as const, error: "ไม่มีสิทธิ์มอบหมายงาน" };
   }
-  const { error } = await supabase
+
+  // Fetch address for distance calculation
+  const { data: req } = await supabase
     .from("requests")
-    .update({ rider_id: riderId, rider_name: riderName, updated_at: new Date().toISOString() })
-    .eq("id", id);
+    .select("order_number, device_model, appt_location")
+    .eq("id", id)
+    .single();
+
+  // Calculate distance from store → customer address
+  const distanceKm = riderId ? await fetchDistanceKm(req?.appt_location ?? "") : null;
+
+  const updatePayload: Record<string, unknown> = {
+    rider_id: riderId, rider_name: riderName, updated_at: new Date().toISOString(),
+  };
+  if (distanceKm !== null) updatePayload.distance_km = distanceKm;
+
+  const { error } = await supabase.from("requests").update(updatePayload).eq("id", id);
   if (error) return { success: false as const, error: error.message };
 
   if (riderId) {
-    const { data: req } = await supabase
-      .from("requests")
-      .select("order_number, device_model, appt_location")
-      .eq("id", id)
-      .single();
+    const distText = distanceKm ? ` · ${distanceKm} กม.` : "";
     after(() => sendPushToUser(riderId, {
       title: "งานใหม่มาแล้ว!",
-      body:  `${req?.order_number ?? ""} · ${req?.device_model ?? ""} · ${req?.appt_location ?? ""}`,
+      body:  `${req?.order_number ?? ""} · ${req?.device_model ?? ""}${distText}`,
       url:   `/rider`,
       tag:   `rider-assign-${id}`,
     }).catch(console.error));
   }
 
-  return { success: true as const };
+  return { success: true as const, distanceKm };
 }
 
 // ─── Fetch single request ─────────────────────────────────────────────────────
