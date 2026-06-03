@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
 import { fetchRiderJob, riderConfirmPrice, riderAdjustPrice, riderCustomerAccepted, riderCustomerRejected } from "@/app/actions/rider";
+import { supabase } from "@/lib/supabase";
 import type { AdminRequest } from "@/lib/types/admin";
 
 const BG     = "#0B0B0D";
@@ -37,13 +38,47 @@ export default function PricePage() {
   const [busy, setBusy]       = useState(false);
   const [error, setError]     = useState("");
 
-  useEffect(() => {
+  const loadJob = useCallback(() => {
     fetchRiderJob(id).then(j => {
+      if (!j) return;
       setJob(j);
-      if (j?.status === "price_negotiation") setMode("waiting");
-      if (j?.device.actualPrice) setNewPrice(String(j.device.actualPrice));
+      if (j.device.actualPrice) setNewPrice(String(j.device.actualPrice));
+      // ถ้าลูกค้าตอบรับผ่าน tracking page แล้ว ไปหน้าชำระเงินเลย
+      if (j.status === "contracting") { router.replace(`/rider/job/${id}/payment`); return; }
+      // ถ้าลูกค้าปฏิเสธผ่าน tracking page แล้ว กลับหน้าแรก
+      if (j.status === "cancelled")   { router.replace("/rider"); return; }
+      if (j.status === "price_negotiation") setMode("waiting");
     });
-  }, [id]);
+  }, [id, router]);
+
+  useEffect(() => { loadJob(); }, [loadJob]);
+
+  // Realtime — สำคัญมาก: ถ้าลูกค้าตอบรับผ่าน tracking page ไรเดอร์จะได้รู้ทันที
+  useEffect(() => {
+    const broadcastCh = supabase
+      .channel("request-updates")
+      .on("broadcast", { event: "updated" }, (payload) => {
+        if (payload.payload?.id !== id) return;
+        loadJob();
+      })
+      .subscribe();
+
+    const pgCh = supabase
+      .channel(`rider-price-pg-${id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "requests" },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (payload: any) => { if (payload.new?.id === id) loadJob(); })
+      .subscribe();
+
+    const onVisible = () => { if (document.visibilityState === "visible") loadJob(); };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      supabase.removeChannel(broadcastCh);
+      supabase.removeChannel(pgCh);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [id, loadJob]);
 
   if (!job) return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>

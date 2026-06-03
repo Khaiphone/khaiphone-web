@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Phone, MapPin, Package, Banknote, ArrowUpDown, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { fetchRiderJob, riderStartJob, riderArriveJob, riderNoShow } from "@/app/actions/rider";
+import { supabase } from "@/lib/supabase";
 import type { AdminRequest } from "@/lib/types/admin";
 
 const BG     = "#0B0B0D";
@@ -87,9 +88,38 @@ export default function JobDetailPage() {
   const [busy, setBusy]   = useState(false);
   const [showNoShow, setShowNoShow] = useState(false);
 
-  useEffect(() => {
+  const reload = useCallback(() => {
     fetchRiderJob(id).then(j => { setJob(j); setLoading(false); });
   }, [id]);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  // Realtime — อัปเดตเมื่อ admin หรือ customer เปลี่ยนสถานะ
+  useEffect(() => {
+    const broadcastCh = supabase
+      .channel("request-updates")
+      .on("broadcast", { event: "updated" }, (payload) => {
+        if (payload.payload?.id !== id) return;
+        reload();
+      })
+      .subscribe();
+
+    const pgCh = supabase
+      .channel(`rider-job-pg-${id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "requests" },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (payload: any) => { if (payload.new?.id === id) reload(); })
+      .subscribe();
+
+    const onVisible = () => { if (document.visibilityState === "visible") reload(); };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      supabase.removeChannel(broadcastCh);
+      supabase.removeChannel(pgCh);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [id, reload]);
 
   if (loading) return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
