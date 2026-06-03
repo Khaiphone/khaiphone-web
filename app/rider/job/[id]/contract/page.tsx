@@ -599,7 +599,7 @@ export default function RiderContractPage() {
                   : <p style={{ color: TEXT2, fontSize: 13 }}>แตะเพื่อถ่ายรูป / เลือกรูป</p>
                 }
               </button>
-              <input ref={idFileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }}
+              <input ref={idFileRef} type="file" accept="image/*" style={{ display: "none" }}
                 onChange={handleIdPhoto} />
             </div>
 
