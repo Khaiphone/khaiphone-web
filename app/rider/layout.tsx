@@ -43,6 +43,12 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
     setMeta("apple-mobile-web-app-title", "KP Rider");
     setMeta("theme-color", "#4ADE80");
 
+    // Prevent iOS rubber-band / pull-to-refresh overscroll
+    document.documentElement.style.overscrollBehavior = "none";
+    document.body.style.overscrollBehavior = "none";
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+
     // Rider PWA manifest + apple touch icon
     let manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
     if (!manifestLink) { manifestLink = document.createElement("link"); manifestLink.rel = "manifest"; document.head.appendChild(manifestLink); }
@@ -118,7 +124,7 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
   const isJobPage = /^\/rider\/job\//.test(pathname);
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, color: TEXT, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+    <div style={{ height: "100dvh", background: BG, color: TEXT, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", display: "flex", flexDirection: "column", overflowY: "auto", overscrollBehavior: "none" }}>
 
       {/* Header */}
       {!isJobPage && (
