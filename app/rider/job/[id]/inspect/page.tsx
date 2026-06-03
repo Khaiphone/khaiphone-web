@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Camera, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, Camera } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { fetchRiderJob, riderSaveInspection } from "@/app/actions/rider";
-import type { AdminRequest } from "@/lib/types/admin";
+import type { AdminRequest, InspectionCriterion, FunctionalTest } from "@/lib/types/admin";
 
 const BG     = "#0B0B0D";
 const CARD   = "#1A1A1C";
@@ -16,24 +16,29 @@ const RED    = "#FF453A";
 const TEXT   = "#F2F2F7";
 const TEXT2  = "#8E8E93";
 
-const DEFAULT_CRITERIA = [
-  "หน้าจอ (รอยขีดข่วน / จอแตก)",
-  "กรอบ / ขอบเครื่อง",
-  "ฝาหลัง / เคส",
-  "กล้องหน้า / กล้องหลัง",
-  "ลำโพง / ไมโครโฟน",
-  "ปุ่มกด (Home / Volume / Power)",
-  "ช่องชาร์จ",
-  "Face ID / Touch ID",
-];
+const INSPECT_KEYS = ["body", "screen", "display", "battery", "warranty", "icloud"] as const;
+const INSPECT_LABELS: Record<string, string> = {
+  body:     "สภาพตัวเครื่องภายนอก",
+  screen:   "หน้าจอ",
+  display:  "การแสดงผล",
+  battery:  "แบตเตอรี่",
+  warranty: "การรับประกัน",
+  icloud:   "iCloud",
+};
 
-const FUNCTIONAL_TESTS = [
-  "โทรออก / รับสายได้",
-  "Wi-Fi เชื่อมต่อได้",
-  "Bluetooth เชื่อมต่อได้",
-  "GPS / Location ทำงาน",
-  "กล้องถ่ายรูปได้",
-  "ชาร์จแบตได้",
+const FUNCTIONAL_TEST_DEFAULTS: FunctionalTest[] = [
+  { label: "Face ID / Touch ID",         pass: true },
+  { label: "กล้องหลัง (ถ่ายภาพ/วิดีโอ)", pass: true },
+  { label: "กล้องหน้า (Selfie)",          pass: true },
+  { label: "ลำโพง (Speaker)",             pass: true },
+  { label: "ไมโครโฟน",                   pass: true },
+  { label: "Wi-Fi",                       pass: true },
+  { label: "Cellular / SIM",             pass: true },
+  { label: "Bluetooth",                  pass: true },
+  { label: "GPS",                        pass: true },
+  { label: "Haptic / Vibration",         pass: true },
+  { label: "ชาร์จพอร์ต",                 pass: true },
+  { label: "ปุ่มด้านข้าง / Volume",       pass: true },
 ];
 
 async function uploadPhoto(file: File, path: string): Promise<string> {
@@ -45,7 +50,9 @@ async function uploadPhoto(file: File, path: string): Promise<string> {
   return publicUrl;
 }
 
-function PhotoBox({ label, url, onCapture, required }: { label: string; url?: string; onCapture: (file: File) => void; required?: boolean }) {
+function PhotoBox({ label, url, onCapture, required }: {
+  label: string; url?: string; onCapture: (file: File) => void; required?: boolean;
+}) {
   const ref = useRef<HTMLInputElement>(null);
   return (
     <div>
@@ -54,7 +61,7 @@ function PhotoBox({ label, url, onCapture, required }: { label: string; url?: st
       </p>
       <button onClick={() => ref.current?.click()} style={{
         width: "100%", aspectRatio: "16/9", background: CARD, border: `1.5px dashed ${url ? ACCENT : BORDER}`,
-        borderRadius: 12, cursor: "pointer", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", position: "relative",
+        borderRadius: 12, cursor: "pointer", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center",
       }}>
         {url ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -72,20 +79,57 @@ function PhotoBox({ label, url, onCapture, required }: { label: string; url?: st
   );
 }
 
-function CheckRow({ label, pass, onToggle }: { label: string; pass: boolean | null; onToggle: (v: boolean) => void }) {
+function CompareRow({ label, stated, actual, onActualChange }: {
+  label: string; stated: string; actual: string; onActualChange: (v: string) => void;
+}) {
+  const pass = !stated || actual.trim().toLowerCase() === stated.trim().toLowerCase();
+  return (
+    <div style={{ padding: "14px 16px", borderBottom: `1px solid ${BORDER}` }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <span style={{ fontSize: 14, fontWeight: 600, color: TEXT }}>{label}</span>
+        {actual && (
+          <span style={{
+            fontSize: 11, padding: "2px 8px", borderRadius: 6, fontWeight: 600,
+            background: pass ? "rgba(48,209,88,0.15)" : "rgba(255,69,58,0.15)",
+            color: pass ? GREEN : RED,
+          }}>
+            {pass ? "ตรงกัน" : "ไม่ตรง"}
+          </span>
+        )}
+      </div>
+      {stated && (
+        <p style={{ margin: "0 0 8px", fontSize: 12, color: TEXT2 }}>
+          ลูกค้าแจ้ง: <span style={{ color: TEXT, fontWeight: 500 }}>{stated}</span>
+        </p>
+      )}
+      <input
+        value={actual}
+        onChange={e => onActualChange(e.target.value)}
+        placeholder={stated || "กรอกสภาพจริง"}
+        style={{
+          width: "100%", background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`,
+          borderRadius: 8, color: TEXT, fontSize: 14, fontFamily: "inherit", outline: "none",
+          padding: "8px 10px", boxSizing: "border-box",
+        }}
+      />
+    </div>
+  );
+}
+
+function CheckRow({ label, pass, onToggle }: { label: string; pass: boolean; onToggle: (v: boolean) => void }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", borderBottom: `1px solid ${BORDER}` }}>
       <span style={{ fontSize: 14, color: TEXT, flex: 1 }}>{label}</span>
       <div style={{ display: "flex", gap: 8 }}>
         <button onClick={() => onToggle(true)} style={{
           padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit",
-          background: pass === true ? "rgba(48,209,88,0.2)" : CARD,
-          color: pass === true ? GREEN : TEXT2, fontWeight: 600, fontSize: 13,
+          background: pass ? "rgba(48,209,88,0.2)" : CARD,
+          color: pass ? GREEN : TEXT2, fontWeight: 600, fontSize: 13,
         }}>ปกติ</button>
         <button onClick={() => onToggle(false)} style={{
           padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit",
-          background: pass === false ? "rgba(255,69,58,0.2)" : CARD,
-          color: pass === false ? RED : TEXT2, fontWeight: 600, fontSize: 13,
+          background: !pass ? "rgba(255,69,58,0.2)" : CARD,
+          color: !pass ? RED : TEXT2, fontWeight: 600, fontSize: 13,
         }}>มีปัญหา</button>
       </div>
     </div>
@@ -98,39 +142,47 @@ export default function InspectPage() {
   const [job, setJob] = useState<AdminRequest | null>(null);
 
   // Photos
-  const [idCardPhotoUrl, setIdCardPhotoUrl]     = useState<string>();
+  const [idCardPhotoUrl,   setIdCardPhotoUrl]   = useState<string>();
   const [deliveryPhotoUrl, setDeliveryPhotoUrl] = useState<string>();
-  const [frontPhotoUrl, setFrontPhotoUrl]       = useState<string>();
-  const [backPhotoUrl, setBackPhotoUrl]         = useState<string>();
-  const [sidePhotoUrl, setSidePhotoUrl]         = useState<string>();
-  const [extraPhotoUrl, setExtraPhotoUrl]       = useState<string>();
+  const [frontPhotoUrl,    setFrontPhotoUrl]    = useState<string>();
+  const [backPhotoUrl,     setBackPhotoUrl]     = useState<string>();
+  const [sidePhotoUrl,     setSidePhotoUrl]     = useState<string>();
+  const [extraPhotoUrl,    setExtraPhotoUrl]    = useState<string>();
   const [uploading, setUploading] = useState(false);
 
   // Device info
-  const [imei, setImei]             = useState("");
-  const [serial, setSerial]         = useState("");
-  const [battery, setBattery]       = useState("");
+  const [imei,          setImei]     = useState("");
+  const [serial,        setSerial]   = useState("");
+  const [battery,       setBattery]  = useState("");
   const [warrantyExpiry, setWarranty] = useState("");
 
-  // Checklists
-  const [criteria, setCriteria]     = useState<Record<string, boolean | null>>(
-    Object.fromEntries(DEFAULT_CRITERIA.map(k => [k, null]))
-  );
-  const [functional, setFunctional] = useState<Record<string, boolean | null>>(
-    Object.fromEntries(FUNCTIONAL_TESTS.map(k => [k, null]))
-  );
+  // Condition comparison (stated vs actual)
+  const [criteria, setCriteria] = useState<Record<string, { stated: string; actual: string }>>({});
+
+  // Functional tests
+  const [functional, setFunctional] = useState<FunctionalTest[]>(FUNCTIONAL_TEST_DEFAULTS.map(t => ({ ...t })));
 
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState("");
 
-  useEffect(() => { fetchRiderJob(id).then(setJob); }, [id]);
+  useEffect(() => {
+    fetchRiderJob(id).then(j => {
+      setJob(j);
+      if (j) {
+        const sels = j.device.selections ?? {};
+        const init: Record<string, { stated: string; actual: string }> = {};
+        INSPECT_KEYS.forEach(k => {
+          if (sels[k]) init[k] = { stated: sels[k], actual: sels[k] };
+        });
+        setCriteria(init);
+      }
+    });
+  }, [id]);
 
   async function handlePhoto(type: "id" | "delivery" | "front" | "back" | "side" | "extra", file: File) {
     setUploading(true);
     try {
-      const ts   = Date.now();
-      const path = `rider/${id}/${type}-${ts}.jpg`;
-      const url  = await uploadPhoto(file, path);
+      const url = await uploadPhoto(file, `rider/${id}/${type}-${Date.now()}.jpg`);
       if (type === "id")       setIdCardPhotoUrl(url);
       if (type === "delivery") setDeliveryPhotoUrl(url);
       if (type === "front")    setFrontPhotoUrl(url);
@@ -145,28 +197,30 @@ export default function InspectPage() {
   }
 
   async function handleSave() {
-    if (!idCardPhotoUrl)    { setError("กรุณาถ่ายรูปบัตรปชช + เครื่อง"); return; }
-    if (!deliveryPhotoUrl)  { setError("กรุณาถ่ายรูปส่งมอบเครื่อง"); return; }
-    if (!frontPhotoUrl)     { setError("กรุณาถ่ายรูปหน้าจอเครื่อง"); return; }
-    if (!backPhotoUrl)      { setError("กรุณาถ่ายรูปด้านหลังเครื่อง"); return; }
+    if (!idCardPhotoUrl)   { setError("กรุณาถ่ายรูปบัตรปชช + เครื่อง"); return; }
+    if (!deliveryPhotoUrl) { setError("กรุณาถ่ายรูปส่งมอบเครื่อง"); return; }
+    if (!frontPhotoUrl)    { setError("กรุณาถ่ายรูปหน้าจอเครื่อง"); return; }
+    if (!backPhotoUrl)     { setError("กรุณาถ่ายรูปด้านหลังเครื่อง"); return; }
 
     setSaving(true);
     setError("");
 
-    const criteriaArr = DEFAULT_CRITERIA.map(label => ({
-      label, stated: "", actual: "", pass: criteria[label] ?? true,
-    }));
-    const functionalArr = FUNCTIONAL_TESTS.map(label => ({
-      label, pass: functional[label] ?? true,
-    }));
+    const criteriaArr: InspectionCriterion[] = INSPECT_KEYS
+      .filter(k => criteria[k])
+      .map(k => ({
+        label:  INSPECT_LABELS[k],
+        stated: criteria[k].stated,
+        actual: criteria[k].actual,
+        pass:   !criteria[k].stated || criteria[k].actual.trim().toLowerCase() === criteria[k].stated.trim().toLowerCase(),
+      }));
 
     const result = await riderSaveInspection(id, {
       imei,
       serial,
-      batteryHealth: battery ? parseInt(battery) : undefined,
+      batteryHealth:  battery ? parseInt(battery) : undefined,
       warrantyExpiry: warrantyExpiry || undefined,
-      criteria: criteriaArr,
-      functionalTests: functionalArr,
+      criteria:       criteriaArr,
+      functionalTests: functional,
       photos: [idCardPhotoUrl, deliveryPhotoUrl, frontPhotoUrl, backPhotoUrl, sidePhotoUrl, extraPhotoUrl].filter(Boolean) as string[],
       idCardPhotoUrl,
       deliveryPhotoUrl,
@@ -175,6 +229,15 @@ export default function InspectPage() {
     if (!result.success) { setError(result.error ?? "เกิดข้อผิดพลาด"); setSaving(false); return; }
     router.push(`/rider/job/${id}/price`);
   }
+
+  if (!job) return (
+    <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ width: 32, height: 32, borderRadius: "50%", border: `3px solid ${BORDER}`, borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+
+  const hasCriteria = INSPECT_KEYS.some(k => criteria[k]);
 
   return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", flexDirection: "column" }}>
@@ -186,7 +249,7 @@ export default function InspectPage() {
         </button>
         <div>
           <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: TEXT }}>ตรวจเครื่อง</p>
-          <p style={{ margin: 0, fontSize: 12, color: TEXT2 }}>{job?.device.model} {job?.device.storage}</p>
+          <p style={{ margin: 0, fontSize: 12, color: TEXT2 }}>{job.device.model} {job.device.storage}</p>
         </div>
       </div>
 
@@ -196,10 +259,10 @@ export default function InspectPage() {
         <section>
           <p style={{ margin: "0 0 14px", fontSize: 13, fontWeight: 700, color: TEXT, textTransform: "uppercase", letterSpacing: 0.5 }}>รูปสภาพเครื่อง</p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <PhotoBox label="หน้าจอ" url={frontPhotoUrl} onCapture={f => handlePhoto("front", f)} required />
-            <PhotoBox label="ด้านหลัง" url={backPhotoUrl} onCapture={f => handlePhoto("back", f)} required />
-            <PhotoBox label="ด้านข้าง / รอยต่างๆ" url={sidePhotoUrl} onCapture={f => handlePhoto("side", f)} />
-            <PhotoBox label="อื่นๆ" url={extraPhotoUrl} onCapture={f => handlePhoto("extra", f)} />
+            <PhotoBox label="หน้าจอ"            url={frontPhotoUrl}  onCapture={f => handlePhoto("front", f)}  required />
+            <PhotoBox label="ด้านหลัง"           url={backPhotoUrl}   onCapture={f => handlePhoto("back", f)}   required />
+            <PhotoBox label="ด้านข้าง / รอยต่างๆ" url={sidePhotoUrl}   onCapture={f => handlePhoto("side", f)}  />
+            <PhotoBox label="อื่นๆ"              url={extraPhotoUrl}  onCapture={f => handlePhoto("extra", f)} />
           </div>
         </section>
 
@@ -207,8 +270,8 @@ export default function InspectPage() {
         <section>
           <p style={{ margin: "0 0 14px", fontSize: 13, fontWeight: 700, color: TEXT, textTransform: "uppercase", letterSpacing: 0.5 }}>รูปถ่ายหลักฐาน</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <PhotoBox label="บัตรประชาชนคู่กับเครื่องที่ขาย" url={idCardPhotoUrl} onCapture={f => handlePhoto("id", f)} required />
-            <PhotoBox label="ส่งมอบเครื่อง (ลูกค้าถือเครื่อง)" url={deliveryPhotoUrl} onCapture={f => handlePhoto("delivery", f)} required />
+            <PhotoBox label="บัตรประชาชนคู่กับเครื่องที่ขาย"    url={idCardPhotoUrl}   onCapture={f => handlePhoto("id", f)}       required />
+            <PhotoBox label="ส่งมอบเครื่อง (ลูกค้าถือเครื่อง)"  url={deliveryPhotoUrl} onCapture={f => handlePhoto("delivery", f)} required />
           </div>
         </section>
 
@@ -235,22 +298,39 @@ export default function InspectPage() {
           </div>
         </section>
 
-        {/* Condition checklist */}
+        {/* Condition comparison */}
         <section>
           <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: TEXT, textTransform: "uppercase", letterSpacing: 0.5 }}>สภาพเครื่อง</p>
-          <div style={{ background: CARD, borderRadius: 14, padding: "0 16px" }}>
-            {DEFAULT_CRITERIA.map(label => (
-              <CheckRow key={label} label={label} pass={criteria[label]} onToggle={v => setCriteria(p => ({ ...p, [label]: v }))} />
-            ))}
+          <p style={{ margin: "0 0 12px", fontSize: 12, color: TEXT2 }}>เปรียบเทียบสิ่งที่ลูกค้าแจ้งกับสภาพจริง</p>
+          <div style={{ background: CARD, borderRadius: 14, overflow: "hidden" }}>
+            {hasCriteria ? (
+              INSPECT_KEYS.filter(k => criteria[k]).map(k => (
+                <CompareRow
+                  key={k}
+                  label={INSPECT_LABELS[k]}
+                  stated={criteria[k].stated}
+                  actual={criteria[k].actual}
+                  onActualChange={v => setCriteria(p => ({ ...p, [k]: { ...p[k], actual: v } }))}
+                />
+              ))
+            ) : (
+              <p style={{ margin: 0, padding: "16px", fontSize: 13, color: TEXT2 }}>ลูกค้าไม่ได้ระบุสภาพเครื่องไว้</p>
+            )}
           </div>
         </section>
 
         {/* Functional tests */}
         <section>
-          <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: TEXT, textTransform: "uppercase", letterSpacing: 0.5 }}>ทดสอบการทำงาน</p>
+          <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: TEXT, textTransform: "uppercase", letterSpacing: 0.5 }}>ฟังก์ชันการใช้งาน</p>
+          <p style={{ margin: "0 0 12px", fontSize: 12, color: TEXT2 }}>กดที่แต่ละรายการหากมีปัญหา</p>
           <div style={{ background: CARD, borderRadius: 14, padding: "0 16px" }}>
-            {FUNCTIONAL_TESTS.map(label => (
-              <CheckRow key={label} label={label} pass={functional[label]} onToggle={v => setFunctional(p => ({ ...p, [label]: v }))} />
+            {functional.map((test, i) => (
+              <CheckRow
+                key={test.label}
+                label={test.label}
+                pass={test.pass}
+                onToggle={v => setFunctional(prev => prev.map((t, j) => j === i ? { ...t, pass: v } : t))}
+              />
             ))}
           </div>
         </section>

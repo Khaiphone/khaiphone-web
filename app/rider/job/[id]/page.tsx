@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import { ArrowLeft, Phone, MapPin, Package, Banknote, ArrowUpDown, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { fetchRiderJob, riderStartJob, riderArriveJob, riderNoShow } from "@/app/actions/rider";
+import { fetchRiderJob, fetchRiderJobs, riderAcceptJob, riderStartJob, riderArriveJob, riderNoShow } from "@/app/actions/rider";
 import { supabase } from "@/lib/supabase";
 import type { AdminRequest } from "@/lib/types/admin";
 
@@ -49,7 +49,8 @@ const TEXT2  = "#8E8E93";
 const STEPS = ["รับงาน", "เดินทาง", "ตรวจเครื่อง", "ราคา/สัญญา", "จบ"];
 
 function stepFromStatus(status: string) {
-  if (status === "confirmed" || status === "pickup_scheduled") return 0;
+  if (status === "confirmed")         return 0;
+  if (status === "pickup_scheduled")  return 1;
   if (status === "en_route")          return 1;
   if (status === "inspecting")        return 2;
   if (status === "price_negotiation") return 3;
@@ -112,13 +113,28 @@ function BigBtn({ label, color = ACCENT, textColor = "#000", onClick, loading, o
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router  = useRouter();
-  const [job, setJob]     = useState<AdminRequest | null>(null);
+  const [job, setJob]         = useState<AdminRequest | null>(null);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy]   = useState(false);
+  const [busy, setBusy]       = useState(false);
   const [showNoShow, setShowNoShow] = useState(false);
+  const [blockingJob, setBlockingJob] = useState<string | null>(null); // order_number of blocking active job
+  const [startError, setStartError]   = useState("");
 
-  const reload = useCallback(() => {
-    fetchRiderJob(id).then(j => { setJob(j); setLoading(false); });
+  const reload = useCallback(async () => {
+    const j = await fetchRiderJob(id);
+    setJob(j);
+    setLoading(false);
+
+    // Check for a blocking active job when status is pickup_scheduled
+    if (j?.status === "pickup_scheduled" && j.riderId) {
+      const active = await fetchRiderJobs(j.riderId);
+      const blocker = active.find(a =>
+        a.id !== id && ["en_route", "inspecting", "price_negotiation", "contracting"].includes(a.status)
+      );
+      setBlockingJob(blocker?.orderNumber ?? null);
+    } else {
+      setBlockingJob(null);
+    }
   }, [id]);
 
   useEffect(() => { reload(); }, [reload]);
@@ -169,9 +185,23 @@ export default function JobDetailPage() {
   const deviceImg = getDeviceImage(job.device.model);
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent("เดอะแพลนท์ วงแหวน-รังสิต อำเภอธัญบุรี ปทุมธานี 12110")}&destination=${encodeURIComponent(job.appointment.location)}`;
 
+  async function handleAccept() {
+    setBusy(true);
+    await riderAcceptJob(id);
+    const updated = await fetchRiderJob(id);
+    setJob(updated);
+    setBusy(false);
+  }
+
   async function handleStart() {
     setBusy(true);
-    await riderStartJob(id);
+    setStartError("");
+    const result = await riderStartJob(id);
+    if (!result.success) {
+      setStartError(result.error ?? "ไม่สามารถออกเดินทางได้");
+      setBusy(false);
+      return;
+    }
     const updated = await fetchRiderJob(id);
     setJob(updated);
     setBusy(false);
@@ -297,8 +327,26 @@ export default function JobDetailPage() {
       {/* Action buttons */}
       <div style={{ padding: "16px 20px", paddingBottom: "calc(16px + env(safe-area-inset-bottom))", background: BG, borderTop: `1px solid ${BORDER}`, display: "flex", flexDirection: "column", gap: 10 }}>
 
-        {job.status === "confirmed" || job.status === "pickup_scheduled" ? (
+        {job.status === "confirmed" ? (
           <>
+            <BigBtn label="รับงานนี้ ✓" onClick={handleAccept} loading={busy} />
+            <BigBtn label="ปฏิเสธงาน" color={RED} textColor="#fff" onClick={() => setShowNoShow(true)} outline />
+          </>
+        ) : job.status === "pickup_scheduled" ? (
+          <>
+            {blockingJob ? (
+              <div style={{ background: "rgba(255,69,58,0.08)", border: "1px solid rgba(255,69,58,0.25)", borderRadius: 12, padding: "12px 14px" }}>
+                <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: RED }}>ยังออกเดินทางไม่ได้</p>
+                <p style={{ margin: 0, fontSize: 12, color: TEXT2 }}>ต้องเสร็จงาน <span style={{ color: TEXT, fontWeight: 600 }}>{blockingJob}</span> ก่อน</p>
+              </div>
+            ) : (
+              <div style={{ background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.2)", borderRadius: 12, padding: "10px 14px" }}>
+                <p style={{ margin: 0, fontSize: 13, color: ACCENT, fontWeight: 600 }}>✓ รับงานแล้ว — กดเมื่อพร้อมออกเดินทาง</p>
+              </div>
+            )}
+            {startError && (
+              <p style={{ margin: 0, fontSize: 13, color: RED }}>{startError}</p>
+            )}
             <BigBtn label="ออกเดินทาง →" onClick={handleStart} loading={busy} />
             <BigBtn label="ลูกค้าไม่อยู่ / ยกเลิก" color={RED} textColor="#fff" onClick={() => setShowNoShow(true)} outline />
           </>

@@ -24,6 +24,7 @@ const TEXT   = "#F2F2F7";
 const TEXT2  = "#8E8E93";
 
 const STATUS_LABEL: Record<string, string> = {
+  pickup_scheduled:  "รับงานแล้ว — รอออกเดินทาง",
   en_route:          "กำลังเดินทาง",
   inspecting:        "กำลังตรวจเครื่อง",
   price_negotiation: "รอยืนยันราคา",
@@ -78,11 +79,10 @@ export default function RiderHomePage() {
     setAccepting(jobId);
     const res = await riderAcceptJob(jobId);
     if (res.success) {
-      // Move from pending to active
       const job = pendingJobs.find(j => j.id === jobId);
       if (job) {
         setPendingJobs(prev => prev.filter(j => j.id !== jobId));
-        setActiveJobs(prev => [{ ...job, status: "en_route" }, ...prev]);
+        setActiveJobs(prev => [{ ...job, status: "pickup_scheduled" }, ...prev]);
       }
     }
     setAccepting(null);

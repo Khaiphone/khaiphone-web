@@ -829,7 +829,11 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                   </span>
                 )}
               </div>
-              {canAssign ? (
+              {(request.status === "new" || request.status === "pending") ? (
+                <p style={{ margin: 0, fontSize: 13, color: "#F59E0B" }}>
+                  ⚠️ ต้องยืนยันนัดหมายก่อนมอบหมายไรเดอร์
+                </p>
+              ) : canAssign ? (
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   <select
                     value={riderDraft}

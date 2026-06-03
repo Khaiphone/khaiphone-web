@@ -80,7 +80,7 @@ async function autoCreateStock(requestId: string) {
   });
 }
 
-// ─── Fetch pending jobs (assigned by admin, awaiting rider acceptance) ────────
+// ─── Fetch pending jobs (assigned by admin, not yet accepted by rider) ────────
 export async function fetchPendingRiderJobs(riderId: string): Promise<AdminRequest[]> {
   await requireAuth();
   const supabase = createServerClient();
@@ -88,12 +88,12 @@ export async function fetchPendingRiderJobs(riderId: string): Promise<AdminReque
     .from("requests")
     .select("*")
     .eq("rider_id", riderId)
-    .in("status", ["confirmed", "pickup_scheduled"])
+    .in("status", ["confirmed"])
     .order("appt_date", { ascending: true });
   return (data ?? []).map(mapRow);
 }
 
-// ─── Fetch active jobs (rider already en_route or further) ───────────────────
+// ─── Fetch active jobs (accepted or en_route or further) ─────────────────────
 export async function fetchRiderJobs(riderId: string): Promise<AdminRequest[]> {
   await requireAuth();
   const supabase = createServerClient();
@@ -101,7 +101,7 @@ export async function fetchRiderJobs(riderId: string): Promise<AdminRequest[]> {
     .from("requests")
     .select("*")
     .eq("rider_id", riderId)
-    .in("status", ["en_route", "inspecting", "price_negotiation", "contracting"])
+    .in("status", ["pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting"])
     .order("appt_date", { ascending: true });
   if (error) { console.error("fetchRiderJobs:", error); return []; }
   return (data ?? []).map(mapRow);
@@ -133,7 +133,7 @@ export async function fetchRiderHistory(riderId: string, months = 3): Promise<Ad
   return (data ?? []).map(mapRow);
 }
 
-// ─── Accept job (confirmed → en_route) ───────────────────────────────────────
+// ─── Accept job (confirmed → pickup_scheduled) ────────────────────────────────
 export async function riderAcceptJob(id: string) {
   const user = await requireAuth();
   const supabase = createServerClient();
@@ -144,7 +144,56 @@ export async function riderAcceptJob(id: string) {
 
   const newLog = [
     ...(req?.status_log ?? []),
-    { status: "en_route", timestamp: now, note: "ไรเดอร์รับงานและออกเดินทางแล้ว" },
+    { status: "pickup_scheduled", timestamp: now, note: "ไรเดอร์รับงานแล้ว รอออกเดินทาง" },
+  ];
+
+  const { error } = await supabase
+    .from("requests")
+    .update({ status: "pickup_scheduled", status_log: newLog, updated_at: now })
+    .eq("id", id);
+  if (error) return { success: false as const, error: error.message };
+
+  after(async () => {
+    await broadcastRequestUpdate(id);
+    await sendPushToOwners({
+      title: `ไรเดอร์รับงาน — ${req?.order_number ?? ""}`,
+      body: `${req?.device_model ?? ""} · รับงานแล้ว รอออกเดินทาง`,
+      url: `/admin/requests/${id}`,
+      tag: `accept-${id}`,
+    }).catch(console.error);
+  });
+
+  return { success: true as const };
+}
+
+// ─── Start job (pickup_scheduled → en_route) ──────────────────────────────────
+export async function riderStartJob(id: string) {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+  const now = new Date().toISOString();
+
+  const { data: req } = await supabase
+    .from("requests").select("status_log, order_number, device_model, rider_id").eq("id", id).single();
+
+  // Block if rider already has an active job (en_route or further)
+  const { data: activeJobs } = await supabase
+    .from("requests")
+    .select("order_number")
+    .eq("rider_id", req?.rider_id ?? user.id)
+    .in("status", ["en_route", "inspecting", "price_negotiation", "contracting"])
+    .neq("id", id);
+
+  if (activeJobs && activeJobs.length > 0) {
+    return {
+      success: false as const,
+      error: `ต้องเสร็จงาน ${activeJobs[0].order_number} ก่อนออกเดินทางงานใหม่`,
+      blockedBy: activeJobs[0].order_number,
+    };
+  }
+
+  const newLog = [
+    ...(req?.status_log ?? []),
+    { status: "en_route", timestamp: now, note: "ไรเดอร์ออกเดินทางแล้ว" },
   ];
 
   const { error } = await supabase
@@ -156,7 +205,7 @@ export async function riderAcceptJob(id: string) {
   after(async () => {
     await broadcastRequestUpdate(id);
     await sendPushToOwners({
-      title: `ไรเดอร์รับงาน — ${req?.order_number ?? ""}`,
+      title: `ไรเดอร์ออกเดินทาง — ${req?.order_number ?? ""}`,
       body: `${req?.device_model ?? ""} · กำลังเดินทางไปหาลูกค้า`,
       url: `/admin/requests/${id}`,
       tag: `en-route-${id}`,
@@ -164,14 +213,6 @@ export async function riderAcceptJob(id: string) {
   });
 
   return { success: true as const };
-}
-
-// ─── Start job (en_route) ─────────────────────────────────────────────────────
-export async function riderStartJob(id: string) {
-  const user = await requireAuth();
-  const result = await updateRiderStatus(id, "en_route", "ไรเดอร์ออกเดินทางแล้ว", user.id);
-  if (result.success) after(() => broadcastRequestUpdate(id));
-  return result;
 }
 
 // ─── Arrive at customer (inspecting) ─────────────────────────────────────────

@@ -295,9 +295,13 @@ export async function assignRider(id: string, riderId: string | null, riderName:
   // Fetch address for distance calculation
   const { data: req } = await supabase
     .from("requests")
-    .select("order_number, device_model, appt_location")
+    .select("order_number, device_model, appt_location, status")
     .eq("id", id)
     .single();
+
+  if (riderId && (req?.status === "new" || req?.status === "pending")) {
+    return { success: false as const, error: "ต้องยืนยันนัดหมายก่อนมอบหมายไรเดอร์" };
+  }
 
   // Calculate distance from store → customer address
   const distanceKm = riderId ? await fetchDistanceKm(req?.appt_location ?? "") : null;
