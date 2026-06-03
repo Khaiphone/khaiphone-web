@@ -4,6 +4,7 @@ export type RequestStatus =
   | "inspecting"
   | "confirmed"
   | "pickup_scheduled"
+  | "en_route"
   | "price_negotiation"
   | "contracting"
   | "completed"
@@ -13,9 +14,10 @@ export type RequestStatus =
 export const STATUS_LABELS: Record<RequestStatus, string> = {
   new:               "คำขอใหม่",
   pending:           "รอตรวจสอบ",
-  inspecting:        "ติดต่อกลับแล้ว",
+  inspecting:        "กำลังตรวจเครื่อง",
   confirmed:         "ยืนยันนัดหมาย",
   pickup_scheduled:  "นัดรับเครื่อง",
+  en_route:          "ไรเดอร์กำลังเดินทาง",
   price_negotiation: "รอยืนยันราคา",
   contracting:       "กำลังทำสัญญา",
   completed:         "เสร็จสิ้น",
@@ -29,6 +31,7 @@ export const STATUS_COLORS: Record<RequestStatus, { bg: string; text: string; bo
   inspecting:        { bg: "rgba(249,115,22,0.15)",  text: "#F97316", border: "rgba(249,115,22,0.3)"  },
   confirmed:         { bg: "rgba(139,92,246,0.15)",  text: "#8B5CF6", border: "rgba(139,92,246,0.3)"  },
   pickup_scheduled:  { bg: "rgba(6,182,212,0.15)",   text: "#06B6D4", border: "rgba(6,182,212,0.3)"   },
+  en_route:          { bg: "rgba(234,179,8,0.15)",   text: "#EAB308", border: "rgba(234,179,8,0.3)"   },
   price_negotiation: { bg: "rgba(245,158,11,0.15)",  text: "#F59E0B", border: "rgba(245,158,11,0.3)"  },
   contracting:       { bg: "rgba(79,70,229,0.15)",   text: "#4F46E5", border: "rgba(79,70,229,0.3)"   },
   completed:         { bg: "rgba(16,185,129,0.15)",  text: "#10B981", border: "rgba(16,185,129,0.3)"  },

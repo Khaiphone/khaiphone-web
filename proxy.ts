@@ -26,6 +26,7 @@ const SUBDOMAIN_MAP: Record<string, string> = {
   admin:   "/admin",
   finance: "/finance",
   stock:   "/stock",
+  rider:   "/rider",
 };
 
 export function proxy(req: NextRequest) {

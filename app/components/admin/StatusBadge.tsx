@@ -11,6 +11,7 @@ const STATUS_CONFIG: Record<RequestStatus, { label: string; color: string; bg: s
   cancelled:         { label: "ยกเลิกนัดหมาย",     color: "#991B1B", bg: "#FEE2E2", dot: "#EF4444" },
   rejected:          { label: "ไม่เข้าเงื่อนไข",   color: "#374151", bg: "#F3F4F6", dot: "#6B7280" },
   pickup_scheduled:  { label: "นัดรับเครื่อง",       color: "#0E7490", bg: "#CFFAFE", dot: "#06B6D4" },
+  en_route:          { label: "กำลังเดินทาง",         color: "#854D0E", bg: "#FEF9C3", dot: "#EAB308" },
 };
 
 export default function StatusBadge({
