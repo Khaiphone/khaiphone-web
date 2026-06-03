@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { MapPin, ChevronRight, Banknote, ArrowUpDown, Package, Wifi, WifiOff, CheckCircle2 } from "lucide-react";
+import { MapPin, ChevronRight, Banknote, ArrowUpDown, Package, Wifi, WifiOff, CheckCircle2, Navigation } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
   fetchPendingRiderJobs,
@@ -178,6 +178,25 @@ export default function RiderHomePage() {
                       <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: ACCENT, flexShrink: 0, marginLeft: 8 }}>฿{fmt(price)}</p>
                     </div>
                   </div>
+
+                  {/* Navigate button */}
+                  {job.appointment.location && (
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(job.appointment.location)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={e => e.stopPropagation()}
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                        padding: "10px 0", borderRadius: 10,
+                        background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.2)",
+                        textDecoration: "none", color: ACCENT, fontSize: 13, fontWeight: 600,
+                      }}
+                    >
+                      <Navigation size={14} />
+                      นำทาง
+                    </a>
+                  )}
 
                   {/* Device */}
                   <div style={{ display: "flex", alignItems: "center", gap: 8, background: CARD2, borderRadius: 10, padding: "8px 12px" }}>
