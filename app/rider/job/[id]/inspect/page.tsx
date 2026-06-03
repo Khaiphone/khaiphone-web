@@ -19,6 +19,15 @@ const INSPECT_LABELS: Record<string, string> = {
   icloud:   "iCloud",
 };
 
+const PHOTO_SLOTS = [
+  { key: "top",    label: "ด้านบน" },
+  { key: "bottom", label: "ด้านล่าง" },
+  { key: "right",  label: "ด้านขวา" },
+  { key: "left",   label: "ด้านซ้าย" },
+  { key: "back",   label: "ด้านหลัง" },
+  { key: "screen", label: "หน้าจอ" },
+] as const;
+
 const FUNCTIONAL_TEST_DEFAULTS: FunctionalTest[] = [
   { label: "Face ID / Touch ID",         pass: true },
   { label: "กล้องหลัง (ถ่ายภาพ/วิดีโอ)", pass: true },
@@ -45,28 +54,26 @@ async function uploadPhoto(file: File, path: string): Promise<string> {
 
 type IC = { CARD: string; CARD2: string; BORDER: string; ACCENT: string; GREEN: string; RED: string; TEXT: string; TEXT2: string };
 
-function PhotoBox({ label, url, onCapture, required, c }: {
-  label: string; url?: string; onCapture: (file: File) => void; required?: boolean; c: IC;
+function SmallPhotoBox({ slotKey, label, url, onCapture, c }: {
+  slotKey: string; label: string; url?: string; onCapture: (file: File) => void; c: IC;
 }) {
-  const ref = useRef<HTMLInputElement>(null);
+  const ref = useRef<HTMLInputElement>(null!);
   return (
     <div>
-      <p style={{ margin: "0 0 8px", fontSize: 13, color: c.TEXT2 }}>
-        {label}{required && <span style={{ color: c.RED }}> *</span>}
-      </p>
       <button onClick={() => ref.current?.click()} style={{
-        width: "100%", aspectRatio: "4/3", background: c.CARD, border: `1.5px dashed ${url ? c.ACCENT : c.BORDER}`,
-        borderRadius: 12, cursor: "pointer", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center",
+        width: "100%", aspectRatio: "3/4", background: c.CARD,
+        border: `1.5px solid ${url ? c.ACCENT : c.BORDER}`,
+        borderRadius: 10, cursor: "pointer", overflow: "hidden", padding: 0,
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4,
       }}>
-        {url ? (
+        {url
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt={label} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-            <Camera size={28} color={c.TEXT2} />
-            <span style={{ fontSize: 12, color: c.TEXT2 }}>แตะเพื่อถ่ายรูป</span>
-          </div>
-        )}
+          ? <img src={url} alt={label} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          : <>
+              <Camera size={18} color={c.TEXT2} />
+              <span style={{ fontSize: 9, color: c.TEXT2, textAlign: "center", lineHeight: 1.3, padding: "0 4px" }}>{label}</span>
+            </>
+        }
       </button>
       <input ref={ref} type="file" accept="image/*" capture="environment" style={{ display: "none" }}
         onChange={e => { const f = e.target.files?.[0]; if (f) onCapture(f); }} />
@@ -139,10 +146,9 @@ export default function InspectPage() {
 
   const [job, setJob] = useState<AdminRequest | null>(null);
 
-  const [idCardPhotoUrl,   setIdCardPhotoUrl]   = useState<string>();
-  const [deliveryPhotoUrl, setDeliveryPhotoUrl] = useState<string>();
-  const [devicePhotos,     setDevicePhotos]     = useState<string[]>([]);
-  const deviceInputRef = useRef<HTMLInputElement>(null!);
+  const [slotPhotos,   setSlotPhotos]   = useState<Partial<Record<string, string>>>({});
+  const [defectPhotos, setDefectPhotos] = useState<string[]>([]);
+  const defectRef = useRef<HTMLInputElement>(null!);
   const [uploading, setUploading] = useState(false);
 
   const [imei,            setImei]           = useState("");
@@ -171,13 +177,12 @@ export default function InspectPage() {
     });
   }, [id]);
 
-  async function handlePhoto(type: "id" | "delivery", file: File) {
+  async function handleSlotPhoto(key: string, file: File) {
     setUploading(true);
     try {
       const compressed = await compressImage(file);
-      const url = await uploadPhoto(compressed, `rider/${id}/${type}-${Date.now()}.jpg`);
-      if (type === "id")       setIdCardPhotoUrl(url);
-      if (type === "delivery") setDeliveryPhotoUrl(url);
+      const url = await uploadPhoto(compressed, `rider/${id}/slot-${key}-${Date.now()}.jpg`);
+      setSlotPhotos(prev => ({ ...prev, [key]: url }));
     } catch {
       setError("อัปโหลดรูปไม่สำเร็จ");
     } finally {
@@ -185,28 +190,25 @@ export default function InspectPage() {
     }
   }
 
-  async function handleDevicePhotos(files: FileList) {
+  async function handleDefectPhotos(files: FileList) {
     setUploading(true);
     try {
       const urls = await Promise.all(
         Array.from(files).map(async file => {
           const compressed = await compressImage(file);
-          return uploadPhoto(compressed, `rider/${id}/device-${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`);
+          return uploadPhoto(compressed, `rider/${id}/defect-${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`);
         })
       );
-      setDevicePhotos(prev => [...prev, ...urls]);
+      setDefectPhotos(prev => [...prev, ...urls]);
     } catch {
       setError("อัปโหลดรูปไม่สำเร็จ");
     } finally {
       setUploading(false);
-      if (deviceInputRef.current) deviceInputRef.current.value = "";
+      if (defectRef.current) defectRef.current.value = "";
     }
   }
 
   async function handleSave() {
-    if (!idCardPhotoUrl)   { setError("กรุณาถ่ายรูปบัตรปชช + เครื่อง"); return; }
-    if (!deliveryPhotoUrl) { setError("กรุณาถ่ายรูปส่งมอบเครื่อง"); return; }
-
     setSaving(true);
     setError("");
 
@@ -222,6 +224,11 @@ export default function InspectPage() {
 
       const warrantyValue = warrantyStatus === "expired" ? "expired" : warrantyExpiry || undefined;
 
+      const photos = [
+        ...Object.values(slotPhotos).filter(Boolean),
+        ...defectPhotos,
+      ] as string[];
+
       const result = await riderSaveInspection(id, {
         imei,
         serial,
@@ -229,9 +236,7 @@ export default function InspectPage() {
         warrantyExpiry: warrantyValue,
         criteria:       criteriaArr,
         functionalTests: functional,
-        photos: [...devicePhotos, idCardPhotoUrl, deliveryPhotoUrl].filter(Boolean) as string[],
-        idCardPhotoUrl,
-        deliveryPhotoUrl,
+        photos,
       });
 
       if (!result.success) { setError(result.error ?? "เกิดข้อผิดพลาด"); return; }
@@ -274,63 +279,49 @@ export default function InspectPage() {
       <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
         <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 24 }}>
 
+        {/* Device photos — structured slots */}
         <section>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: TEXT, textTransform: "uppercase", letterSpacing: 0.5 }}>
-              รูปสภาพเครื่อง {devicePhotos.length > 0 && <span style={{ color: ACCENT, fontWeight: 400 }}>({devicePhotos.length})</span>}
-            </p>
-            <button onClick={() => deviceInputRef.current?.click()} disabled={uploading} style={{
-              background: ACCENT, border: "none", borderRadius: 8, padding: "6px 14px",
-              fontSize: 13, fontWeight: 600, color: "#000", cursor: "pointer", fontFamily: "inherit",
-              opacity: uploading ? 0.6 : 1,
-            }}>
-              + เพิ่มรูป
-            </button>
+          <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: TEXT, textTransform: "uppercase", letterSpacing: 0.5 }}>รูปสภาพเครื่อง</p>
+          <p style={{ margin: "0 0 12px", fontSize: 12, color: TEXT2 }}>ถ่ายให้ครบทุกด้าน</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
+            {PHOTO_SLOTS.map(slot => (
+              <SmallPhotoBox
+                key={slot.key}
+                slotKey={slot.key}
+                label={slot.label}
+                url={slotPhotos[slot.key]}
+                onCapture={f => handleSlotPhoto(slot.key, f)}
+                c={ic}
+              />
+            ))}
           </div>
-          <input
-            ref={deviceInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            style={{ display: "none" }}
-            onChange={e => { if (e.target.files?.length) handleDevicePhotos(e.target.files); }}
-          />
-          {devicePhotos.length > 0 ? (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-              {devicePhotos.map((url, i) => (
-                <div key={i} style={{ position: "relative", aspectRatio: "1", borderRadius: 10, overflow: "hidden" }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt={`device-${i}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  <button
-                    onClick={() => setDevicePhotos(prev => prev.filter((_, j) => j !== i))}
-                    style={{
-                      position: "absolute", top: 4, right: 4, width: 22, height: 22,
-                      borderRadius: "50%", background: "rgba(0,0,0,0.6)", border: "none",
-                      color: "#fff", fontSize: 13, cursor: "pointer", display: "flex",
-                      alignItems: "center", justifyContent: "center", lineHeight: 1,
-                    }}
-                  >✕</button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <button onClick={() => deviceInputRef.current?.click()} style={{
-              width: "100%", padding: "24px 0", background: CARD, border: `1.5px dashed ${BORDER}`,
-              borderRadius: 12, cursor: "pointer", display: "flex", flexDirection: "column",
-              alignItems: "center", gap: 8,
-            }}>
-              <Camera size={28} color={TEXT2} />
-              <span style={{ fontSize: 13, color: TEXT2 }}>แตะเพื่อเพิ่มรูปสภาพเครื่อง</span>
-            </button>
-          )}
-        </section>
 
-        <section>
-          <p style={{ margin: "0 0 14px", fontSize: 13, fontWeight: 700, color: TEXT, textTransform: "uppercase", letterSpacing: 0.5 }}>รูปถ่ายหลักฐาน</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <PhotoBox label="บัตรประชาชนคู่กับเครื่องที่ขาย"    url={idCardPhotoUrl}   onCapture={f => handlePhoto("id", f)}       required c={ic} />
-            <PhotoBox label="ส่งมอบเครื่อง (ลูกค้าถือเครื่อง)"  url={deliveryPhotoUrl} onCapture={f => handlePhoto("delivery", f)} required c={ic} />
+          {/* Defect photos */}
+          <p style={{ margin: "0 0 8px", fontSize: 12, color: TEXT2, fontWeight: 600 }}>รูปตำหนิเพิ่มเติม</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            {defectPhotos.map((url, i) => (
+              <div key={i} style={{ position: "relative", aspectRatio: "3/4", borderRadius: 10, overflow: "hidden" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt={`ตำหนิ ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <button onClick={() => setDefectPhotos(prev => prev.filter((_, j) => j !== i))} style={{
+                  position: "absolute", top: 4, right: 4, width: 22, height: 22,
+                  borderRadius: "50%", background: "rgba(0,0,0,0.6)", border: "none",
+                  color: "#fff", fontSize: 13, cursor: "pointer", display: "flex",
+                  alignItems: "center", justifyContent: "center",
+                }}>✕</button>
+              </div>
+            ))}
+            <button onClick={() => defectRef.current?.click()} disabled={uploading} style={{
+              aspectRatio: "3/4", background: CARD, border: `1.5px dashed ${BORDER}`,
+              borderRadius: 10, cursor: "pointer", display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center", gap: 4, opacity: uploading ? 0.6 : 1,
+            }}>
+              <Camera size={18} color={TEXT2} />
+              <span style={{ fontSize: 9, color: TEXT2 }}>+ ตำหนิ</span>
+            </button>
           </div>
+          <input ref={defectRef} type="file" accept="image/*" capture="environment" multiple style={{ display: "none" }}
+            onChange={e => { if (e.target.files?.length) handleDefectPhotos(e.target.files); }} />
         </section>
 
         <section>
@@ -342,13 +333,13 @@ export default function InspectPage() {
               <input value={imei} onChange={e => setImei(e.target.value)} placeholder="กรอก IMEI หรือ *#06#"
                 style={{ width: "100%", background: "none", border: "none", color: TEXT, fontSize: 15, fontFamily: "inherit", outline: "none" }} />
             </div>
-            {/* Serial Number — force uppercase */}
+            {/* Serial Number */}
             <div style={{ padding: "12px 16px", borderBottom: `1px solid ${BORDER}` }}>
               <p style={{ margin: "0 0 4px", fontSize: 11, color: TEXT2 }}>Serial Number</p>
               <input value={serial} onChange={e => setSerial(e.target.value.toUpperCase())} placeholder="กรอก Serial"
                 style={{ width: "100%", background: "none", border: "none", color: TEXT, fontSize: 15, fontFamily: "inherit", outline: "none", textTransform: "uppercase" }} />
             </div>
-            {/* Battery Health — dropdown */}
+            {/* Battery Health */}
             <div style={{ padding: "12px 16px", borderBottom: `1px solid ${BORDER}` }}>
               <p style={{ margin: "0 0 4px", fontSize: 11, color: TEXT2 }}>Battery Health</p>
               <select value={battery} onChange={e => setBattery(e.target.value)}
@@ -359,7 +350,7 @@ export default function InspectPage() {
                 ))}
               </select>
             </div>
-            {/* Warranty status */}
+            {/* Warranty */}
             <div style={{ padding: "12px 16px" }}>
               <p style={{ margin: "0 0 8px", fontSize: 11, color: TEXT2 }}>การรับประกัน</p>
               <div style={{ display: "flex", gap: 8, marginBottom: warrantyStatus === "valid" ? 10 : 0 }}>

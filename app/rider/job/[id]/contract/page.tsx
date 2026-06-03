@@ -82,8 +82,11 @@ export default function RiderContractPage() {
   const [accessoriesOther, setAccessoriesOther] = useState("");
 
   // Photos
-  const [idPhotoDataUrl, setIdPhotoDataUrl] = useState<string | null>(null);
-  const idFileRef = useRef<HTMLInputElement>(null!);
+  const [idPhotoDataUrl,       setIdPhotoDataUrl]       = useState<string | null>(null);
+  const [deliveryPhotoDataUrl, setDeliveryPhotoDataUrl] = useState<string | null>(null);
+  const idFileRef       = useRef<HTMLInputElement>(null!);
+  const deliveryFileRef = useRef<HTMLInputElement>(null!);
+  const [uploading, setUploading] = useState(false);
 
   const contractHTML = useRef("");
   const receiptHTML  = useRef("");
@@ -140,6 +143,23 @@ export default function RiderContractPage() {
     const compressed = await compressImage(file);
     const dataUrl = await applyWatermark(compressed);
     setIdPhotoDataUrl(dataUrl);
+  }
+
+  async function handleDeliveryPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const compressed = await compressImage(file);
+      const dataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => resolve(ev.target!.result as string);
+        reader.readAsDataURL(compressed as File);
+      });
+      setDeliveryPhotoDataUrl(dataUrl);
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function handleGenerate() {
@@ -281,6 +301,7 @@ export default function RiderContractPage() {
           </div>
         </div>
         ${idPhotoDataUrl ? `<div class="id-photo-wrap"><div class="id-photo-hd">📷 เอกสารยืนยันตัวตนผู้ขาย — สำเนาบัตรประชาชน (มี Watermark)</div><img src="${idPhotoDataUrl}" alt="บัตรประชาชน"></div>` : ""}
+        ${deliveryPhotoDataUrl ? `<div class="id-photo-wrap"><div class="id-photo-hd">📸 รูปส่งมอบเครื่อง — ลูกค้าถือเครื่องที่ขาย</div><img src="${deliveryPhotoDataUrl}" alt="ส่งมอบเครื่อง"></div>` : ""}
       </div>
       <div class="footer">
         <div>
@@ -366,6 +387,7 @@ export default function RiderContractPage() {
           <div style="font-size:10.5px;color:#166534;line-height:1.7">ข้าพเจ้า <strong>${esc(cName)}</strong> ได้รับเงินจำนวน <strong>${price.toLocaleString("th-TH")} บาทถ้วน</strong> จาก <strong>${esc(staffName || "Khaiphone.com")}</strong> เป็นค่าขายโทรศัพท์มือถือ <strong>${esc(r.device.model)} ${esc(r.device.storage)}</strong> ตามสัญญาเลขที่ <strong>${receiptNo}</strong> เรียบร้อยแล้ว โดยสมัครใจ</div>
         </div>
         ${idPhotoDataUrl ? `<div class="id-photo-wrap"><div class="id-photo-hd">📷 เอกสารยืนยันตัวตนผู้ขาย — สำเนาบัตรประชาชน (มี Watermark)</div><img src="${idPhotoDataUrl}" alt="บัตรประชาชน"></div>` : ""}
+        ${deliveryPhotoDataUrl ? `<div class="id-photo-wrap"><div class="id-photo-hd">📸 รูปส่งมอบเครื่อง — ลูกค้าถือเครื่องที่ขาย</div><img src="${deliveryPhotoDataUrl}" alt="ส่งมอบเครื่อง"></div>` : ""}
         <div style="margin:10px 0;padding:9px 13px;border:1px solid #e5e7eb;border-radius:8px;background:#fafafa">
           <div style="font-size:9.5px;font-weight:700;color:#1a1a2e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📎 หลักฐานที่แนบในระบบ</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 16px">
@@ -589,7 +611,7 @@ export default function RiderContractPage() {
 
             {/* ID Card Photo */}
             <div style={{ background: CARD, borderRadius: 14, padding: "14px 16px" }}>
-              <p style={{ margin: "0 0 10px", fontSize: 13, fontWeight: 700, color: TEXT }}>ถ่ายบัตรประชาชนผู้ขาย</p>
+              <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: TEXT }}>ถ่ายบัตรประชาชนผู้ขาย</p>
               <p style={{ margin: "0 0 10px", fontSize: 12, color: TEXT2 }}>จะมี Watermark โดยอัตโนมัติ</p>
               <button onClick={() => idFileRef.current?.click()} style={{
                 width: "100%", aspectRatio: "16/9", background: CARD2, border: `1.5px dashed ${idPhotoDataUrl ? ACCENT : BORDER}`,
@@ -603,6 +625,25 @@ export default function RiderContractPage() {
               </button>
               <input ref={idFileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }}
                 onChange={handleIdPhoto} />
+            </div>
+
+            {/* Delivery Photo */}
+            <div style={{ background: CARD, borderRadius: 14, padding: "14px 16px" }}>
+              <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: TEXT }}>ถ่ายรูปส่งมอบเครื่อง</p>
+              <p style={{ margin: "0 0 10px", fontSize: 12, color: TEXT2 }}>ลูกค้าถือเครื่องที่จะขายคู่กับบัตรประชาชน</p>
+              <button onClick={() => deliveryFileRef.current?.click()} disabled={uploading} style={{
+                width: "100%", aspectRatio: "16/9", background: CARD2, border: `1.5px dashed ${deliveryPhotoDataUrl ? ACCENT : BORDER}`,
+                borderRadius: 12, cursor: "pointer", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center",
+                opacity: uploading ? 0.6 : 1,
+              }}>
+                {deliveryPhotoDataUrl
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={deliveryPhotoDataUrl} alt="ส่งมอบเครื่อง" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  : <p style={{ color: TEXT2, fontSize: 13 }}>{uploading ? "กำลังโหลด..." : "แตะเพื่อถ่ายรูป"}</p>
+                }
+              </button>
+              <input ref={deliveryFileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }}
+                onChange={handleDeliveryPhoto} />
             </div>
 
             {error && (
