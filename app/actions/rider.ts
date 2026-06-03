@@ -364,6 +364,28 @@ export async function riderNoShow(id: string) {
   return { success: true as const };
 }
 
+// ─── Online / Offline status ─────────────────────────────────────────────────
+export async function setRiderOnlineStatus(isOnline: boolean) {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+  await supabase
+    .from("admin_users")
+    .update({ is_online: isOnline, last_seen_at: new Date().toISOString() })
+    .eq("user_id", user.id);
+  return { success: true as const };
+}
+
+export async function fetchRiderOnlineStatus(userId: string): Promise<boolean> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("admin_users")
+    .select("is_online")
+    .eq("user_id", userId)
+    .single();
+  return data?.is_online ?? false;
+}
+
 // ─── Monthly stats ────────────────────────────────────────────────────────────
 export async function fetchRiderStats(riderId: string) {
   await requireAuth();
@@ -386,6 +408,42 @@ export async function fetchRiderStats(riderId: string) {
     completedJobs: completed.length,
     cancelledJobs: cancelled.length,
     totalEarnings: completed.reduce((s, j) => s + (j.actual_price ?? j.estimated_price ?? 0), 0),
+  };
+}
+
+// ─── Earnings breakdown (today / week / month) ────────────────────────────────
+export async function fetchRiderEarnings(riderId: string) {
+  await requireAuth();
+  const supabase = createServerClient();
+
+  const now   = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - now.getDay());
+  weekStart.setHours(0, 0, 0, 0);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+  const { data } = await supabase
+    .from("requests")
+    .select("status, actual_price, estimated_price, created_at, device_model, device_storage, order_number")
+    .eq("assigned_to", riderId)
+    .eq("status", "completed")
+    .gte("created_at", monthStart)
+    .order("created_at", { ascending: false });
+
+  const jobs = data ?? [];
+
+  const sum = (list: typeof jobs) =>
+    list.reduce((s, j) => s + ((j.actual_price ?? j.estimated_price) || 0), 0);
+
+  const todayJobs   = jobs.filter(j => j.created_at >= today);
+  const weekJobs    = jobs.filter(j => j.created_at >= weekStart.toISOString());
+
+  return {
+    today:  { count: todayJobs.length,  total: sum(todayJobs)  },
+    week:   { count: weekJobs.length,   total: sum(weekJobs)   },
+    month:  { count: jobs.length,       total: sum(jobs)       },
+    recent: jobs.slice(0, 20),
   };
 }
 

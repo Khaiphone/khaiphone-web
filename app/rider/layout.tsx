@@ -3,27 +3,34 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { Home, Clock, User } from "lucide-react";
+import { Home, Clock, Wallet, UserCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { fetchMyProfile } from "@/app/actions/admin-users";
+import { setRiderOnlineStatus, fetchRiderOnlineStatus } from "@/app/actions/rider";
 
 const BG     = "#0B0B0D";
 const CARD   = "#1A1A1C";
 const BORDER = "#2C2C2E";
 const GOLD   = "#D4A843";
+const GREEN  = "#30D158";
 const TEXT   = "#F2F2F7";
 const TEXT2  = "#8E8E93";
 
 const NAV = [
-  { href: "/rider",         label: "งานวันนี้", icon: Home  },
-  { href: "/rider/history", label: "ประวัติ",   icon: Clock },
+  { href: "/rider",          label: "งานวันนี้", icon: Home       },
+  { href: "/rider/earnings", label: "รายได้",    icon: Wallet     },
+  { href: "/rider/history",  label: "ประวัติ",   icon: Clock      },
+  { href: "/rider/account",  label: "บัญชี",     icon: UserCircle },
 ] as const;
 
 export default function RiderLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
-  const [ready, setReady]     = useState(false);
+  const [ready, setReady]       = useState(false);
   const [riderName, setRiderName] = useState("");
+  const [userId, setUserId]     = useState<string>("");
+  const [isOnline, setIsOnline] = useState(false);
+  const [togglingOnline, setTogglingOnline] = useState(false);
 
   useEffect(() => {
     const setMeta = (name: string, content: string) => {
@@ -46,9 +53,20 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
         return;
       }
       setRiderName(profile.name ?? "ไรเดอร์");
+      setUserId(session.user.id);
+      const online = await fetchRiderOnlineStatus(session.user.id);
+      setIsOnline(online);
       setReady(true);
     });
   }, [router]);
+
+  async function toggleOnline() {
+    setTogglingOnline(true);
+    const next = !isOnline;
+    setIsOnline(next);
+    await setRiderOnlineStatus(next);
+    setTogglingOnline(false);
+  }
 
   if (!ready) return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -64,19 +82,43 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
 
       {/* Header */}
       {!isJobPage && (
-        <header style={{ background: CARD, borderBottom: `1px solid ${BORDER}`, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 10 }}>
+        <header style={{
+          background: CARD, borderBottom: `1px solid ${BORDER}`,
+          padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between",
+          position: "sticky", top: 0, zIndex: 10,
+        }}>
           <div>
             <p style={{ margin: 0, fontSize: 11, color: TEXT2, letterSpacing: 1, textTransform: "uppercase" }}>Khaiphone Rider</p>
             <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: TEXT }}>{riderName}</p>
           </div>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: GOLD, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <User size={18} color="#000" />
-          </div>
+
+          {/* Online / Offline toggle */}
+          <button
+            onClick={toggleOnline}
+            disabled={togglingOnline}
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "8px 16px", borderRadius: 999,
+              background: isOnline ? "rgba(48,209,88,0.15)" : "rgba(142,142,147,0.15)",
+              border: `1.5px solid ${isOnline ? GREEN : BORDER}`,
+              cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s",
+              opacity: togglingOnline ? 0.6 : 1,
+            }}
+          >
+            <div style={{
+              width: 8, height: 8, borderRadius: "50%",
+              background: isOnline ? GREEN : TEXT2,
+              boxShadow: isOnline ? `0 0 6px ${GREEN}` : "none",
+            }} />
+            <span style={{ fontSize: 13, fontWeight: 700, color: isOnline ? GREEN : TEXT2 }}>
+              {isOnline ? "พร้อมรับงาน" : "ออฟไลน์"}
+            </span>
+          </button>
         </header>
       )}
 
       {/* Content */}
-      <main style={{ paddingBottom: isJobPage ? 0 : 80 }}>
+      <main style={{ paddingBottom: isJobPage ? 0 : "calc(64px + env(safe-area-inset-bottom))" }}>
         {children}
       </main>
 
@@ -93,10 +135,10 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
             return (
               <Link key={href} href={href} style={{
                 flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
-                padding: "10px 0", gap: 4, textDecoration: "none",
+                padding: "10px 0", gap: 3, textDecoration: "none",
                 color: active ? GOLD : TEXT2,
               }}>
-                <Icon size={22} strokeWidth={active ? 2.5 : 1.8} />
+                <Icon size={21} strokeWidth={active ? 2.5 : 1.8} />
                 <span style={{ fontSize: 10, fontWeight: active ? 600 : 400 }}>{label}</span>
               </Link>
             );
