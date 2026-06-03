@@ -6,6 +6,7 @@ import Image from "next/image";
 import { ArrowLeft, Phone, MapPin, Package, Banknote, ArrowUpDown, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { fetchRiderJob, fetchRiderJobs, riderAcceptJob, riderStartJob, riderArriveJob, riderNoShow } from "@/app/actions/rider";
 import { supabase } from "@/lib/supabase";
+import { useRiderTheme } from "@/app/rider/theme";
 import type { AdminRequest } from "@/lib/types/admin";
 
 function getDeviceImage(model: string): string {
@@ -36,16 +37,6 @@ function getDeviceImage(model: string): string {
   return "/product-iphone.webp";
 }
 
-const BG     = "#0B0B0D";
-const CARD   = "#1A1A1C";
-const CARD2  = "#222224";
-const BORDER = "#2C2C2E";
-const ACCENT = "#4ADE80";
-const GREEN  = "#30D158";
-const RED    = "#FF453A";
-const TEXT   = "#F2F2F7";
-const TEXT2  = "#8E8E93";
-
 const STEPS = ["รับงาน", "เดินทาง", "ตรวจเครื่อง", "ราคา/สัญญา", "จบ"];
 
 function stepFromStatus(status: string) {
@@ -59,24 +50,26 @@ function stepFromStatus(status: string) {
   return 0;
 }
 
-function StepBar({ current }: { current: number }) {
+type TC = { CARD: string; BORDER: string; ACCENT: string; GREEN: string; TEXT: string; TEXT2: string };
+
+function StepBar({ current, c }: { current: number; c: TC }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", padding: "16px 20px", background: CARD, borderBottom: `1px solid ${BORDER}` }}>
+    <div style={{ display: "flex", alignItems: "center", padding: "16px 20px", background: c.CARD, borderBottom: `1px solid ${c.BORDER}` }}>
       {STEPS.map((label, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", flex: i < STEPS.length - 1 ? 1 : 0 }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
             <div style={{
               width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-              background: i < current ? GREEN : i === current ? ACCENT : BORDER,
-              fontSize: 10, fontWeight: 700, color: i <= current ? "#000" : TEXT2,
+              background: i < current ? c.GREEN : i === current ? c.ACCENT : c.BORDER,
+              fontSize: 10, fontWeight: 700, color: i <= current ? "#000" : c.TEXT2,
               flexShrink: 0,
             }}>
               {i < current ? "✓" : i + 1}
             </div>
-            <span style={{ fontSize: 9, color: i === current ? ACCENT : TEXT2, whiteSpace: "nowrap", fontWeight: i === current ? 600 : 400 }}>{label}</span>
+            <span style={{ fontSize: 9, color: i === current ? c.ACCENT : c.TEXT2, whiteSpace: "nowrap", fontWeight: i === current ? 600 : 400 }}>{label}</span>
           </div>
           {i < STEPS.length - 1 && (
-            <div style={{ flex: 1, height: 2, background: i < current ? GREEN : BORDER, margin: "0 4px", marginBottom: 14 }} />
+            <div style={{ flex: 1, height: 2, background: i < current ? c.GREEN : c.BORDER, margin: "0 4px", marginBottom: 14 }} />
           )}
         </div>
       ))}
@@ -84,16 +77,16 @@ function StepBar({ current }: { current: number }) {
   );
 }
 
-function Row({ label, value, gold }: { label: string; value: string; gold?: boolean }) {
+function Row({ label, value, gold, c }: { label: string; value: string; gold?: boolean; c: TC }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-      <span style={{ fontSize: 13, color: TEXT2, flexShrink: 0 }}>{label}</span>
-      <span style={{ fontSize: 13, color: gold ? ACCENT : TEXT, fontWeight: gold ? 700 : 400, textAlign: "right" }}>{value}</span>
+      <span style={{ fontSize: 13, color: c.TEXT2, flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: 13, color: gold ? c.ACCENT : c.TEXT, fontWeight: gold ? 700 : 400, textAlign: "right" }}>{value}</span>
     </div>
   );
 }
 
-function BigBtn({ label, color = ACCENT, textColor = "#000", onClick, loading, outline }: {
+function BigBtn({ label, color = "#4ADE80", textColor = "#000", onClick, loading, outline }: {
   label: string; color?: string; textColor?: string; onClick: () => void; loading?: boolean; outline?: boolean;
 }) {
   return (
@@ -113,11 +106,14 @@ function BigBtn({ label, color = ACCENT, textColor = "#000", onClick, loading, o
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router  = useRouter();
+  const { BG, CARD, CARD2, BORDER, ACCENT, GREEN, RED, TEXT, TEXT2 } = useRiderTheme();
+  const tc: TC = { CARD, BORDER, ACCENT, GREEN, TEXT, TEXT2 };
+
   const [job, setJob]         = useState<AdminRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy]       = useState(false);
   const [showNoShow, setShowNoShow] = useState(false);
-  const [blockingJob, setBlockingJob] = useState<string | null>(null); // order_number of blocking active job
+  const [blockingJob, setBlockingJob] = useState<string | null>(null);
   const [startError, setStartError]   = useState("");
 
   const reload = useCallback(async () => {
@@ -125,7 +121,6 @@ export default function JobDetailPage() {
     setJob(j);
     setLoading(false);
 
-    // Check for a blocking active job when status is pickup_scheduled
     if (j?.status === "pickup_scheduled" && j.riderId) {
       const active = await fetchRiderJobs(j.riderId);
       const blocker = active.find(a =>
@@ -139,7 +134,6 @@ export default function JobDetailPage() {
 
   useEffect(() => { reload(); }, [reload]);
 
-  // Realtime — อัปเดตเมื่อ admin หรือ customer เปลี่ยนสถานะ
   useEffect(() => {
     const broadcastCh = supabase
       .channel("request-updates")
@@ -168,7 +162,7 @@ export default function JobDetailPage() {
 
   if (loading) return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 32, height: 32, borderRadius: "50%", border: "3px solid #2C2C2E", borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
+      <div style={{ width: 32, height: 32, borderRadius: "50%", border: `3px solid ${BORDER}`, borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
@@ -238,7 +232,7 @@ export default function JobDetailPage() {
       </div>
 
       {/* Step bar */}
-      <StepBar current={step} />
+      <StepBar current={step} c={tc} />
 
       {/* Body */}
       <div style={{ flex: 1, padding: 20, display: "flex", flexDirection: "column", gap: 14, overflowY: "auto" }}>
@@ -259,10 +253,10 @@ export default function JobDetailPage() {
             )}
           </div>
           <div style={{ padding: "0 16px 14px", display: "flex", gap: 16 }}>
-            <Row label="วันที่" value={job.appointment.date} />
-            <Row label="เวลา"  value={job.appointment.time}  />
+            <Row label="วันที่" value={job.appointment.date} c={tc} />
+            <Row label="เวลา"  value={job.appointment.time}  c={tc} />
             {job.distanceKm != null && (
-              <Row label="ระยะทาง" value={`${job.distanceKm} กม.`} />
+              <Row label="ระยะทาง" value={`${job.distanceKm} กม.`} c={tc} />
             )}
           </div>
         </div>
@@ -289,9 +283,9 @@ export default function JobDetailPage() {
             </div>
           </div>
           <div style={{ padding: "0 16px 14px", borderTop: `1px solid ${BORDER}`, paddingTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-            <Row label="ราคาตกลง" value={`฿${price.toLocaleString("th-TH")}`} gold />
+            <Row label="ราคาตกลง" value={`฿${price.toLocaleString("th-TH")}`} gold c={tc} />
             {(job.extraDevices?.length ?? 0) > 0 && (
-              <Row label="เครื่องเสริม" value={`${job.extraDevices?.length ?? 0} เครื่อง`} />
+              <Row label="เครื่องเสริม" value={`${job.extraDevices?.length ?? 0} เครื่อง`} c={tc} />
             )}
             {(job.device.conditionDetails?.length ?? 0) > 0 && (
               <div style={{ marginTop: 4 }}>
@@ -310,10 +304,10 @@ export default function JobDetailPage() {
             {isCash ? <Banknote size={15} color={GREEN} /> : <ArrowUpDown size={15} color="#0A84FF" />}
             <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>การชำระเงิน</span>
           </div>
-          <Row label="วิธี" value={isCash ? "เงินสด" : "โอนเงิน"} />
-          {!isCash && job.payment.bankName     && <Row label="ธนาคาร"    value={job.payment.bankName}      />}
-          {!isCash && job.payment.accountName  && <Row label="ชื่อบัญชี" value={job.payment.accountName}   />}
-          {!isCash && job.payment.accountNumber && <Row label="เลขบัญชี" value={job.payment.accountNumber} />}
+          <Row label="วิธี" value={isCash ? "เงินสด" : "โอนเงิน"} c={tc} />
+          {!isCash && job.payment.bankName     && <Row label="ธนาคาร"    value={job.payment.bankName}      c={tc} />}
+          {!isCash && job.payment.accountName  && <Row label="ชื่อบัญชี" value={job.payment.accountName}   c={tc} />}
+          {!isCash && job.payment.accountNumber && <Row label="เลขบัญชี" value={job.payment.accountNumber} c={tc} />}
         </div>
 
         {job.customerNotes && (

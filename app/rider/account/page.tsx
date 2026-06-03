@@ -2,23 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { UserCircle, LogOut, Wifi, WifiOff, ChevronRight } from "lucide-react";
+import { UserCircle, LogOut, Wifi, WifiOff, ChevronRight, Moon, Sun } from "lucide-react";
 import { Sk } from "@/app/rider/skeleton";
 import { supabase } from "@/lib/supabase";
 import { fetchMyProfile } from "@/app/actions/admin-users";
 import { setRiderOnlineStatus, fetchRiderOnlineStatus } from "@/app/actions/rider";
-
-const BG     = "#0B0B0D";
-const CARD   = "#1A1A1C";
-const BORDER = "#2C2C2E";
-const ACCENT = "#4ADE80";
-const GREEN  = "#30D158";
-const RED    = "#FF453A";
-const TEXT   = "#F2F2F7";
-const TEXT2  = "#8E8E93";
+import { useRiderTheme } from "@/app/rider/theme";
 
 export default function AccountPage() {
   const router = useRouter();
+  const { BG: _BG, CARD, BORDER, ACCENT, GREEN, RED, TEXT, TEXT2, isDark, toggleTheme } = useRiderTheme();
   const [profile, setProfile] = useState<{ name: string; email: string; role: string } | null>(null);
   const [isOnline, setIsOnline]   = useState(false);
   const [toggling, setToggling]   = useState(false);
@@ -55,7 +48,6 @@ export default function AccountPage() {
 
   if (loading) return (
     <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* Profile card skeleton */}
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 24, display: "flex", alignItems: "center", gap: 16 }}>
         <Sk w={56} h={56} r={28} />
         <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
@@ -64,7 +56,6 @@ export default function AccountPage() {
           <Sk w={50} h={20} r={6} />
         </div>
       </div>
-      {/* Online toggle skeleton */}
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <Sk w={22} h={22} r={11} />
@@ -75,7 +66,6 @@ export default function AccountPage() {
         </div>
         <Sk w={52} h={30} r={15} />
       </div>
-      {/* Menu items skeleton */}
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, overflow: "hidden" }}>
         {[0,1].map(i => (
           <div key={i} style={{ padding: "16px 20px", borderBottom: i === 0 ? `1px solid ${BORDER}` : "none", display: "flex", alignItems: "center", gap: 12 }}>
@@ -123,7 +113,6 @@ export default function AccountPage() {
               </p>
             </div>
           </div>
-          {/* Toggle switch */}
           <div style={{
             width: 48, height: 28, borderRadius: 14,
             background: isOnline ? GREEN : BORDER,
@@ -143,7 +132,30 @@ export default function AccountPage() {
         <div style={{ padding: "14px 20px", borderBottom: `1px solid ${BORDER}` }}>
           <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.5 }}>ทั่วไป</p>
         </div>
-        <a href="https://admin.khaiphone.com/admin/profile" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", textDecoration: "none", borderBottom: `1px solid ${BORDER}` }}>
+
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          style={{ width: "100%", padding: "16px 20px", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: "inherit", borderBottom: `1px solid ${BORDER}` }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {isDark ? <Moon size={20} color={TEXT2} /> : <Sun size={20} color={TEXT2} />}
+            <span style={{ fontSize: 15, color: TEXT }}>{isDark ? "โหมดมืด" : "โหมดสว่าง"}</span>
+          </div>
+          <div style={{
+            width: 48, height: 28, borderRadius: 14,
+            background: isDark ? BORDER : ACCENT,
+            position: "relative", transition: "background 0.2s", flexShrink: 0,
+          }}>
+            <div style={{
+              position: "absolute", top: 3, left: isDark ? 3 : 23,
+              width: 22, height: 22, borderRadius: "50%", background: "#fff",
+              transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+            }} />
+          </div>
+        </button>
+
+        <a href="https://admin.khaiphone.com/admin/profile" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", textDecoration: "none", borderBottom: profile?.role === "owner" ? `1px solid ${BORDER}` : "none" }}>
           <span style={{ fontSize: 15, color: TEXT }}>แก้ไขโปรไฟล์</span>
           <ChevronRight size={16} color={TEXT2} />
         </a>

@@ -8,14 +8,8 @@ import { saveContractUrls, markContractSigned } from "@/app/actions/admin-reques
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
 import { validateImageFile } from "@/lib/validate-file";
+import { useRiderTheme } from "@/app/rider/theme";
 import type { AdminRequest } from "@/lib/types/admin";
-
-const BG     = "#0B0B0D";
-const CARD   = "#1A1A1C";
-const BORDER = "#2C2C2E";
-const ACCENT = "#4ADE80";
-const TEXT   = "#F2F2F7";
-const TEXT2  = "#8E8E93";
 
 const FONT_LINK = '<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">';
 
@@ -70,6 +64,7 @@ function formatIdNumber(raw: string) {
 export default function RiderContractPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { BG, CARD, BORDER, ACCENT, TEXT, TEXT2 } = useRiderTheme();
   const [job, setJob]     = useState<AdminRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -437,7 +432,7 @@ export default function RiderContractPage() {
 
   if (loading) return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 32, height: 32, borderRadius: "50%", border: "3px solid #2C2C2E", borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
+      <div style={{ width: 32, height: 32, borderRadius: "50%", border: `3px solid ${BORDER}`, borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );

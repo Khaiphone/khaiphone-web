@@ -6,16 +6,8 @@ import { ArrowLeft, Camera, Banknote, ArrowUpDown, Send, Clock, FileText, CheckC
 import { supabase } from "@/lib/supabase";
 import { fetchRiderJob, riderCompleteCash, riderRequestTransfer, riderCompleteTransfer } from "@/app/actions/rider";
 import { markContractSigned } from "@/app/actions/admin-requests";
+import { useRiderTheme } from "@/app/rider/theme";
 import type { AdminRequest } from "@/lib/types/admin";
-
-const BG     = "#0B0B0D";
-const CARD   = "#1A1A1C";
-const BORDER = "#2C2C2E";
-const ACCENT = "#4ADE80";
-const GREEN  = "#30D158";
-const BLUE   = "#0A84FF";
-const TEXT   = "#F2F2F7";
-const TEXT2  = "#8E8E93";
 
 function fmt(n: number) { return n.toLocaleString("th-TH"); }
 
@@ -35,6 +27,7 @@ async function uploadSlip(file: File, id: string): Promise<string> {
 export default function PaymentPage() {
   const { id } = useParams<{ id: string }>();
   const router  = useRouter();
+  const { BG, CARD, BORDER, ACCENT, GREEN, BLUE, TEXT, TEXT2 } = useRiderTheme();
   const [job, setJob]               = useState<AdminRequest | null>(null);
   const [contractSignedAt, setContractSignedAt] = useState<string | null>(null);
   const [signingContract, setSigningContract]   = useState(false);
@@ -56,7 +49,7 @@ export default function PaymentPage() {
 
   if (!job) return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 32, height: 32, borderRadius: "50%", border: "3px solid #2C2C2E", borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
+      <div style={{ width: 32, height: 32, borderRadius: "50%", border: `3px solid ${BORDER}`, borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
@@ -120,7 +113,6 @@ export default function PaymentPage() {
 
       <div style={{ flex: 1, padding: 20, display: "flex", flexDirection: "column", gap: 20 }}>
 
-        {/* Payment summary */}
         <div style={{ background: CARD, borderRadius: 16, padding: 24, textAlign: "center" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 8 }}>
             {isCash
@@ -134,7 +126,6 @@ export default function PaymentPage() {
           <p style={{ margin: "4px 0 0", fontSize: 13, color: TEXT2 }}>{job.device.model} {job.device.storage}</p>
         </div>
 
-        {/* Contract signing */}
         {signed ? (
           <div style={{ background: "rgba(48,209,88,0.08)", border: "1px solid rgba(48,209,88,0.2)", borderRadius: 14, padding: 16, display: "flex", alignItems: "center", gap: 12 }}>
             <CheckCircle2 size={20} color={GREEN} style={{ flexShrink: 0 }} />
@@ -165,10 +156,8 @@ export default function PaymentPage() {
           </div>
         )}
 
-        {/* Payment section — locked until contract signed */}
         {signed && (
           <>
-            {/* Cash flow */}
             {isCash && (
               <>
                 <div style={{ background: CARD, borderRadius: 14, padding: 16 }}>
@@ -200,7 +189,6 @@ export default function PaymentPage() {
               </>
             )}
 
-            {/* Transfer flow */}
             {!isCash && (
               <>
                 <div style={{ background: CARD, borderRadius: 14, padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
@@ -235,7 +223,6 @@ export default function PaymentPage() {
                       </div>
                     </div>
 
-                    {/* Slip upload — optional, any party can upload */}
                     <div>
                       <p style={{ margin: "0 0 10px", fontSize: 13, color: TEXT2 }}>
                         แนบสลิปโอนเงิน <span style={{ color: TEXT2, fontWeight: 400 }}>(ถ้ามี)</span>
@@ -274,7 +261,6 @@ export default function PaymentPage() {
         )}
       </div>
 
-      {/* Cash complete button */}
       {isCash && signed && (
         <div style={{ padding: "16px 20px", paddingBottom: "calc(16px + env(safe-area-inset-bottom))", background: BG, borderTop: `1px solid ${BORDER}` }}>
           <button onClick={handleCompleteCash} disabled={busy || uploading || !photoUrl} style={{

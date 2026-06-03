@@ -5,17 +5,8 @@ import { CheckCircle2, XCircle, Package } from "lucide-react";
 import { Sk } from "@/app/rider/skeleton";
 import { supabase } from "@/lib/supabase";
 import { fetchRiderHistory, fetchRiderStats } from "@/app/actions/rider";
+import { useRiderTheme } from "@/app/rider/theme";
 import type { AdminRequest } from "@/lib/types/admin";
-
-const BG     = "#0B0B0D";
-const CARD   = "#1A1A1C";
-const CARD2  = "#222224";
-const BORDER = "#2C2C2E";
-const ACCENT = "#4ADE80";
-const GREEN  = "#30D158";
-const RED    = "#FF453A";
-const TEXT   = "#F2F2F7";
-const TEXT2  = "#8E8E93";
 
 function fmt(n: number) { return n.toLocaleString("th-TH"); }
 
@@ -25,6 +16,7 @@ function fmtDate(d: string) {
 }
 
 export default function HistoryPage() {
+  const { CARD, CARD2, BORDER, ACCENT, GREEN, RED, TEXT, TEXT2 } = useRiderTheme();
   const [jobs, setJobs]   = useState<AdminRequest[]>([]);
   const [stats, setStats] = useState({ completedJobs: 0, cancelledJobs: 0, totalEarnings: 0 });
   const [loading, setLoading] = useState(true);
@@ -44,7 +36,6 @@ export default function HistoryPage() {
 
   if (loading) return (
     <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Stats card skeleton */}
       <div style={{ background: CARD, borderRadius: 16, padding: 20 }}>
         <Sk w={80} h={12} style={{ marginBottom: 16 }} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
@@ -56,7 +47,6 @@ export default function HistoryPage() {
           ))}
         </div>
       </div>
-      {/* History list skeleton */}
       {[0,1,2,3].map(i => (
         <div key={i} style={{ background: CARD, borderRadius: 14, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
@@ -76,7 +66,6 @@ export default function HistoryPage() {
   return (
     <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
 
-      {/* Monthly stats */}
       <div style={{ background: CARD, borderRadius: 16, padding: 20 }}>
         <p style={{ margin: "0 0 16px", fontSize: 13, fontWeight: 600, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.5 }}>สถิติเดือนนี้</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
@@ -93,7 +82,6 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      {/* Job list */}
       <div>
         <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 600, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.5 }}>
           ประวัติงาน (3 เดือน)

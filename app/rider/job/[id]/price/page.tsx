@@ -5,16 +5,8 @@ import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
 import { fetchRiderJob, riderConfirmPrice, riderAdjustPrice, riderCustomerAccepted, riderCustomerRejected } from "@/app/actions/rider";
 import { supabase } from "@/lib/supabase";
+import { useRiderTheme } from "@/app/rider/theme";
 import type { AdminRequest } from "@/lib/types/admin";
-
-const BG     = "#0B0B0D";
-const CARD   = "#1A1A1C";
-const BORDER = "#2C2C2E";
-const ACCENT = "#4ADE80";
-const GREEN  = "#30D158";
-const RED    = "#FF453A";
-const TEXT   = "#F2F2F7";
-const TEXT2  = "#8E8E93";
 
 function fmt(n: number) { return n.toLocaleString("th-TH"); }
 
@@ -30,6 +22,7 @@ const ADJUST_REASONS = [
 export default function PricePage() {
   const { id } = useParams<{ id: string }>();
   const router  = useRouter();
+  const { BG, CARD, BORDER, ACCENT, GREEN, RED, TEXT, TEXT2 } = useRiderTheme();
   const [job, setJob]         = useState<AdminRequest | null>(null);
   const [mode, setMode]       = useState<"confirm" | "adjust" | "waiting">("confirm");
   const [newPrice, setNewPrice] = useState("");
@@ -43,9 +36,7 @@ export default function PricePage() {
       if (!j) return;
       setJob(j);
       if (j.device.actualPrice) setNewPrice(String(j.device.actualPrice));
-      // ถ้าลูกค้าตอบรับผ่าน tracking page แล้ว ไปหน้าชำระเงินเลย
       if (j.status === "contracting") { router.replace(`/rider/job/${id}/payment`); return; }
-      // ถ้าลูกค้าปฏิเสธผ่าน tracking page แล้ว กลับหน้าแรก
       if (j.status === "cancelled")   { router.replace("/rider"); return; }
       if (j.status === "price_negotiation") setMode("waiting");
     });
@@ -53,7 +44,6 @@ export default function PricePage() {
 
   useEffect(() => { loadJob(); }, [loadJob]);
 
-  // Realtime — สำคัญมาก: ถ้าลูกค้าตอบรับผ่าน tracking page ไรเดอร์จะได้รู้ทันที
   useEffect(() => {
     const broadcastCh = supabase
       .channel("request-updates")
@@ -82,7 +72,7 @@ export default function PricePage() {
 
   if (!job) return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 32, height: 32, borderRadius: "50%", border: "3px solid #2C2C2E", borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
+      <div style={{ width: 32, height: 32, borderRadius: "50%", border: `3px solid ${BORDER}`, borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
@@ -131,38 +121,33 @@ export default function PricePage() {
 
       <div style={{ flex: 1, padding: 20, display: "flex", flexDirection: "column", gap: 20 }}>
 
-        {/* Price display */}
         <div style={{ background: CARD, borderRadius: 16, padding: 24, textAlign: "center" }}>
           <p style={{ margin: "0 0 4px", fontSize: 13, color: TEXT2 }}>ราคาที่ตกลงไว้</p>
           <p style={{ margin: 0, fontSize: 36, fontWeight: 800, color: ACCENT }}>฿{fmt(agreedPrice)}</p>
           <p style={{ margin: "4px 0 0", fontSize: 13, color: TEXT2 }}>{job.device.model} {job.device.storage}</p>
         </div>
 
-        {/* Mode: Confirm */}
         {mode === "confirm" && (
-          <>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <button onClick={handleConfirm} disabled={busy} style={{
-                padding: 16, borderRadius: 14, background: GREEN, border: "none", fontSize: 16,
-                fontWeight: 700, color: "#000", cursor: "pointer", fontFamily: "inherit", opacity: busy ? 0.6 : 1,
-              }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  <CheckCircle2 size={18} />
-                  ราคาตรงกัน — ไปชำระเงิน
-                </div>
-              </button>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <button onClick={handleConfirm} disabled={busy} style={{
+              padding: 16, borderRadius: 14, background: GREEN, border: "none", fontSize: 16,
+              fontWeight: 700, color: "#000", cursor: "pointer", fontFamily: "inherit", opacity: busy ? 0.6 : 1,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <CheckCircle2 size={18} />
+                ราคาตรงกัน — ไปชำระเงิน
+              </div>
+            </button>
 
-              <button onClick={() => setMode("adjust")} style={{
-                padding: 16, borderRadius: 14, background: "transparent", border: `1px solid ${BORDER}`,
-                fontSize: 16, fontWeight: 600, color: TEXT2, cursor: "pointer", fontFamily: "inherit",
-              }}>
-                ราคาต้องปรับ — เสนอราคาใหม่
-              </button>
-            </div>
-          </>
+            <button onClick={() => setMode("adjust")} style={{
+              padding: 16, borderRadius: 14, background: "transparent", border: `1px solid ${BORDER}`,
+              fontSize: 16, fontWeight: 600, color: TEXT2, cursor: "pointer", fontFamily: "inherit",
+            }}>
+              ราคาต้องปรับ — เสนอราคาใหม่
+            </button>
+          </div>
         )}
 
-        {/* Mode: Adjust */}
         {mode === "adjust" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ background: CARD, borderRadius: 14, padding: 16 }}>
@@ -178,7 +163,7 @@ export default function PricePage() {
 
             <div style={{ background: CARD, borderRadius: 14, padding: "0 16px" }}>
               <p style={{ padding: "12px 0 8px", margin: 0, fontSize: 13, color: TEXT2 }}>เหตุผล</p>
-              {ADJUST_REASONS.map((r, i) => (
+              {ADJUST_REASONS.map((r) => (
                 <label key={r} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderTop: `1px solid ${BORDER}`, cursor: "pointer" }}>
                   <div style={{
                     width: 18, height: 18, borderRadius: "50%", border: `2px solid ${reason === r ? ACCENT : BORDER}`,
@@ -215,7 +200,6 @@ export default function PricePage() {
           </div>
         )}
 
-        {/* Mode: Waiting for customer */}
         {mode === "waiting" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ background: "rgba(212,168,67,0.08)", border: "1px solid rgba(212,168,67,0.2)", borderRadius: 14, padding: 20, textAlign: "center" }}>

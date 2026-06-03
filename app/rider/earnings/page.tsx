@@ -5,15 +5,7 @@ import { TrendingUp, Package } from "lucide-react";
 import { Sk } from "@/app/rider/skeleton";
 import { supabase } from "@/lib/supabase";
 import { fetchRiderEarnings } from "@/app/actions/rider";
-
-const BG     = "#0B0B0D";
-const CARD   = "#1A1A1C";
-const CARD2  = "#222224";
-const BORDER = "#2C2C2E";
-const ACCENT = "#4ADE80";
-const GREEN  = "#30D158";
-const TEXT   = "#F2F2F7";
-const TEXT2  = "#8E8E93";
+import { useRiderTheme } from "@/app/rider/theme";
 
 function fmt(n: number) { return n.toLocaleString("th-TH"); }
 function fmtDate(d: string) {
@@ -23,6 +15,7 @@ function fmtDate(d: string) {
 type Earnings = Awaited<ReturnType<typeof fetchRiderEarnings>>;
 
 export default function EarningsPage() {
+  const { BG: _BG, CARD, CARD2, BORDER, ACCENT, GREEN, TEXT, TEXT2 } = useRiderTheme();
   const [data, setData]     = useState<Earnings | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -37,7 +30,6 @@ export default function EarningsPage() {
 
   if (loading) return (
     <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 10 }}>
-      {/* Period cards skeleton */}
       {[0,1,2].map(i => (
         <div key={i} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -51,7 +43,6 @@ export default function EarningsPage() {
           </div>
         </div>
       ))}
-      {/* Recent jobs skeleton */}
       <div style={{ marginTop: 8 }}>
         <Sk w={80} h={13} style={{ marginBottom: 14 }} />
         {[0,1,2].map(i => (
@@ -76,7 +67,6 @@ export default function EarningsPage() {
   return (
     <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 20 }}>
 
-      {/* Period summary cards */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {periods.map(({ label, data: d, color }) => (
           <div key={label} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -99,7 +89,6 @@ export default function EarningsPage() {
         ))}
       </div>
 
-      {/* Recent jobs */}
       <div>
         <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 600, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.5 }}>
           งานล่าสุดเดือนนี้

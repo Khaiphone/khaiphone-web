@@ -5,16 +5,8 @@ import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Camera } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { fetchRiderJob, riderSaveInspection } from "@/app/actions/rider";
+import { useRiderTheme } from "@/app/rider/theme";
 import type { AdminRequest, InspectionCriterion, FunctionalTest } from "@/lib/types/admin";
-
-const BG     = "#0B0B0D";
-const CARD   = "#1A1A1C";
-const BORDER = "#2C2C2E";
-const ACCENT = "#4ADE80";
-const GREEN  = "#30D158";
-const RED    = "#FF453A";
-const TEXT   = "#F2F2F7";
-const TEXT2  = "#8E8E93";
 
 const INSPECT_KEYS = ["body", "screen", "display", "battery", "warranty", "icloud"] as const;
 const INSPECT_LABELS: Record<string, string> = {
@@ -50,17 +42,19 @@ async function uploadPhoto(file: File, path: string): Promise<string> {
   return publicUrl;
 }
 
-function PhotoBox({ label, url, onCapture, required }: {
-  label: string; url?: string; onCapture: (file: File) => void; required?: boolean;
+type IC = { CARD: string; BORDER: string; ACCENT: string; GREEN: string; RED: string; TEXT: string; TEXT2: string };
+
+function PhotoBox({ label, url, onCapture, required, c }: {
+  label: string; url?: string; onCapture: (file: File) => void; required?: boolean; c: IC;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   return (
     <div>
-      <p style={{ margin: "0 0 8px", fontSize: 13, color: TEXT2 }}>
-        {label}{required && <span style={{ color: RED }}> *</span>}
+      <p style={{ margin: "0 0 8px", fontSize: 13, color: c.TEXT2 }}>
+        {label}{required && <span style={{ color: c.RED }}> *</span>}
       </p>
       <button onClick={() => ref.current?.click()} style={{
-        width: "100%", aspectRatio: "16/9", background: CARD, border: `1.5px dashed ${url ? ACCENT : BORDER}`,
+        width: "100%", aspectRatio: "16/9", background: c.CARD, border: `1.5px dashed ${url ? c.ACCENT : c.BORDER}`,
         borderRadius: 12, cursor: "pointer", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center",
       }}>
         {url ? (
@@ -68,8 +62,8 @@ function PhotoBox({ label, url, onCapture, required }: {
           <img src={url} alt={label} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-            <Camera size={28} color={TEXT2} />
-            <span style={{ fontSize: 12, color: TEXT2 }}>แตะเพื่อถ่ายรูป</span>
+            <Camera size={28} color={c.TEXT2} />
+            <span style={{ fontSize: 12, color: c.TEXT2 }}>แตะเพื่อถ่ายรูป</span>
           </div>
         )}
       </button>
@@ -79,27 +73,27 @@ function PhotoBox({ label, url, onCapture, required }: {
   );
 }
 
-function CompareRow({ label, stated, actual, onActualChange }: {
-  label: string; stated: string; actual: string; onActualChange: (v: string) => void;
+function CompareRow({ label, stated, actual, onActualChange, c }: {
+  label: string; stated: string; actual: string; onActualChange: (v: string) => void; c: IC;
 }) {
   const pass = !stated || actual.trim().toLowerCase() === stated.trim().toLowerCase();
   return (
-    <div style={{ padding: "14px 16px", borderBottom: `1px solid ${BORDER}` }}>
+    <div style={{ padding: "14px 16px", borderBottom: `1px solid ${c.BORDER}` }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <span style={{ fontSize: 14, fontWeight: 600, color: TEXT }}>{label}</span>
+        <span style={{ fontSize: 14, fontWeight: 600, color: c.TEXT }}>{label}</span>
         {actual && (
           <span style={{
             fontSize: 11, padding: "2px 8px", borderRadius: 6, fontWeight: 600,
             background: pass ? "rgba(48,209,88,0.15)" : "rgba(255,69,58,0.15)",
-            color: pass ? GREEN : RED,
+            color: pass ? c.GREEN : c.RED,
           }}>
             {pass ? "ตรงกัน" : "ไม่ตรง"}
           </span>
         )}
       </div>
       {stated && (
-        <p style={{ margin: "0 0 8px", fontSize: 12, color: TEXT2 }}>
-          ลูกค้าแจ้ง: <span style={{ color: TEXT, fontWeight: 500 }}>{stated}</span>
+        <p style={{ margin: "0 0 8px", fontSize: 12, color: c.TEXT2 }}>
+          ลูกค้าแจ้ง: <span style={{ color: c.TEXT, fontWeight: 500 }}>{stated}</span>
         </p>
       )}
       <input
@@ -107,8 +101,8 @@ function CompareRow({ label, stated, actual, onActualChange }: {
         onChange={e => onActualChange(e.target.value)}
         placeholder={stated || "กรอกสภาพจริง"}
         style={{
-          width: "100%", background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`,
-          borderRadius: 8, color: TEXT, fontSize: 14, fontFamily: "inherit", outline: "none",
+          width: "100%", background: "rgba(128,128,128,0.06)", border: `1px solid ${c.BORDER}`,
+          borderRadius: 8, color: c.TEXT, fontSize: 14, fontFamily: "inherit", outline: "none",
           padding: "8px 10px", boxSizing: "border-box",
         }}
       />
@@ -116,20 +110,20 @@ function CompareRow({ label, stated, actual, onActualChange }: {
   );
 }
 
-function CheckRow({ label, pass, onToggle }: { label: string; pass: boolean; onToggle: (v: boolean) => void }) {
+function CheckRow({ label, pass, onToggle, c }: { label: string; pass: boolean; onToggle: (v: boolean) => void; c: IC }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", borderBottom: `1px solid ${BORDER}` }}>
-      <span style={{ fontSize: 14, color: TEXT, flex: 1 }}>{label}</span>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", borderBottom: `1px solid ${c.BORDER}` }}>
+      <span style={{ fontSize: 14, color: c.TEXT, flex: 1 }}>{label}</span>
       <div style={{ display: "flex", gap: 8 }}>
         <button onClick={() => onToggle(true)} style={{
           padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit",
-          background: pass ? "rgba(48,209,88,0.2)" : CARD,
-          color: pass ? GREEN : TEXT2, fontWeight: 600, fontSize: 13,
+          background: pass ? "rgba(48,209,88,0.2)" : c.CARD,
+          color: pass ? c.GREEN : c.TEXT2, fontWeight: 600, fontSize: 13,
         }}>ปกติ</button>
         <button onClick={() => onToggle(false)} style={{
           padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit",
-          background: !pass ? "rgba(255,69,58,0.2)" : CARD,
-          color: !pass ? RED : TEXT2, fontWeight: 600, fontSize: 13,
+          background: !pass ? "rgba(255,69,58,0.2)" : c.CARD,
+          color: !pass ? c.RED : c.TEXT2, fontWeight: 600, fontSize: 13,
         }}>มีปัญหา</button>
       </div>
     </div>
@@ -139,9 +133,11 @@ function CheckRow({ label, pass, onToggle }: { label: string; pass: boolean; onT
 export default function InspectPage() {
   const { id } = useParams<{ id: string }>();
   const router  = useRouter();
+  const { BG, CARD, BORDER, ACCENT, GREEN, RED, TEXT, TEXT2 } = useRiderTheme();
+  const ic: IC = { CARD, BORDER, ACCENT, GREEN, RED, TEXT, TEXT2 };
+
   const [job, setJob] = useState<AdminRequest | null>(null);
 
-  // Photos
   const [idCardPhotoUrl,   setIdCardPhotoUrl]   = useState<string>();
   const [deliveryPhotoUrl, setDeliveryPhotoUrl] = useState<string>();
   const [frontPhotoUrl,    setFrontPhotoUrl]    = useState<string>();
@@ -150,16 +146,12 @@ export default function InspectPage() {
   const [extraPhotoUrl,    setExtraPhotoUrl]    = useState<string>();
   const [uploading, setUploading] = useState(false);
 
-  // Device info
   const [imei,          setImei]     = useState("");
   const [serial,        setSerial]   = useState("");
   const [battery,       setBattery]  = useState("");
   const [warrantyExpiry, setWarranty] = useState("");
 
-  // Condition comparison (stated vs actual)
   const [criteria, setCriteria] = useState<Record<string, { stated: string; actual: string }>>({});
-
-  // Functional tests
   const [functional, setFunctional] = useState<FunctionalTest[]>(FUNCTIONAL_TEST_DEFAULTS.map(t => ({ ...t })));
 
   const [saving, setSaving] = useState(false);
@@ -242,7 +234,6 @@ export default function InspectPage() {
   return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", flexDirection: "column" }}>
 
-      {/* Header */}
       <div style={{ background: CARD, borderBottom: `1px solid ${BORDER}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 10 }}>
         <button onClick={() => router.back()} style={{ background: "none", border: "none", color: TEXT2, cursor: "pointer", padding: 0 }}>
           <ArrowLeft size={22} />
@@ -255,27 +246,24 @@ export default function InspectPage() {
 
       <div style={{ flex: 1, overflowY: "auto", padding: 20, display: "flex", flexDirection: "column", gap: 24 }}>
 
-        {/* Photos — device condition */}
         <section>
           <p style={{ margin: "0 0 14px", fontSize: 13, fontWeight: 700, color: TEXT, textTransform: "uppercase", letterSpacing: 0.5 }}>รูปสภาพเครื่อง</p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <PhotoBox label="หน้าจอ"            url={frontPhotoUrl}  onCapture={f => handlePhoto("front", f)}  required />
-            <PhotoBox label="ด้านหลัง"           url={backPhotoUrl}   onCapture={f => handlePhoto("back", f)}   required />
-            <PhotoBox label="ด้านข้าง / รอยต่างๆ" url={sidePhotoUrl}   onCapture={f => handlePhoto("side", f)}  />
-            <PhotoBox label="อื่นๆ"              url={extraPhotoUrl}  onCapture={f => handlePhoto("extra", f)} />
+            <PhotoBox label="หน้าจอ"            url={frontPhotoUrl}  onCapture={f => handlePhoto("front", f)}  required c={ic} />
+            <PhotoBox label="ด้านหลัง"           url={backPhotoUrl}   onCapture={f => handlePhoto("back", f)}   required c={ic} />
+            <PhotoBox label="ด้านข้าง / รอยต่างๆ" url={sidePhotoUrl}   onCapture={f => handlePhoto("side", f)}  c={ic} />
+            <PhotoBox label="อื่นๆ"              url={extraPhotoUrl}  onCapture={f => handlePhoto("extra", f)} c={ic} />
           </div>
         </section>
 
-        {/* Photos — documents */}
         <section>
           <p style={{ margin: "0 0 14px", fontSize: 13, fontWeight: 700, color: TEXT, textTransform: "uppercase", letterSpacing: 0.5 }}>รูปถ่ายหลักฐาน</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <PhotoBox label="บัตรประชาชนคู่กับเครื่องที่ขาย"    url={idCardPhotoUrl}   onCapture={f => handlePhoto("id", f)}       required />
-            <PhotoBox label="ส่งมอบเครื่อง (ลูกค้าถือเครื่อง)"  url={deliveryPhotoUrl} onCapture={f => handlePhoto("delivery", f)} required />
+            <PhotoBox label="บัตรประชาชนคู่กับเครื่องที่ขาย"    url={idCardPhotoUrl}   onCapture={f => handlePhoto("id", f)}       required c={ic} />
+            <PhotoBox label="ส่งมอบเครื่อง (ลูกค้าถือเครื่อง)"  url={deliveryPhotoUrl} onCapture={f => handlePhoto("delivery", f)} required c={ic} />
           </div>
         </section>
 
-        {/* Device info */}
         <section>
           <p style={{ margin: "0 0 14px", fontSize: 13, fontWeight: 700, color: TEXT, textTransform: "uppercase", letterSpacing: 0.5 }}>ข้อมูลเครื่อง</p>
           <div style={{ background: CARD, borderRadius: 14, overflow: "hidden" }}>
@@ -298,7 +286,6 @@ export default function InspectPage() {
           </div>
         </section>
 
-        {/* Condition comparison */}
         <section>
           <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: TEXT, textTransform: "uppercase", letterSpacing: 0.5 }}>สภาพเครื่อง</p>
           <p style={{ margin: "0 0 12px", fontSize: 12, color: TEXT2 }}>เปรียบเทียบสิ่งที่ลูกค้าแจ้งกับสภาพจริง</p>
@@ -311,6 +298,7 @@ export default function InspectPage() {
                   stated={criteria[k].stated}
                   actual={criteria[k].actual}
                   onActualChange={v => setCriteria(p => ({ ...p, [k]: { ...p[k], actual: v } }))}
+                  c={ic}
                 />
               ))
             ) : (
@@ -319,7 +307,6 @@ export default function InspectPage() {
           </div>
         </section>
 
-        {/* Functional tests */}
         <section>
           <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: TEXT, textTransform: "uppercase", letterSpacing: 0.5 }}>ฟังก์ชันการใช้งาน</p>
           <p style={{ margin: "0 0 12px", fontSize: 12, color: TEXT2 }}>กดที่แต่ละรายการหากมีปัญหา</p>
@@ -330,6 +317,7 @@ export default function InspectPage() {
                 label={test.label}
                 pass={test.pass}
                 onToggle={v => setFunctional(prev => prev.map((t, j) => j === i ? { ...t, pass: v } : t))}
+                c={ic}
               />
             ))}
           </div>
@@ -342,7 +330,6 @@ export default function InspectPage() {
         )}
       </div>
 
-      {/* Save button */}
       <div style={{ padding: "16px 20px", paddingBottom: "calc(16px + env(safe-area-inset-bottom))", background: BG, borderTop: `1px solid ${BORDER}` }}>
         <button onClick={handleSave} disabled={saving || uploading} style={{
           width: "100%", padding: 16, borderRadius: 14, background: ACCENT, border: "none",

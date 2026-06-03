@@ -9,15 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { fetchMyProfile } from "@/app/actions/admin-users";
 import { fetchRiderOnlineStatus, fetchRiderNotifications } from "@/app/actions/rider";
 import { saveSubscription } from "@/app/actions/push";
-
-const BG     = "#0B0B0D";
-const CARD   = "#1A1A1C";
-const CARD2  = "#222224";
-const BORDER = "#2C2C2E";
-const ACCENT = "#4ADE80";
-const GREEN  = "#30D158";
-const TEXT   = "#F2F2F7";
-const TEXT2  = "#8E8E93";
+import { RiderThemeProvider, useRiderTheme } from "@/app/rider/theme";
 
 const NAV = [
   { href: "/rider",          label: "หน้าแรก",   icon: Home       },
@@ -29,29 +21,27 @@ const NAV = [
 type Notif = { id: string; requestId: string; orderId: string; title: string; body: string; timestamp: string };
 
 function fmtTime(iso: string) {
-  const d = new Date(iso);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
+  const diffMs = Date.now() - new Date(iso).getTime();
   const diffH  = Math.floor(diffMs / 3600000);
   const diffD  = Math.floor(diffMs / 86400000);
   if (diffH < 1)  return "เมื่อกี้";
   if (diffH < 24) return `${diffH} ชม. ที่แล้ว`;
   if (diffD < 7)  return `${diffD} วันที่แล้ว`;
-  return d.toLocaleDateString("th-TH", { day: "numeric", month: "short" });
+  return new Date(iso).toLocaleDateString("th-TH", { day: "numeric", month: "short" });
 }
 
-export default function RiderLayout({ children }: { children: React.ReactNode }) {
+function RiderLayoutInner({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
+  const { BG, CARD, BORDER, ACCENT, GREEN, TEXT, TEXT2 } = useRiderTheme();
+
   const [ready, setReady]         = useState(false);
   const [riderName, setRiderName] = useState("");
   const [userId, setUserId]       = useState<string>("");
   const [isOnline, setIsOnline]   = useState(false);
-
-  // Notifications
-  const [notifs, setNotifs]           = useState<Notif[]>([]);
-  const [showNotifs, setShowNotifs]   = useState(false);
-  const [lastRead, setLastRead]       = useState<string>(() =>
+  const [notifs, setNotifs]       = useState<Notif[]>([]);
+  const [showNotifs, setShowNotifs] = useState(false);
+  const [lastRead, setLastRead]   = useState<string>(() =>
     typeof window !== "undefined" ? (localStorage.getItem("rider-notif-read") ?? "") : ""
   );
 
@@ -131,7 +121,6 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
     });
   }, [router, loadNotifs]);
 
-  // Refresh notifications when a job status changes (realtime)
   useEffect(() => {
     if (!userId) return;
     const ch = supabase
@@ -175,40 +164,22 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
           padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between",
           position: "sticky", top: 0, zIndex: 10, flexShrink: 0,
         }}>
-          {/* Left: logo */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Image
-              src="/rider-apple-touch-icon.png"
-              alt="KP Rider"
-              width={32} height={32}
-              style={{ borderRadius: 8 }}
-              unoptimized
-            />
+            <Image src="/rider-apple-touch-icon.png" alt="KP Rider" width={32} height={32} style={{ borderRadius: 8 }} unoptimized />
             <span style={{ fontSize: 13, fontWeight: 700, color: ACCENT, letterSpacing: 0.3 }}>KP Rider</span>
           </div>
 
-          {/* Center: greeting */}
           <div style={{ textAlign: "center" }}>
             <p style={{ margin: 0, fontSize: 11, color: TEXT2, letterSpacing: 0.5 }}>สวัสดีครับ,</p>
             <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: TEXT }}>{riderName}</p>
           </div>
 
-          {/* Right: online dot + bell */}
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{
-              width: 9, height: 9, borderRadius: "50%",
-              background: isOnline ? GREEN : BORDER,
-              boxShadow: isOnline ? `0 0 6px ${GREEN}` : "none",
-            }} />
+            <div style={{ width: 9, height: 9, borderRadius: "50%", background: isOnline ? GREEN : BORDER, boxShadow: isOnline ? `0 0 6px ${GREEN}` : "none" }} />
             <button onClick={openNotifs} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, position: "relative", display: "flex" }}>
               <Bell size={22} color={unreadCount > 0 ? ACCENT : TEXT2} />
               {unreadCount > 0 && (
-                <span style={{
-                  position: "absolute", top: -4, right: -4,
-                  background: "#FF453A", borderRadius: "50%",
-                  width: 16, height: 16, fontSize: 9, fontWeight: 700, color: "#fff",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
+                <span style={{ position: "absolute", top: -4, right: -4, background: "#FF453A", borderRadius: "50%", width: 16, height: 16, fontSize: 9, fontWeight: 700, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
@@ -224,20 +195,11 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
 
       {/* Bottom Nav */}
       {!isJobPage && (
-        <nav style={{
-          position: "fixed", bottom: 0, left: 0, right: 0,
-          background: CARD, borderTop: `1px solid ${BORDER}`,
-          display: "flex", paddingBottom: "env(safe-area-inset-bottom)",
-          zIndex: 10,
-        }}>
+        <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: CARD, borderTop: `1px solid ${BORDER}`, display: "flex", paddingBottom: "env(safe-area-inset-bottom)", zIndex: 10 }}>
           {NAV.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
             return (
-              <Link key={href} href={href} style={{
-                flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
-                padding: "10px 0", gap: 3, textDecoration: "none",
-                color: active ? ACCENT : TEXT2,
-              }}>
+              <Link key={href} href={href} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "10px 0", gap: 3, textDecoration: "none", color: active ? ACCENT : TEXT2 }}>
                 <Icon size={21} strokeWidth={active ? 2.5 : 1.8} />
                 <span style={{ fontSize: 10, fontWeight: active ? 600 : 400 }}>{label}</span>
               </Link>
@@ -248,25 +210,12 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
 
       {/* Notification bottom sheet */}
       {showNotifs && (
-        <div
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 50, display: "flex", alignItems: "flex-end" }}
-          onClick={() => setShowNotifs(false)}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              width: "100%", background: CARD, borderRadius: "20px 20px 0 0",
-              maxHeight: "75vh", display: "flex", flexDirection: "column",
-              paddingBottom: "env(safe-area-inset-bottom)",
-            }}
-          >
-            {/* Sheet header */}
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 50, display: "flex", alignItems: "flex-end" }} onClick={() => setShowNotifs(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ width: "100%", background: CARD, borderRadius: "20px 20px 0 0", maxHeight: "75vh", display: "flex", flexDirection: "column", paddingBottom: "env(safe-area-inset-bottom)" }}>
             <div style={{ padding: "16px 20px 12px", borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
               <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: TEXT }}>การแจ้งเตือน</p>
               <button onClick={() => setShowNotifs(false)} style={{ background: "none", border: "none", color: TEXT2, cursor: "pointer", fontSize: 22, lineHeight: 1, padding: 0 }}>×</button>
             </div>
-
-            {/* Notification list */}
             <div style={{ overflowY: "auto", flex: 1 }}>
               {notifs.length === 0 ? (
                 <div style={{ padding: 40, textAlign: "center" }}>
@@ -276,19 +225,9 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
               ) : notifs.map((n, i) => {
                 const isUnread = n.timestamp > lastRead;
                 return (
-                  <div
-                    key={n.id}
-                    onClick={() => { setShowNotifs(false); router.push(`/rider/job/${n.requestId}`); }}
-                    style={{
-                      padding: "14px 20px", borderBottom: i < notifs.length - 1 ? `1px solid ${BORDER}` : "none",
-                      background: isUnread ? "rgba(74,222,128,0.05)" : "transparent",
-                      cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start",
-                    }}
-                  >
-                    <div style={{
-                      width: 8, height: 8, borderRadius: "50%", marginTop: 5, flexShrink: 0,
-                      background: isUnread ? ACCENT : "transparent",
-                    }} />
+                  <div key={n.id} onClick={() => { setShowNotifs(false); router.push(`/rider/job/${n.requestId}`); }}
+                    style={{ padding: "14px 20px", borderBottom: i < notifs.length - 1 ? `1px solid ${BORDER}` : "none", background: isUnread ? "rgba(74,222,128,0.05)" : "transparent", cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", marginTop: 5, flexShrink: 0, background: isUnread ? ACCENT : "transparent" }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ margin: "0 0 2px", fontSize: 14, fontWeight: isUnread ? 700 : 400, color: TEXT }}>{n.title}</p>
                       <p style={{ margin: "0 0 4px", fontSize: 12, color: TEXT2 }}>{n.body}</p>
@@ -302,5 +241,13 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
         </div>
       )}
     </div>
+  );
+}
+
+export default function RiderLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <RiderThemeProvider>
+      <RiderLayoutInner>{children}</RiderLayoutInner>
+    </RiderThemeProvider>
   );
 }

@@ -11,16 +11,8 @@ import {
   fetchRiderOnlineStatus,
 } from "@/app/actions/rider";
 import { Sk } from "@/app/rider/skeleton";
+import { useRiderTheme } from "@/app/rider/theme";
 import type { AdminRequest } from "@/lib/types/admin";
-
-const BG     = "#0B0B0D";
-const CARD   = "#1A1A1C";
-const CARD2  = "#222224";
-const BORDER = "#2C2C2E";
-const ACCENT = "#4ADE80";
-const GREEN  = "#30D158";
-const TEXT   = "#F2F2F7";
-const TEXT2  = "#8E8E93";
 
 const STATUS_LABEL: Record<string, string> = {
   pickup_scheduled:  "รับงานแล้ว — รอออกเดินทาง",
@@ -34,6 +26,7 @@ function fmt(n: number) { return n.toLocaleString("th-TH"); }
 
 export default function RiderHomePage() {
   const router = useRouter();
+  const { CARD, CARD2, BORDER, ACCENT, GREEN, TEXT, TEXT2 } = useRiderTheme();
   const [userId, setUserId]           = useState<string>("");
   const [isOnline, setIsOnline]       = useState(false);
   const [toggling, setToggling]       = useState(false);
@@ -87,7 +80,6 @@ export default function RiderHomePage() {
 
   if (loading) return (
     <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* Online toggle skeleton */}
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <Sk w={22} h={22} r={11} />
@@ -98,7 +90,6 @@ export default function RiderHomePage() {
         </div>
         <Sk w={52} h={30} r={15} />
       </div>
-      {/* Pending job skeleton */}
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
           <Sk w={60} h={15} />
@@ -113,7 +104,6 @@ export default function RiderHomePage() {
           <Sk h={46} r={12} />
         </div>
       </div>
-      {/* Stats skeleton */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
         {[0,1,2].map(i => (
           <div key={i} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "14px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
@@ -122,7 +112,6 @@ export default function RiderHomePage() {
           </div>
         ))}
       </div>
-      {/* Active job skeleton */}
       <div>
         <Sk w={80} h={15} style={{ marginBottom: 12 }} />
         <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -199,7 +188,6 @@ export default function RiderHomePage() {
               const isAccepting = accepting === job.id;
               return (
                 <div key={job.id} style={{ background: CARD, border: `1px solid rgba(74,222,128,0.25)`, borderRadius: 16, padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
-                  {/* Route */}
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
                       <div style={{ width: 8, height: 8, borderRadius: "50%", background: TEXT2, marginTop: 5, flexShrink: 0 }} />
@@ -223,7 +211,6 @@ export default function RiderHomePage() {
                     </div>
                   </div>
 
-                  {/* Navigate button */}
                   {job.appointment.location && (
                     <a
                       href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(job.appointment.location)}`}
@@ -242,7 +229,6 @@ export default function RiderHomePage() {
                     </a>
                   )}
 
-                  {/* Device */}
                   <div style={{ display: "flex", alignItems: "center", gap: 8, background: CARD2, borderRadius: 10, padding: "8px 12px" }}>
                     <Package size={14} color={TEXT2} />
                     <span style={{ fontSize: 13, color: TEXT, flex: 1 }}>{job.device.model} {job.device.storage}</span>
@@ -256,7 +242,6 @@ export default function RiderHomePage() {
                     </div>
                   </div>
 
-                  {/* Accept button */}
                   <button
                     onClick={() => acceptJob(job.id)}
                     disabled={isAccepting}

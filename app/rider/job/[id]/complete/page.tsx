@@ -4,21 +4,15 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { CheckCircle2, ExternalLink } from "lucide-react";
 import { fetchRiderJob } from "@/app/actions/rider";
+import { useRiderTheme } from "@/app/rider/theme";
 import type { AdminRequest } from "@/lib/types/admin";
-
-const BG     = "#0B0B0D";
-const CARD   = "#1A1A1C";
-const BORDER = "#2C2C2E";
-const ACCENT = "#4ADE80";
-const GREEN  = "#30D158";
-const TEXT   = "#F2F2F7";
-const TEXT2  = "#8E8E93";
 
 function fmt(n: number) { return n.toLocaleString("th-TH"); }
 
 export default function CompletePage() {
   const { id } = useParams<{ id: string }>();
   const router  = useRouter();
+  const { BG, CARD, BORDER, ACCENT, GREEN, TEXT, TEXT2 } = useRiderTheme();
   const [job, setJob] = useState<AdminRequest | null>(null);
 
   useEffect(() => { fetchRiderJob(id).then(setJob); }, [id]);
@@ -28,7 +22,6 @@ export default function CompletePage() {
   return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
 
-      {/* Success icon */}
       <div style={{ marginBottom: 24, animation: "pop 0.4s ease" }}>
         <CheckCircle2 size={72} color={GREEN} strokeWidth={1.5} />
       </div>
