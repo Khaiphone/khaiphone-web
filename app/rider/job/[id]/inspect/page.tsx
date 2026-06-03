@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Camera } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { fetchRiderJob, riderSaveInspection } from "@/app/actions/rider";
+import { compressImage } from "@/lib/compress-image";
 import { useRiderTheme } from "@/app/rider/theme";
 import type { AdminRequest, InspectionCriterion, FunctionalTest } from "@/lib/types/admin";
 
@@ -174,7 +175,8 @@ export default function InspectPage() {
   async function handlePhoto(type: "id" | "delivery" | "front" | "back" | "side" | "extra", file: File) {
     setUploading(true);
     try {
-      const url = await uploadPhoto(file, `rider/${id}/${type}-${Date.now()}.jpg`);
+      const compressed = await compressImage(file);
+      const url = await uploadPhoto(compressed, `rider/${id}/${type}-${Date.now()}.jpg`);
       if (type === "id")       setIdCardPhotoUrl(url);
       if (type === "delivery") setDeliveryPhotoUrl(url);
       if (type === "front")    setFrontPhotoUrl(url);
