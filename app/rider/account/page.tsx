@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { UserCircle, LogOut, Wifi, WifiOff, ChevronRight } from "lucide-react";
+import { Sk } from "@/app/rider/skeleton";
 import { supabase } from "@/lib/supabase";
 import { fetchMyProfile } from "@/app/actions/admin-users";
 import { setRiderOnlineStatus, fetchRiderOnlineStatus } from "@/app/actions/rider";
@@ -22,6 +23,7 @@ export default function AccountPage() {
   const [isOnline, setIsOnline]   = useState(false);
   const [toggling, setToggling]   = useState(false);
   const [userId, setUserId]       = useState<string>("");
+  const [loading, setLoading]     = useState(true);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -33,6 +35,7 @@ export default function AccountPage() {
       ]);
       if (p) setProfile({ name: p.name ?? "", email: p.email ?? "", role: p.role });
       setIsOnline(online);
+      setLoading(false);
     });
   }, []);
 
@@ -49,6 +52,40 @@ export default function AccountPage() {
     await supabase.auth.signOut();
     router.replace("/admin/login");
   }
+
+  if (loading) return (
+    <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* Profile card skeleton */}
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 24, display: "flex", alignItems: "center", gap: 16 }}>
+        <Sk w={56} h={56} r={28} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
+          <Sk w="55%" h={16} />
+          <Sk w="70%" h={12} />
+          <Sk w={50} h={20} r={6} />
+        </div>
+      </div>
+      {/* Online toggle skeleton */}
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <Sk w={22} h={22} r={11} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <Sk w={80} h={14} />
+            <Sk w={110} h={11} />
+          </div>
+        </div>
+        <Sk w={52} h={30} r={15} />
+      </div>
+      {/* Menu items skeleton */}
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, overflow: "hidden" }}>
+        {[0,1].map(i => (
+          <div key={i} style={{ padding: "16px 20px", borderBottom: i === 0 ? `1px solid ${BORDER}` : "none", display: "flex", alignItems: "center", gap: 12 }}>
+            <Sk w={20} h={20} r={4} />
+            <Sk w="50%" h={14} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 20 }}>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CheckCircle2, XCircle, Package } from "lucide-react";
+import { Sk } from "@/app/rider/skeleton";
 import { supabase } from "@/lib/supabase";
 import { fetchRiderHistory, fetchRiderStats } from "@/app/actions/rider";
 import type { AdminRequest } from "@/lib/types/admin";
@@ -42,9 +43,33 @@ export default function HistoryPage() {
   }, []);
 
   if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 300 }}>
-      <div style={{ width: 32, height: 32, borderRadius: "50%", border: "3px solid #2C2C2E", borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Stats card skeleton */}
+      <div style={{ background: CARD, borderRadius: 16, padding: 20 }}>
+        <Sk w={80} h={12} style={{ marginBottom: 16 }} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+          {[0,1,2].map(i => (
+            <div key={i} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <Sk w="70%" h={11} />
+              <Sk w="50%" h={22} />
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* History list skeleton */}
+      {[0,1,2,3].map(i => (
+        <div key={i} style={{ background: CARD, borderRadius: 14, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
+            <Sk w="60%" h={14} />
+            <Sk w="45%" h={11} />
+            <Sk w="35%" h={11} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
+            <Sk w={70} h={20} r={6} />
+            <Sk w={55} h={13} />
+          </div>
+        </div>
+      ))}
     </div>
   );
 

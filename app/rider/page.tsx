@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { MapPin, ChevronRight, Banknote, ArrowUpDown, Package, Wifi, WifiOff, CheckCircle2, Navigation } from "lucide-react";
+import { MapPin, Banknote, ArrowUpDown, Package, Wifi, WifiOff, CheckCircle2, Navigation, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
   fetchRiderHomeData,
@@ -10,6 +10,7 @@ import {
   setRiderOnlineStatus,
   fetchRiderOnlineStatus,
 } from "@/app/actions/rider";
+import { Sk } from "@/app/rider/skeleton";
 import type { AdminRequest } from "@/lib/types/admin";
 
 const BG     = "#0B0B0D";
@@ -85,9 +86,53 @@ export default function RiderHomePage() {
   }
 
   if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 300 }}>
-      <div style={{ width: 32, height: 32, borderRadius: "50%", border: `3px solid ${BORDER}`, borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* Online toggle skeleton */}
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <Sk w={22} h={22} r={11} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <Sk w={90} h={14} />
+            <Sk w={120} h={11} />
+          </div>
+        </div>
+        <Sk w={52} h={30} r={15} />
+      </div>
+      {/* Pending job skeleton */}
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+          <Sk w={60} h={15} />
+          <Sk w={40} h={20} r={10} />
+        </div>
+        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <Sk w="70%" h={13} />
+            <Sk w="85%" h={13} />
+          </div>
+          <Sk h={38} r={10} />
+          <Sk h={46} r={12} />
+        </div>
+      </div>
+      {/* Stats skeleton */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+        {[0,1,2].map(i => (
+          <div key={i} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "14px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
+            <Sk w="80%" h={10} />
+            <Sk w="60%" h={20} />
+          </div>
+        ))}
+      </div>
+      {/* Active job skeleton */}
+      <div>
+        <Sk w={80} h={15} style={{ marginBottom: 12 }} />
+        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
+            <Sk w="60%" h={14} />
+            <Sk w="40%" h={11} />
+          </div>
+          <Sk w={70} h={26} r={8} />
+        </div>
+      </div>
     </div>
   );
 

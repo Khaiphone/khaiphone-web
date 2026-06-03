@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { TrendingUp, Package } from "lucide-react";
+import { Sk } from "@/app/rider/skeleton";
 import { supabase } from "@/lib/supabase";
 import { fetchRiderEarnings } from "@/app/actions/rider";
 
@@ -35,9 +36,34 @@ export default function EarningsPage() {
   }, []);
 
   if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 300 }}>
-      <div style={{ width: 32, height: 32, borderRadius: "50%", border: "3px solid #2C2C2E", borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 10 }}>
+      {/* Period cards skeleton */}
+      {[0,1,2].map(i => (
+        <div key={i} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <Sk w={60} h={12} />
+            <Sk w={100} h={28} />
+            <Sk w={80} h={11} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
+            <Sk w={50} h={11} />
+            <Sk w={40} h={18} />
+          </div>
+        </div>
+      ))}
+      {/* Recent jobs skeleton */}
+      <div style={{ marginTop: 8 }}>
+        <Sk w={80} h={13} style={{ marginBottom: 14 }} />
+        {[0,1,2].map(i => (
+          <div key={i} style={{ background: CARD, borderRadius: 14, padding: "14px 16px", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 7, flex: 1 }}>
+              <Sk w="55%" h={13} />
+              <Sk w="40%" h={11} />
+            </div>
+            <Sk w={70} h={20} r={6} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 
