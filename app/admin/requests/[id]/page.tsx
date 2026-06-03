@@ -526,7 +526,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   async function copyTrackingLink() {
     if (!request) return;
     const phone = request.customer.phone.replace(/\D/g, "");
-    const url = `${window.location.origin}/request/${request.orderNumber}?phone=${encodeURIComponent(phone)}`;
+    const url = `https://khaiphone.com/request/${request.orderNumber}?phone=${encodeURIComponent(phone)}`;
     try {
       await navigator.clipboard.writeText(url);
     } catch {
