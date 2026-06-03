@@ -102,7 +102,7 @@ export default function PaymentPage() {
   }
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: BG, display: "flex", flexDirection: "column" }}>
+    <div style={{ height: "100%", overflow: "hidden", background: BG, display: "flex", flexDirection: "column" }}>
 
       <div style={{ background: CARD, borderBottom: `1px solid ${BORDER}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: 12 }}>
         <button onClick={() => router.back()} style={{ background: "none", border: "none", color: TEXT2, cursor: "pointer", padding: 0 }}>
@@ -111,7 +111,7 @@ export default function PaymentPage() {
         <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: TEXT }}>ชำระเงิน</p>
       </div>
 
-      <div style={{ flex: 1, padding: 20, display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: 20, display: "flex", flexDirection: "column", gap: 20 }}>
 
         <div style={{ background: CARD, borderRadius: 16, padding: 24, textAlign: "center" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 8 }}>

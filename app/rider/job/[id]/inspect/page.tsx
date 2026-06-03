@@ -259,7 +259,7 @@ export default function InspectPage() {
   const hasCriteria = INSPECT_KEYS.some(k => criteria[k]);
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: BG, display: "flex", flexDirection: "column" }}>
+    <div style={{ height: "100%", overflow: "hidden", background: BG, display: "flex", flexDirection: "column" }}>
 
       <div style={{ background: CARD, borderBottom: `1px solid ${BORDER}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: 12 }}>
         <button onClick={() => router.back()} style={{ background: "none", border: "none", color: TEXT2, cursor: "pointer", padding: 0 }}>
