@@ -456,6 +456,7 @@ export default function RiderContractPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", flexDirection: "column" }}>
+      <style>{`input[type="date"]{-webkit-appearance:none;appearance:none}`}</style>
 
       {/* Header */}
       <div style={{ background: CARD, borderBottom: `1px solid ${BORDER}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 10 }}>
