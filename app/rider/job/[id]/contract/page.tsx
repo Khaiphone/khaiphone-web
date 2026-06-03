@@ -455,7 +455,7 @@ export default function RiderContractPage() {
   };
 
   return (
-    <div style={{ height: "100dvh", background: BG, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ position: "fixed", inset: 0, background: BG, display: "flex", flexDirection: "column" }}>
       <style>{`input[type="date"]{-webkit-appearance:none;appearance:none}`}</style>
 
       {/* Header */}

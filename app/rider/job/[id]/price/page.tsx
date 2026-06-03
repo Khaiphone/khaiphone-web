@@ -143,7 +143,7 @@ export default function PricePage() {
   }
 
   return (
-    <div style={{ height: "100dvh", background: BG, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ position: "fixed", inset: 0, background: BG, display: "flex", flexDirection: "column" }}>
 
       {/* Header */}
       <div style={{ background: CARD, borderBottom: `1px solid ${BORDER}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: 12 }}>
