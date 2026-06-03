@@ -11,9 +11,9 @@ import {
   fetchRequest, updateStatus, addNote,
   updateAppointment, updatePayment, updatePrice,
   markContractSigned, savePaymentSlip, updateDeviceColor,
-  assignRequest, deleteRequest, updateCustomer, updateDevice,
+  assignRequest, assignRider, deleteRequest, updateCustomer, updateDevice,
 } from "@/app/actions/admin-requests";
-import { fetchAdminUsers, fetchMyRole } from "@/app/actions/admin-users";
+import { fetchAdminUsers, fetchMyRole, fetchMyProfile } from "@/app/actions/admin-users";
 import type { AdminUserRow } from "@/app/actions/admin-users";
 import { saveInspection, recordArrival, respondToNegotiation } from "@/app/actions/inspection";
 import { supabase } from "@/lib/supabase";
@@ -138,10 +138,15 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const [currentColorDraft, setCurrentColorDraft] = useState("");
   const inspectionRef = useRef<HTMLDivElement>(null);
 
-  // Assignment
+  // Staff assignment
   const [staffList,    setStaffList]    = useState<AdminUserRow[]>([]);
   const [assignSaving, setAssignSaving] = useState(false);
   const [assignDraft,  setAssignDraft]  = useState<string>(""); // user_id or ""
+
+  // Rider assignment
+  const [riderDraft,   setRiderDraft]   = useState<string>(""); // user_id or ""
+  const [riderSaving,  setRiderSaving]  = useState(false);
+  const [canAssign,    setCanAssign]    = useState(false);
 
   // Arrival photo
   const [showArrivalForm,   setShowArrivalForm]   = useState(false);
@@ -173,17 +178,26 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         setCustDraft({ name: data.customer.name, phone: data.customer.phone, email: data.customer.email ?? "" });
         setDevDraft({ model: data.device.model, storage: data.device.storage, color: data.device.color ?? "", condition: data.device.condition, estimatedPrice: String(data.device.estimatedPrice) });
         setAssignDraft(data.assignedTo ?? "");
+        setRiderDraft(data.riderId ?? "");
       }
       setLoading(false);
     });
 
-    // Load staff list for owners only (for assignment dropdown)
+    // Load staff list for owners and staff with assign_requests permission
     supabase.auth.getUser().then(async ({ data: authData }) => {
       if (!authData.user) return;
       const role = await fetchMyRole(authData.user.id);
       if (role === "owner") {
         setIsOwner(true);
+        setCanAssign(true);
         fetchAdminUsers().then(list => setStaffList(list.filter(u => u.active)));
+      } else {
+        const profile = await fetchMyProfile(authData.user.id);
+        const perms = profile?.permissions ?? [];
+        if (perms.includes("assign_requests")) {
+          setCanAssign(true);
+          fetchAdminUsers().then(list => setStaffList(list.filter(u => u.active)));
+        }
       }
     });
   }, [id]);
@@ -430,6 +444,18 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
       setSaveError("บันทึก assignment ไม่สำเร็จ");
     }
     setAssignSaving(false);
+  }
+
+  async function handleRiderAssign() {
+    setRiderSaving(true);
+    const rider = staffList.find(s => s.user_id === riderDraft);
+    const result = await assignRider(id, riderDraft || null, rider?.name ?? null);
+    if (result.success) {
+      setRequest(prev => prev ? { ...prev, riderId: riderDraft || null, riderName: rider?.name ?? null } : prev);
+    } else {
+      setSaveError("มอบหมายไรเดอร์ไม่สำเร็จ");
+    }
+    setRiderSaving(false);
   }
 
   async function handleSlipUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -783,6 +809,63 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                 <p style={{ color: TEXT2, fontSize: 13, margin: 0 }}>
                   {request.assignedToName ?? "ยังไม่ได้มอบหมาย"}
                 </p>
+              )}
+            </div>
+          </Card>
+        )}
+
+        {/* B3. Rider Assignment */}
+        {(canAssign || request.riderName) && (
+          <Card>
+            <div style={{ padding: "14px 16px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <SectionLabel>ไรเดอร์รับงาน</SectionLabel>
+                {request.riderId && (
+                  <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 6,
+                    background: staffList.find(s => s.user_id === request.riderId)?.is_online ? "rgba(48,209,88,0.12)" : "rgba(142,142,147,0.12)",
+                    color: staffList.find(s => s.user_id === request.riderId)?.is_online ? "#30D158" : "#8E8E93",
+                  }}>
+                    {staffList.find(s => s.user_id === request.riderId)?.is_online ? "● Online" : "● Offline"}
+                  </span>
+                )}
+              </div>
+              {canAssign ? (
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <select
+                    value={riderDraft}
+                    onChange={e => setRiderDraft(e.target.value)}
+                    style={{ flex: 1, padding: "8px 10px", borderRadius: 10, border: `1px solid ${BORDER}`, fontSize: 13, color: TEXT, background: "#F5F5F7", fontFamily: "inherit", outline: "none" }}
+                  >
+                    <option value="">— ยังไม่ได้มอบหมายไรเดอร์ —</option>
+                    {staffList.map(s => (
+                      <option key={s.user_id} value={s.user_id}>
+                        {s.is_online ? "● " : "○ "}{s.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleRiderAssign}
+                    disabled={riderSaving || riderDraft === (request.riderId ?? "")}
+                    style={{
+                      padding: "8px 14px", borderRadius: 10, border: "none",
+                      background: "#1a1a2e", color: "#F0C040", fontSize: 13, fontWeight: 600,
+                      cursor: "pointer", fontFamily: "inherit",
+                      opacity: (riderSaving || riderDraft === (request.riderId ?? "")) ? 0.5 : 1,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {riderSaving ? "..." : "มอบหมาย"}
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%",
+                    background: staffList.find(s => s.user_id === request.riderId)?.is_online ? "#30D158" : "#8E8E93",
+                  }} />
+                  <p style={{ color: TEXT2, fontSize: 13, margin: 0 }}>
+                    {request.riderName ?? "ยังไม่ได้มอบหมายไรเดอร์"}
+                  </p>
+                </div>
               )}
             </div>
           </Card>

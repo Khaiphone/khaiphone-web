@@ -156,6 +156,8 @@ export interface AdminRequest {
   receiptUrl?: string;
   assignedTo?: string | null;
   assignedToName?: string | null;
+  riderId?: string | null;
+  riderName?: string | null;
 }
 
 export interface AdminNotification {

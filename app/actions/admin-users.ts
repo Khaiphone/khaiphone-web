@@ -16,6 +16,7 @@ export type AdminUserRow = {
   active: boolean;
   permissions: Permission[];
   created_at: string;
+  is_online?: boolean;
 };
 
 export async function fetchMyProfile(userId: string): Promise<{ name: string; role: AdminRole; email: string; permissions: Permission[] } | null> {

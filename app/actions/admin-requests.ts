@@ -106,6 +106,8 @@ function mapRow(row: any): AdminRequest {
     receiptUrl:     row.receipt_url      ?? undefined,
     assignedTo:     row.assigned_to      ?? null,
     assignedToName: row.assigned_to_name ?? null,
+    riderId:        row.rider_id         ?? null,
+    riderName:      row.rider_name       ?? null,
   };
 }
 
@@ -251,6 +253,43 @@ export async function assignRequest(id: string, userId: string | null, name: str
       body:  `${req?.order_number ?? ""} · ${req?.device_model ?? ""}`,
       url:   `/admin/requests/${id}`,
       tag:   `assign-${id}`,
+    }).catch(console.error));
+  }
+
+  return { success: true as const };
+}
+
+// ─── Assign rider to request ──────────────────────────────────────────────────
+export async function assignRider(id: string, riderId: string | null, riderName: string | null) {
+  const caller = await requireAuth();
+  const supabase = createServerClient();
+  const { data: callerProfile } = await supabase
+    .from("admin_users")
+    .select("role, permissions")
+    .eq("user_id", caller.id)
+    .single();
+  const callerRole = callerProfile?.role as AdminRole | undefined;
+  const callerPerms = (callerProfile?.permissions ?? []) as Permission[];
+  if (callerRole === "staff" && !callerPerms.includes("assign_requests")) {
+    return { success: false as const, error: "ไม่มีสิทธิ์มอบหมายงาน" };
+  }
+  const { error } = await supabase
+    .from("requests")
+    .update({ rider_id: riderId, rider_name: riderName, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { success: false as const, error: error.message };
+
+  if (riderId) {
+    const { data: req } = await supabase
+      .from("requests")
+      .select("order_number, device_model, appt_location")
+      .eq("id", id)
+      .single();
+    after(() => sendPushToUser(riderId, {
+      title: "งานใหม่มาแล้ว!",
+      body:  `${req?.order_number ?? ""} · ${req?.device_model ?? ""} · ${req?.appt_location ?? ""}`,
+      url:   `/rider`,
+      tag:   `rider-assign-${id}`,
     }).catch(console.error));
   }
 
