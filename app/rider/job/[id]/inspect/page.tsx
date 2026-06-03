@@ -100,6 +100,10 @@ export default function InspectPage() {
   // Photos
   const [idCardPhotoUrl, setIdCardPhotoUrl]     = useState<string>();
   const [deliveryPhotoUrl, setDeliveryPhotoUrl] = useState<string>();
+  const [frontPhotoUrl, setFrontPhotoUrl]       = useState<string>();
+  const [backPhotoUrl, setBackPhotoUrl]         = useState<string>();
+  const [sidePhotoUrl, setSidePhotoUrl]         = useState<string>();
+  const [extraPhotoUrl, setExtraPhotoUrl]       = useState<string>();
   const [uploading, setUploading] = useState(false);
 
   // Device info
@@ -121,7 +125,7 @@ export default function InspectPage() {
 
   useEffect(() => { fetchRiderJob(id).then(setJob); }, [id]);
 
-  async function handlePhoto(type: "id" | "delivery", file: File) {
+  async function handlePhoto(type: "id" | "delivery" | "front" | "back" | "side" | "extra", file: File) {
     setUploading(true);
     try {
       const ts   = Date.now();
@@ -129,7 +133,11 @@ export default function InspectPage() {
       const url  = await uploadPhoto(file, path);
       if (type === "id")       setIdCardPhotoUrl(url);
       if (type === "delivery") setDeliveryPhotoUrl(url);
-    } catch (e) {
+      if (type === "front")    setFrontPhotoUrl(url);
+      if (type === "back")     setBackPhotoUrl(url);
+      if (type === "side")     setSidePhotoUrl(url);
+      if (type === "extra")    setExtraPhotoUrl(url);
+    } catch {
       setError("อัปโหลดรูปไม่สำเร็จ");
     } finally {
       setUploading(false);
@@ -139,6 +147,8 @@ export default function InspectPage() {
   async function handleSave() {
     if (!idCardPhotoUrl)    { setError("กรุณาถ่ายรูปบัตรปชช + เครื่อง"); return; }
     if (!deliveryPhotoUrl)  { setError("กรุณาถ่ายรูปส่งมอบเครื่อง"); return; }
+    if (!frontPhotoUrl)     { setError("กรุณาถ่ายรูปหน้าจอเครื่อง"); return; }
+    if (!backPhotoUrl)      { setError("กรุณาถ่ายรูปด้านหลังเครื่อง"); return; }
 
     setSaving(true);
     setError("");
@@ -157,7 +167,7 @@ export default function InspectPage() {
       warrantyExpiry: warrantyExpiry || undefined,
       criteria: criteriaArr,
       functionalTests: functionalArr,
-      photos: [idCardPhotoUrl, deliveryPhotoUrl].filter(Boolean) as string[],
+      photos: [idCardPhotoUrl, deliveryPhotoUrl, frontPhotoUrl, backPhotoUrl, sidePhotoUrl, extraPhotoUrl].filter(Boolean) as string[],
       idCardPhotoUrl,
       deliveryPhotoUrl,
     });
@@ -182,7 +192,18 @@ export default function InspectPage() {
 
       <div style={{ flex: 1, overflowY: "auto", padding: 20, display: "flex", flexDirection: "column", gap: 24 }}>
 
-        {/* Photos */}
+        {/* Photos — device condition */}
+        <section>
+          <p style={{ margin: "0 0 14px", fontSize: 13, fontWeight: 700, color: TEXT, textTransform: "uppercase", letterSpacing: 0.5 }}>รูปสภาพเครื่อง</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <PhotoBox label="หน้าจอ" url={frontPhotoUrl} onCapture={f => handlePhoto("front", f)} required />
+            <PhotoBox label="ด้านหลัง" url={backPhotoUrl} onCapture={f => handlePhoto("back", f)} required />
+            <PhotoBox label="ด้านข้าง / รอยต่างๆ" url={sidePhotoUrl} onCapture={f => handlePhoto("side", f)} />
+            <PhotoBox label="อื่นๆ" url={extraPhotoUrl} onCapture={f => handlePhoto("extra", f)} />
+          </div>
+        </section>
+
+        {/* Photos — documents */}
         <section>
           <p style={{ margin: "0 0 14px", fontSize: 13, fontWeight: 700, color: TEXT, textTransform: "uppercase", letterSpacing: 0.5 }}>รูปถ่ายหลักฐาน</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
