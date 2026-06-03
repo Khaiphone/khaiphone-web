@@ -139,7 +139,7 @@ export default function PaymentPage() {
           <div style={{ background: "rgba(48,209,88,0.08)", border: "1px solid rgba(48,209,88,0.2)", borderRadius: 14, padding: 16, display: "flex", alignItems: "center", gap: 12 }}>
             <CheckCircle2 size={20} color={GREEN} style={{ flexShrink: 0 }} />
             <div>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: TEXT }}>เซ็นสัญญาแล้ว</p>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: TEXT }}>ออกเอกสารแล้ว</p>
               <p style={{ margin: "2px 0 0", fontSize: 12, color: TEXT2 }}>เวลา {fmtTime(contractSignedAt!)} น.</p>
             </div>
           </div>
@@ -148,21 +148,19 @@ export default function PaymentPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
               <FileText size={18} color={ACCENT} />
               <div>
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: TEXT }}>ทำสัญญาซื้อขาย</p>
-                <p style={{ margin: "2px 0 0", fontSize: 12, color: TEXT2 }}>ต้องเซ็นสัญญาก่อนชำระเงิน</p>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: TEXT }}>ออกเอกสารสัญญา</p>
+                <p style={{ margin: "2px 0 0", fontSize: 12, color: TEXT2 }}>ต้องออกเอกสารก่อนชำระเงิน</p>
               </div>
             </div>
             <button
-              onClick={handleSignContract}
-              disabled={signingContract}
+              onClick={() => router.push(`/rider/job/${id}/contract`)}
               style={{
                 width: "100%", padding: "14px 0", borderRadius: 12,
                 background: ACCENT, border: "none", cursor: "pointer",
                 fontFamily: "inherit", fontSize: 15, fontWeight: 700, color: "#000",
-                opacity: signingContract ? 0.6 : 1,
               }}
             >
-              {signingContract ? "กำลังบันทึก..." : "ยืนยัน — ทำสัญญาเรียบร้อยแล้ว"}
+              📄 ออกเอกสารออนไลน์ →
             </button>
           </div>
         )}
