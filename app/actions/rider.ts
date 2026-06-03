@@ -98,7 +98,21 @@ export async function riderStartJob(id: string) {
 // ─── Arrive at customer (inspecting) ─────────────────────────────────────────
 export async function riderArriveJob(id: string) {
   const user = await requireAuth();
-  return updateRiderStatus(id, "inspecting", "ไรเดอร์ถึงที่แล้ว เริ่มตรวจเครื่อง", user.id);
+  const supabase = createServerClient();
+  const { data: req } = await supabase
+    .from("requests").select("status_log, order_number, device_model").eq("id", id).single();
+  const now = new Date().toISOString();
+  const newLog = [...(req?.status_log ?? []), { status: "inspecting", timestamp: now, note: "ไรเดอร์ถึงที่แล้ว เริ่มตรวจเครื่อง" }];
+  const { error } = await supabase
+    .from("requests").update({ status: "inspecting", status_log: newLog, updated_at: now }).eq("id", id);
+  if (error) return { success: false as const, error: error.message };
+  after(() => sendPushToOwners({
+    title: `ไรเดอร์ถึงที่แล้ว — ${req?.order_number ?? ""}`,
+    body: `${req?.device_model ?? ""} · กำลังตรวจเครื่อง`,
+    url: `/admin/requests/${id}`,
+    tag: `arrive-${id}`,
+  }).catch(console.error));
+  return { success: true as const };
 }
 
 // ─── Save inspection data ─────────────────────────────────────────────────────
@@ -227,7 +241,7 @@ export async function riderCustomerAccepted(id: string) {
   const now = new Date().toISOString();
 
   const { data: req } = await supabase
-    .from("requests").select("inspection, status_log").eq("id", id).single();
+    .from("requests").select("inspection, status_log, order_number, device_model").eq("id", id).single();
 
   const updatedInspection = {
     ...(req?.inspection ?? {}),
@@ -246,6 +260,12 @@ export async function riderCustomerAccepted(id: string) {
     .update({ status: "contracting", status_log: newLog, inspection: updatedInspection, updated_at: now })
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
+  after(() => sendPushToOwners({
+    title: `ลูกค้ายอมรับราคา — ${req?.order_number ?? ""}`,
+    body: `${req?.device_model ?? ""} · กำลังทำสัญญา`,
+    url: `/admin/requests/${id}`,
+    tag: `accepted-${id}`,
+  }).catch(console.error));
   return { success: true as const };
 }
 
@@ -256,7 +276,7 @@ export async function riderCustomerRejected(id: string) {
   const now = new Date().toISOString();
 
   const { data: req } = await supabase
-    .from("requests").select("inspection, status_log").eq("id", id).single();
+    .from("requests").select("inspection, status_log, order_number, device_model").eq("id", id).single();
 
   const updatedInspection = {
     ...(req?.inspection ?? {}),
@@ -275,6 +295,12 @@ export async function riderCustomerRejected(id: string) {
     .update({ status: "cancelled", status_log: newLog, inspection: updatedInspection, updated_at: now })
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
+  after(() => sendPushToOwners({
+    title: `ลูกค้าปฏิเสธราคา — ${req?.order_number ?? ""}`,
+    body: `${req?.device_model ?? ""} · งานถูกยกเลิก`,
+    url: `/admin/requests/${id}`,
+    tag: `rejected-${id}`,
+  }).catch(console.error));
   return { success: true as const };
 }
 
