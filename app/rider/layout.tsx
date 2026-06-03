@@ -41,7 +41,16 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
     setMeta("apple-mobile-web-app-capable", "yes");
     setMeta("apple-mobile-web-app-status-bar-style", "black");
     setMeta("apple-mobile-web-app-title", "KP Rider");
-    setMeta("theme-color", "#0B0B0D");
+    setMeta("theme-color", "#4ADE80");
+
+    // Rider PWA manifest + apple touch icon
+    let manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+    if (!manifestLink) { manifestLink = document.createElement("link"); manifestLink.rel = "manifest"; document.head.appendChild(manifestLink); }
+    manifestLink.href = "/rider-manifest.json";
+
+    let appleIcon = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]');
+    if (!appleIcon) { appleIcon = document.createElement("link"); appleIcon.rel = "apple-touch-icon"; document.head.appendChild(appleIcon); }
+    appleIcon.href = "/rider-apple-touch-icon.png";
 
     // Register service worker + subscribe to push notifications
     if ("serviceWorker" in navigator && "PushManager" in window) {
