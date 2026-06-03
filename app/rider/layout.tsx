@@ -68,6 +68,12 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
 
+    // Tell iOS to resize layout (not scroll visual viewport) when keyboard opens
+    const vp = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+    if (vp && !vp.content.includes("interactive-widget")) {
+      vp.content = vp.content + ", interactive-widget=resizes-content";
+    }
+
     let manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
     if (!manifestLink) { manifestLink = document.createElement("link"); manifestLink.rel = "manifest"; document.head.appendChild(manifestLink); }
     manifestLink.href = "/rider-manifest.json";
