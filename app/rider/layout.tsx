@@ -7,6 +7,7 @@ import { Home, Clock, Wallet, UserCircle, Bell, Menu } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { fetchMyProfile } from "@/app/actions/admin-users";
 import { fetchRiderOnlineStatus } from "@/app/actions/rider";
+import { saveSubscription } from "@/app/actions/push";
 
 const BG     = "#0B0B0D";
 const CARD   = "#1A1A1C";
@@ -41,6 +42,36 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
     setMeta("apple-mobile-web-app-status-bar-style", "black");
     setMeta("apple-mobile-web-app-title", "KP Rider");
     setMeta("theme-color", "#0B0B0D");
+
+    // Register service worker + subscribe to push notifications
+    if ("serviceWorker" in navigator && "PushManager" in window) {
+      navigator.serviceWorker.register("/sw.js").then(async (reg) => {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") return;
+
+        const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        if (!vapidKey) return;
+
+        const key = Uint8Array.from(atob(vapidKey.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+
+        const existing = await reg.pushManager.getSubscription();
+        if (existing) {
+          const existingKeyBuf = existing.options.applicationServerKey;
+          if (existingKeyBuf) {
+            const existingKey = new Uint8Array(existingKeyBuf);
+            if (key.length === existingKey.length && key.every((v, i) => v === existingKey[i])) return;
+          }
+          await existing.unsubscribe();
+        }
+
+        const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+        const json = sub.toJSON();
+        if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
+          const { data: { session } } = await supabase.auth.getSession();
+          await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, userId: session?.user?.id });
+        }
+      }).catch(e => console.error("SW registration error:", e));
+    }
   }, []);
 
   useEffect(() => {
