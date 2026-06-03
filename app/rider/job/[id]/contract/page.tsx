@@ -536,15 +536,14 @@ export default function RiderContractPage() {
                 <input type="text" inputMode="numeric" value={idNumber} onChange={e => setIdNumber(formatIdNumber(e.target.value))} placeholder="X-XXXX-XXXXX-XX-X" maxLength={17} style={{ ...inputSt, fontFamily: "monospace", letterSpacing: 1 }} />
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div style={{ minWidth: 0 }}>
-                  <label style={labelSt}>วันเดือนปีเกิด</label>
-                  <input type="date" value={dob} onChange={e => setDob(e.target.value)} style={inputSt} />
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <label style={labelSt}>วันที่ทำสัญญา</label>
-                  <input type="date" value={txDate} onChange={e => setTxDate(e.target.value)} style={inputSt} />
-                </div>
+              <div>
+                <label style={labelSt}>วันเดือนปีเกิด</label>
+                <input type="date" value={dob} onChange={e => setDob(e.target.value)} style={inputSt} />
+              </div>
+
+              <div>
+                <label style={labelSt}>วันที่ทำสัญญา</label>
+                <input type="date" value={txDate} onChange={e => setTxDate(e.target.value)} style={inputSt} />
               </div>
 
               <div>
