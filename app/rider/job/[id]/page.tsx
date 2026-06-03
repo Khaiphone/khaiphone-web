@@ -17,7 +17,7 @@ const RED    = "#FF453A";
 const TEXT   = "#F2F2F7";
 const TEXT2  = "#8E8E93";
 
-const STEPS = ["เดินทาง", "ตรวจเครื่อง", "ราคา", "ชำระเงิน", "จบ"];
+const STEPS = ["รับงาน", "เดินทาง", "ตรวจเครื่อง", "ราคา/สัญญา", "จบ"];
 
 function stepFromStatus(status: string) {
   if (status === "confirmed" || status === "pickup_scheduled") return 0;

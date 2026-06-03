@@ -61,7 +61,8 @@ const TIMELINE_STEPS = [
   "รอตรวจสอบ",
   "เจ้าหน้าที่ติดต่อกลับแล้ว",
   "ยืนยันนัดหมาย",
-  "ตรวจสอบสภาพเครื่อง",
+  "ไรเดอร์กำลังเดินทาง",
+  "กำลังตรวจสอบเครื่อง",
   "กำลังทำสัญญาซื้อขาย",
   "เสร็จสิ้น",
 ];
@@ -131,24 +132,28 @@ function IconApple({ style }: { style?: React.CSSProperties }) {
 }
 
 interface HeroConfig { badge: string; badgeBg: string; badgeColor: string; badgeBorder: string; title: string; progress: number }
-function getHeroConfig(doneUpTo: number): HeroConfig {
-  if (doneUpTo >= 6) return { badge: "เสร็จสิ้น",        badgeBg: "rgba(16,185,129,0.15)",  badgeColor: "#10B981", badgeBorder: "rgba(16,185,129,0.3)",  title: "ธุรกรรมสำเร็จเรียบร้อย",          progress: 100 };
-  if (doneUpTo === 5) return { badge: "กำลังทำสัญญา",    badgeBg: "rgba(16,185,129,0.15)",  badgeColor: "#10B981", badgeBorder: "rgba(16,185,129,0.3)",  title: "กำลังดำเนินการทำสัญญาซื้อขาย",   progress: 92  };
-  if (doneUpTo === 4) return { badge: "รอยืนยันราคา",    badgeBg: "rgba(245,158,11,0.15)",  badgeColor: "#FBBF24", badgeBorder: "rgba(245,158,11,0.3)",  title: "กรุณายืนยันราคาที่เสนอใหม่",       progress: 80  };
-  if (doneUpTo === 3) return { badge: "ยืนยันนัดหมาย",   badgeBg: "rgba(139,92,246,0.15)",  badgeColor: "#A78BFA", badgeBorder: "rgba(139,92,246,0.3)",  title: "นัดหมายได้รับการยืนยันแล้ว",       progress: 65  };
-  if (doneUpTo === 2) return { badge: "ติดต่อกลับแล้ว",  badgeBg: "rgba(249,115,22,0.15)",  badgeColor: "#FB923C", badgeBorder: "rgba(249,115,22,0.3)",  title: "เจ้าหน้าที่ได้ติดต่อกลับแล้ว",     progress: 50  };
-  if (doneUpTo === 1) return { badge: "รอตรวจสอบ",        badgeBg: "rgba(59,130,246,0.15)",  badgeColor: "#60A5FA", badgeBorder: "rgba(59,130,246,0.3)",  title: "ทีมงานกำลังตรวจสอบข้อมูลของคุณ",   progress: 35  };
-  return                     { badge: "คำขอใหม่",         badgeBg: "rgba(34,197,94,0.15)",   badgeColor: "#22C55E", badgeBorder: "rgba(34,197,94,0.25)",  title: "คำขอของคุณได้รับการบันทึกแล้ว",    progress: 20  };
+function getHeroConfig(doneUpTo: number, dbStatus?: string): HeroConfig {
+  if (dbStatus === "en_route")
+    return { badge: "ไรเดอร์กำลังเดินทาง", badgeBg: "rgba(234,179,8,0.15)",   badgeColor: "#EAB308", badgeBorder: "rgba(234,179,8,0.3)",   title: "ไรเดอร์กำลังเดินทางมาหาคุณ",        progress: 55  };
+  if (doneUpTo >= 7) return { badge: "เสร็จสิ้น",          badgeBg: "rgba(16,185,129,0.15)",  badgeColor: "#10B981", badgeBorder: "rgba(16,185,129,0.3)",  title: "ธุรกรรมสำเร็จเรียบร้อย",            progress: 100 };
+  if (doneUpTo === 6) return { badge: "กำลังทำสัญญา",      badgeBg: "rgba(16,185,129,0.15)",  badgeColor: "#10B981", badgeBorder: "rgba(16,185,129,0.3)",  title: "กำลังดำเนินการทำสัญญาซื้อขาย",     progress: 92  };
+  if (doneUpTo === 5) return { badge: "รอยืนยันราคา",      badgeBg: "rgba(245,158,11,0.15)",  badgeColor: "#FBBF24", badgeBorder: "rgba(245,158,11,0.3)",  title: "กรุณายืนยันราคาที่เสนอใหม่",         progress: 80  };
+  if (doneUpTo === 4) return { badge: "กำลังตรวจสอบเครื่อง", badgeBg: "rgba(249,115,22,0.15)", badgeColor: "#FB923C", badgeBorder: "rgba(249,115,22,0.3)", title: "ไรเดอร์ถึงแล้ว กำลังตรวจสอบเครื่อง", progress: 70 };
+  if (doneUpTo === 3) return { badge: "ยืนยันนัดหมาย",     badgeBg: "rgba(139,92,246,0.15)",  badgeColor: "#A78BFA", badgeBorder: "rgba(139,92,246,0.3)",  title: "นัดหมายได้รับการยืนยันแล้ว",         progress: 48  };
+  if (doneUpTo === 2) return { badge: "ติดต่อกลับแล้ว",    badgeBg: "rgba(249,115,22,0.15)",  badgeColor: "#FB923C", badgeBorder: "rgba(249,115,22,0.3)",  title: "เจ้าหน้าที่ได้ติดต่อกลับแล้ว",       progress: 35  };
+  if (doneUpTo === 1) return { badge: "รอตรวจสอบ",          badgeBg: "rgba(59,130,246,0.15)",  badgeColor: "#60A5FA", badgeBorder: "rgba(59,130,246,0.3)",  title: "ทีมงานกำลังตรวจสอบข้อมูลของคุณ",     progress: 22  };
+  return                     { badge: "คำขอใหม่",           badgeBg: "rgba(34,197,94,0.15)",   badgeColor: "#22C55E", badgeBorder: "rgba(34,197,94,0.25)",  title: "คำขอของคุณได้รับการบันทึกแล้ว",      progress: 10  };
 }
 
 function statusToDoneUpTo(status: string): number {
   switch (status) {
-    case "completed":         return 6;
-    case "contracting":       return 5;
-    case "price_negotiation": return 4;
+    case "completed":         return 7;
+    case "contracting":       return 6;
+    case "price_negotiation": return 5;
+    case "inspecting":        return 4;
+    case "en_route":          return 3;
     case "pickup_scheduled":
     case "confirmed":         return 3;
-    case "inspecting":        return 2;
     case "pending":           return 1;
     default:                  return 0;
   }
@@ -413,14 +418,14 @@ function RequestDetailInner() {
       if (dbReq.status === "completed" || dbReq.status === "cancelled" || dbReq.status === "rejected") {
         try { localStorage.removeItem("khaiphone_submission"); } catch {}
       }
-      const statusToStep: Record<string, number> = { pending: 1, inspecting: 2, confirmed: 3, pickup_scheduled: 3, price_negotiation: 4, contracting: 5, completed: 6 };
-      const ts: (string | null)[] = [dbReq.createdAt, null, null, null, null, null, null];
+      const statusToStep: Record<string, number> = { pending: 1, confirmed: 3, pickup_scheduled: 3, en_route: 4, inspecting: 5, price_negotiation: 5, contracting: 6, completed: 7 };
+      const ts: (string | null)[] = [dbReq.createdAt, null, null, null, null, null, null, null];
       dbReq.statusLog.forEach(log => {
         const step = statusToStep[log.status];
         if (step !== undefined) ts[step] = log.timestamp;
       });
-      // ถ้าตรวจแล้วราคาตรง (ข้าม price_negotiation) ให้ step 4 ใช้ timestamp เดียวกับ contracting
-      if (!ts[4] && ts[5]) ts[4] = ts[5];
+      // ถ้าข้าม price_negotiation (ราคาตรง) ให้ step 5 ใช้ timestamp เดียวกับ contracting
+      if (!ts[5] && ts[6]) ts[5] = ts[6];
       setStepTimestamps(ts);
       setState("ok");
       return true;
@@ -604,7 +609,7 @@ function RequestDetailInner() {
       ? { badge: "ยกเลิกการขาย",   badgeBg: "rgba(156,163,175,0.15)", badgeColor: "#6B7280", badgeBorder: "rgba(156,163,175,0.3)", title: "คำขอถูกยกเลิกแล้ว",          progress: 0 }
     : dbStatus === "rejected"
       ? { badge: "ไม่เข้าเงื่อนไข", badgeBg: "rgba(239,68,68,0.12)",  badgeColor: "#F87171", badgeBorder: "rgba(239,68,68,0.25)",  title: "ไม่ผ่านเงื่อนไขการรับซื้อ",  progress: 0 }
-    : getHeroConfig(doneUpTo);
+    : getHeroConfig(doneUpTo, dbStatus);
 
   const selectionEntries = Object.entries(sub.selections ?? {})
     .filter(([, v]) => v)
@@ -721,7 +726,7 @@ function RequestDetailInner() {
             )}
 
             {/* Notice: prepare ID card (confirmed / inspecting) */}
-            {doneUpTo >= 2 && doneUpTo < 4 && dbStatus !== "rejected" && dbStatus !== "cancelled" && (
+            {doneUpTo >= 2 && doneUpTo < 5 && dbStatus !== "rejected" && dbStatus !== "cancelled" && (
               <div className="rounded-2xl px-5 py-4 flex items-start gap-3" style={{ background: "#FFFBEB", border: "1px solid #FDE68A" }}>
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "#FEF3C7" }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
