@@ -169,13 +169,13 @@ export default function RiderHomePage() {
                     </div>
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
                       <MapPin size={10} color={ACCENT} style={{ marginTop: 3, flexShrink: 0 }} />
-                      <div style={{ flex: 1 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ margin: 0, fontSize: 11, color: TEXT2 }}>ส่งที่</p>
                         <p style={{ margin: 0, fontSize: 13, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {job.appointment.location || "ไม่ระบุที่อยู่"}
                         </p>
                       </div>
-                      <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: ACCENT, flexShrink: 0 }}>฿{fmt(price)}</p>
+                      <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: ACCENT, flexShrink: 0, marginLeft: 8 }}>฿{fmt(price)}</p>
                     </div>
                   </div>
 
