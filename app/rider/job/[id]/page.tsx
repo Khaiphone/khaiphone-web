@@ -2,10 +2,39 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import Image from "next/image";
 import { ArrowLeft, Phone, MapPin, Package, Banknote, ArrowUpDown, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { fetchRiderJob, riderStartJob, riderArriveJob, riderNoShow } from "@/app/actions/rider";
 import { supabase } from "@/lib/supabase";
 import type { AdminRequest } from "@/lib/types/admin";
+
+function getDeviceImage(model: string): string {
+  const m = model.toLowerCase();
+  if (m.includes("17 pro max"))  return "/iPhone-17-pro-max.webp";
+  if (m.includes("17 pro"))      return "/iPhone-17-pro-max.webp";
+  if (m.includes("17 air"))      return "/iPhone-air.webp";
+  if (m.includes("17 plus"))     return "/iPhone-air.webp";
+  if (m.includes("17e"))         return "/iPhone-17e.webp";
+  if (m.includes("17"))          return "/iPhone-17.webp";
+  if (m.includes("16 pro max"))  return "/iPhone-16-pro-max.webp";
+  if (m.includes("16 pro"))      return "/iPhone-16-pro-max.webp";
+  if (m.includes("16 plus"))     return "/iPhone-16.webp";
+  if (m.includes("16"))          return "/iPhone-16.webp";
+  if (m.includes("15 pro max"))  return "/iPhone-15-pro-max.webp";
+  if (m.includes("15 pro"))      return "/iPhone-15-pro-max.webp";
+  if (m.includes("15"))          return "/iPhone-15.webp";
+  if (m.includes("14 pro max"))  return "/iPhone-14-pro-max.webp";
+  if (m.includes("14 pro"))      return "/iPhone-14-pro-max.webp";
+  if (m.includes("14"))          return "/iPhone-14.webp";
+  if (m.includes("13 pro max"))  return "/iPhone-13-pro-max.webp";
+  if (m.includes("13 pro"))      return "/iPhone-13-pro-max.webp";
+  if (m.includes("13"))          return "/iPhone-13.webp";
+  if (m.includes("12 pro max"))  return "/iPhone-12-pro-max.webp";
+  if (m.includes("12"))          return "/iPhone-12.webp";
+  if (m.includes("11 pro max"))  return "/iPhone-11-pro-max.webp";
+  if (m.includes("11"))          return "/iPhone-11.webp";
+  return "/product-iphone.webp";
+}
 
 const BG     = "#0B0B0D";
 const CARD   = "#1A1A1C";
@@ -134,9 +163,10 @@ export default function JobDetailPage() {
     </div>
   );
 
-  const step    = stepFromStatus(job.status);
-  const isCash  = job.payment.method === "cash";
-  const price   = job.device.actualPrice ?? job.device.estimatedPrice;
+  const step      = stepFromStatus(job.status);
+  const isCash    = job.payment.method === "cash";
+  const price     = job.device.actualPrice ?? job.device.estimatedPrice;
+  const deviceImg = getDeviceImage(job.device.model);
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent("เดอะแพลนท์ วงแหวน-รังสิต อำเภอธัญบุรี ปทุมธานี 12110")}&destination=${encodeURIComponent(job.appointment.location)}`;
 
   async function handleStart() {
@@ -208,17 +238,40 @@ export default function JobDetailPage() {
         </div>
 
         {/* Device */}
-        <div style={{ background: CARD, borderRadius: 14, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+        <div style={{ background: CARD, borderRadius: 14, overflow: "hidden" }}>
+          <div style={{ padding: "14px 16px", borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", gap: 8 }}>
             <Package size={15} color={ACCENT} />
             <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>เครื่องที่รับซื้อ</span>
           </div>
-          <Row label="รุ่น"       value={`${job.device.model} ${job.device.storage}`} />
-          <Row label="ราคาตกลง"  value={`฿${price.toLocaleString("th-TH")}`} gold />
-          <Row label="สภาพ"       value={job.device.condition} />
-          {(job.extraDevices?.length ?? 0) > 0 && (
-            <Row label="เครื่องเสริม" value={`${job.extraDevices?.length ?? 0} เครื่อง`} />
-          )}
+          <div style={{ padding: "14px 16px", display: "flex", gap: 14, alignItems: "flex-start" }}>
+            <div style={{ width: 72, height: 72, borderRadius: 12, background: "#F0F0F3", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
+              <Image src={deviceImg} alt={job.device.model} width={64} height={64} style={{ objectFit: "contain" }} unoptimized />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 700, color: TEXT }}>{job.device.model}</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
+                {job.device.storage && <span style={{ background: BORDER, color: TEXT2, fontSize: 12, fontWeight: 500, padding: "2px 8px", borderRadius: 6 }}>{job.device.storage}</span>}
+                {job.device.color   && <span style={{ background: BORDER, color: TEXT2, fontSize: 12, fontWeight: 500, padding: "2px 8px", borderRadius: 6 }}>{job.device.color}</span>}
+              </div>
+              {job.device.condition && (
+                <span style={{ fontSize: 12, fontWeight: 600, color: ACCENT, background: "rgba(74,222,128,0.12)", padding: "2px 8px", borderRadius: 6 }}>{job.device.condition}</span>
+              )}
+            </div>
+          </div>
+          <div style={{ padding: "0 16px 14px", borderTop: `1px solid ${BORDER}`, paddingTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+            <Row label="ราคาตกลง" value={`฿${price.toLocaleString("th-TH")}`} gold />
+            {(job.extraDevices?.length ?? 0) > 0 && (
+              <Row label="เครื่องเสริม" value={`${job.extraDevices?.length ?? 0} เครื่อง`} />
+            )}
+            {(job.device.conditionDetails?.length ?? 0) > 0 && (
+              <div style={{ marginTop: 4 }}>
+                <p style={{ margin: "0 0 6px", fontSize: 12, color: TEXT2, fontWeight: 600 }}>รายละเอียดสภาพเครื่อง</p>
+                {job.device.conditionDetails!.map((d, i) => (
+                  <p key={i} style={{ margin: "0 0 4px", fontSize: 13, color: TEXT2 }}>• {d}</p>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Payment */}
