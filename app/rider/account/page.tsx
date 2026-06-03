@@ -110,10 +110,12 @@ export default function AccountPage() {
           <span style={{ fontSize: 15, color: TEXT }}>แก้ไขโปรไฟล์</span>
           <ChevronRight size={16} color={TEXT2} />
         </a>
-        <a href="https://admin.khaiphone.com" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", textDecoration: "none" }}>
-          <span style={{ fontSize: 15, color: TEXT }}>ไปหน้า Admin</span>
-          <ChevronRight size={16} color={TEXT2} />
-        </a>
+        {profile?.role === "owner" && (
+          <a href="https://admin.khaiphone.com" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", textDecoration: "none" }}>
+            <span style={{ fontSize: 15, color: TEXT }}>ไปหน้า Admin</span>
+            <ChevronRight size={16} color={TEXT2} />
+          </a>
+        )}
       </div>
 
       {/* Logout */}
