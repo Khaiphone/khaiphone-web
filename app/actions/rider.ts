@@ -80,6 +80,34 @@ async function autoCreateStock(requestId: string) {
   });
 }
 
+// ─── Home page data — pending + active + stats in one round trip ─────────────
+export async function fetchRiderHomeData(riderId: string) {
+  await requireAuth();
+  const supabase = createServerClient();
+  const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+
+  const [{ data: pendingData }, { data: activeData }, { data: statsData }] = await Promise.all([
+    supabase.from("requests").select("*").eq("rider_id", riderId)
+      .in("status", ["confirmed"]).order("appt_date", { ascending: true }),
+    supabase.from("requests").select("*").eq("rider_id", riderId)
+      .in("status", ["pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting"])
+      .order("appt_date", { ascending: true }),
+    supabase.from("requests")
+      .select("status, actual_price, estimated_price")
+      .eq("rider_id", riderId).gte("created_at", startOfMonth),
+  ]);
+
+  const completed = (statsData ?? []).filter(j => j.status === "completed");
+  return {
+    pending:    (pendingData ?? []).map(mapRow),
+    active:     (activeData  ?? []).map(mapRow),
+    stats: {
+      completedJobs: completed.length,
+      totalEarnings: completed.reduce((s, j) => s + (j.actual_price ?? j.estimated_price ?? 0), 0),
+    },
+  };
+}
+
 // ─── Fetch pending jobs (assigned by admin, not yet accepted by rider) ────────
 export async function fetchPendingRiderJobs(riderId: string): Promise<AdminRequest[]> {
   await requireAuth();

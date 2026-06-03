@@ -5,9 +5,7 @@ import { useRouter } from "next/navigation";
 import { MapPin, ChevronRight, Banknote, ArrowUpDown, Package, Wifi, WifiOff, CheckCircle2, Navigation } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
-  fetchPendingRiderJobs,
-  fetchRiderJobs,
-  fetchRiderStats,
+  fetchRiderHomeData,
   riderAcceptJob,
   setRiderOnlineStatus,
   fetchRiderOnlineStatus,
@@ -45,15 +43,13 @@ export default function RiderHomePage() {
   const [loading, setLoading]         = useState(true);
 
   const loadData = useCallback(async (uid: string) => {
-    const [pending, active, s, online] = await Promise.all([
-      fetchPendingRiderJobs(uid),
-      fetchRiderJobs(uid),
-      fetchRiderStats(uid),
+    const [homeData, online] = await Promise.all([
+      fetchRiderHomeData(uid),
       fetchRiderOnlineStatus(uid),
     ]);
-    setPendingJobs(pending);
-    setActiveJobs(active);
-    setStats(s);
+    setPendingJobs(homeData.pending);
+    setActiveJobs(homeData.active);
+    setStats(homeData.stats);
     setIsOnline(online);
     setLoading(false);
   }, []);

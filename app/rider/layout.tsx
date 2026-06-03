@@ -92,14 +92,16 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) { router.replace("/admin/login"); return; }
-      const profile = await fetchMyProfile(session.user.id);
+      const [profile, online] = await Promise.all([
+        fetchMyProfile(session.user.id),
+        fetchRiderOnlineStatus(session.user.id),
+      ]);
       if (!profile || (profile.role !== "owner" && profile.role !== "staff")) {
         router.replace("/admin/login");
         return;
       }
       setRiderName(profile.name ?? "ไรเดอร์");
       setUserId(session.user.id);
-      const online = await fetchRiderOnlineStatus(session.user.id);
       setIsOnline(online);
       setReady(true);
     });
