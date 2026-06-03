@@ -25,8 +25,8 @@ export default function MobileNav() {
     };
   }, []);
 
-  // Admin has its own BottomTabNav — hide public nav on all admin routes
-  if (pathname.startsWith("/admin")) return null;
+  // These apps have their own nav — hide public nav
+  if (pathname.startsWith("/admin") || pathname.startsWith("/rider") || pathname.startsWith("/stock") || pathname.startsWith("/finance")) return null;
 
   const isSell = pathname === "/sell" || pathname.startsWith("/sell/") || pathname.startsWith("/estimate/");
   const isTradeIn = pathname === "/trade-in";
