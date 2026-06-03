@@ -574,6 +574,7 @@ export async function markContractSigned(id: string) {
     .update({ contract_signed_at: signedAt, updated_at: signedAt })
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
+  after(() => broadcastRequestUpdate(id));
   return { success: true as const, signedAt };
 }
 
