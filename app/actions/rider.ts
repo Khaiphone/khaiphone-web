@@ -7,6 +7,79 @@ import { sendPushToOwners, sendPushToUser } from "@/app/actions/push";
 import { broadcastRequestUpdate } from "@/lib/broadcast";
 import type { AdminRequest } from "@/lib/types/admin";
 
+// ─── Auto-create stock entry when a job is completed by rider ────────────────
+async function autoCreateStock(requestId: string) {
+  const supabase = createServerClient();
+
+  const { data: current } = await supabase
+    .from("requests")
+    .select("order_number, source, device_model, device_storage, device_color, actual_price, estimated_price, customer_name, customer_phone, inspection")
+    .eq("id", requestId)
+    .single();
+
+  if (!current) return;
+
+  const { count } = await supabase.from("stocks").select("*", { count: "exact", head: true })
+    .eq("request_ref", current.order_number);
+  if ((count ?? 0) > 0) return; // already exists
+
+  const insp = current.inspection ?? {};
+  const year = new Date().getFullYear();
+  const { count: totalCount } = await supabase.from("stocks").select("*", { count: "exact", head: true });
+  const stockId = `STK-${year}-${String((totalCount ?? 0) + 1).padStart(5, "0")}`;
+  const now = new Date().toISOString();
+
+  const sourceMap: Record<string, string> = {
+    website: "เว็บไซต์", line: "LINE OA", facebook: "Facebook",
+    phone: "โทรศัพท์", manual: "หน้าร้าน",
+  };
+
+  await supabase.from("stocks").insert({
+    id: stockId,
+    model:          current.device_model   ?? "",
+    storage:        current.device_storage ?? "",
+    color:          current.device_color   ?? "",
+    imei:           insp.imei    ?? "",
+    serial:         insp.serial  ?? "",
+    grade:          insp.result === "matched" ? "A" : insp.result === "adjusted" ? "B" : "A",
+    battery_health: insp.batteryHealth ?? 0,
+    cycle_count:    insp.batteryCycles ?? 0,
+    icloud_status:  "", carrier_lock: "", accessories: "",
+    physical_checks: [
+      ...(insp.criteria ?? []).map((c: { label: string; pass: boolean; actual?: string }) => ({ label: c.label, condition: c.pass ? "ปกติ" : (c.actual?.trim() || "มีตำหนิ") })),
+      ...(insp.functionalTests ?? []).map((t: { label: string; pass: boolean }) => ({ label: t.label, condition: t.pass ? "ปกติ" : "มีปัญหา" })),
+    ],
+    cost_price:     current.actual_price ?? current.estimated_price ?? 0,
+    shipping_cost:  0, other_cost: 0, selling_price: 0,
+    status:         "รอตรวจ",
+    source_channel: sourceMap[current.source ?? "website"] ?? "เว็บไซต์",
+    request_ref:    current.order_number,
+    seller_name:    current.customer_name  ?? "",
+    seller_phone:   current.customer_phone ?? "",
+    received_at:    now,
+    inspector:      "",
+    photos:         insp.photos ?? [],
+    inspection_snapshot: {
+      imei:            insp.imei    ?? null,
+      serial:          insp.serial  ?? null,
+      model:           current.device_model   ?? null,
+      storage:         current.device_storage ?? null,
+      color:           current.device_color   ?? null,
+      source:          "inspection",
+      result:          insp.result          ?? null,
+      batteryHealth:   insp.batteryHealth   ?? null,
+      batteryCycles:   insp.batteryCycles   ?? null,
+      warrantyExpiry:  insp.warrantyExpiry  ?? null,
+      criteria:        insp.criteria        ?? [],
+      functionalTests: insp.functionalTests ?? [],
+      issues:          insp.issues          ?? [],
+    },
+    notes:      [],
+    status_log: [{ status: "รอตรวจ", timestamp: now, note: `สร้างอัตโนมัติจาก ${current.order_number} (ไรเดอร์)`, by: "system" }],
+    created_at: now, updated_at: now,
+  });
+}
+
 // ─── Fetch pending jobs (assigned by admin, awaiting rider acceptance) ────────
 export async function fetchPendingRiderJobs(riderId: string): Promise<AdminRequest[]> {
   await requireAuth();
@@ -348,6 +421,7 @@ export async function riderCompleteCash(id: string, cashPhotoUrl: string) {
 
   after(async () => {
     await broadcastRequestUpdate(id);
+    await autoCreateStock(id);
     await sendPushToOwners({
       title: `งานเสร็จสิ้น — ${req?.order_number ?? ""}`,
       body: `${req?.device_model ?? ""} · ฿${(req?.actual_price ?? 0).toLocaleString("th-TH")} (เงินสด)`,
@@ -424,6 +498,7 @@ export async function riderCompleteTransfer(id: string, slipUrl?: string) {
 
   after(async () => {
     await broadcastRequestUpdate(id);
+    await autoCreateStock(id);
     await sendPushToOwners({
       title: `งานเสร็จสิ้น — ${req?.order_number ?? ""}`,
       body: `${req?.device_model ?? ""} · ฿${(req?.actual_price ?? 0).toLocaleString("th-TH")} (โอนเงิน)`,
