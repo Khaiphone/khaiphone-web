@@ -68,7 +68,7 @@ function PhotoBox({ label, url, onCapture, required, c }: {
           </div>
         )}
       </button>
-      <input ref={ref} type="file" accept="image/*" style={{ display: "none" }}
+      <input ref={ref} type="file" accept="image/*" capture="environment" style={{ display: "none" }}
         onChange={e => { const f = e.target.files?.[0]; if (f) onCapture(f); }} />
     </div>
   );

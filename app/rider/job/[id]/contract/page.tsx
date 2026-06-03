@@ -94,6 +94,7 @@ export default function RiderContractPage() {
       if (j) {
         setBuyerName(j.customer.name);
         setAddress(j.customer.address ?? "");
+        if (j.payment.contractSignedAt) setDone(true);
       }
       setLoading(false);
     });
@@ -600,7 +601,7 @@ export default function RiderContractPage() {
                   : <p style={{ color: TEXT2, fontSize: 13 }}>แตะเพื่อถ่ายรูป / เลือกรูป</p>
                 }
               </button>
-              <input ref={idFileRef} type="file" accept="image/*" style={{ display: "none" }}
+              <input ref={idFileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }}
                 onChange={handleIdPhoto} />
             </div>
 

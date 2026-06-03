@@ -352,7 +352,12 @@ export default function JobDetailPage() {
             <BigBtn label="ลูกค้าไม่อยู่ / ยกเลิก" color={RED} textColor="#fff" onClick={() => setShowNoShow(true)} outline />
           </>
         ) : job.status === "inspecting" ? (
-          <BigBtn label="ไปหน้าตรวจเครื่อง →" onClick={() => router.push(`/rider/job/${id}/inspect`)} />
+          job.inspection
+            ? <>
+                <BigBtn label="ดูสรุปและยืนยันราคา →" onClick={() => router.push(`/rider/job/${id}/inspect`)} />
+                <BigBtn label="แก้ไขการตรวจเครื่อง" color={BORDER} textColor={TEXT} onClick={() => router.push(`/rider/job/${id}/inspect`)} outline />
+              </>
+            : <BigBtn label="ไปหน้าตรวจเครื่อง →" onClick={() => router.push(`/rider/job/${id}/inspect`)} />
         ) : job.status === "price_negotiation" ? (
           <>
             <BigBtn label="ดูสถานะราคา →" onClick={() => router.push(`/rider/job/${id}/price`)} />
@@ -360,7 +365,9 @@ export default function JobDetailPage() {
           </>
         ) : job.status === "contracting" ? (
           <>
-            <BigBtn label="ไปหน้าสัญญา →" onClick={() => router.push(`/rider/job/${id}/contract`)} />
+            {job.payment.contractSignedAt
+              ? <BigBtn label="ไปหน้าชำระเงิน →" onClick={() => router.push(`/rider/job/${id}/payment`)} />
+              : <BigBtn label="ไปหน้าสัญญา →" onClick={() => router.push(`/rider/job/${id}/contract`)} />}
             <BigBtn label="แก้ไขการตรวจเครื่อง" color={BORDER} textColor={TEXT} onClick={() => router.push(`/rider/job/${id}/inspect`)} outline />
           </>
 
