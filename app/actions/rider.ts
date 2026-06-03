@@ -400,7 +400,7 @@ export async function riderRequestTransfer(id: string) {
 }
 
 // ─── Complete job after transfer confirmed ────────────────────────────────────
-export async function riderCompleteTransfer(id: string) {
+export async function riderCompleteTransfer(id: string, slipUrl?: string) {
   const user = await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
@@ -413,9 +413,12 @@ export async function riderCompleteTransfer(id: string) {
     { status: "completed", timestamp: now, note: "Finance โอนเงินแล้ว ไรเดอร์ยืนยัน" },
   ];
 
+  const updatePayload: Record<string, unknown> = { status: "completed", status_log: newLog, updated_at: now };
+  if (slipUrl) updatePayload.payment_slip_url = slipUrl;
+
   const { error } = await supabase
     .from("requests")
-    .update({ status: "completed", status_log: newLog, updated_at: now })
+    .update(updatePayload)
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
 

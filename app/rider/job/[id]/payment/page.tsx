@@ -38,12 +38,14 @@ export default function PaymentPage() {
   const [job, setJob]               = useState<AdminRequest | null>(null);
   const [contractSignedAt, setContractSignedAt] = useState<string | null>(null);
   const [signingContract, setSigningContract]   = useState(false);
-  const [photoUrl, setPhotoUrl]     = useState<string>();
+  const [photoUrl, setPhotoUrl]         = useState<string>();
+  const [slipUrl, setSlipUrl]           = useState<string>();
   const [transferSent, setTransferSent] = useState(false);
-  const [uploading, setUploading]   = useState(false);
+  const [uploading, setUploading]       = useState(false);
   const [busy, setBusy]             = useState(false);
   const [error, setError]           = useState("");
   const photoRef = useRef<HTMLInputElement>(null);
+  const slipRef  = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchRiderJob(id).then(j => {
@@ -72,10 +74,15 @@ export default function PaymentPage() {
 
   async function handlePhoto(file: File) {
     setUploading(true);
-    try {
-      const url = await uploadSlip(file, id);
-      setPhotoUrl(url);
-    } catch { setError("อัปโหลดรูปไม่สำเร็จ"); }
+    try { setPhotoUrl(await uploadSlip(file, id)); }
+    catch { setError("อัปโหลดรูปไม่สำเร็จ"); }
+    finally { setUploading(false); }
+  }
+
+  async function handleSlip(file: File) {
+    setUploading(true);
+    try { setSlipUrl(await uploadSlip(file, id)); }
+    catch { setError("อัปโหลดรูปไม่สำเร็จ"); }
     finally { setUploading(false); }
   }
 
@@ -96,7 +103,7 @@ export default function PaymentPage() {
 
   async function handleCompleteTransfer() {
     setBusy(true);
-    const result = await riderCompleteTransfer(id);
+    const result = await riderCompleteTransfer(id, slipUrl);
     if (!result.success) { setError(result.error ?? "เกิดข้อผิดพลาด"); setBusy(false); return; }
     router.push(`/rider/job/${id}/complete`);
   }
@@ -230,11 +237,34 @@ export default function PaymentPage() {
                       </div>
                     </div>
 
-                    <button onClick={handleCompleteTransfer} disabled={busy} style={{
+                    {/* Slip upload — optional, any party can upload */}
+                    <div>
+                      <p style={{ margin: "0 0 10px", fontSize: 13, color: TEXT2 }}>
+                        แนบสลิปโอนเงิน <span style={{ color: TEXT2, fontWeight: 400 }}>(ถ้ามี)</span>
+                      </p>
+                      <button onClick={() => slipRef.current?.click()} style={{
+                        width: "100%", aspectRatio: "16/9", background: CARD, border: `1.5px dashed ${slipUrl ? BLUE : BORDER}`,
+                        borderRadius: 12, cursor: "pointer", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        {slipUrl
+                          // eslint-disable-next-line @next/next/no-img-element
+                          ? <img src={slipUrl} alt="slip" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          : (
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                              <Camera size={28} color={TEXT2} />
+                              <span style={{ fontSize: 12, color: TEXT2 }}>ถ่ายรูปสลิปโอนเงิน</span>
+                            </div>
+                          )}
+                      </button>
+                      <input ref={slipRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }}
+                        onChange={e => { const f = e.target.files?.[0]; if (f) handleSlip(f); }} />
+                    </div>
+
+                    <button onClick={handleCompleteTransfer} disabled={busy || uploading} style={{
                       padding: 16, borderRadius: 14, background: GREEN, border: "none", fontSize: 16,
-                      fontWeight: 700, color: "#000", cursor: "pointer", fontFamily: "inherit", opacity: busy ? 0.6 : 1,
+                      fontWeight: 700, color: "#000", cursor: "pointer", fontFamily: "inherit", opacity: (busy || uploading) ? 0.6 : 1,
                     }}>
-                      {busy ? "กำลังบันทึก..." : "Finance โอนแล้ว — จบงาน ✓"}
+                      {busy ? "กำลังบันทึก..." : "โอนแล้ว — จบงาน ✓"}
                     </button>
                   </div>
                 )}
