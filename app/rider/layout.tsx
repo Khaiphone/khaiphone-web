@@ -189,7 +189,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Content */}
-      <main style={{ paddingBottom: isJobPage ? 0 : "calc(64px + env(safe-area-inset-bottom))", flex: 1, overflowY: "auto" }}>
+      <main style={{ paddingBottom: isJobPage ? 0 : "calc(64px + env(safe-area-inset-bottom))", flex: 1, overflowY: "auto", minHeight: 0 }}>
         {children}
       </main>
 
@@ -216,7 +216,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
               <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: TEXT }}>การแจ้งเตือน</p>
               <button onClick={() => setShowNotifs(false)} style={{ background: "none", border: "none", color: TEXT2, cursor: "pointer", fontSize: 22, lineHeight: 1, padding: 0 }}>×</button>
             </div>
-            <div style={{ overflowY: "auto", flex: 1 }}>
+            <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
               {notifs.length === 0 ? (
                 <div style={{ padding: 40, textAlign: "center" }}>
                   <Bell size={32} color={BORDER} style={{ marginBottom: 12 }} />

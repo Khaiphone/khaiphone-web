@@ -235,7 +235,7 @@ export default function JobDetailPage() {
       <StepBar current={step} c={tc} />
 
       {/* Body */}
-      <div style={{ flex: 1, padding: 20, display: "flex", flexDirection: "column", gap: 14, overflowY: "auto" }}>
+      <div style={{ flex: 1, minHeight: 0, padding: 20, display: "flex", flexDirection: "column", gap: 14, overflowY: "auto" }}>
 
         {/* Location */}
         <div style={{ background: CARD, borderRadius: 14, overflow: "hidden" }}>
