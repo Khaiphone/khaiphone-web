@@ -214,7 +214,7 @@ export default function JobDetailPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, display: "flex", flexDirection: "column" }}>
+    <div style={{ height: "100dvh", background: BG, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
       {/* Top bar */}
       <div style={{ background: CARD, borderBottom: `1px solid ${BORDER}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: 12 }}>

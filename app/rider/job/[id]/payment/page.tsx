@@ -102,7 +102,7 @@ export default function PaymentPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, display: "flex", flexDirection: "column" }}>
+    <div style={{ height: "100dvh", background: BG, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
       <div style={{ background: CARD, borderBottom: `1px solid ${BORDER}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: 12 }}>
         <button onClick={() => router.back()} style={{ background: "none", border: "none", color: TEXT2, cursor: "pointer", padding: 0 }}>
