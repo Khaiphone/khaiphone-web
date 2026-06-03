@@ -352,9 +352,16 @@ export default function JobDetailPage() {
         ) : job.status === "inspecting" ? (
           <BigBtn label="ไปหน้าตรวจเครื่อง →" onClick={() => router.push(`/rider/job/${id}/inspect`)} />
         ) : job.status === "price_negotiation" ? (
-          <BigBtn label="ดูสถานะราคา →" onClick={() => router.push(`/rider/job/${id}/price`)} />
+          <>
+            <BigBtn label="ดูสถานะราคา →" onClick={() => router.push(`/rider/job/${id}/price`)} />
+            <BigBtn label="แก้ไขการตรวจเครื่อง" color={BORDER} textColor={TEXT} onClick={() => router.push(`/rider/job/${id}/inspect`)} outline />
+          </>
         ) : job.status === "contracting" ? (
-          <BigBtn label="ไปหน้าชำระเงิน →" onClick={() => router.push(`/rider/job/${id}/payment`)} />
+          <>
+            <BigBtn label="ไปหน้าสัญญา →" onClick={() => router.push(`/rider/job/${id}/contract`)} />
+            <BigBtn label="แก้ไขการตรวจเครื่อง" color={BORDER} textColor={TEXT} onClick={() => router.push(`/rider/job/${id}/inspect`)} outline />
+          </>
+
         ) : job.status === "completed" ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: 16 }}>
             <CheckCircle2 size={20} color={GREEN} />
