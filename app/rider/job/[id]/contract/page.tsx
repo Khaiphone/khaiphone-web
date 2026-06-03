@@ -64,7 +64,7 @@ function formatIdNumber(raw: string) {
 export default function RiderContractPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { BG, CARD, BORDER, ACCENT, TEXT, TEXT2 } = useRiderTheme();
+  const { BG, CARD, CARD2, BORDER, ACCENT, TEXT, TEXT2 } = useRiderTheme();
   const [job, setJob]     = useState<AdminRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -589,7 +589,7 @@ export default function RiderContractPage() {
               <p style={{ margin: "0 0 10px", fontSize: 13, fontWeight: 700, color: TEXT }}>ถ่ายบัตรประชาชนผู้ขาย</p>
               <p style={{ margin: "0 0 10px", fontSize: 12, color: TEXT2 }}>จะมี Watermark โดยอัตโนมัติ</p>
               <button onClick={() => idFileRef.current?.click()} style={{
-                width: "100%", aspectRatio: "16/9", background: "#111", border: `1.5px dashed ${idPhotoDataUrl ? ACCENT : BORDER}`,
+                width: "100%", aspectRatio: "16/9", background: CARD2, border: `1.5px dashed ${idPhotoDataUrl ? ACCENT : BORDER}`,
                 borderRadius: 12, cursor: "pointer", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center",
               }}>
                 {idPhotoDataUrl

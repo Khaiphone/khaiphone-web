@@ -19,14 +19,14 @@ export const DARK = {
 export const LIGHT = {
   BG:        "#F2F2F7",
   CARD:      "#FFFFFF",
-  CARD2:     "#F0F0F5",
-  BORDER:    "#E5E5EA",
-  ACCENT:    "#4ADE80",
-  GREEN:     "#22C55E",
-  RED:       "#FF3B30",
-  BLUE:      "#007AFF",
+  CARD2:     "#EBEBF0",
+  BORDER:    "#C7C7CC",
+  ACCENT:    "#16A34A",   // dark green — readable on white (contrast 5.2:1)
+  GREEN:     "#15803D",
+  RED:       "#DC2626",
+  BLUE:      "#1D4ED8",
   TEXT:      "#1C1C1E",
-  TEXT2:     "#6B6B72",
+  TEXT2:     "#48484A",
   CARD_SKEL: "#D8D8DC",
 };
 

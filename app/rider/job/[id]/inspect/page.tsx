@@ -42,7 +42,7 @@ async function uploadPhoto(file: File, path: string): Promise<string> {
   return publicUrl;
 }
 
-type IC = { CARD: string; BORDER: string; ACCENT: string; GREEN: string; RED: string; TEXT: string; TEXT2: string };
+type IC = { CARD: string; CARD2: string; BORDER: string; ACCENT: string; GREEN: string; RED: string; TEXT: string; TEXT2: string };
 
 function PhotoBox({ label, url, onCapture, required, c }: {
   label: string; url?: string; onCapture: (file: File) => void; required?: boolean; c: IC;
@@ -101,7 +101,7 @@ function CompareRow({ label, stated, actual, onActualChange, c }: {
         onChange={e => onActualChange(e.target.value)}
         placeholder={stated || "กรอกสภาพจริง"}
         style={{
-          width: "100%", background: "rgba(128,128,128,0.06)", border: `1px solid ${c.BORDER}`,
+          width: "100%", background: c.CARD2, border: `1px solid ${c.BORDER}`,
           borderRadius: 8, color: c.TEXT, fontSize: 14, fontFamily: "inherit", outline: "none",
           padding: "8px 10px", boxSizing: "border-box",
         }}
@@ -117,12 +117,12 @@ function CheckRow({ label, pass, onToggle, c }: { label: string; pass: boolean; 
       <div style={{ display: "flex", gap: 8 }}>
         <button onClick={() => onToggle(true)} style={{
           padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit",
-          background: pass ? "rgba(48,209,88,0.2)" : c.CARD,
+          background: pass ? "rgba(48,209,88,0.2)" : c.CARD2,
           color: pass ? c.GREEN : c.TEXT2, fontWeight: 600, fontSize: 13,
         }}>ปกติ</button>
         <button onClick={() => onToggle(false)} style={{
           padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit",
-          background: !pass ? "rgba(255,69,58,0.2)" : c.CARD,
+          background: !pass ? "rgba(255,69,58,0.2)" : c.CARD2,
           color: !pass ? c.RED : c.TEXT2, fontWeight: 600, fontSize: 13,
         }}>มีปัญหา</button>
       </div>
@@ -133,8 +133,8 @@ function CheckRow({ label, pass, onToggle, c }: { label: string; pass: boolean; 
 export default function InspectPage() {
   const { id } = useParams<{ id: string }>();
   const router  = useRouter();
-  const { BG, CARD, BORDER, ACCENT, GREEN, RED, TEXT, TEXT2 } = useRiderTheme();
-  const ic: IC = { CARD, BORDER, ACCENT, GREEN, RED, TEXT, TEXT2 };
+  const { BG, CARD, CARD2, BORDER, ACCENT, GREEN, RED, TEXT, TEXT2 } = useRiderTheme();
+  const ic: IC = { CARD, CARD2, BORDER, ACCENT, GREEN, RED, TEXT, TEXT2 };
 
   const [job, setJob] = useState<AdminRequest | null>(null);
 
