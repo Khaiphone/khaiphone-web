@@ -36,7 +36,7 @@ export default function PricePage() {
       if (!j) return;
       setJob(j);
       if (j.device.actualPrice) setNewPrice(String(j.device.actualPrice));
-      if (j.status === "contracting") { router.replace(`/rider/job/${id}/payment`); return; }
+      if (j.status === "contracting") { router.replace(`/rider/job/${id}/contract`); return; }
       if (j.status === "cancelled")   { router.replace("/rider"); return; }
       if (j.status === "price_negotiation") setMode("waiting");
     });

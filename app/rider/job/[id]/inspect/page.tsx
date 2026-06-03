@@ -55,7 +55,7 @@ function PhotoBox({ label, url, onCapture, required, c }: {
         {label}{required && <span style={{ color: c.RED }}> *</span>}
       </p>
       <button onClick={() => ref.current?.click()} style={{
-        width: "100%", aspectRatio: "16/9", background: c.CARD, border: `1.5px dashed ${url ? c.ACCENT : c.BORDER}`,
+        width: "100%", aspectRatio: "4/3", background: c.CARD, border: `1.5px dashed ${url ? c.ACCENT : c.BORDER}`,
         borderRadius: 12, cursor: "pointer", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center",
       }}>
         {url ? (
@@ -145,10 +145,11 @@ export default function InspectPage() {
   const deviceInputRef = useRef<HTMLInputElement>(null!);
   const [uploading, setUploading] = useState(false);
 
-  const [imei,          setImei]     = useState("");
-  const [serial,        setSerial]   = useState("");
-  const [battery,       setBattery]  = useState("");
-  const [warrantyExpiry, setWarranty] = useState("");
+  const [imei,            setImei]           = useState("");
+  const [serial,          setSerial]         = useState("");
+  const [battery,         setBattery]        = useState("");
+  const [warrantyStatus,  setWarrantyStatus] = useState<"valid" | "expired" | "">("");
+  const [warrantyExpiry,  setWarranty]       = useState("");
 
   const [criteria, setCriteria] = useState<Record<string, { stated: string; actual: string }>>({});
   const [functional, setFunctional] = useState<FunctionalTest[]>(FUNCTIONAL_TEST_DEFAULTS.map(t => ({ ...t })));
@@ -209,29 +210,43 @@ export default function InspectPage() {
     setSaving(true);
     setError("");
 
-    const criteriaArr: InspectionCriterion[] = INSPECT_KEYS
-      .filter(k => criteria[k])
-      .map(k => ({
-        label:  INSPECT_LABELS[k],
-        stated: criteria[k].stated,
-        actual: criteria[k].actual,
-        pass:   !criteria[k].stated || criteria[k].actual.trim().toLowerCase() === criteria[k].stated.trim().toLowerCase(),
-      }));
+    try {
+      const criteriaArr: InspectionCriterion[] = INSPECT_KEYS
+        .filter(k => criteria[k])
+        .map(k => ({
+          label:  INSPECT_LABELS[k],
+          stated: criteria[k].stated,
+          actual: criteria[k].actual,
+          pass:   !criteria[k].stated || criteria[k].actual.trim().toLowerCase() === criteria[k].stated.trim().toLowerCase(),
+        }));
 
-    const result = await riderSaveInspection(id, {
-      imei,
-      serial,
-      batteryHealth:  battery ? parseInt(battery) : undefined,
-      warrantyExpiry: warrantyExpiry || undefined,
-      criteria:       criteriaArr,
-      functionalTests: functional,
-      photos: [...devicePhotos, idCardPhotoUrl, deliveryPhotoUrl].filter(Boolean) as string[],
-      idCardPhotoUrl,
-      deliveryPhotoUrl,
-    });
+      const warrantyValue = warrantyStatus === "expired" ? "expired" : warrantyExpiry || undefined;
 
-    if (!result.success) { setError(result.error ?? "เกิดข้อผิดพลาด"); setSaving(false); return; }
-    router.push(`/rider/job/${id}/price`);
+      const result = await riderSaveInspection(id, {
+        imei,
+        serial,
+        batteryHealth:  battery ? parseInt(battery) : undefined,
+        warrantyExpiry: warrantyValue,
+        criteria:       criteriaArr,
+        functionalTests: functional,
+        photos: [...devicePhotos, idCardPhotoUrl, deliveryPhotoUrl].filter(Boolean) as string[],
+        idCardPhotoUrl,
+        deliveryPhotoUrl,
+      });
+
+      if (!result.success) { setError(result.error ?? "เกิดข้อผิดพลาด"); return; }
+
+      const currentStatus = job?.status;
+      if (currentStatus === "contracting" || currentStatus === "price_negotiation") {
+        router.push(`/rider/job/${id}`);
+      } else {
+        router.push(`/rider/job/${id}/price`);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "เกิดข้อผิดพลาด");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (!job) return (
@@ -320,22 +335,53 @@ export default function InspectPage() {
         <section>
           <p style={{ margin: "0 0 14px", fontSize: 13, fontWeight: 700, color: TEXT, textTransform: "uppercase", letterSpacing: 0.5 }}>ข้อมูลเครื่อง</p>
           <div style={{ background: CARD, borderRadius: 14, overflow: "hidden" }}>
-            {[
-              { label: "IMEI",           value: imei,           setter: setImei,     placeholder: "กรอก IMEI หรือ *#06#" },
-              { label: "Serial Number",  value: serial,         setter: setSerial,   placeholder: "กรอก Serial" },
-              { label: "Battery Health", value: battery,        setter: setBattery,  placeholder: "เช่น 87", suffix: "%" },
-              { label: "ประกันหมด",      value: warrantyExpiry, setter: setWarranty, placeholder: "เช่น 2025-12-31" },
-            ].map(({ label, value, setter, placeholder }, i, arr) => (
-              <div key={label} style={{ padding: "12px 16px", borderBottom: i < arr.length - 1 ? `1px solid ${BORDER}` : "none" }}>
-                <p style={{ margin: "0 0 4px", fontSize: 11, color: TEXT2 }}>{label}</p>
-                <input
-                  value={value}
-                  onChange={e => setter(e.target.value)}
-                  placeholder={placeholder}
-                  style={{ width: "100%", background: "none", border: "none", color: TEXT, fontSize: 15, fontFamily: "inherit", outline: "none" }}
-                />
+            {/* IMEI */}
+            <div style={{ padding: "12px 16px", borderBottom: `1px solid ${BORDER}` }}>
+              <p style={{ margin: "0 0 4px", fontSize: 11, color: TEXT2 }}>IMEI</p>
+              <input value={imei} onChange={e => setImei(e.target.value)} placeholder="กรอก IMEI หรือ *#06#"
+                style={{ width: "100%", background: "none", border: "none", color: TEXT, fontSize: 15, fontFamily: "inherit", outline: "none" }} />
+            </div>
+            {/* Serial Number — force uppercase */}
+            <div style={{ padding: "12px 16px", borderBottom: `1px solid ${BORDER}` }}>
+              <p style={{ margin: "0 0 4px", fontSize: 11, color: TEXT2 }}>Serial Number</p>
+              <input value={serial} onChange={e => setSerial(e.target.value.toUpperCase())} placeholder="กรอก Serial"
+                style={{ width: "100%", background: "none", border: "none", color: TEXT, fontSize: 15, fontFamily: "inherit", outline: "none", textTransform: "uppercase" }} />
+            </div>
+            {/* Battery Health — dropdown */}
+            <div style={{ padding: "12px 16px", borderBottom: `1px solid ${BORDER}` }}>
+              <p style={{ margin: "0 0 4px", fontSize: 11, color: TEXT2 }}>Battery Health</p>
+              <select value={battery} onChange={e => setBattery(e.target.value)}
+                style={{ width: "100%", background: "none", border: "none", color: battery ? TEXT : TEXT2, fontSize: 15, fontFamily: "inherit", outline: "none", appearance: "none" }}>
+                <option value="">-- เลือก % --</option>
+                {Array.from({ length: 51 }, (_, i) => 100 - i).map(v => (
+                  <option key={v} value={String(v)}>{v}%</option>
+                ))}
+              </select>
+            </div>
+            {/* Warranty status */}
+            <div style={{ padding: "12px 16px" }}>
+              <p style={{ margin: "0 0 8px", fontSize: 11, color: TEXT2 }}>การรับประกัน</p>
+              <div style={{ display: "flex", gap: 8, marginBottom: warrantyStatus === "valid" ? 10 : 0 }}>
+                {(["valid", "expired"] as const).map(s => (
+                  <button key={s} onClick={() => setWarrantyStatus(prev => prev === s ? "" : s)} style={{
+                    flex: 1, padding: "8px 0", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit",
+                    fontSize: 13, fontWeight: 600,
+                    background: warrantyStatus === s
+                      ? (s === "valid" ? "rgba(48,209,88,0.2)" : "rgba(255,69,58,0.2)")
+                      : CARD2,
+                    color: warrantyStatus === s
+                      ? (s === "valid" ? GREEN : RED)
+                      : TEXT2,
+                  }}>
+                    {s === "valid" ? "ยังมีประกัน" : "ประกันสิ้นสุดแล้ว"}
+                  </button>
+                ))}
               </div>
-            ))}
+              {warrantyStatus === "valid" && (
+                <input type="date" value={warrantyExpiry} onChange={e => setWarranty(e.target.value)}
+                  style={{ width: "100%", background: CARD2, border: `1px solid ${BORDER}`, borderRadius: 8, color: TEXT, fontSize: 14, fontFamily: "inherit", outline: "none", padding: "8px 10px", boxSizing: "border-box", appearance: "none" as const }} />
+              )}
+            </div>
           </div>
         </section>
 
