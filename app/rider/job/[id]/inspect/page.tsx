@@ -141,10 +141,8 @@ export default function InspectPage() {
 
   const [idCardPhotoUrl,   setIdCardPhotoUrl]   = useState<string>();
   const [deliveryPhotoUrl, setDeliveryPhotoUrl] = useState<string>();
-  const [frontPhotoUrl,    setFrontPhotoUrl]    = useState<string>();
-  const [backPhotoUrl,     setBackPhotoUrl]     = useState<string>();
-  const [sidePhotoUrl,     setSidePhotoUrl]     = useState<string>();
-  const [extraPhotoUrl,    setExtraPhotoUrl]    = useState<string>();
+  const [devicePhotos,     setDevicePhotos]     = useState<string[]>([]);
+  const deviceInputRef = useRef<HTMLInputElement>(null!);
   const [uploading, setUploading] = useState(false);
 
   const [imei,          setImei]     = useState("");
@@ -172,17 +170,13 @@ export default function InspectPage() {
     });
   }, [id]);
 
-  async function handlePhoto(type: "id" | "delivery" | "front" | "back" | "side" | "extra", file: File) {
+  async function handlePhoto(type: "id" | "delivery", file: File) {
     setUploading(true);
     try {
       const compressed = await compressImage(file);
       const url = await uploadPhoto(compressed, `rider/${id}/${type}-${Date.now()}.jpg`);
       if (type === "id")       setIdCardPhotoUrl(url);
       if (type === "delivery") setDeliveryPhotoUrl(url);
-      if (type === "front")    setFrontPhotoUrl(url);
-      if (type === "back")     setBackPhotoUrl(url);
-      if (type === "side")     setSidePhotoUrl(url);
-      if (type === "extra")    setExtraPhotoUrl(url);
     } catch {
       setError("อัปโหลดรูปไม่สำเร็จ");
     } finally {
@@ -190,11 +184,27 @@ export default function InspectPage() {
     }
   }
 
+  async function handleDevicePhotos(files: FileList) {
+    setUploading(true);
+    try {
+      const urls = await Promise.all(
+        Array.from(files).map(async file => {
+          const compressed = await compressImage(file);
+          return uploadPhoto(compressed, `rider/${id}/device-${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`);
+        })
+      );
+      setDevicePhotos(prev => [...prev, ...urls]);
+    } catch {
+      setError("อัปโหลดรูปไม่สำเร็จ");
+    } finally {
+      setUploading(false);
+      if (deviceInputRef.current) deviceInputRef.current.value = "";
+    }
+  }
+
   async function handleSave() {
     if (!idCardPhotoUrl)   { setError("กรุณาถ่ายรูปบัตรปชช + เครื่อง"); return; }
     if (!deliveryPhotoUrl) { setError("กรุณาถ่ายรูปส่งมอบเครื่อง"); return; }
-    if (!frontPhotoUrl)    { setError("กรุณาถ่ายรูปหน้าจอเครื่อง"); return; }
-    if (!backPhotoUrl)     { setError("กรุณาถ่ายรูปด้านหลังเครื่อง"); return; }
 
     setSaving(true);
     setError("");
@@ -215,7 +225,7 @@ export default function InspectPage() {
       warrantyExpiry: warrantyExpiry || undefined,
       criteria:       criteriaArr,
       functionalTests: functional,
-      photos: [idCardPhotoUrl, deliveryPhotoUrl, frontPhotoUrl, backPhotoUrl, sidePhotoUrl, extraPhotoUrl].filter(Boolean) as string[],
+      photos: [...devicePhotos, idCardPhotoUrl, deliveryPhotoUrl].filter(Boolean) as string[],
       idCardPhotoUrl,
       deliveryPhotoUrl,
     });
@@ -249,13 +259,54 @@ export default function InspectPage() {
       <div style={{ flex: 1, overflowY: "auto", padding: 20, display: "flex", flexDirection: "column", gap: 24 }}>
 
         <section>
-          <p style={{ margin: "0 0 14px", fontSize: 13, fontWeight: 700, color: TEXT, textTransform: "uppercase", letterSpacing: 0.5 }}>รูปสภาพเครื่อง</p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <PhotoBox label="หน้าจอ"            url={frontPhotoUrl}  onCapture={f => handlePhoto("front", f)}  required c={ic} />
-            <PhotoBox label="ด้านหลัง"           url={backPhotoUrl}   onCapture={f => handlePhoto("back", f)}   required c={ic} />
-            <PhotoBox label="ด้านข้าง / รอยต่างๆ" url={sidePhotoUrl}   onCapture={f => handlePhoto("side", f)}  c={ic} />
-            <PhotoBox label="อื่นๆ"              url={extraPhotoUrl}  onCapture={f => handlePhoto("extra", f)} c={ic} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: TEXT, textTransform: "uppercase", letterSpacing: 0.5 }}>
+              รูปสภาพเครื่อง {devicePhotos.length > 0 && <span style={{ color: ACCENT, fontWeight: 400 }}>({devicePhotos.length})</span>}
+            </p>
+            <button onClick={() => deviceInputRef.current?.click()} disabled={uploading} style={{
+              background: ACCENT, border: "none", borderRadius: 8, padding: "6px 14px",
+              fontSize: 13, fontWeight: 600, color: "#000", cursor: "pointer", fontFamily: "inherit",
+              opacity: uploading ? 0.6 : 1,
+            }}>
+              + เพิ่มรูป
+            </button>
           </div>
+          <input
+            ref={deviceInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            style={{ display: "none" }}
+            onChange={e => { if (e.target.files?.length) handleDevicePhotos(e.target.files); }}
+          />
+          {devicePhotos.length > 0 ? (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+              {devicePhotos.map((url, i) => (
+                <div key={i} style={{ position: "relative", aspectRatio: "1", borderRadius: 10, overflow: "hidden" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt={`device-${i}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <button
+                    onClick={() => setDevicePhotos(prev => prev.filter((_, j) => j !== i))}
+                    style={{
+                      position: "absolute", top: 4, right: 4, width: 22, height: 22,
+                      borderRadius: "50%", background: "rgba(0,0,0,0.6)", border: "none",
+                      color: "#fff", fontSize: 13, cursor: "pointer", display: "flex",
+                      alignItems: "center", justifyContent: "center", lineHeight: 1,
+                    }}
+                  >✕</button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <button onClick={() => deviceInputRef.current?.click()} style={{
+              width: "100%", padding: "24px 0", background: CARD, border: `1.5px dashed ${BORDER}`,
+              borderRadius: 12, cursor: "pointer", display: "flex", flexDirection: "column",
+              alignItems: "center", gap: 8,
+            }}>
+              <Camera size={28} color={TEXT2} />
+              <span style={{ fontSize: 13, color: TEXT2 }}>แตะเพื่อเพิ่มรูปสภาพเครื่อง</span>
+            </button>
+          )}
         </section>
 
         <section>
