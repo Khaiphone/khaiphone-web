@@ -4,6 +4,7 @@ import { after } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/require-auth";
 import { sendPushToOwners, sendPushToUser } from "@/app/actions/push";
+import { broadcastRequestUpdate } from "@/lib/broadcast";
 import type { AdminRequest } from "@/lib/types/admin";
 
 // ─── Fetch pending jobs (assigned by admin, awaiting rider acceptance) ────────
@@ -79,12 +80,15 @@ export async function riderAcceptJob(id: string) {
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
 
-  after(() => sendPushToOwners({
-    title: `ไรเดอร์รับงาน — ${req?.order_number ?? ""}`,
-    body: `${req?.device_model ?? ""} · กำลังเดินทางไปหาลูกค้า`,
-    url: `/admin/requests/${id}`,
-    tag: `en-route-${id}`,
-  }).catch(console.error));
+  after(async () => {
+    await broadcastRequestUpdate(id);
+    await sendPushToOwners({
+      title: `ไรเดอร์รับงาน — ${req?.order_number ?? ""}`,
+      body: `${req?.device_model ?? ""} · กำลังเดินทางไปหาลูกค้า`,
+      url: `/admin/requests/${id}`,
+      tag: `en-route-${id}`,
+    }).catch(console.error);
+  });
 
   return { success: true as const };
 }
@@ -92,7 +96,9 @@ export async function riderAcceptJob(id: string) {
 // ─── Start job (en_route) ─────────────────────────────────────────────────────
 export async function riderStartJob(id: string) {
   const user = await requireAuth();
-  return updateRiderStatus(id, "en_route", "ไรเดอร์ออกเดินทางแล้ว", user.id);
+  const result = await updateRiderStatus(id, "en_route", "ไรเดอร์ออกเดินทางแล้ว", user.id);
+  if (result.success) after(() => broadcastRequestUpdate(id));
+  return result;
 }
 
 // ─── Arrive at customer (inspecting) ─────────────────────────────────────────
@@ -106,12 +112,15 @@ export async function riderArriveJob(id: string) {
   const { error } = await supabase
     .from("requests").update({ status: "inspecting", status_log: newLog, updated_at: now }).eq("id", id);
   if (error) return { success: false as const, error: error.message };
-  after(() => sendPushToOwners({
-    title: `ไรเดอร์ถึงที่แล้ว — ${req?.order_number ?? ""}`,
-    body: `${req?.device_model ?? ""} · กำลังตรวจเครื่อง`,
-    url: `/admin/requests/${id}`,
-    tag: `arrive-${id}`,
-  }).catch(console.error));
+  after(async () => {
+    await broadcastRequestUpdate(id);
+    await sendPushToOwners({
+      title: `ไรเดอร์ถึงที่แล้ว — ${req?.order_number ?? ""}`,
+      body: `${req?.device_model ?? ""} · กำลังตรวจเครื่อง`,
+      url: `/admin/requests/${id}`,
+      tag: `arrive-${id}`,
+    }).catch(console.error);
+  });
   return { success: true as const };
 }
 
@@ -151,6 +160,7 @@ export async function riderSaveInspection(id: string, inspection: {
     })
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
+  after(() => broadcastRequestUpdate(id));
   return { success: true as const };
 }
 
@@ -181,12 +191,15 @@ export async function riderConfirmPrice(id: string, actualPrice: number) {
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
 
-  after(() => sendPushToOwners({
-    title: "ราคาตรงกัน — กำลังทำสัญญา",
-    body: `งาน ${id.slice(0, 8)}... · ฿${actualPrice.toLocaleString("th-TH")}`,
-    url: `/admin/requests/${id}`,
-    tag: `contracting-${id}`,
-  }).catch(console.error));
+  after(async () => {
+    await broadcastRequestUpdate(id);
+    await sendPushToOwners({
+      title: "ราคาตรงกัน — กำลังทำสัญญา",
+      body: `งาน ${id.slice(0, 8)}... · ฿${actualPrice.toLocaleString("th-TH")}`,
+      url: `/admin/requests/${id}`,
+      tag: `contracting-${id}`,
+    }).catch(console.error);
+  });
 
   return { success: true as const };
 }
@@ -224,12 +237,15 @@ export async function riderAdjustPrice(id: string, newPrice: number, reason: str
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
 
-  after(() => sendPushToOwners({
-    title: `ปรับราคา — ${req?.order_number ?? ""}`,
-    body: `${req?.device_model ?? ""} · เสนอ ฿${newPrice.toLocaleString("th-TH")} (${reason})`,
-    url: `/admin/requests/${id}`,
-    tag: `price-${id}`,
-  }).catch(console.error));
+  after(async () => {
+    await broadcastRequestUpdate(id);
+    await sendPushToOwners({
+      title: `ปรับราคา — ${req?.order_number ?? ""}`,
+      body: `${req?.device_model ?? ""} · เสนอ ฿${newPrice.toLocaleString("th-TH")} (${reason})`,
+      url: `/admin/requests/${id}`,
+      tag: `price-${id}`,
+    }).catch(console.error);
+  });
 
   return { success: true as const };
 }
@@ -260,12 +276,15 @@ export async function riderCustomerAccepted(id: string) {
     .update({ status: "contracting", status_log: newLog, inspection: updatedInspection, updated_at: now })
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
-  after(() => sendPushToOwners({
-    title: `ลูกค้ายอมรับราคา — ${req?.order_number ?? ""}`,
-    body: `${req?.device_model ?? ""} · กำลังทำสัญญา`,
-    url: `/admin/requests/${id}`,
-    tag: `accepted-${id}`,
-  }).catch(console.error));
+  after(async () => {
+    await broadcastRequestUpdate(id);
+    await sendPushToOwners({
+      title: `ลูกค้ายอมรับราคา — ${req?.order_number ?? ""}`,
+      body: `${req?.device_model ?? ""} · กำลังทำสัญญา`,
+      url: `/admin/requests/${id}`,
+      tag: `accepted-${id}`,
+    }).catch(console.error);
+  });
   return { success: true as const };
 }
 
@@ -295,12 +314,15 @@ export async function riderCustomerRejected(id: string) {
     .update({ status: "cancelled", status_log: newLog, inspection: updatedInspection, updated_at: now })
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
-  after(() => sendPushToOwners({
-    title: `ลูกค้าปฏิเสธราคา — ${req?.order_number ?? ""}`,
-    body: `${req?.device_model ?? ""} · งานถูกยกเลิก`,
-    url: `/admin/requests/${id}`,
-    tag: `rejected-${id}`,
-  }).catch(console.error));
+  after(async () => {
+    await broadcastRequestUpdate(id);
+    await sendPushToOwners({
+      title: `ลูกค้าปฏิเสธราคา — ${req?.order_number ?? ""}`,
+      body: `${req?.device_model ?? ""} · งานถูกยกเลิก`,
+      url: `/admin/requests/${id}`,
+      tag: `rejected-${id}`,
+    }).catch(console.error);
+  });
   return { success: true as const };
 }
 
@@ -324,12 +346,15 @@ export async function riderCompleteCash(id: string, cashPhotoUrl: string) {
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
 
-  after(() => sendPushToOwners({
-    title: `งานเสร็จสิ้น — ${req?.order_number ?? ""}`,
-    body: `${req?.device_model ?? ""} · ฿${(req?.actual_price ?? 0).toLocaleString("th-TH")} (เงินสด)`,
-    url: `/admin/requests/${id}`,
-    tag: `completed-${id}`,
-  }).catch(console.error));
+  after(async () => {
+    await broadcastRequestUpdate(id);
+    await sendPushToOwners({
+      title: `งานเสร็จสิ้น — ${req?.order_number ?? ""}`,
+      body: `${req?.device_model ?? ""} · ฿${(req?.actual_price ?? 0).toLocaleString("th-TH")} (เงินสด)`,
+      url: `/admin/requests/${id}`,
+      tag: `completed-${id}`,
+    }).catch(console.error);
+  });
 
   return { success: true as const };
 }
@@ -358,6 +383,7 @@ export async function riderRequestTransfer(id: string) {
   await supabase.from("requests").update({ status_log: newLog, updated_at: now }).eq("id", id);
 
   after(async () => {
+    await broadcastRequestUpdate(id);
     const pushPayload = {
       title: `โอนเงินให้ลูกค้า — ${req?.order_number ?? ""}`,
       body: `${req?.customer_name ?? ""} · ฿${(req?.actual_price ?? 0).toLocaleString("th-TH")} · ${req?.payment_bank ?? ""} ${req?.payment_account_number ?? ""}`,
@@ -393,12 +419,15 @@ export async function riderCompleteTransfer(id: string) {
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
 
-  after(() => sendPushToOwners({
-    title: `งานเสร็จสิ้น — ${req?.order_number ?? ""}`,
-    body: `${req?.device_model ?? ""} · ฿${(req?.actual_price ?? 0).toLocaleString("th-TH")} (โอนเงิน)`,
-    url: `/admin/requests/${id}`,
-    tag: `completed-${id}`,
-  }).catch(console.error));
+  after(async () => {
+    await broadcastRequestUpdate(id);
+    await sendPushToOwners({
+      title: `งานเสร็จสิ้น — ${req?.order_number ?? ""}`,
+      body: `${req?.device_model ?? ""} · ฿${(req?.actual_price ?? 0).toLocaleString("th-TH")} (โอนเงิน)`,
+      url: `/admin/requests/${id}`,
+      tag: `completed-${id}`,
+    }).catch(console.error);
+  });
 
   return { success: true as const };
 }
@@ -423,12 +452,15 @@ export async function riderNoShow(id: string) {
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
 
-  after(() => sendPushToOwners({
-    title: `ลูกค้าไม่อยู่ — ${req?.order_number ?? ""}`,
-    body: `${req?.device_model ?? ""} · ไรเดอร์ถึงที่แล้วแต่ไม่พบลูกค้า`,
-    url: `/admin/requests/${id}`,
-    tag: `noshow-${id}`,
-  }).catch(console.error));
+  after(async () => {
+    await broadcastRequestUpdate(id);
+    await sendPushToOwners({
+      title: `ลูกค้าไม่อยู่ — ${req?.order_number ?? ""}`,
+      body: `${req?.device_model ?? ""} · ไรเดอร์ถึงที่แล้วแต่ไม่พบลูกค้า`,
+      url: `/admin/requests/${id}`,
+      tag: `noshow-${id}`,
+    }).catch(console.error);
+  });
 
   return { success: true as const };
 }
