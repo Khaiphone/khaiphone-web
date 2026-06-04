@@ -1260,12 +1260,43 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
               </div>
 
               <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 12 }}>
+
+                {/* Finance action banner — shown when transfer is pending slip */}
+                {request.status === "contracting" &&
+                 request.payment.method === "transfer" &&
+                 request.payment.contractSignedAt &&
+                 !request.payment.slipUrl && (
+                  <div style={{ background: "#FFF7ED", border: "1.5px solid #FB923C", borderRadius: 12, padding: "14px 16px", marginBottom: 14 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                      <span style={{ fontSize: 20 }}>🔔</span>
+                      <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#C2410C" }}>Finance ต้องดำเนินการ</p>
+                    </div>
+                    <p style={{ margin: "0 0 10px", fontSize: 13, color: "#9A3412" }}>
+                      โอนเงิน <strong>฿{(request.inspection?.actualPrice ?? request.device.estimatedPrice).toLocaleString("th-TH")} บาท</strong> ให้ลูกค้า แล้วแนบสลิปด้านล่าง — ไรเดอร์จะเห็นทันที
+                    </p>
+                    {(request.payment.bankName || request.payment.accountNumber || request.payment.accountName) && (
+                      <div style={{ background: "#FED7AA", borderRadius: 8, padding: "10px 12px", fontSize: 12, color: "#7C2D12", lineHeight: 1.9 }}>
+                        {request.payment.bankName    && <div>🏦 ธนาคาร: <strong>{request.payment.bankName}</strong></div>}
+                        {request.payment.accountName && <div>👤 ชื่อบัญชี: <strong>{request.payment.accountName}</strong></div>}
+                        {request.payment.accountNumber && <div>🔢 เลขบัญชี: <strong style={{ fontFamily: "monospace", letterSpacing: 1 }}>{request.payment.accountNumber}</strong></div>}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Slip uploaded confirmation */}
+                {request.payment.slipUrl && (
+                  <div style={{ background: "#F0FDF4", border: "1px solid #86efac", borderRadius: 8, padding: "8px 12px", marginBottom: 10, fontSize: 12, color: "#15803d", fontWeight: 600 }}>
+                    ✅ แนบสลิปแล้ว — ไรเดอร์จะเห็นและยืนยันจบงานอัตโนมัติ
+                  </div>
+                )}
+
                 <p style={{ color: TEXT, fontSize: 14, fontWeight: 600, margin: "0 0 8px" }}>
-                  สลิปโอนเงิน {request.payment.method === "cash" ? "(เงินสด)" : `(${request.payment.bankName ?? "โอนเงิน"})`}
+                  {request.payment.method === "cash" ? "หลักฐานการรับเงินสด" : `สลิปโอนเงิน${request.payment.bankName ? ` · ${request.payment.bankName}` : ""}`}
                 </p>
 
                 {request.payment.slipUrl ? (
-                  <div style={{ position: "relative" }}>
+                  <div>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={request.payment.slipUrl} alt="slip" style={{ width: "100%", maxHeight: 300, objectFit: "contain", borderRadius: 10, border: `1px solid ${BORDER}`, background: "#F5F5F7" }} />
                     <button
@@ -1279,9 +1310,17 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                   <button
                     onClick={() => slipFileRef.current?.click()}
                     disabled={slipUploading}
-                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "#F5F5F7", border: `1px dashed ${BORDER}`, borderRadius: 10, padding: "16px 0", color: TEXT2, fontSize: 13, cursor: "pointer", fontFamily: "inherit", touchAction: "manipulation", opacity: slipUploading ? 0.6 : 1 }}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      width: "100%", borderRadius: 12, padding: "16px 0",
+                      fontSize: 14, fontWeight: 700, cursor: slipUploading ? "default" : "pointer",
+                      fontFamily: "inherit", touchAction: "manipulation", opacity: slipUploading ? 0.7 : 1,
+                      background: request.status === "contracting" && request.payment.method === "transfer" ? "#1a1a2e" : "#F5F5F7",
+                      color:      request.status === "contracting" && request.payment.method === "transfer" ? "#F0C040"  : TEXT2,
+                      border: "none",
+                    }}
                   >
-                    {slipUploading ? "กำลังอัพโหลด..." : "📎 อัพโหลดสลิป"}
+                    {slipUploading ? "กำลังอัพโหลด..." : "📎 แนบสลิปหลังโอนเงิน"}
                   </button>
                 )}
                 <input ref={slipFileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleSlipUpload} />
