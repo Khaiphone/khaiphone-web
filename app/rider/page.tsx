@@ -17,6 +17,7 @@ const STATUS_LABEL: Record<string, string> = {
   inspecting:        "กำลังตรวจเครื่อง",
   price_negotiation: "รอยืนยันราคา",
   contracting:       "กำลังทำสัญญา",
+  awaiting_transfer: "รอ Finance โอน",
 };
 
 function fmt(n: number) { return n.toLocaleString("th-TH"); }
@@ -285,7 +286,7 @@ export default function RiderHomePage() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
         {[
           { label: "งานเดือนนี้",   value: `${stats.completedJobs}`,              sub: "งาน" },
-          { label: "รายได้เดือนนี้", value: `฿${fmt(stats.totalEarnings)}`,        sub: ""    },
+          { label: "มูลค่าเดือนนี้",  value: `฿${fmt(stats.totalEarnings)}`,        sub: ""    },
           { label: "งานในมือ",      value: `${activeJobs.length + pendingJobs.length}`, sub: "งาน" },
         ].map(({ label, value, sub }) => (
           <div key={label} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "14px 12px" }}>
