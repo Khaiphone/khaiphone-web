@@ -525,7 +525,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
                 <button onClick={handleSickwCheck} disabled={sickwLoading}
                   style={{ flexShrink: 0, padding: "5px 10px", borderRadius: 8, background: "rgba(10,132,255,0.15)", border: "1px solid rgba(10,132,255,0.4)", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5, opacity: sickwLoading ? 0.6 : 1 }}>
                   {sickwLoading ? <Loader2 size={13} color="#0A84FF" style={{ animation: "spin 0.8s linear infinite" }} /> : <ShieldCheck size={13} color="#0A84FF" />}
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "#0A84FF" }}>SICKW</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "#0A84FF" }}>ตรวจสอบ Apple</span>
                 </button>
               )}
             </div>
@@ -535,7 +535,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
               {sickwLoading ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <Loader2 size={14} color="#0A84FF" style={{ animation: "spin 0.8s linear infinite" }} />
-                  <span style={{ fontSize: 12, color: c.TEXT2 }}>กำลังเช็ค SICKW...</span>
+                  <span style={{ fontSize: 12, color: c.TEXT2 }}>กำลังตรวจสอบข้อมูล Apple...</span>
                 </div>
               ) : sickwError ? (
                 <p style={{ margin: 0, fontSize: 12, color: c.RED }}>{sickwError}</p>
@@ -565,7 +565,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
                   {sickwRaw && (
                     <div style={{ marginTop: 8 }}>
                       <button onClick={() => setSickwExpanded(p => !p)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 12, color: "#0A84FF", fontFamily: "inherit" }}>
-                        {sickwExpanded ? "▲ ซ่อนรายงานเต็ม" : "▼ ดูรายงานเต็ม (SICKW)"}
+                        {sickwExpanded ? "▲ ซ่อนรายงานเต็ม" : "▼ ดูรายงานเต็ม"}
                       </button>
                       {sickwExpanded && (
                         <pre style={{ margin: "6px 0 0", padding: "10px 12px", borderRadius: 8, background: c.CARD2, fontSize: 11, lineHeight: 1.6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", color: c.TEXT }}>{sickwRaw}</pre>

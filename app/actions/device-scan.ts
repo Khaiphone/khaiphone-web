@@ -120,7 +120,12 @@ export async function checkSickw(
     const configParts = devConfig.split(",");
     const colorFromConfig = configParts.length >= 5 ? configParts[4].trim() : undefined;
 
+    // Fallback: extract color from Model Name after storage size e.g. "iPad Wi Fi 128GB Silver"
+    const modelName = r["Model Name"] ?? "";
+    const colorFromModel = modelName.match(/\d+\s*[GT]B\s+(.+)$/i)?.[1]?.trim();
+
     const warrantyDate =
+      parseShortDate(r["Coverage End Date"] ?? "") ??
       parseShortDate(r["Coverage Duration"] ?? "") ??
       parseShortDate(r["Coverage End"] ?? "") ??
       r["WarrantyDate"] ?? r["warranty_date"];
@@ -130,7 +135,7 @@ export async function checkSickw(
       data: {
         imei:          r["IMEI"]          ?? r.IMEI   ?? r.Imei  ?? r.imei,
         device:        r["Device Configuration"] ?? r.Device ?? r.device ?? r.Model ?? r.model,
-        color:         colorFromConfig    ?? r.Color  ?? r.color ?? r.Colour ?? r.colour,
+        color:         colorFromConfig ?? colorFromModel ?? r.Color ?? r.color ?? r.Colour ?? r.colour,
         carrier:       r["Carrier"]       ?? r.Carrier ?? r.carrier,
         carrierLock:   r["Unlock Status"] ?? r["Sim-Lock"] ?? r.CarrierLock ?? r.simlock,
         icloudStatus:  ([r["iCloud Lock"], r["iCloud Status"]].filter(Boolean).join(" / ")) ||

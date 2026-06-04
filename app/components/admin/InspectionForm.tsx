@@ -548,7 +548,7 @@ export default function InspectionForm({
                 {sickwLoading
                   ? <Loader2 size={13} color="#1D4ED8" style={{ animation: "spin 0.8s linear infinite" }} />
                   : <ShieldCheck size={13} color="#1D4ED8" />}
-                <span style={{ fontSize: 11, fontWeight: 600, color: "#1D4ED8", whiteSpace: "nowrap" }}>SICKW</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: "#1D4ED8", whiteSpace: "nowrap" }}>ตรวจสอบ Apple</span>
               </button>
             )}
           </div>
@@ -579,7 +579,7 @@ export default function InspectionForm({
         <div style={{ marginTop: 8, background: "#F8FAFF", border: "1px solid #BFDBFE", borderRadius: 10, overflow: "hidden" }}>
           <div style={{ padding: "8px 12px", borderBottom: "1px solid #BFDBFE", display: "flex", alignItems: "center", gap: 6 }}>
             <ShieldCheck size={13} color="#1D4ED8" />
-            <span style={{ fontSize: 11, fontWeight: 700, color: "#1D4ED8" }}>ผลตรวจสอบ SICKW</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#1D4ED8" }}>ผลตรวจสอบ Apple</span>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
             {[
@@ -609,7 +609,7 @@ export default function InspectionForm({
           {sickwRaw && (
             <div style={{ padding: "8px 12px", borderTop: "1px solid #BFDBFE" }}>
               <button onClick={() => setSickwExpanded(p => !p)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 11, color: "#1D4ED8", fontFamily: "inherit" }}>
-                {sickwExpanded ? "▲ ซ่อนรายงานเต็ม" : "▼ ดูรายงานเต็ม (SICKW)"}
+                {sickwExpanded ? "▲ ซ่อนรายงานเต็ม" : "▼ ดูรายงานเต็ม"}
               </button>
               {sickwExpanded && (
                 <pre style={{ margin: "6px 0 0", padding: "8px 10px", borderRadius: 6, background: "#F1F5F9", fontSize: 10, lineHeight: 1.6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", color: "#1E293B" }}>{sickwRaw}</pre>
@@ -622,11 +622,11 @@ export default function InspectionForm({
         <div style={{ marginTop: 8, background: "#F8FAFF", border: "1px solid #BFDBFE", borderRadius: 10, overflow: "hidden" }}>
           <div style={{ padding: "8px 12px", borderBottom: "1px solid #BFDBFE", display: "flex", alignItems: "center", gap: 6 }}>
             <ShieldCheck size={13} color="#1D4ED8" />
-            <span style={{ fontSize: 11, fontWeight: 700, color: "#1D4ED8" }}>รายงาน SICKW (บันทึกไว้แล้ว)</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#1D4ED8" }}>รายงานตรวจสอบ Apple (บันทึกไว้แล้ว)</span>
           </div>
           <div style={{ padding: "8px 12px" }}>
             <button onClick={() => setSickwExpanded(p => !p)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 11, color: "#1D4ED8", fontFamily: "inherit" }}>
-              {sickwExpanded ? "▲ ซ่อนรายงาน" : "▼ ดูรายงาน SICKW"}
+              {sickwExpanded ? "▲ ซ่อนรายงาน" : "▼ ดูรายงาน"}
             </button>
             {sickwExpanded && (
               <pre style={{ margin: "6px 0 0", padding: "8px 10px", borderRadius: 6, background: "#F1F5F9", fontSize: 10, lineHeight: 1.6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", color: "#1E293B" }}>{sickwRaw}</pre>
