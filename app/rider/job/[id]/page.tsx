@@ -9,7 +9,7 @@ import {
   riderAcceptJob, riderStartJob, riderArriveJob, riderNoShow,
   riderSaveInspection, riderConfirmPrice, riderAdjustPrice,
   riderCustomerAccepted, riderCustomerRejected,
-  riderCompleteCash, riderCompleteTransfer,
+  riderCompleteCash, riderCompleteTransfer, riderRequestTransfer,
 } from "@/app/actions/rider";
 import { saveContractUrls, markContractSigned } from "@/app/actions/admin-requests";
 import { supabase } from "@/lib/supabase";
@@ -623,10 +623,22 @@ function ContractStep({ job, reload, riderName, c }: { job: AdminRequest; reload
   const custFileRef = useRef<HTMLInputElement>(null!);
   const paymentFileRef = useRef<HTMLInputElement>(null!);
 
+  const price = job.inspection?.actualPrice ?? job.device.estimatedPrice;
+
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
   const contractHTMLRef = useRef("");
   const receiptHTMLRef = useRef("");
+
+  // Post-generation state
+  const [contractSigned, setContractSigned] = useState(!!job.payment.contractSignedAt);
+  const [transferBusy, setTransferBusy] = useState(false);
+  const [transferNotified, setTransferNotified] = useState(false);
+  const [slipDataUrl, setSlipDataUrl] = useState<string | null>(null);
+  const [slipStorageUrl, setSlipStorageUrl] = useState<string | null>(null);
+  const [slipUploading, setSlipUploading] = useState(false);
+  const [completingBusy, setCompletingBusy] = useState(false);
+  const slipFileRef = useRef<HTMLInputElement>(null!);
 
   const inputSt: React.CSSProperties = { width: "100%", padding: "9px 11px", borderRadius: 8, border: `1px solid ${c.BORDER}`, background: c.CARD2, fontSize: 14, color: c.TEXT, fontFamily: "inherit", outline: "none" };
   const labelSt: React.CSSProperties = { display: "block", fontSize: 12, fontWeight: 600, color: c.TEXT2, marginBottom: 4 };
@@ -702,6 +714,40 @@ function ContractStep({ job, reload, riderName, c }: { job: AdminRequest; reload
 
   function toggleAcc(acc: string) {
     setAccessories(prev => prev.includes(acc) ? prev.filter(a=>a!==acc) : [...prev, acc]);
+  }
+
+  function openStoredDoc(path: string | undefined) {
+    if (!path) return;
+    const { data: { publicUrl } } = supabase.storage.from("inspection-photos").getPublicUrl(path);
+    window.open(publicUrl, "_blank");
+  }
+
+  async function handleSlipPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file) return;
+    const v = validateImageFile(file); if (!v.valid) { alert((v as { valid:false;error:string }).error); return; }
+    setSlipUploading(true);
+    try {
+      const compressed = await compressImage(file);
+      const reader = new FileReader();
+      reader.onload = ev => setSlipDataUrl(ev.target!.result as string);
+      reader.readAsDataURL(compressed);
+      const storageUrl = await uploadPhoto(compressed, `rider/${job.id}/slip-${Date.now()}.jpg`);
+      setSlipStorageUrl(storageUrl);
+    } catch { setError("อัปโหลดสลิปไม่สำเร็จ"); }
+    finally { setSlipUploading(false); e.target.value = ""; }
+  }
+
+  async function handleRequestTransfer() {
+    setTransferBusy(true);
+    await riderRequestTransfer(job.id);
+    setTransferNotified(true);
+    setTransferBusy(false);
+  }
+
+  async function handleCompleteTransfer() {
+    setCompletingBusy(true);
+    await riderCompleteTransfer(job.id, slipStorageUrl ?? undefined);
+    reload();
   }
 
   async function handleGenerate() {
@@ -865,16 +911,16 @@ function ContractStep({ job, reload, riderName, c }: { job: AdminRequest; reload
       await saveContractUrls(job.id, cu.data.path, ru.data.path);
       await markContractSigned(job.id);
 
-      // Complete the job inline — payment evidence is already embedded in receipt
-      if (payMethod === "cash") {
-        await riderCompleteCash(job.id, paymentPhotoStorageUrl ?? "");
-      } else {
-        await riderCompleteTransfer(job.id, paymentPhotoStorageUrl ?? undefined);
-      }
-
       contractHTMLRef.current = cBody;
       receiptHTMLRef.current  = rBody;
-      reload();
+
+      if (payMethod === "cash") {
+        await riderCompleteCash(job.id, paymentPhotoStorageUrl ?? "");
+        reload();
+      } else {
+        setContractSigned(true);
+        reload();
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "เกิดข้อผิดพลาด");
     } finally {
@@ -977,38 +1023,73 @@ function ContractStep({ job, reload, riderName, c }: { job: AdminRequest; reload
             </button>
             <input ref={custFileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleCustPhoto} />
           </div>
-          {/* Payment evidence — embedded into receipt at generate time */}
-          <div style={{ borderTop: `1px solid ${c.BORDER}`, paddingTop: 14 }}>
-            <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: c.TEXT }}>
-              {payMethod === "cash" ? "💵 หลักฐานมอบเงินสด" : "📎 สลิปโอนเงิน"}
-            </p>
-            <p style={{ margin: "0 0 8px", fontSize: 12, color: c.TEXT2 }}>
-              {payMethod === "cash" ? "ถ่ายรูปขณะมอบเงิน — จะแนบในใบสำคัญรับเงิน" : "อัปโหลดสลิปที่ลูกค้าโอน — จะแนบในใบสำคัญรับเงิน"}
-            </p>
-            {paymentPhotoDataUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={paymentPhotoDataUrl} alt="หลักฐานชำระเงิน" style={{ width: "100%", maxHeight: 220, objectFit: "contain", borderRadius: 8, border: `1px solid ${c.GREEN}`, marginBottom: 8 }} />
-            )}
-            <button onClick={()=>paymentFileRef.current?.click()} disabled={paymentPhotoUploading} style={{ width: "100%", padding: "12px", borderRadius: 10, border: `1.5px dashed ${paymentPhotoDataUrl ? c.GREEN : c.BORDER}`, background: paymentPhotoDataUrl ? "rgba(74,222,128,0.06)" : c.CARD, color: paymentPhotoDataUrl ? c.GREEN : c.TEXT2, fontSize: 13, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: paymentPhotoUploading ? 0.6 : 1 }}>
-              <Camera size={16} />
-              {paymentPhotoUploading ? "กำลังอัปโหลด..." : paymentPhotoDataUrl ? "เปลี่ยนหลักฐาน ✓" : (payMethod === "cash" ? "ถ่ายรูปมอบเงิน" : "ถ่าย/อัปโหลดสลิป")}
-            </button>
-            <input ref={paymentFileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handlePaymentPhoto} />
-          </div>
+          {/* Payment evidence — cash only; transfer slip is captured after Finance transfers */}
+          {payMethod === "cash" && (
+            <div style={{ borderTop: `1px solid ${c.BORDER}`, paddingTop: 14 }}>
+              <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: c.TEXT }}>💵 หลักฐานมอบเงินสด</p>
+              <p style={{ margin: "0 0 8px", fontSize: 12, color: c.TEXT2 }}>ถ่ายรูปขณะมอบเงิน — จะแนบในใบสำคัญรับเงิน</p>
+              {paymentPhotoDataUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={paymentPhotoDataUrl} alt="หลักฐานชำระเงิน" style={{ width: "100%", maxHeight: 220, objectFit: "contain", borderRadius: 8, border: `1px solid ${c.GREEN}`, marginBottom: 8 }} />
+              )}
+              <button onClick={()=>paymentFileRef.current?.click()} disabled={paymentPhotoUploading} style={{ width: "100%", padding: "12px", borderRadius: 10, border: `1.5px dashed ${paymentPhotoDataUrl ? c.GREEN : c.BORDER}`, background: paymentPhotoDataUrl ? "rgba(74,222,128,0.06)" : c.CARD, color: paymentPhotoDataUrl ? c.GREEN : c.TEXT2, fontSize: 13, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: paymentPhotoUploading ? 0.6 : 1 }}>
+                <Camera size={16} />
+                {paymentPhotoUploading ? "กำลังอัปโหลด..." : paymentPhotoDataUrl ? "เปลี่ยนหลักฐาน ✓" : "ถ่ายรูปมอบเงิน"}
+              </button>
+              <input ref={paymentFileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handlePaymentPhoto} />
+            </div>
+          )}
         </div>
       </div>
 
       {error && <p style={{ margin: 0, fontSize: 13, color: c.RED }}>{error}</p>}
 
-      {contractHTMLRef.current ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {contractSigned ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ background: "rgba(74,222,128,0.08)", border: `1px solid ${c.GREEN}`, borderRadius: 10, padding: "12px 14px" }}>
             <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: c.GREEN }}>✓ สร้างสัญญาสำเร็จแล้ว</p>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={()=>openDoc(contractHTMLRef.current)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: `1px solid ${c.BORDER}`, background: c.CARD, color: c.TEXT, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>เปิดสัญญา ↗</button>
-            <button onClick={()=>openDoc(receiptHTMLRef.current)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: `1px solid ${c.BORDER}`, background: c.CARD, color: c.TEXT, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>เปิดใบรับเงิน ↗</button>
+            <button onClick={() => contractHTMLRef.current ? openDoc(contractHTMLRef.current) : openStoredDoc(job.contractUrl)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: `1px solid ${c.BORDER}`, background: c.CARD, color: c.TEXT, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>เปิดสัญญา ↗</button>
+            <button onClick={() => receiptHTMLRef.current ? openDoc(receiptHTMLRef.current) : openStoredDoc(job.receiptUrl)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: `1px solid ${c.BORDER}`, background: c.CARD, color: c.TEXT, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>เปิดใบรับเงิน ↗</button>
           </div>
+
+          {payMethod === "transfer" && (
+            <>
+              {/* Step 1: Notify Finance */}
+              <div style={{ background: c.CARD, border: `1px solid ${c.BORDER}`, borderRadius: 12, padding: "14px 16px" }}>
+                <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: c.TEXT }}>📤 แจ้ง Finance โอนเงิน</p>
+                <p style={{ margin: "0 0 10px", fontSize: 12, color: c.TEXT2 }}>
+                  กด "แจ้ง Finance" เพื่อให้ทีมโอน ฿{price.toLocaleString("th-TH")} ไปยังบัญชีลูกค้า
+                </p>
+                {transferNotified && (
+                  <p style={{ margin: "0 0 10px", fontSize: 12, color: c.GREEN, fontWeight: 600 }}>✓ แจ้ง Finance แล้ว — รอโอนเงิน</p>
+                )}
+                <BigBtn
+                  label={transferNotified ? "แจ้งซ้ำอีกครั้ง" : "แจ้ง Finance โอนเงิน →"}
+                  color="#4F46E5" textColor="#fff"
+                  loading={transferBusy}
+                  onClick={handleRequestTransfer}
+                />
+              </div>
+
+              {/* Step 2: Upload slip + confirm */}
+              <div style={{ background: c.CARD, border: `1px solid ${c.BORDER}`, borderRadius: 12, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: c.TEXT }}>📎 ยืนยันโอนสำเร็จ</p>
+                <p style={{ margin: 0, fontSize: 12, color: c.TEXT2 }}>อัปโหลดสลิปหลังจาก Finance โอนแล้ว แล้วกดยืนยัน</p>
+                {slipDataUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={slipDataUrl} alt="สลิปโอนเงิน" style={{ width: "100%", maxHeight: 240, objectFit: "contain", borderRadius: 8, border: `1px solid ${c.GREEN}` }} />
+                )}
+                <button onClick={() => slipFileRef.current?.click()} disabled={slipUploading} style={{ width: "100%", padding: "12px", borderRadius: 10, border: `1.5px dashed ${slipDataUrl ? c.GREEN : c.BORDER}`, background: slipDataUrl ? "rgba(74,222,128,0.06)" : c.CARD, color: slipDataUrl ? c.GREEN : c.TEXT2, fontSize: 13, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: slipUploading ? 0.6 : 1 }}>
+                  <Camera size={16} />
+                  {slipUploading ? "กำลังอัปโหลด..." : slipDataUrl ? "เปลี่ยนสลิป ✓" : "ถ่าย/อัปโหลดสลิป"}
+                </button>
+                <input ref={slipFileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleSlipPhoto} />
+                <BigBtn label="ยืนยันโอนสำเร็จ →" loading={completingBusy} onClick={handleCompleteTransfer} />
+              </div>
+            </>
+          )}
         </div>
       ) : (
         <BigBtn label={generating ? "กำลังสร้างสัญญา..." : "สร้างสัญญาและบันทึก →"} loading={generating} onClick={handleGenerate} />
@@ -1266,7 +1347,6 @@ export default function JobWizardPage() {
                   <ContractStep job={job} reload={reload} riderName={riderName} c={c} />
                 </>
               )}
-              {/* contracting + signed → completed immediately via handleGenerate, so this state should not be reached */}
             </div>
           ) : step < 3 ? (
             <LockedStepRow label="ราคา/สัญญา" c={c} />
