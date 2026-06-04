@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
-import { ArrowLeft, Phone, MapPin, Camera, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Phone, MapPin, Camera, AlertTriangle, CheckCircle2, ExternalLink } from "lucide-react";
 import {
   fetchRiderJob, fetchRiderJobs,
   riderAcceptJob, riderStartJob, riderArriveJob, riderNoShow,
@@ -981,8 +981,8 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
             <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: c.GREEN }}>✓ ออกเอกสารสำเร็จแล้ว</p>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => contractHTMLRef.current ? openDoc(contractHTMLRef.current) : openStoredDoc(job.contractUrl)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: `1px solid ${c.BORDER}`, background: c.CARD, color: c.TEXT, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>เปิดสัญญา ↗</button>
-            <button onClick={() => receiptHTMLRef.current ? openDoc(receiptHTMLRef.current) : openStoredDoc(job.receiptUrl)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: `1px solid ${c.BORDER}`, background: c.CARD, color: c.TEXT, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>เปิดใบรับเงิน ↗</button>
+            <button onClick={() => contractHTMLRef.current ? openDoc(contractHTMLRef.current) : openStoredDoc(job.contractUrl)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: `1px solid ${c.BORDER}`, background: c.CARD, color: c.TEXT, fontSize: 13, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><span>เปิดสัญญา</span><ExternalLink size={13} /></button>
+            <button onClick={() => receiptHTMLRef.current ? openDoc(receiptHTMLRef.current) : openStoredDoc(job.receiptUrl)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: `1px solid ${c.BORDER}`, background: c.CARD, color: c.TEXT, fontSize: 13, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><span>เปิดใบรับเงิน</span><ExternalLink size={13} /></button>
           </div>
 
           {payMethod === "transfer" && (
@@ -1238,7 +1238,7 @@ export default function JobWizardPage() {
                 <div style={{ padding:"12px 16px", display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
                   <p style={{ margin:0, fontSize:14, color:TEXT, flex:1 }}>{job.appointment.location || "ไม่ระบุที่อยู่"}</p>
                   {job.appointment.location && (
-                    <a href={mapsUrl} target="_blank" rel="noreferrer" style={{ background:ACCENT, borderRadius:8, padding:"6px 12px", fontSize:12, fontWeight:700, color:"#000", textDecoration:"none", whiteSpace:"nowrap", flexShrink:0 }}>นำทาง ↗</a>
+                    <a href={mapsUrl} target="_blank" rel="noreferrer" style={{ background:ACCENT, borderRadius:8, padding:"6px 12px", fontSize:12, fontWeight:700, color:"#000", textDecoration:"none", whiteSpace:"nowrap", flexShrink:0, display:"inline-flex", alignItems:"center", gap:5 }}>นำทาง <ExternalLink size={11} /></a>
                   )}
                 </div>
                 <div style={{ padding:"0 16px 12px", display:"flex", gap:16 }}>
@@ -1269,8 +1269,8 @@ export default function JobWizardPage() {
                 <CardHead icon={<MapPin size={14} color={ACCENT} />} title="ปลายทาง" c={c} />
                 <div style={{ padding:14 }}>
                   <p style={{ margin:"0 0 10px", fontSize:15, fontWeight:600, color:TEXT }}>{job.appointment.location}</p>
-                  <a href={mapsUrl} target="_blank" rel="noreferrer" style={{ display:"block", background:ACCENT, borderRadius:10, padding:"12px", textAlign:"center", fontSize:15, fontWeight:700, color:"#000", textDecoration:"none" }}>
-                    เปิด Google Maps ↗
+                  <a href={mapsUrl} target="_blank" rel="noreferrer" style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:6, background:ACCENT, borderRadius:10, padding:"12px", fontSize:15, fontWeight:700, color:"#000", textDecoration:"none" }}>
+                    เปิด Google Maps <ExternalLink size={14} />
                   </a>
                 </div>
                 <div style={{ padding:"0 14px 14px", display:"flex", gap:16 }}>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   ArrowLeft, Phone, MapPin, Calendar, CreditCard,
-  Clock, CheckCircle, Circle, Pencil, Check, X, Copy,
+  Clock, CheckCircle, Circle, Pencil, Check, X, Copy, ExternalLink,
 } from "lucide-react";
 import {
   fetchRequest, updateStatus, addNote,
@@ -962,7 +962,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                       rel="noopener noreferrer"
                       style={{ color: GOLD, fontSize: "13px", margin: 0, fontWeight: 600 }}
                     >
-                      {request.appointment.location} ↗
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{request.appointment.location} <ExternalLink size={11} /></span>
                     </a>
                   ) : (
                     <p style={{ color: TEXT2, fontSize: "13px", margin: 0 }}>{request.appointment.location}</p>
@@ -1377,14 +1377,14 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                   onClick={() => openAdminDoc(request.contractUrl!)}
                   style={{ flex: 1, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "13px", color: TEXT, fontSize: 14, fontWeight: 600, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit" }}
                 >
-                  ดูสัญญาซื้อขาย ↗
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>ดูสัญญาซื้อขาย <ExternalLink size={13} /></span>
                 </button>
                 {request.receiptUrl && (
                   <button
                     onClick={() => openAdminDoc(request.receiptUrl!)}
                     style={{ flex: 1, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "13px", color: TEXT, fontSize: 14, fontWeight: 600, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit" }}
                   >
-                    ดูใบรับเงิน ↗
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>ดูใบรับเงิน <ExternalLink size={13} /></span>
                   </button>
                 )}
               </div>
