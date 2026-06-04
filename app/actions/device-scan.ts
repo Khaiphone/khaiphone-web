@@ -133,8 +133,8 @@ export async function checkSickw(
         color:         colorFromConfig    ?? r.Color  ?? r.color ?? r.Colour ?? r.colour,
         carrier:       r["Carrier"]       ?? r.Carrier ?? r.carrier,
         carrierLock:   r["Unlock Status"] ?? r["Sim-Lock"] ?? r.CarrierLock ?? r.simlock,
-        icloudStatus:  [r["iCloud Lock"], r["iCloud Status"]].filter(Boolean).join(" / ") ||
-                       r.iCloudStatus ?? r.icloud_status ?? r.icloud,
+        icloudStatus:  ([r["iCloud Lock"], r["iCloud Status"]].filter(Boolean).join(" / ")) ||
+                       (r.iCloudStatus ?? r.icloud_status ?? r.icloud),
         blacklist:     r["Blacklist"]     ?? r.blacklist,
         warrantyStatus: r["Limited Warranty"] ?? r.WarrantyStatus ?? r.warranty_status ?? r.warranty,
         warrantyDate,
