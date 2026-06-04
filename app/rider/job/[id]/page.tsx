@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import { ArrowLeft, Phone, MapPin, Camera, AlertTriangle, CheckCircle2, ExternalLink, ScanLine, ShieldCheck, ShieldAlert, ShieldX, Loader2, RefreshCw } from "lucide-react";
-import { scanDeviceInfo, checkSickw } from "@/app/actions/device-scan";
+import { scanDeviceInfo, checkSickw, scanIdCard } from "@/app/actions/device-scan";
 import type { SickwResult } from "@/app/actions/device-scan";
 import {
   fetchRiderJob, fetchRiderJobs,
@@ -824,6 +824,8 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
   const [txDate, setTxDate] = useState(new Date().toISOString().slice(0, 10));
 
   const [idPhotoDataUrl, setIdPhotoDataUrl] = useState<string | null>(null);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrError,   setOcrError]   = useState("");
   const [custProdPhotoDataUrl, setCustProdPhotoDataUrl] = useState<string | null>(null);
   const [paymentPhotoDataUrl, setPaymentPhotoDataUrl] = useState<string | null>(null);
   const [paymentPhotoUploading, setPaymentPhotoUploading] = useState(false);
@@ -892,7 +894,25 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
   async function handleIdPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return;
     const v = validateImageFile(file); if (!v.valid) { alert((v as { valid:false;error:string }).error); return; }
-    const url = await applyWatermark(file); setIdPhotoDataUrl(url);
+    const compressed = await compressImage(file);
+    setOcrLoading(true); setOcrError("");
+    try {
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => resolve((ev.target!.result as string).split(",")[1]);
+        reader.readAsDataURL(compressed as File);
+      });
+      const result = await scanIdCard(base64);
+      if (result.data) {
+        const d = result.data;
+        if (d.nameTh && !buyerName) setBuyerName(d.nameTh);
+        if (d.id && !idNumber) setIdNumber(d.id.replace(/(\d)(\d{4})(\d{5})(\d{2})(\d)/, "$1-$2-$3-$4-$5"));
+        if (d.dob && !dob) setDob(d.dob);
+        if (d.address && !address) setAddress(d.address);
+      } else if (result.error) { setOcrError(result.error); }
+    } catch { setOcrError("สแกนบัตรไม่สำเร็จ"); }
+    finally { setOcrLoading(false); }
+    const url = await applyWatermark(compressed as File); setIdPhotoDataUrl(url);
     e.target.value = "";
   }
 
@@ -1166,6 +1186,9 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
               <Camera size={16} />{idPhotoDataUrl ? "เปลี่ยนรูปบัตร" : "ถ่ายบัตรประชาชน"}
             </button>
             <input ref={idFileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleIdPhoto} />
+            {ocrLoading && <p style={{ margin: "6px 0 0", fontSize: 12, color: c.ACCENT, textAlign: "center" }}>🔍 กำลังอ่านข้อมูลจากบัตร...</p>}
+            {ocrError && !ocrLoading && <p style={{ margin: "6px 0 0", fontSize: 12, color: c.RED }}>⚠️ {ocrError} — กรอกข้อมูลเองได้เลย</p>}
+            {idPhotoDataUrl && !ocrLoading && !ocrError && <p style={{ margin: "6px 0 0", fontSize: 12, color: "#30D158", textAlign: "center" }}>✓ อ่านข้อมูลจากบัตรแล้ว — ตรวจสอบด้านล่าง</p>}
           </div>
           <div>
             <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 600, color: c.TEXT }}>รูปลูกค้าพร้อมสินค้า</p>
