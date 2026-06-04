@@ -47,6 +47,7 @@ export async function scanDeviceInfo(
 export type SickwResult = {
   imei?: string;
   device?: string;
+  color?: string;
   carrier?: string;
   carrierLock?: string;
   icloudStatus?: string;
@@ -81,6 +82,7 @@ export async function checkSickw(
       data: {
         imei:          r.IMEI          ?? r.Imei          ?? r.imei,
         device:        r.Device        ?? r.device        ?? r.Model ?? r.model,
+        color:         r.Color         ?? r.color         ?? r.Colour ?? r.colour,
         carrier:       r.Carrier       ?? r.carrier,
         carrierLock:   r.CarrierLock   ?? r.simlock        ?? r.sim_lock,
         icloudStatus:  r.iCloudStatus  ?? r.icloud_status  ?? r.iCloudLock ?? r.icloud,

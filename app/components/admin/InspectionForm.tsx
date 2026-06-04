@@ -426,6 +426,28 @@ export default function InspectionForm({
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
+  function applySickwData(data: SickwResult) {
+    setSickwResult(data);
+    if (data.imei) { setImei(data.imei); setImeiError(false); }
+    if (data.color) {
+      setColorDraft(data.color);
+      setCustomColor(colorOptions.includes(data.color) ? "" : data.color);
+      setColorError(false);
+      onColorChange?.(data.color);
+    }
+    if (data.warrantyStatus) {
+      const ws = data.warrantyStatus.toLowerCase();
+      if (ws.includes("expir") || ws.includes("out of") || ws.includes("หมด")) {
+        setWarrantyExpiry("expired");
+      } else if (ws.includes("active") || ws.includes("valid") || ws.includes("cover")) {
+        if (data.warrantyDate) {
+          const parsed = new Date(data.warrantyDate);
+          if (!isNaN(parsed.getTime())) setWarrantyExpiry(parsed.toISOString().slice(0, 10));
+        }
+      }
+    }
+  }
+
   async function handleSickwCheck() {
     const id = serial.trim() || imei.trim();
     if (!id) return;
@@ -433,12 +455,8 @@ export default function InspectionForm({
     setSickwError("");
     setSickwResult(null);
     const res = await checkSickw(id);
-    if (res.success && res.data) {
-      setSickwResult(res.data);
-      if (res.data.imei) { setImei(res.data.imei); setImeiError(false); }
-    } else {
-      setSickwError(res.error ?? "ตรวจสอบไม่สำเร็จ");
-    }
+    if (res.success && res.data) applySickwData(res.data);
+    else setSickwError(res.error ?? "ตรวจสอบไม่สำเร็จ");
     setSickwLoading(false);
   }
 

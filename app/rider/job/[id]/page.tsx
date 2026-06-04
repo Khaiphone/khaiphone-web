@@ -305,6 +305,23 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  function applySickwData(data: import("@/app/actions/device-scan").SickwResult) {
+    setSickwResult(data);
+    if (data.imei) setImei(data.imei);
+    if (data.warrantyStatus) {
+      const ws = data.warrantyStatus.toLowerCase();
+      if (ws.includes("expir") || ws.includes("out of") || ws.includes("หมด")) {
+        setWarrantyStatus("expired");
+      } else if (ws.includes("active") || ws.includes("valid") || ws.includes("cover")) {
+        setWarrantyStatus("valid");
+        if (data.warrantyDate) {
+          const parsed = new Date(data.warrantyDate);
+          if (!isNaN(parsed.getTime())) setWarranty(parsed.toISOString().slice(0, 10));
+        }
+      }
+    }
+  }
+
   async function handleScan(file: File) {
     setScanning(true); setError(""); setSickwResult(null); setSickwError("");
     try {
@@ -315,14 +332,10 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
       if (result.error) { setError(result.error); return; }
       if (result.serial) {
         setSerial(result.serial);
-        // Auto-check SICKW with Serial Number
         setSickwLoading(true);
         const sickw = await checkSickw(result.serial);
         if (!sickw.success) setSickwError(sickw.error ?? "เช็ค SICKW ไม่ได้");
-        else {
-          setSickwResult(sickw.data ?? null);
-          if (sickw.data?.imei) setImei(sickw.data.imei);
-        }
+        else if (sickw.data) applySickwData(sickw.data);
         setSickwLoading(false);
       }
     } catch { setError("สแกนไม่สำเร็จ กรุณากรอกเอง"); }
@@ -335,10 +348,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
     setSickwLoading(true); setSickwResult(null); setSickwError("");
     const res = await checkSickw(id);
     if (!res.success) setSickwError(res.error ?? "เช็ค SICKW ไม่ได้");
-    else {
-      setSickwResult(res.data ?? null);
-      if (res.data?.imei) setImei(res.data.imei);
-    }
+    else if (res.data) applySickwData(res.data);
     setSickwLoading(false);
   }
 
