@@ -308,29 +308,35 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // Parse saved raw text back into SickwResult on mount (avoids re-paying for check)
+  // Restore full SickwResult (including form auto-fill) from saved raw text on mount
   useEffect(() => {
-    if (sickwRaw && !sickwResult) {
-      const map: Record<string, string> = {};
-      for (const line of sickwRaw.split("\n")) {
-        const idx = line.indexOf(": ");
-        if (idx > 0) map[line.slice(0, idx).trim()] = line.slice(idx + 2).trim();
-      }
-      const cfg = map["Device Configuration"] ?? "";
-      const cfgParts = cfg.split(",");
-      const colorFromCfg = cfgParts.length >= 5 ? cfgParts[4].trim() : undefined;
-      const colorFromModel = (map["Model Name"] ?? "").match(/\d+\s*[GT]B\s+(.+)$/i)?.[1]?.trim();
-      setSickwResult({
-        imei:          map["IMEI"],
-        device:        cfg || map["Model Name"],
-        color:         colorFromCfg ?? colorFromModel,
-        carrierLock:   map["Unlock Status"] ?? map["Sim-Lock"],
-        icloudStatus:  [map["iCloud Lock"], map["iCloud Status"]].filter(Boolean).join(" / ") || undefined,
-        blacklist:     map["Blacklist"],
-        warrantyStatus: map["Limited Warranty"],
-        rawText:       sickwRaw,
-      });
+    if (!sickwRaw || sickwResult) return;
+    const map: Record<string, string> = {};
+    for (const line of sickwRaw.split("\n")) {
+      const idx = line.indexOf(": ");
+      if (idx > 0) map[line.slice(0, idx).trim()] = line.slice(idx + 2).trim();
     }
+    const cfg = map["Device Configuration"] ?? "";
+    const cfgParts = cfg.split(",");
+    const colorFromCfg = cfgParts.length >= 5 ? cfgParts[4].trim() : undefined;
+    const colorFromModel = (map["Model Name"] ?? "").match(/\d+\s*[GT]B\s+(.+)$/i)?.[1]?.trim();
+    // Parse DD/MM/YY warranty date
+    const rawDate = map["Coverage End Date"] ?? map["Coverage Duration"] ?? "";
+    const dm = rawDate.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+    const warrantyDate = dm
+      ? `${dm[3].length === 2 ? `20${dm[3]}` : dm[3]}-${dm[2].padStart(2, "0")}-${dm[1].padStart(2, "0")}`
+      : undefined;
+    applySickwData({
+      imei:           map["IMEI"],
+      device:         cfg || map["Model Name"],
+      color:          colorFromCfg ?? colorFromModel,
+      carrierLock:    map["Unlock Status"] ?? map["Sim-Lock"],
+      icloudStatus:   [map["iCloud Lock"], map["iCloud Status"]].filter(Boolean).join(" / ") || undefined,
+      blacklist:      map["Blacklist"],
+      warrantyStatus: map["Limited Warranty"],
+      warrantyDate,
+      rawText:        sickwRaw,
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sickwRaw]);
 
