@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { TrendingUp, Package } from "lucide-react";
 import { Sk } from "@/app/rider/skeleton";
-import { supabase } from "@/lib/supabase";
 import { fetchRiderEarnings } from "@/app/actions/rider";
 import { useRiderTheme } from "@/app/rider/theme";
+import { useRiderSession } from "@/app/rider/context";
+import { cacheGet, cacheSet } from "@/app/rider/cache";
 
 function fmt(n: number) { return n.toLocaleString("th-TH"); }
 function fmtDate(d: string) {
@@ -16,17 +17,18 @@ type Earnings = Awaited<ReturnType<typeof fetchRiderEarnings>>;
 
 export default function EarningsPage() {
   const { BG: _BG, CARD, CARD2, BORDER, ACCENT, GREEN, TEXT, TEXT2 } = useRiderTheme();
-  const [data, setData]     = useState<Earnings | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { userId } = useRiderSession();
+  const [data, setData]     = useState<Earnings | null>(() => cacheGet<Earnings>(`earnings:${userId}`));
+  const [loading, setLoading] = useState(!cacheGet<Earnings>(`earnings:${userId}`));
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) return;
-      const e = await fetchRiderEarnings(session.user.id);
+    if (!userId) return;
+    fetchRiderEarnings(userId).then(e => {
       setData(e);
+      cacheSet(`earnings:${userId}`, e);
       setLoading(false);
     });
-  }, []);
+  }, [userId]);
 
   if (loading) return (
     <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 10 }}>

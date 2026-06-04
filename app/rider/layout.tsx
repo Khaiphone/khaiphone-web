@@ -10,6 +10,7 @@ import { fetchMyProfile } from "@/app/actions/admin-users";
 import { fetchRiderOnlineStatus, fetchRiderNotifications } from "@/app/actions/rider";
 import { saveSubscription } from "@/app/actions/push";
 import { RiderThemeProvider, useRiderTheme } from "@/app/rider/theme";
+import { RiderSessionContext } from "@/app/rider/context";
 
 const NAV = [
   { href: "/rider",          label: "หน้าแรก",   icon: Home       },
@@ -37,6 +38,8 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
 
   const [ready, setReady]         = useState(false);
   const [riderName, setRiderName] = useState("");
+  const [riderEmail, setRiderEmail] = useState("");
+  const [riderRole, setRiderRole] = useState("");
   const [userId, setUserId]       = useState<string>("");
   const [isOnline, setIsOnline]   = useState(false);
   const [notifs, setNotifs]       = useState<Notif[]>([]);
@@ -133,6 +136,8 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
         return;
       }
       setRiderName(profile.name ?? "ไรเดอร์");
+      setRiderEmail(profile.email ?? "");
+      setRiderRole(profile.role ?? "");
       setUserId(session.user.id);
       setIsOnline(online);
       setReady(true);
@@ -151,11 +156,6 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
     return () => { supabase.removeChannel(ch); };
   }, [userId, loadNotifs]);
 
-  useEffect(() => {
-    const handler = (e: Event) => { setIsOnline((e as CustomEvent<boolean>).detail); };
-    window.addEventListener("rider-online-change", handler);
-    return () => window.removeEventListener("rider-online-change", handler);
-  }, []);
 
   function openNotifs() {
     const now = new Date().toISOString();
@@ -174,6 +174,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
   const isJobPage = /^\/rider\/job\//.test(pathname);
 
   return (
+    <RiderSessionContext.Provider value={{ userId, riderName, riderEmail, riderRole, isOnline, setIsOnline }}>
     <div style={{ height: "100dvh", background: BG, color: TEXT, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", display: "flex", flexDirection: "column", overflow: "hidden", overscrollBehavior: "none" }}>
 
       {/* Header */}
@@ -260,6 +261,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
         </div>
       )}
     </div>
+    </RiderSessionContext.Provider>
   );
 }
 

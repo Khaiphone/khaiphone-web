@@ -4,14 +4,11 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, Banknote, ArrowUpDown, Package, Wifi, WifiOff, CheckCircle2, Navigation, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import {
-  fetchRiderHomeData,
-  riderAcceptJob,
-  setRiderOnlineStatus,
-  fetchRiderOnlineStatus,
-} from "@/app/actions/rider";
+import { fetchRiderHomeData, riderAcceptJob, setRiderOnlineStatus } from "@/app/actions/rider";
 import { Sk } from "@/app/rider/skeleton";
 import { useRiderTheme } from "@/app/rider/theme";
+import { useRiderSession } from "@/app/rider/context";
+import { cacheGet, cacheSet } from "@/app/rider/cache";
 import type { AdminRequest } from "@/lib/types/admin";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -24,11 +21,12 @@ const STATUS_LABEL: Record<string, string> = {
 
 function fmt(n: number) { return n.toLocaleString("th-TH"); }
 
+type HomeData = { pending: AdminRequest[]; active: AdminRequest[]; stats: { completedJobs: number; totalEarnings: number } };
+
 export default function RiderHomePage() {
   const router = useRouter();
   const { CARD, CARD2, BORDER, ACCENT, GREEN, TEXT, TEXT2 } = useRiderTheme();
-  const [userId, setUserId]           = useState<string>("");
-  const [isOnline, setIsOnline]       = useState(false);
+  const { userId, isOnline, setIsOnline } = useRiderSession();
   const [toggling, setToggling]       = useState(false);
   const [pendingJobs, setPendingJobs] = useState<AdminRequest[]>([]);
   const [activeJobs, setActiveJobs]   = useState<AdminRequest[]>([]);
@@ -37,31 +35,31 @@ export default function RiderHomePage() {
   const [loading, setLoading]         = useState(true);
 
   const loadData = useCallback(async (uid: string) => {
-    const [homeData, online] = await Promise.all([
-      fetchRiderHomeData(uid),
-      fetchRiderOnlineStatus(uid),
-    ]);
+    const homeData = await fetchRiderHomeData(uid);
     setPendingJobs(homeData.pending);
     setActiveJobs(homeData.active);
     setStats(homeData.stats);
-    setIsOnline(online);
+    cacheSet<HomeData>(`home:${uid}`, homeData);
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) return;
-      setUserId(session.user.id);
-      await loadData(session.user.id);
-    });
-  }, [loadData]);
+    if (!userId) return;
+    const cached = cacheGet<HomeData>(`home:${userId}`);
+    if (cached) {
+      setPendingJobs(cached.pending);
+      setActiveJobs(cached.active);
+      setStats(cached.stats);
+      setLoading(false);
+    }
+    loadData(userId);
+  }, [userId, loadData]);
 
   async function toggleOnline() {
     setToggling(true);
     const next = !isOnline;
     setIsOnline(next);
     await setRiderOnlineStatus(next);
-    window.dispatchEvent(new CustomEvent("rider-online-change", { detail: next }));
     setToggling(false);
   }
 

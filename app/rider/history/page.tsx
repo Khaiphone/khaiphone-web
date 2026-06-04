@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, XCircle, Package } from "lucide-react";
 import { Sk } from "@/app/rider/skeleton";
-import { supabase } from "@/lib/supabase";
 import { fetchRiderHistory, fetchRiderStats } from "@/app/actions/rider";
 import { useRiderTheme } from "@/app/rider/theme";
+import { useRiderSession } from "@/app/rider/context";
+import { cacheGet, cacheSet } from "@/app/rider/cache";
 import type { AdminRequest } from "@/lib/types/admin";
 
 function fmt(n: number) { return n.toLocaleString("th-TH"); }
@@ -15,24 +16,25 @@ function fmtDate(d: string) {
   return new Date(d).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
 }
 
+type HistoryCache = { jobs: AdminRequest[]; stats: { completedJobs: number; cancelledJobs: number; totalEarnings: number } };
+
 export default function HistoryPage() {
   const { CARD, CARD2, BORDER, ACCENT, GREEN, RED, TEXT, TEXT2 } = useRiderTheme();
-  const [jobs, setJobs]   = useState<AdminRequest[]>([]);
-  const [stats, setStats] = useState({ completedJobs: 0, cancelledJobs: 0, totalEarnings: 0 });
-  const [loading, setLoading] = useState(true);
+  const { userId } = useRiderSession();
+  const cached = cacheGet<HistoryCache>(`history:${userId}`);
+  const [jobs, setJobs]   = useState<AdminRequest[]>(cached?.jobs ?? []);
+  const [stats, setStats] = useState(cached?.stats ?? { completedJobs: 0, cancelledJobs: 0, totalEarnings: 0 });
+  const [loading, setLoading] = useState(!cached);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) return;
-      const [h, s] = await Promise.all([
-        fetchRiderHistory(session.user.id),
-        fetchRiderStats(session.user.id),
-      ]);
+    if (!userId) return;
+    Promise.all([fetchRiderHistory(userId), fetchRiderStats(userId)]).then(([h, s]) => {
       setJobs(h);
       setStats(s);
+      cacheSet<HistoryCache>(`history:${userId}`, { jobs: h, stats: s });
       setLoading(false);
     });
-  }, []);
+  }, [userId]);
 
   if (loading) return (
     <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>

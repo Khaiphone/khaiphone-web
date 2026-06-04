@@ -1,36 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { UserCircle, LogOut, Wifi, WifiOff, ChevronRight, Moon, Sun } from "lucide-react";
 import { Sk } from "@/app/rider/skeleton";
 import { supabase } from "@/lib/supabase";
-import { fetchMyProfile } from "@/app/actions/admin-users";
-import { setRiderOnlineStatus, fetchRiderOnlineStatus } from "@/app/actions/rider";
+import { setRiderOnlineStatus } from "@/app/actions/rider";
 import { useRiderTheme } from "@/app/rider/theme";
+import { useRiderSession } from "@/app/rider/context";
 
 export default function AccountPage() {
   const router = useRouter();
   const { BG: _BG, CARD, BORDER, ACCENT, GREEN, RED, TEXT, TEXT2, isDark, toggleTheme } = useRiderTheme();
-  const [profile, setProfile] = useState<{ name: string; email: string; role: string } | null>(null);
-  const [isOnline, setIsOnline]   = useState(false);
-  const [toggling, setToggling]   = useState(false);
-  const [userId, setUserId]       = useState<string>("");
-  const [loading, setLoading]     = useState(true);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) return;
-      setUserId(session.user.id);
-      const [p, online] = await Promise.all([
-        fetchMyProfile(session.user.id),
-        fetchRiderOnlineStatus(session.user.id),
-      ]);
-      if (p) setProfile({ name: p.name ?? "", email: p.email ?? "", role: p.role });
-      setIsOnline(online);
-      setLoading(false);
-    });
-  }, []);
+  const { userId, riderName, riderEmail, riderRole, isOnline, setIsOnline } = useRiderSession();
+  const [toggling, setToggling] = useState(false);
 
   async function toggleOnline() {
     setToggling(true);
@@ -46,16 +29,9 @@ export default function AccountPage() {
     router.replace("/admin/login");
   }
 
-  if (loading) return (
+  // account page never shows a loading skeleton — data comes from context instantly
+  if (!userId) return (
     <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 24, display: "flex", alignItems: "center", gap: 16 }}>
-        <Sk w={56} h={56} r={28} />
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
-          <Sk w="55%" h={16} />
-          <Sk w="70%" h={12} />
-          <Sk w={50} h={20} r={6} />
-        </div>
-      </div>
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <Sk w={22} h={22} r={11} />
@@ -86,10 +62,10 @@ export default function AccountPage() {
           <UserCircle size={30} color="#000" />
         </div>
         <div>
-          <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: TEXT }}>{profile?.name ?? "..."}</p>
-          <p style={{ margin: "2px 0 0", fontSize: 13, color: TEXT2 }}>{profile?.email}</p>
+          <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: TEXT }}>{riderName}</p>
+          <p style={{ margin: "2px 0 0", fontSize: 13, color: TEXT2 }}>{riderEmail}</p>
           <p style={{ margin: "4px 0 0", fontSize: 11, fontWeight: 600, color: ACCENT, textTransform: "uppercase", letterSpacing: 0.5 }}>
-            {profile?.role === "owner" ? "เจ้าของ" : "พนักงาน / ไรเดอร์"}
+            {riderRole === "owner" ? "เจ้าของ" : "พนักงาน / ไรเดอร์"}
           </p>
         </div>
       </div>
@@ -155,11 +131,11 @@ export default function AccountPage() {
           </div>
         </button>
 
-        <a href="https://admin.khaiphone.com/admin/profile" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", textDecoration: "none", borderBottom: profile?.role === "owner" ? `1px solid ${BORDER}` : "none" }}>
+        <a href="https://admin.khaiphone.com/admin/profile" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", textDecoration: "none", borderBottom: riderRole === "owner" ? `1px solid ${BORDER}` : "none" }}>
           <span style={{ fontSize: 15, color: TEXT }}>แก้ไขโปรไฟล์</span>
           <ChevronRight size={16} color={TEXT2} />
         </a>
-        {profile?.role === "owner" && (
+        {riderRole === "owner" && (
           <a href="https://admin.khaiphone.com" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", textDecoration: "none" }}>
             <span style={{ fontSize: 15, color: TEXT }}>ไปหน้า Admin</span>
             <ChevronRight size={16} color={TEXT2} />
