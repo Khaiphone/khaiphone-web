@@ -1426,7 +1426,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                   <p style={{ color: TEXT, fontSize: 14, fontWeight: 600, margin: 0 }}>สัญญาซื้อขาย</p>
                   {request.payment.contractSignedAt ? (
                     <p style={{ color: "#059669", fontSize: 12, margin: "2px 0 0" }}>
-                      ✅ เซ็นแล้ว · {fmtDateTime(request.payment.contractSignedAt)} น.
+                      ✅ ออกเอกสารแล้ว · {fmtDateTime(request.payment.contractSignedAt)} น.
                     </p>
                   ) : (
                     <p style={{ color: TEXT3, fontSize: 12, margin: "2px 0 0" }}>ยังไม่ได้บันทึก</p>

@@ -978,7 +978,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
       {contractSigned ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ background: "rgba(74,222,128,0.08)", border: `1px solid ${c.GREEN}`, borderRadius: 10, padding: "12px 14px" }}>
-            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: c.GREEN }}>✓ สร้างสัญญาสำเร็จแล้ว</p>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: c.GREEN }}>✓ ออกเอกสารสำเร็จแล้ว</p>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={() => contractHTMLRef.current ? openDoc(contractHTMLRef.current) : openStoredDoc(job.contractUrl)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: `1px solid ${c.BORDER}`, background: c.CARD, color: c.TEXT, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>เปิดสัญญา ↗</button>
@@ -1328,7 +1328,7 @@ export default function JobWizardPage() {
 
           {/* ── Step 3: ราคา/สัญญา ── */}
           {step > 3 ? (
-            <DoneCard label="สัญญาลงนามแล้ว ✓" detail={`฿${price.toLocaleString("th-TH")} · ${isCash ? "เงินสด" : "โอนเงิน"}`} c={c} />
+            <DoneCard label="ออกเอกสารแล้ว ✓" detail={`฿${price.toLocaleString("th-TH")} · ${isCash ? "เงินสด" : "โอนเงิน"}`} c={c} />
           ) : step === 3 ? (
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
               {job.status === "price_negotiation" && (
