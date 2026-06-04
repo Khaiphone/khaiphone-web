@@ -1232,7 +1232,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
               <Camera size={16} />{idPhotoDataUrl ? "เปลี่ยนรูปบัตร" : "ถ่ายบัตรประชาชน"}
             </button>
             <input ref={idFileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleIdPhoto} />
-            {!idPhotoDataUrl && !ocrLoading && <p style={{ margin: "6px 0 0", fontSize: 11, color: c.TEXT2, textAlign: "center" }}>📱 หมุนโทรศัพท์แนวนอน เพื่อให้บัตรเต็มเฟรมและ OCR แม่นขึ้น</p>}
+            {!idPhotoDataUrl && !ocrLoading && <p style={{ margin: "6px 0 0", fontSize: 11, color: c.TEXT2, textAlign: "center" }}>📱 ถ่ายแนวตั้ง เพื่อให้ OCR อ่านภาษาไทยได้แม่นขึ้น</p>}
             {ocrLoading && <p style={{ margin: "6px 0 0", fontSize: 12, color: c.ACCENT, textAlign: "center" }}>🔍 กำลังอ่านข้อมูลจากบัตร...</p>}
             {ocrError && !ocrLoading && <p style={{ margin: "6px 0 0", fontSize: 12, color: c.RED }}>⚠️ {ocrError} — กรอกข้อมูลเองได้เลย</p>}
             {idPhotoDataUrl && !ocrLoading && !ocrError && <p style={{ margin: "6px 0 0", fontSize: 12, color: "#30D158", textAlign: "center" }}>✓ อ่านข้อมูลจากบัตรแล้ว — ตรวจสอบด้านล่าง</p>}
