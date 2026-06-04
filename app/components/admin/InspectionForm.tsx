@@ -427,13 +427,18 @@ export default function InspectionForm({
   // ── Render ───────────────────────────────────────────────────────────────────
 
   async function handleSickwCheck() {
-    if (!imei.trim()) return;
+    const id = serial.trim() || imei.trim();
+    if (!id) return;
     setSickwLoading(true);
     setSickwError("");
     setSickwResult(null);
-    const res = await checkSickw(imei.trim());
-    if (res.success && res.data) setSickwResult(res.data);
-    else setSickwError(res.error ?? "ตรวจสอบไม่สำเร็จ");
+    const res = await checkSickw(id);
+    if (res.success && res.data) {
+      setSickwResult(res.data);
+      if (res.data.imei) { setImei(res.data.imei); setImeiError(false); }
+    } else {
+      setSickwError(res.error ?? "ตรวจสอบไม่สำเร็จ");
+    }
     setSickwLoading(false);
   }
 
@@ -505,17 +510,17 @@ export default function InspectionForm({
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 4 }}>
         <div>
           <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>
-            IMEI <span style={{ color: "#EF4444" }}>*</span>
+            Serial Number <span style={{ color: "#EF4444" }}>*</span>
           </label>
           <div style={{ display: "flex", gap: 6 }}>
             <input
-              value={imei}
-              onChange={e => { setImei(e.target.value); setSickwResult(null); setSickwError(""); if (e.target.value.trim()) setImeiError(false); }}
-              placeholder="เช่น 356789123456789"
+              value={serial}
+              onChange={e => { setSerial(e.target.value.toUpperCase()); setSickwResult(null); setSickwError(""); if (e.target.value.trim()) setSerialError(false); }}
+              placeholder="เช่น F2LJH0X7XY"
               maxLength={20}
-              style={{ flex: 1, background: "#F5F5F7", border: `1px solid ${imeiError ? "#EF4444" : BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" }}
+              style={{ flex: 1, background: "#F5F5F7", border: `1px solid ${serialError ? "#EF4444" : BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" }}
             />
-            {imei.trim().length >= 14 && (
+            {serial.trim().length >= 10 && !sickwResult && (
               <button type="button" onClick={handleSickwCheck} disabled={sickwLoading}
                 style={{ flexShrink: 0, padding: "0 10px", borderRadius: 10, background: "#EFF6FF", border: "1px solid #BFDBFE", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4, opacity: sickwLoading ? 0.6 : 1 }}>
                 {sickwLoading
@@ -525,20 +530,20 @@ export default function InspectionForm({
               </button>
             )}
           </div>
-          {imeiError && <p style={{ color: "#EF4444", fontSize: 11, marginTop: 4 }}>กรุณากรอก IMEI</p>}
+          {serialError && <p style={{ color: "#EF4444", fontSize: 11, marginTop: 4 }}>กรุณากรอก Serial Number</p>}
         </div>
         <div>
           <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>
-            Serial Number <span style={{ color: "#EF4444" }}>*</span>
+            IMEI <span style={{ color: "#EF4444" }}>*</span>
           </label>
           <input
-            value={serial}
-            onChange={e => { setSerial(e.target.value.toUpperCase()); if (e.target.value.trim()) setSerialError(false); }}
-            placeholder="เช่น F2LJH0X7XY"
+            value={imei}
+            onChange={e => { setImei(e.target.value); if (e.target.value.trim()) setImeiError(false); }}
+            placeholder="เช่น 356789123456789"
             maxLength={20}
-            style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${serialError ? "#EF4444" : BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" }}
+            style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${imeiError ? "#EF4444" : BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" }}
           />
-          {serialError && <p style={{ color: "#EF4444", fontSize: 11, marginTop: 4 }}>กรุณากรอก Serial Number</p>}
+          {imeiError && <p style={{ color: "#EF4444", fontSize: 11, marginTop: 4 }}>กรุณากรอก IMEI</p>}
         </div>
       </div>
 
