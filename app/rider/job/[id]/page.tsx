@@ -1165,12 +1165,18 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
         slipImgSrc: paymentPhotoDataUrl ?? "",
       };
 
+      // Full HTML (with embedded photos) — used for in-browser preview only
       const cBody = buildContractPage(dev, 0, true, ctx);
       const rBody = buildReceiptPage(dev, 0, true, ctx);
       const printCSS = "@media print{.header,.footer{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{max-width:none}}";
       const wrap = (body: string) => `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">${FONT_LINK}<style>${DOC_CSS}${printCSS}</style></head><body>${body}</body></html>`;
 
-      const uploadResult = await uploadContractFiles(job.id, docNo, wrap(cBody), wrap(rBody));
+      // Lightweight HTML (no base64 photos) — stored in Supabase storage
+      const ctxLight = { ...ctx, idPhotoDataUrl: null, custProdPhotoDataUrl: null, slipImgSrc: "" };
+      const cBodyLight = buildContractPage(dev, 0, true, ctxLight);
+      const rBodyLight = buildReceiptPage(dev, 0, true, ctxLight);
+
+      const uploadResult = await uploadContractFiles(job.id, docNo, wrap(cBodyLight), wrap(rBodyLight));
       if (!uploadResult.success) throw new Error("อัปโหลดสัญญาไม่สำเร็จ: " + uploadResult.error);
 
       await saveContractUrls(job.id, uploadResult.contractPath, uploadResult.receiptPath);
