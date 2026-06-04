@@ -843,6 +843,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
   const receiptHTMLRef = useRef("");
 
   // Post-generation state
+  const isCompleted = job.status === "completed";
   const [contractSigned, setContractSigned] = useState(!!job.payment.contractSignedAt || job.status === "awaiting_transfer");
   const [transferBusy, setTransferBusy] = useState(false);
   const [transferNotified, setTransferNotified] = useState(job.status === "awaiting_transfer");
@@ -887,10 +888,10 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
           canvas.width = img.width * scale; canvas.height = img.height * scale;
           const ctx = canvas.getContext("2d")!;
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          // Base font on shorter dimension so it looks consistent regardless of orientation
-          const shortSide = Math.min(canvas.width, canvas.height);
-          const fs = Math.max(16, Math.floor(shortSide / 14));
-          const maxW = shortSide * 0.85;
+          // Base font and maxWidth on diagonal so text spans the full image
+          const diagonal = Math.sqrt(canvas.width ** 2 + canvas.height ** 2);
+          const fs = Math.max(20, Math.floor(diagonal / 18));
+          const maxW = diagonal * 0.88;
           ctx.save();
           ctx.globalAlpha = 0.70;
           ctx.fillStyle = "#DC2626";
@@ -924,8 +925,8 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
       const result = await scanIdCard(base64);
       if (result.data) {
         const d = result.data;
-        if (d.nameTh) setBuyerName(d.nameTh);
-        if (d.id && !idNumber) setIdNumber(d.id.replace(/(\d)(\d{4})(\d{5})(\d{2})(\d)/, "$1-$2-$3-$4-$5"));
+        if (d.nameTh && !buyerName) setBuyerName(d.nameTh);
+        if (d.id) setIdNumber(d.id.replace(/(\d)(\d{4})(\d{5})(\d{2})(\d)/, "$1-$2-$3-$4-$5"));
         if (d.dob) setDob(d.dob);
         if (d.address && !address) setAddress(d.address);
       } else if (result.error) { setOcrError(result.error); }
@@ -1139,9 +1140,9 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
-      <fieldset disabled={contractSigned} style={{ border: "none", padding: 0, margin: 0, opacity: contractSigned ? 0.55 : 1 }}>
+      <fieldset disabled={isCompleted} style={{ border: "none", padding: 0, margin: 0, opacity: isCompleted ? 0.55 : 1 }}>
       <div style={{ background: c.CARD, border: `1px solid ${c.BORDER}`, borderRadius: 14, overflow: "hidden" }}>
-        <div style={{ padding: "10px 14px", borderBottom: `1px solid ${c.BORDER}`, background: c.CARD2, fontSize: 13, fontWeight: 700, color: c.TEXT }}>ข้อมูลสัญญา {contractSigned && <span style={{ fontSize: 11, color: c.GREEN, marginLeft: 6 }}>✓ ล็อกแล้ว</span>}</div>
+        <div style={{ padding: "10px 14px", borderBottom: `1px solid ${c.BORDER}`, background: c.CARD2, fontSize: 13, fontWeight: 700, color: c.TEXT }}>ข้อมูลสัญญา {isCompleted && <span style={{ fontSize: 11, color: c.GREEN, marginLeft: 6 }}>✓ ล็อกแล้ว</span>}</div>
         <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
 
           <div><label style={labelSt}>ชื่อ-นามสกุลผู้ขาย</label>
@@ -1269,15 +1270,19 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
 
       {error && <p style={{ margin: 0, fontSize: 13, color: c.RED }}>{error}</p>}
 
-      {contractSigned ? (
+      {contractSigned && (
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => contractHTMLRef.current ? openDoc(contractHTMLRef.current) : openStoredDoc(job.contractUrl)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: `1px solid ${c.BORDER}`, background: c.CARD, color: c.TEXT, fontSize: 13, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><span>เปิดสัญญา</span><ExternalLink size={13} /></button>
+          <button onClick={() => receiptHTMLRef.current ? openDoc(receiptHTMLRef.current) : openStoredDoc(job.receiptUrl)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: `1px solid ${c.BORDER}`, background: c.CARD, color: c.TEXT, fontSize: 13, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><span>เปิดใบรับเงิน</span><ExternalLink size={13} /></button>
+        </div>
+      )}
+
+      {!isCompleted && (
+        <BigBtn label={generating ? "กำลังสร้างสัญญา..." : contractSigned ? "สร้างสัญญาใหม่ →" : "สร้างสัญญาและบันทึก →"} loading={generating} onClick={handleGenerate} />
+      )}
+
+      {contractSigned && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ background: "rgba(74,222,128,0.08)", border: `1px solid ${c.GREEN}`, borderRadius: 10, padding: "12px 14px" }}>
-            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: c.GREEN }}>✓ ออกเอกสารสำเร็จแล้ว</p>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => contractHTMLRef.current ? openDoc(contractHTMLRef.current) : openStoredDoc(job.contractUrl)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: `1px solid ${c.BORDER}`, background: c.CARD, color: c.TEXT, fontSize: 13, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><span>เปิดสัญญา</span><ExternalLink size={13} /></button>
-            <button onClick={() => receiptHTMLRef.current ? openDoc(receiptHTMLRef.current) : openStoredDoc(job.receiptUrl)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: `1px solid ${c.BORDER}`, background: c.CARD, color: c.TEXT, fontSize: 13, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><span>เปิดใบรับเงิน</span><ExternalLink size={13} /></button>
-          </div>
 
           {payMethod === "transfer" && (
             <>
@@ -1364,8 +1369,6 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
             </>
           )}
         </div>
-      ) : (
-        <BigBtn label={generating ? "กำลังสร้างสัญญา..." : "สร้างสัญญาและบันทึก →"} loading={generating} onClick={handleGenerate} />
       )}
     </div>
   );
