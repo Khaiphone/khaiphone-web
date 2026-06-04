@@ -663,6 +663,21 @@ export async function updateExpense(
   return { success: true };
 }
 
+export async function deletePurchaseRecord(id: string): Promise<{ success: true } | { success: false; error: string }> {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+  const { data: profile } = await supabase.from("admin_users").select("role").eq("user_id", user.id).single();
+  if (profile?.role !== "owner") return { success: false, error: "เฉพาะเจ้าของเท่านั้นที่ลบได้" };
+  const { data: existing } = await supabase.from("requests").select("order_number, device_model").eq("id", id).single();
+  const { error } = await supabase.from("requests").delete().eq("id", id);
+  if (error) return { success: false, error: error.message };
+  insertAuditLog({
+    action: `ลบรายการซื้อ: ${existing?.device_model ?? ""}`,
+    refNumber: existing?.order_number ?? id,
+  }).catch(() => {});
+  return { success: true };
+}
+
 export async function deleteExpense(id: string): Promise<{ success: true } | { success: false; error: string }> {
   await requireAuth();
   const supabase = createServerClient();

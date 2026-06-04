@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Search } from 'lucide-react'
-import { fetchFinancePurchases } from '@/app/actions/finance'
+import { Search, Trash2 } from 'lucide-react'
+import { fetchFinancePurchases, deletePurchaseRecord } from '@/app/actions/finance'
 import type { FinancePurchase } from '@/app/actions/finance'
+import { supabase } from '@/lib/supabase'
+import { fetchMyProfile } from '@/app/actions/admin-users'
 
 const CARD = 'var(--f-card)'
 const BORDER = 'var(--f-border)'
@@ -34,11 +36,30 @@ export default function PurchasesPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+  const [isOwner, setIsOwner] = useState(false)
+  const [deleting, setDeleting] = useState<string | null>(null)
   const perPage = 10
 
   useEffect(() => {
     fetchFinancePurchases().then((d) => { setItems(d); setLoading(false) })
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return
+      const profile = await fetchMyProfile(user.id)
+      setIsOwner(profile?.role === 'owner')
+    })
   }, [])
+
+  async function handleDelete(id: string, refNumber: string) {
+    if (!confirm(`ลบรายการ ${refNumber} ออกจากประวัติการซื้อ?\n\nการดำเนินการนี้ไม่สามารถย้อนกลับได้`)) return
+    setDeleting(id)
+    const result = await deletePurchaseRecord(id)
+    if (result.success) {
+      setItems((prev) => prev.filter((r) => r.id !== id))
+    } else {
+      alert(result.error)
+    }
+    setDeleting(null)
+  }
 
   const filtered = items.filter((r) => {
     if (!search) return true
@@ -96,7 +117,7 @@ export default function PurchasesPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
-                {['วันที่รับซื้อ', 'เลขรายการ', 'รุ่น', 'ต้นทุน', 'ผู้ขาย', 'ราคาขาย', 'กำไร', 'สถานะ'].map((h) => (
+                {['วันที่รับซื้อ', 'เลขรายการ', 'รุ่น', 'ต้นทุน', 'ผู้ขาย', 'ราคาขาย', 'กำไร', 'สถานะ', ...(isOwner ? [''] : [])].map((h) => (
                   <th key={h} style={{ padding: '12px 16px', textAlign: 'left', color: TEXT3, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                     {h}
                   </th>
@@ -106,11 +127,11 @@ export default function PurchasesPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: 32, textAlign: 'center', color: TEXT3, fontSize: 14 }}>กำลังโหลด...</td>
+                  <td colSpan={isOwner ? 9 : 8} style={{ padding: 32, textAlign: 'center', color: TEXT3, fontSize: 14 }}>กำลังโหลด...</td>
                 </tr>
               ) : paged.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: 32, textAlign: 'center', color: TEXT3, fontSize: 14 }}>ไม่พบรายการ</td>
+                  <td colSpan={isOwner ? 9 : 8} style={{ padding: 32, textAlign: 'center', color: TEXT3, fontSize: 14 }}>ไม่พบรายการ</td>
                 </tr>
               ) : (
                 paged.map((r, idx) => {
@@ -119,7 +140,7 @@ export default function PurchasesPage() {
                   return (
                     <tr
                       key={r.id}
-                      style={{ borderBottom: idx < paged.length - 1 ? `1px solid ${BORDER}` : 'none' }}
+                      style={{ borderBottom: idx < paged.length - 1 ? `1px solid ${BORDER}` : 'none', opacity: deleting === r.id ? 0.4 : 1, transition: 'opacity 0.2s' }}
                       onMouseEnter={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = 'var(--f-hover)')}
                       onMouseLeave={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = 'transparent')}
                     >
@@ -149,6 +170,20 @@ export default function PurchasesPage() {
                           {stockInfo.label}
                         </span>
                       </td>
+                      {isOwner && (
+                        <td style={{ padding: '12px 16px' }}>
+                          <button
+                            onClick={() => handleDelete(r.id, r.refNumber)}
+                            disabled={deleting === r.id}
+                            style={{ background: 'none', border: 'none', cursor: deleting === r.id ? 'not-allowed' : 'pointer', padding: 4, borderRadius: 6, color: '#ef4444', opacity: deleting === r.id ? 0.4 : 0.6, lineHeight: 0 }}
+                            title="ลบรายการนี้"
+                            onMouseEnter={(e) => { if (deleting !== r.id) (e.currentTarget as HTMLButtonElement).style.opacity = '1' }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = deleting === r.id ? '0.4' : '0.6' }}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   )
                 })
