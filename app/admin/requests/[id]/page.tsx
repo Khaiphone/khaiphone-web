@@ -1289,6 +1289,28 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                       </div>
                     )}
 
+                    {/* Rider assessment — grade + condition */}
+                    {((request.inspection as { conditionGrade?: string; conditionLabel?: string }).conditionGrade ||
+                      (request.inspection as { conditionGrade?: string; conditionLabel?: string }).conditionLabel) && (() => {
+                      const grade = (request.inspection as { conditionGrade?: string }).conditionGrade;
+                      const label = (request.inspection as { conditionLabel?: string }).conditionLabel;
+                      const gradeColor: Record<string, string> = { A: "#22c55e", "A-": "#84cc16", "B+": "#eab308", B: "#f97316", "B-": "#fb923c", C: "#ef4444" };
+                      const color = grade ? (gradeColor[grade] ?? "#888") : "#888";
+                      return (
+                        <div style={{ marginBottom: 16, borderRadius: 10, border: `1.5px solid ${color}40`, background: `${color}0d`, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                          {grade && (
+                            <div style={{ minWidth: 44, height: 44, borderRadius: 10, background: `${color}22`, border: `2px solid ${color}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <span style={{ fontSize: 16, fontWeight: 800, color, fontFamily: "monospace" }}>{grade}</span>
+                            </div>
+                          )}
+                          <div>
+                            <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>ผลการประเมินจากไรเดอร์</p>
+                            {label && <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: TEXT }}>{label}</p>}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     {/* Apple Check (SICKW) */}
                     {request.inspection.sickw_report && (() => {
                       const raw = request.inspection!.sickw_report!;
