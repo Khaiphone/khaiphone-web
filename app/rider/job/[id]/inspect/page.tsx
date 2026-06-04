@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Camera } from "lucide-react";
+import { ArrowLeft, Camera, ScanLine, ShieldCheck, ShieldAlert, ShieldX, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { fetchRiderJob, riderSaveInspection } from "@/app/actions/rider";
+import { scanDeviceInfo, checkSickw } from "@/app/actions/device-scan";
+import type { SickwResult } from "@/app/actions/device-scan";
 import { compressImage } from "@/lib/compress-image";
 import { useRiderTheme } from "@/app/rider/theme";
 import type { AdminRequest, InspectionCriterion, FunctionalTest } from "@/lib/types/admin";
@@ -160,6 +162,12 @@ export default function InspectPage() {
   const [criteria, setCriteria] = useState<Record<string, { stated: string; actual: string }>>({});
   const [functional, setFunctional] = useState<FunctionalTest[]>(FUNCTIONAL_TEST_DEFAULTS.map(t => ({ ...t })));
 
+  const scanRef = useRef<HTMLInputElement>(null!);
+  const [scanning,    setScanning]    = useState(false);
+  const [sickwResult, setSickwResult] = useState<SickwResult | null>(null);
+  const [sickwError,  setSickwError]  = useState("");
+  const [sickwLoading,setSickwLoading]= useState(false);
+
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState("");
 
@@ -206,6 +214,43 @@ export default function InspectPage() {
       setUploading(false);
       if (defectRef.current) defectRef.current.value = "";
     }
+  }
+
+  async function handleScan(file: File) {
+    setScanning(true);
+    setError("");
+    try {
+      const compressed = await compressImage(file);
+      const dataUrl = await new Promise<string>((res, rej) => {
+        const reader = new FileReader();
+        reader.onload = () => res((reader.result as string).split(",")[1]);
+        reader.onerror = rej;
+        reader.readAsDataURL(compressed);
+      });
+      const result = await scanDeviceInfo(dataUrl);
+      if (result.error) { setError(result.error); return; }
+      if (result.imei)   setImei(result.imei);
+      if (result.serial) setSerial(result.serial.toUpperCase());
+    } catch {
+      setError("สแกนไม่สำเร็จ กรุณากรอกเอง");
+    } finally {
+      setScanning(false);
+      if (scanRef.current) scanRef.current.value = "";
+    }
+  }
+
+  async function handleSickwCheck() {
+    if (!imei.trim()) return;
+    setSickwLoading(true);
+    setSickwError("");
+    setSickwResult(null);
+    const res = await checkSickw(imei.trim());
+    if (res.success && res.data) {
+      setSickwResult(res.data);
+    } else {
+      setSickwError(res.error ?? "ตรวจสอบไม่สำเร็จ");
+    }
+    setSickwLoading(false);
   }
 
   async function handleSave() {
@@ -325,13 +370,40 @@ export default function InspectPage() {
         </section>
 
         <section>
-          <p style={{ margin: "0 0 14px", fontSize: 13, fontWeight: 700, color: TEXT, textTransform: "uppercase", letterSpacing: 0.5 }}>ข้อมูลเครื่อง</p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: TEXT, textTransform: "uppercase", letterSpacing: 0.5 }}>ข้อมูลเครื่อง</p>
+            <button
+              onClick={() => scanRef.current?.click()}
+              disabled={scanning}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 10, background: scanning ? "rgba(74,222,128,0.1)" : "rgba(74,222,128,0.15)", border: `1px solid ${ACCENT}`, cursor: "pointer", fontFamily: "inherit", opacity: scanning ? 0.7 : 1 }}
+            >
+              {scanning
+                ? <Loader2 size={14} color={ACCENT} style={{ animation: "spin 0.8s linear infinite" }} />
+                : <ScanLine size={14} color={ACCENT} />
+              }
+              <span style={{ fontSize: 13, fontWeight: 600, color: ACCENT }}>{scanning ? "กำลังอ่าน..." : "สแกน About"}</span>
+            </button>
+            <input ref={scanRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }}
+              onChange={e => { const f = e.target.files?.[0]; if (f) handleScan(f); }} />
+          </div>
           <div style={{ background: CARD, borderRadius: 14, overflow: "hidden" }}>
             {/* IMEI */}
             <div style={{ padding: "12px 16px", borderBottom: `1px solid ${BORDER}` }}>
               <p style={{ margin: "0 0 4px", fontSize: 11, color: TEXT2 }}>IMEI</p>
-              <input value={imei} onChange={e => setImei(e.target.value)} placeholder="กรอก IMEI หรือ *#06#"
-                style={{ width: "100%", background: "none", border: "none", color: TEXT, fontSize: 15, fontFamily: "inherit", outline: "none" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input value={imei} onChange={e => { setImei(e.target.value); setSickwResult(null); setSickwError(""); }} placeholder="กรอก IMEI หรือ *#06#"
+                  style={{ flex: 1, background: "none", border: "none", color: TEXT, fontSize: 15, fontFamily: "inherit", outline: "none" }} />
+                {imei.trim().length >= 14 && (
+                  <button onClick={handleSickwCheck} disabled={sickwLoading}
+                    style={{ flexShrink: 0, padding: "5px 10px", borderRadius: 8, background: "rgba(10,132,255,0.15)", border: "1px solid rgba(10,132,255,0.4)", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5, opacity: sickwLoading ? 0.6 : 1 }}>
+                    {sickwLoading
+                      ? <Loader2 size={13} color="#0A84FF" style={{ animation: "spin 0.8s linear infinite" }} />
+                      : <ShieldCheck size={13} color="#0A84FF" />
+                    }
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#0A84FF" }}>SICKW</span>
+                  </button>
+                )}
+              </div>
             </div>
             {/* Serial Number */}
             <div style={{ padding: "12px 16px", borderBottom: `1px solid ${BORDER}` }}>
@@ -375,6 +447,44 @@ export default function InspectPage() {
               )}
             </div>
           </div>
+          {/* SICKW result card */}
+          {sickwError && (
+            <div style={{ marginTop: 10, background: "rgba(255,69,58,0.08)", border: "1px solid rgba(255,69,58,0.25)", borderRadius: 10, padding: "10px 14px" }}>
+              <p style={{ margin: 0, fontSize: 13, color: RED }}>{sickwError}</p>
+            </div>
+          )}
+          {sickwResult && (
+            <div style={{ marginTop: 10, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
+              <div style={{ padding: "10px 14px", borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", gap: 6 }}>
+                <ShieldCheck size={14} color="#0A84FF" />
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#0A84FF" }}>ผลตรวจสอบ SICKW</span>
+              </div>
+              {[
+                { label: "รุ่น",          value: sickwResult.device },
+                { label: "Carrier",       value: sickwResult.carrier },
+                { label: "SIM Lock",      value: sickwResult.carrierLock,  highlight: sickwResult.carrierLock?.toLowerCase().includes("lock") },
+                { label: "iCloud",        value: sickwResult.icloudStatus, highlight: sickwResult.icloudStatus?.toLowerCase().includes("on") || sickwResult.icloudStatus?.toLowerCase().includes("locked") },
+                { label: "Blacklist",     value: sickwResult.blacklist,    highlight: sickwResult.blacklist?.toLowerCase() !== "clean" && !!sickwResult.blacklist },
+                { label: "Warranty",      value: sickwResult.warrantyStatus },
+                { label: "หมดประกัน",    value: sickwResult.warrantyDate },
+              ].filter(r => r.value).map(({ label, value, highlight }) => (
+                <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 14px", borderBottom: `1px solid ${BORDER}` }}>
+                  <span style={{ fontSize: 12, color: TEXT2 }}>{label}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    {highlight && <ShieldAlert size={12} color={RED} />}
+                    <span style={{ fontSize: 12, fontWeight: 600, color: highlight ? RED : GREEN }}>{value}</span>
+                  </div>
+                </div>
+              ))}
+              {/* iCloud / SIM Lock warning banner */}
+              {(sickwResult.icloudStatus?.toLowerCase().includes("on") || sickwResult.carrierLock?.toLowerCase().includes("lock")) && (
+                <div style={{ padding: "10px 14px", background: "rgba(255,69,58,0.08)", display: "flex", alignItems: "center", gap: 8 }}>
+                  <ShieldX size={15} color={RED} />
+                  <span style={{ fontSize: 12, fontWeight: 600, color: RED }}>แจ้งผู้บริหารก่อนรับเครื่อง</span>
+                </div>
+              )}
+            </div>
+          )}
         </section>
 
         <section>
