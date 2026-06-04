@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Plus, X, Camera, Check, AlertCircle } from "lucide-react";
+import { Plus, X, Camera, Check, AlertCircle, ShieldCheck, ShieldAlert, ShieldX, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { saveInspectionPhotos } from "@/app/actions/inspection";
+import { checkSickw } from "@/app/actions/device-scan";
+import type { SickwResult } from "@/app/actions/device-scan";
 import { compressImage } from "@/lib/compress-image";
 import { validateImageFiles } from "@/lib/validate-file";
 import type { InspectionData, InspectionCriterion, FunctionalTest, ExtraDeviceInspection } from "@/lib/types/admin";
@@ -157,9 +159,12 @@ export default function InspectionForm({
   const iphoneSeries = (() => { const m = model?.match(/iPhone\s+(\d+)/i); return m ? Number(m[1]) : 0; })();
   const showCycles = iphoneSeries >= 15;
   const showHealth = iphoneSeries > 0; // all iPhones have battery health; 15+ also shows cycles
-  const [imeiError,   setImeiError]   = useState(false);
-  const [serialError, setSerialError] = useState(false);
-  const [uploading,    setUploading]   = useState(false);
+  const [imeiError,    setImeiError]    = useState(false);
+  const [serialError,  setSerialError]  = useState(false);
+  const [sickwResult,  setSickwResult]  = useState<SickwResult | null>(null);
+  const [sickwError,   setSickwError]   = useState("");
+  const [sickwLoading, setSickwLoading] = useState(false);
+  const [uploading,    setUploading]    = useState(false);
   const [uploadErr,    setUploadErr]   = useState<string | null>(null);
   const [photoSaving,  setPhotoSaving] = useState(false);
   const [photoSaved,   setPhotoSaved]  = useState(false);
@@ -421,6 +426,17 @@ export default function InspectionForm({
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
+  async function handleSickwCheck() {
+    if (!imei.trim()) return;
+    setSickwLoading(true);
+    setSickwError("");
+    setSickwResult(null);
+    const res = await checkSickw(imei.trim());
+    if (res.success && res.data) setSickwResult(res.data);
+    else setSickwError(res.error ?? "ตรวจสอบไม่สำเร็จ");
+    setSickwLoading(false);
+  }
+
   const sectionLabel = (text: string) => (
     <p style={{ color: TEXT3, fontSize: 10, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.06em", margin: "0 0 10px" }}>
       {text}
@@ -491,13 +507,24 @@ export default function InspectionForm({
           <label style={{ color: TEXT2, fontSize: 11, fontWeight: 600, display: "block", marginBottom: 4 }}>
             IMEI <span style={{ color: "#EF4444" }}>*</span>
           </label>
-          <input
-            value={imei}
-            onChange={e => { setImei(e.target.value); if (e.target.value.trim()) setImeiError(false); }}
-            placeholder="เช่น 356789123456789"
-            maxLength={20}
-            style={{ width: "100%", background: "#F5F5F7", border: `1px solid ${imeiError ? "#EF4444" : BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" }}
-          />
+          <div style={{ display: "flex", gap: 6 }}>
+            <input
+              value={imei}
+              onChange={e => { setImei(e.target.value); setSickwResult(null); setSickwError(""); if (e.target.value.trim()) setImeiError(false); }}
+              placeholder="เช่น 356789123456789"
+              maxLength={20}
+              style={{ flex: 1, background: "#F5F5F7", border: `1px solid ${imeiError ? "#EF4444" : BORDER}`, borderRadius: 10, padding: "9px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" }}
+            />
+            {imei.trim().length >= 14 && (
+              <button type="button" onClick={handleSickwCheck} disabled={sickwLoading}
+                style={{ flexShrink: 0, padding: "0 10px", borderRadius: 10, background: "#EFF6FF", border: "1px solid #BFDBFE", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4, opacity: sickwLoading ? 0.6 : 1 }}>
+                {sickwLoading
+                  ? <Loader2 size={13} color="#1D4ED8" style={{ animation: "spin 0.8s linear infinite" }} />
+                  : <ShieldCheck size={13} color="#1D4ED8" />}
+                <span style={{ fontSize: 11, fontWeight: 600, color: "#1D4ED8", whiteSpace: "nowrap" }}>SICKW</span>
+              </button>
+            )}
+          </div>
           {imeiError && <p style={{ color: "#EF4444", fontSize: 11, marginTop: 4 }}>กรุณากรอก IMEI</p>}
         </div>
         <div>
@@ -514,6 +541,46 @@ export default function InspectionForm({
           {serialError && <p style={{ color: "#EF4444", fontSize: 11, marginTop: 4 }}>กรุณากรอก Serial Number</p>}
         </div>
       </div>
+
+      {/* SICKW result */}
+      {sickwError && (
+        <div style={{ marginTop: 8, padding: "8px 12px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8 }}>
+          <p style={{ margin: 0, fontSize: 12, color: "#DC2626" }}>{sickwError}</p>
+        </div>
+      )}
+      {sickwResult && (
+        <div style={{ marginTop: 8, background: "#F8FAFF", border: "1px solid #BFDBFE", borderRadius: 10, overflow: "hidden" }}>
+          <div style={{ padding: "8px 12px", borderBottom: "1px solid #BFDBFE", display: "flex", alignItems: "center", gap: 6 }}>
+            <ShieldCheck size={13} color="#1D4ED8" />
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#1D4ED8" }}>ผลตรวจสอบ SICKW</span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
+            {[
+              { label: "รุ่น",       value: sickwResult.device },
+              { label: "Carrier",    value: sickwResult.carrier },
+              { label: "SIM Lock",   value: sickwResult.carrierLock,  warn: sickwResult.carrierLock?.toLowerCase().includes("lock") },
+              { label: "iCloud",     value: sickwResult.icloudStatus, warn: sickwResult.icloudStatus?.toLowerCase().includes("on") || sickwResult.icloudStatus?.toLowerCase().includes("lost") },
+              { label: "Blacklist",  value: sickwResult.blacklist,    warn: sickwResult.blacklist?.toLowerCase() !== "clean" && !!sickwResult.blacklist },
+              { label: "MDM Lock",   value: sickwResult.icloudStatus ? undefined : undefined },
+              { label: "Warranty",   value: sickwResult.warrantyStatus },
+            ].filter(r => r.value).map(({ label, value, warn }) => (
+              <div key={label} style={{ padding: "6px 12px", borderBottom: "1px solid #BFDBFE", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 11, color: TEXT2 }}>{label}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  {warn && <ShieldAlert size={11} color="#DC2626" />}
+                  <span style={{ fontSize: 11, fontWeight: 600, color: warn ? "#DC2626" : "#16A34A" }}>{value}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          {(sickwResult.icloudStatus?.toLowerCase().includes("on") || sickwResult.carrierLock?.toLowerCase().includes("lock")) && (
+            <div style={{ padding: "8px 12px", background: "#FEF2F2", display: "flex", alignItems: "center", gap: 6 }}>
+              <ShieldX size={13} color="#DC2626" />
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#DC2626" }}>ควรแจ้งผู้บริหารก่อนรับเครื่อง</span>
+            </div>
+          )}
+        </div>
+      )}
       </div>
 
       {/* Warranty + Battery Cycles (admin-only) */}
