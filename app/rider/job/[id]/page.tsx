@@ -959,20 +959,40 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
           canvas.width = img.width * scale; canvas.height = img.height * scale;
           const ctx = canvas.getContext("2d")!;
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          // Base font and maxWidth on diagonal so text spans the full image
+
           const diagonal = Math.sqrt(canvas.width ** 2 + canvas.height ** 2);
-          const fs = Math.max(20, Math.floor(diagonal / 18));
-          const maxW = diagonal * 0.88;
+          const fs = Math.max(14, Math.floor(diagonal / 24));
+          const LINE1 = "ใช้สำหรับขายให้ Khaiphone.com เท่านั้น";
+          const LINE2 = `วันที่ ${thDate(txDate + "T00:00:00")}`;
+
           ctx.save();
-          ctx.globalAlpha = 0.70;
+          ctx.globalAlpha = 0.42;
           ctx.fillStyle = "#DC2626";
           ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
           ctx.translate(canvas.width / 2, canvas.height / 2);
           ctx.rotate(-22 * Math.PI / 180);
+
           ctx.font = `bold ${fs}px Arial,sans-serif`;
-          ctx.fillText("ใช้สำหรับขายให้ Khaiphone.com เท่านั้น", 0, 0, maxW);
-          ctx.font = `${Math.floor(fs * 0.78)}px Arial,sans-serif`;
-          ctx.fillText(`วันที่ ${thDate(txDate + "T00:00:00")}`, 0, fs * 1.5, maxW);
+          const tw = ctx.measureText(LINE1).width;
+          const tileW = tw + fs * 2;
+          const tileH = fs * 3.6;
+          const halfDiag = diagonal / 2 + tileW;
+          const cols = Math.ceil(halfDiag / tileW);
+          const rows = Math.ceil(halfDiag / tileH);
+
+          for (let row = -rows; row <= rows; row++) {
+            const offsetX = (row % 2 !== 0) ? tileW / 2 : 0;
+            for (let col = -cols; col <= cols; col++) {
+              const x = col * tileW + offsetX;
+              const y = row * tileH;
+              ctx.font = `bold ${fs}px Arial,sans-serif`;
+              ctx.fillText(LINE1, x, y - fs * 0.4);
+              ctx.font = `${Math.floor(fs * 0.72)}px Arial,sans-serif`;
+              ctx.fillText(LINE2, x, y + fs * 1.0);
+            }
+          }
+
           ctx.restore();
           resolve(canvas.toDataURL("image/jpeg", 0.88));
         };

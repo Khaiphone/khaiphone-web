@@ -357,20 +357,18 @@ export function buildReceiptPage(dev: ContractDevice, devIdx: number, isFirst: b
     }
   }
 
-  p += `<div style="margin-top:14px;border-top:1px solid #e5e7eb;padding-top:12px">
-    <div style="font-size:10px;font-weight:700;color:#1a1a2e;margin-bottom:5px">🛡️ การยืนยันเอกสารดิจิทัล</div>
-    <div style="margin-bottom:2px"><span style="font-size:9.5px;color:#aaa">Document ID :</span>&nbsp;<span style="font-size:9.5px;font-family:monospace;color:#1a1a2e;font-weight:600">${receiptNo}</span></div>
-    <div style="margin-bottom:2px"><span style="font-size:9.5px;color:#aaa">Verification Code :</span>&nbsp;<span style="font-size:9.5px;font-family:monospace;color:#c9a84c;font-weight:600">${receiptNo}-${dateShort.replace(/ \/ /g,"")}</span></div>
-  </div>
-  </div>
+  p += `</div>
   <div class="footer">
     <div>
+      <div style="font-size:11px;font-weight:700;color:#FFD700;margin-bottom:4px">🛡️ การยืนยันเอกสารดิจิทัล</div>
       <div class="fv-row"><span class="fv-lbl">Document ID :</span><span class="fv-val">${receiptNo}</span></div>
+      <div class="fv-row"><span class="fv-lbl">Request ID :</span><span class="fv-val">${esc(docNo)}</span></div>
       <div class="fv-row"><span class="fv-lbl">Document Generated :</span><span class="fv-val">${genTs}</span></div>
+      <div class="fv-row"><span class="fv-lbl">ตรวจสอบเอกสารได้ที่ :</span><span class="fv-val">khaiphone.com/verify</span></div>
     </div>
     <div style="text-align:right">
       <div class="footer-brand">Khaiphone.com</div>
-      <div class="footer-info">รับซื้อ-ขาย Apple มือสอง<br>📞 095-553-5167 &nbsp;🌐 khaiphone.com</div>
+      <div class="footer-info">รับซื้อ-ขาย Apple มือสอง<br>📞 095-553-5167 &nbsp;💬 LINE: @khaiphone<br>🌐 khaiphone.com</div>
     </div>
   </div>`;
 
