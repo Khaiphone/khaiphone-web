@@ -1459,15 +1459,24 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                       โอนเงิน ฿{(request.inspection?.actualPrice ?? request.device.estimatedPrice).toLocaleString("th-TH")} ให้ลูกค้า
                     </p>
                     {(request.payment.bankName || request.payment.accountName || request.payment.accountNumber) && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                         {request.payment.bankName && (
-                          <p style={{ margin: 0, fontSize: 12, color: TEXT3 }}>{request.payment.bankName}</p>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <span style={{ fontSize: 12, color: TEXT3, minWidth: 72 }}>ธนาคาร</span>
+                            <span style={{ fontSize: 12, color: TEXT2, fontWeight: 600 }}>{request.payment.bankName}</span>
+                          </div>
                         )}
                         {request.payment.accountName && (
-                          <p style={{ margin: 0, fontSize: 12, color: TEXT3 }}>{request.payment.accountName}</p>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <span style={{ fontSize: 12, color: TEXT3, minWidth: 72 }}>ชื่อบัญชี</span>
+                            <span style={{ fontSize: 12, color: TEXT2, fontWeight: 600 }}>{request.payment.accountName}</span>
+                          </div>
                         )}
                         {request.payment.accountNumber && (
-                          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: TEXT2, fontFamily: "monospace", letterSpacing: "0.05em" }}>{request.payment.accountNumber}</p>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <span style={{ fontSize: 12, color: TEXT3, minWidth: 72 }}>เลขที่บัญชี</span>
+                            <span style={{ fontSize: 13, color: TEXT, fontWeight: 700, fontFamily: "monospace", letterSpacing: "0.05em" }}>{request.payment.accountNumber}</span>
+                          </div>
                         )}
                       </div>
                     )}
