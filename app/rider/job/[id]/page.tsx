@@ -823,6 +823,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
   const [deviceColor, setDeviceColor] = useState(job.device.color ?? "");
   const [txDate, setTxDate] = useState(new Date().toISOString().slice(0, 10));
 
+  const [guardianConfirmed, setGuardianConfirmed] = useState(false);
   const [idPhotoDataUrl, setIdPhotoDataUrl] = useState<string | null>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrError,   setOcrError]   = useState("");
@@ -855,6 +856,17 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
 
   const inputSt: React.CSSProperties = { width: "100%", padding: "9px 11px", borderRadius: 8, border: `1px solid ${c.BORDER}`, background: c.CARD2, fontSize: 14, color: c.TEXT, fontFamily: "inherit", outline: "none" };
   const labelSt: React.CSSProperties = { display: "block", fontSize: 12, fontWeight: 600, color: c.TEXT2, marginBottom: 4 };
+
+  function calcAge(dobStr: string): number | null {
+    if (!dobStr) return null;
+    const birth = new Date(dobStr);
+    if (isNaN(birth.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    return age;
+  }
 
   function formatId(raw: string) {
     const d = raw.replace(/\D/g,"").slice(0,13);
@@ -905,9 +917,9 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
       const result = await scanIdCard(base64);
       if (result.data) {
         const d = result.data;
-        if (d.nameTh && !buyerName) setBuyerName(d.nameTh);
+        if (d.nameTh) setBuyerName(d.nameTh);
         if (d.id && !idNumber) setIdNumber(d.id.replace(/(\d)(\d{4})(\d{5})(\d{2})(\d)/, "$1-$2-$3-$4-$5"));
-        if (d.dob && !dob) setDob(d.dob);
+        if (d.dob) setDob(d.dob);
         if (d.address && !address) setAddress(d.address);
       } else if (result.error) { setOcrError(result.error); }
     } catch { setOcrError("สแกนบัตรไม่สำเร็จ"); }
@@ -1132,9 +1144,35 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
             <div><label style={labelSt}>เลขบัตรประชาชน</label>
               <input type="text" inputMode="numeric" placeholder="X-XXXX-XXXXX-XX-X" value={idNumber} onChange={e=>setIdNumber(formatId(e.target.value))} maxLength={17}
                 style={{ ...inputSt, fontFamily:"monospace", letterSpacing:1 }} /></div>
-            <div><label style={labelSt}>วันเดือนปีเกิด</label>
-              <input type="date" value={dob} onChange={e=>setDob(e.target.value)} style={{ ...inputSt, appearance:"none" }} /></div>
+            <div>
+              <label style={labelSt}>
+                วันเดือนปีเกิด
+                {(() => { const age = calcAge(dob); return age !== null ? <span style={{ marginLeft: 6, fontWeight: 700, color: age < 20 ? "#FF453A" : "#30D158" }}>อายุ {age} ปี</span> : null; })()}
+              </label>
+              <input type="date" value={dob} onChange={e=>setDob(e.target.value)} style={{ ...inputSt, appearance:"none" }} />
+            </div>
           </div>
+
+          {(() => {
+            const age = calcAge(dob);
+            if (age === null || age >= 20) return null;
+            return (
+              <div style={{ borderRadius: 10, border: "1.5px solid rgba(255,69,58,0.5)", background: "rgba(255,69,58,0.08)", padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <span style={{ fontSize: 20, lineHeight: 1 }}>⚠️</span>
+                  <div>
+                    <p style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 700, color: "#FF453A" }}>ผู้ขายอายุต่ำกว่า 20 ปี — ต้องมีผู้ปกครอง</p>
+                    <p style={{ margin: 0, fontSize: 12, color: "#FF453A", opacity: 0.85 }}>ตามกฎหมาย ผู้เยาว์ต้องได้รับความยินยอมจากผู้ปกครองก่อนทำสัญญา</p>
+                  </div>
+                </div>
+                <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+                  <input type="checkbox" checked={guardianConfirmed} onChange={e => setGuardianConfirmed(e.target.checked)}
+                    style={{ width: 18, height: 18, accentColor: "#FF453A", cursor: "pointer", flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#FF453A" }}>ผู้ปกครองอยู่ต่อหน้าและลงนามยินยอมแล้ว</span>
+                </label>
+              </div>
+            );
+          })()}
 
           <div><label style={labelSt}>ที่อยู่</label>
             <textarea value={address} onChange={e=>setAddress(e.target.value)} rows={2}
