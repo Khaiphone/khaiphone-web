@@ -281,8 +281,9 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   const [defectPhotos, setDefectPhotos] = useState<string[]>([]);
   const defectRef = useRef<HTMLInputElement>(null!);
   const [uploading, setUploading] = useState(false);
-  const [imei, setImei] = useState(job.inspection?.imei ?? "");
+  const [imei,   setImei]   = useState(job.inspection?.imei ?? "");
   const [serial, setSerial] = useState(job.inspection?.serial ?? "");
+  const [color,  setColor]  = useState(job.device?.color ?? "");
   const [battery, setBattery] = useState(job.inspection?.batteryHealth ? String(job.inspection.batteryHealth) : "");
   const [warrantyStatus, setWarrantyStatus] = useState<"valid" | "expired" | "">(
     job.inspection?.warrantyExpiry === "expired" ? "expired" : job.inspection?.warrantyExpiry ? "valid" : ""
@@ -308,6 +309,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   function applySickwData(data: import("@/app/actions/device-scan").SickwResult) {
     setSickwResult(data);
     if (data.imei) setImei(data.imei);
+    if (data.color) setColor(data.color);
     if (data.warrantyStatus) {
       const ws = data.warrantyStatus.toLowerCase();
       if (ws.includes("expir") || ws.includes("out of") || ws.includes("หมด")) {
@@ -391,7 +393,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
       const warrantyValue = warrantyStatus === "expired" ? "expired" : warrantyExpiry || undefined;
       const photos = [...Object.values(slotPhotos).filter(Boolean), ...defectPhotos] as string[];
       const result = await riderSaveInspection(job.id, {
-        imei, serial,
+        imei, serial, color: color.trim() || undefined,
         batteryHealth: battery ? parseInt(battery) : undefined,
         warrantyExpiry: warrantyValue,
         criteria: criteriaArr, functionalTests: functional, photos,
@@ -558,6 +560,11 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
               )}
             </div>
           )}
+          <div style={{ padding: "12px 16px", borderBottom: `1px solid ${c.BORDER}` }}>
+            <p style={{ margin: "0 0 4px", fontSize: 11, color: c.TEXT2 }}>สีตัวเครื่อง</p>
+            <input value={color} onChange={e => setColor(e.target.value)} placeholder="เช่น Black Titanium, Midnight"
+              style={{ width: "100%", background: "none", border: "none", color: c.TEXT, fontSize: 15, fontFamily: "inherit", outline: "none" }} />
+          </div>
           <div style={{ padding: "12px 16px", borderBottom: `1px solid ${c.BORDER}` }}>
             <p style={{ margin: "0 0 4px", fontSize: 11, color: c.TEXT2 }}>IMEI</p>
             <input value={imei} onChange={e => setImei(e.target.value)} placeholder="กรอก IMEI (ไม่บังคับ)"

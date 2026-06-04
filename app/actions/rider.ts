@@ -270,6 +270,7 @@ export async function riderArriveJob(id: string) {
 export async function riderSaveInspection(id: string, inspection: {
   imei?: string;
   serial?: string;
+  color?: string;
   batteryHealth?: number;
   batteryCycles?: number;
   warrantyExpiry?: string;
@@ -282,11 +283,12 @@ export async function riderSaveInspection(id: string, inspection: {
   await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
+  const { color, ...inspectionRest } = inspection;
   const { error } = await supabase
     .from("requests")
     .update({
       inspection: {
-        ...inspection,
+        ...inspectionRest,
         inspectedAt: now,
         arrivedAt: now,
         result: "matched",
@@ -298,6 +300,7 @@ export async function riderSaveInspection(id: string, inspection: {
         negotiationRespondedAt: null,
         negotiationRespondedBy: null,
       },
+      ...(color ? { device_color: color } : {}),
       updated_at: now,
     })
     .eq("id", id);
