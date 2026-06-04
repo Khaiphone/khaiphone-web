@@ -72,11 +72,19 @@ export async function checkSickw(
     const res  = await fetch(url, { next: { revalidate: 0 } });
     const json = await res.json();
 
+    console.log("[SICKW]", identifier, JSON.stringify(json));
+
     if (json.status === "error" || !json.result) {
-      return { success: false, error: json.message ?? "ไม่พบข้อมูลจาก SICKW" };
+      const msg = json.message || json.result || json.error || json.status;
+      return {
+        success: false,
+        error: typeof msg === "string" && msg ? msg : `SICKW ไม่พบข้อมูล (${identifier})`,
+      };
     }
 
-    const r = json.result as Record<string, string>;
+    const r = typeof json.result === "string"
+      ? {} as Record<string, string>
+      : json.result as Record<string, string>;
     return {
       success: true,
       data: {
