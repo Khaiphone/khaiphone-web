@@ -1497,7 +1497,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
               <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 12 }}>
 
                 {/* Finance action banner — shown when transfer is pending slip */}
-                {(request.status === "contracting" || request.status === "awaiting_transfer") &&
+                {request.status === "awaiting_transfer" &&
                  request.payment.method === "transfer" &&
                  !request.payment.slipUrl && (
                   <div ref={financeRef} style={{ marginBottom: 14 }}>
@@ -1561,9 +1561,9 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                       display: "block", width: "100%", borderRadius: 10, padding: "14px 0",
                       fontSize: 14, fontWeight: 700, cursor: slipUploading ? "default" : "pointer",
                       fontFamily: "inherit", touchAction: "manipulation", opacity: slipUploading ? 0.7 : 1,
-                      background: ["contracting","awaiting_transfer"].includes(request.status) && request.payment.method === "transfer" ? GOLD : BG,
-                      color:      ["contracting","awaiting_transfer"].includes(request.status) && request.payment.method === "transfer" ? "#fff" : TEXT2,
-                      border: ["contracting","awaiting_transfer"].includes(request.status) && request.payment.method === "transfer" ? "none" : `1px solid ${BORDER}`,
+                      background: request.status === "awaiting_transfer" && request.payment.method === "transfer" ? GOLD : BG,
+                      color:      request.status === "awaiting_transfer" && request.payment.method === "transfer" ? "#fff" : TEXT2,
+                      border: request.status === "awaiting_transfer" && request.payment.method === "transfer" ? "none" : `1px solid ${BORDER}`,
                     }}
                   >
                     {slipUploading ? "กำลังอัพโหลด..." : "แนบสลิปโอนเงิน"}
