@@ -760,6 +760,27 @@ export async function patchReceiptWithSlip(requestId: string): Promise<{ success
   return { success: true };
 }
 
+// ─── Upload contract HTML files (service role to bypass RLS) ─────────────────
+export async function uploadContractFiles(
+  jobId: string,
+  docNo: string,
+  contractHtml: string,
+  receiptHtml: string,
+) {
+  await requireAuth();
+  const supabase = createServerClient();
+  const cPath = `contracts/${jobId}/${docNo}-contract.html`;
+  const rPath = `contracts/${jobId}/${docNo}-receipt.html`;
+  const enc = new TextEncoder();
+  const [cu, ru] = await Promise.all([
+    supabase.storage.from("inspection-photos").upload(cPath, enc.encode(contractHtml), { upsert: true, contentType: "text/html;charset=utf-8" }),
+    supabase.storage.from("inspection-photos").upload(rPath, enc.encode(receiptHtml), { upsert: true, contentType: "text/html;charset=utf-8" }),
+  ]);
+  if (cu.error) { console.error("uploadContractFiles contract error:", cu.error); return { success: false as const, error: cu.error.message }; }
+  if (ru.error) { console.error("uploadContractFiles receipt error:", ru.error); return { success: false as const, error: ru.error.message }; }
+  return { success: true as const, contractPath: cu.data.path, receiptPath: ru.data.path };
+}
+
 // ─── Save contract + receipt URLs ────────────────────────────────────────────
 export async function saveContractUrls(
   id: string,

@@ -14,7 +14,7 @@ import {
   riderCompleteCash, riderCompleteTransfer, riderRequestTransfer,
   riderRequestHelp,
 } from "@/app/actions/rider";
-import { saveContractUrls, markContractSigned, savePaymentSlip, getDocumentSignedUrl, patchReceiptWithSlip } from "@/app/actions/admin-requests";
+import { uploadContractFiles, saveContractUrls, markContractSigned, savePaymentSlip, getDocumentSignedUrl, patchReceiptWithSlip } from "@/app/actions/admin-requests";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
 import { validateImageFile } from "@/lib/validate-file";
@@ -1103,17 +1103,10 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
       const printCSS = "@media print{.header,.footer{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{max-width:none}}";
       const wrap = (body: string) => `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">${FONT_LINK}<style>${DOC_CSS}${printCSS}</style></head><body>${body}</body></html>`;
 
-      const [cBlob, rBlob] = [new Blob([wrap(cBody)], {type:"text/html;charset=utf-8"}), new Blob([wrap(rBody)], {type:"text/html;charset=utf-8"})];
-      const cPath = `contracts/${job.id}/${docNo}-contract.html`;
-      const rPath = `contracts/${job.id}/${docNo}-receipt.html`;
+      const uploadResult = await uploadContractFiles(job.id, docNo, wrap(cBody), wrap(rBody));
+      if (!uploadResult.success) throw new Error("อัปโหลดสัญญาไม่สำเร็จ: " + uploadResult.error);
 
-      const [cu, ru] = await Promise.all([
-        supabase.storage.from("inspection-photos").upload(cPath, cBlob, { upsert: true, contentType: "text/html" }),
-        supabase.storage.from("inspection-photos").upload(rPath, rBlob, { upsert: true, contentType: "text/html" }),
-      ]);
-      if (cu.error || ru.error) throw new Error("อัปโหลดสัญญาไม่สำเร็จ");
-
-      await saveContractUrls(job.id, cu.data.path, ru.data.path);
+      await saveContractUrls(job.id, uploadResult.contractPath, uploadResult.receiptPath);
       await markContractSigned(job.id);
 
       contractHTMLRef.current = cBody;
