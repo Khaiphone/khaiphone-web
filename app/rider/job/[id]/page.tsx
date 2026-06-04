@@ -9,7 +9,7 @@ import {
   riderAcceptJob, riderStartJob, riderArriveJob, riderNoShow,
   riderSaveInspection, riderConfirmPrice, riderAdjustPrice,
   riderCustomerAccepted, riderCustomerRejected,
-  riderCompleteCash, riderRequestTransfer, riderCompleteTransfer,
+  riderCompleteCash, riderCompleteTransfer,
 } from "@/app/actions/rider";
 import { saveContractUrls, markContractSigned } from "@/app/actions/admin-requests";
 import { supabase } from "@/lib/supabase";
@@ -616,8 +616,12 @@ function ContractStep({ job, reload, riderName, c }: { job: AdminRequest; reload
 
   const [idPhotoDataUrl, setIdPhotoDataUrl] = useState<string | null>(null);
   const [custProdPhotoDataUrl, setCustProdPhotoDataUrl] = useState<string | null>(null);
+  const [paymentPhotoDataUrl, setPaymentPhotoDataUrl] = useState<string | null>(null);
+  const [paymentPhotoUploading, setPaymentPhotoUploading] = useState(false);
+  const [paymentPhotoStorageUrl, setPaymentPhotoStorageUrl] = useState<string | null>(null);
   const idFileRef = useRef<HTMLInputElement>(null!);
   const custFileRef = useRef<HTMLInputElement>(null!);
+  const paymentFileRef = useRef<HTMLInputElement>(null!);
 
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
@@ -677,6 +681,23 @@ function ContractStep({ job, reload, riderName, c }: { job: AdminRequest; reload
     reader.onload = ev => setCustProdPhotoDataUrl(ev.target!.result as string);
     reader.readAsDataURL(compressed);
     e.target.value = "";
+  }
+
+  async function handlePaymentPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file) return;
+    const v = validateImageFile(file); if (!v.valid) { alert((v as { valid:false;error:string }).error); return; }
+    setPaymentPhotoUploading(true);
+    try {
+      const compressed = await compressImage(file);
+      // Show preview via data URL
+      const reader = new FileReader();
+      reader.onload = ev => setPaymentPhotoDataUrl(ev.target!.result as string);
+      reader.readAsDataURL(compressed);
+      // Upload to storage immediately so we have the URL at generate time
+      const storageUrl = await uploadPhoto(compressed, `rider/${job.id}/payment-${Date.now()}.jpg`);
+      setPaymentPhotoStorageUrl(storageUrl);
+    } catch { setError("อัปโหลดรูปหลักฐานไม่สำเร็จ"); }
+    finally { setPaymentPhotoUploading(false); e.target.value = ""; }
   }
 
   function toggleAcc(acc: string) {
@@ -787,6 +808,7 @@ function ContractStep({ job, reload, riderName, c }: { job: AdminRequest; reload
           <div class="cno-box"><div class="cno-label">เลขที่ใบรับเงิน</div><div class="cno-value">${esc(docNo)}-R</div><div class="cno-date">วันที่ ${dateStr}<br>เวลา ${timeStr} น.</div></div>
         </div>
         <div class="content">
+
           <div class="two-col" style="margin-bottom:12px">
             <div class="icard"><div class="icard-hd"><div class="hd-num">1</div> ผู้รับเงิน (ผู้ขาย)</div><div class="icard-body">
               <div class="f"><span class="fl">ชื่อ-นามสกุล</span><span class="fv" style="font-size:13px;font-weight:700;color:#1a1a2e">${esc(cName)}</span></div>
@@ -816,6 +838,7 @@ function ContractStep({ job, reload, riderName, c }: { job: AdminRequest; reload
           </div>
           ${idPhotoDataUrl ? `<div class="id-photo-wrap"><div class="id-photo-hd">📷 สำเนาบัตรประชาชน (มี Watermark)</div><img src="${idPhotoDataUrl}" alt="บัตรประชาชน"></div>` : ""}
           ${custProdPhotoDataUrl ? `<div class="id-photo-wrap"><div class="id-photo-hd">📸 รูปลูกค้าพร้อมสินค้า</div><img src="${custProdPhotoDataUrl}" alt="ลูกค้าพร้อมสินค้า" style="max-height:300px;object-fit:contain"></div>` : ""}
+          ${paymentPhotoDataUrl ? `<div class="id-photo-wrap"><div class="id-photo-hd">${payMethod === "cash" ? "💵 หลักฐานมอบเงินสด" : "📎 หลักฐานการโอนเงิน (สลิป)"}</div><img src="${paymentPhotoDataUrl}" alt="หลักฐานชำระเงิน" style="max-height:340px;object-fit:contain"></div>` : ""}
         </div>
         <div class="footer">
           <div><div class="fv-row"><span class="fv-lbl">Document ID :</span><span class="fv-val">${esc(docNo)}-R</span></div>
@@ -841,6 +864,13 @@ function ContractStep({ job, reload, riderName, c }: { job: AdminRequest; reload
 
       await saveContractUrls(job.id, cu.data.path, ru.data.path);
       await markContractSigned(job.id);
+
+      // Complete the job inline — payment evidence is already embedded in receipt
+      if (payMethod === "cash") {
+        await riderCompleteCash(job.id, paymentPhotoStorageUrl ?? "");
+      } else {
+        await riderCompleteTransfer(job.id, paymentPhotoStorageUrl ?? undefined);
+      }
 
       contractHTMLRef.current = cBody;
       receiptHTMLRef.current  = rBody;
@@ -947,6 +977,24 @@ function ContractStep({ job, reload, riderName, c }: { job: AdminRequest; reload
             </button>
             <input ref={custFileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleCustPhoto} />
           </div>
+          {/* Payment evidence — embedded into receipt at generate time */}
+          <div style={{ borderTop: `1px solid ${c.BORDER}`, paddingTop: 14 }}>
+            <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: c.TEXT }}>
+              {payMethod === "cash" ? "💵 หลักฐานมอบเงินสด" : "📎 สลิปโอนเงิน"}
+            </p>
+            <p style={{ margin: "0 0 8px", fontSize: 12, color: c.TEXT2 }}>
+              {payMethod === "cash" ? "ถ่ายรูปขณะมอบเงิน — จะแนบในใบสำคัญรับเงิน" : "อัปโหลดสลิปที่ลูกค้าโอน — จะแนบในใบสำคัญรับเงิน"}
+            </p>
+            {paymentPhotoDataUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={paymentPhotoDataUrl} alt="หลักฐานชำระเงิน" style={{ width: "100%", maxHeight: 220, objectFit: "contain", borderRadius: 8, border: `1px solid ${c.GREEN}`, marginBottom: 8 }} />
+            )}
+            <button onClick={()=>paymentFileRef.current?.click()} disabled={paymentPhotoUploading} style={{ width: "100%", padding: "12px", borderRadius: 10, border: `1.5px dashed ${paymentPhotoDataUrl ? c.GREEN : c.BORDER}`, background: paymentPhotoDataUrl ? "rgba(74,222,128,0.06)" : c.CARD, color: paymentPhotoDataUrl ? c.GREEN : c.TEXT2, fontSize: 13, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: paymentPhotoUploading ? 0.6 : 1 }}>
+              <Camera size={16} />
+              {paymentPhotoUploading ? "กำลังอัปโหลด..." : paymentPhotoDataUrl ? "เปลี่ยนหลักฐาน ✓" : (payMethod === "cash" ? "ถ่ายรูปมอบเงิน" : "ถ่าย/อัปโหลดสลิป")}
+            </button>
+            <input ref={paymentFileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handlePaymentPhoto} />
+          </div>
         </div>
       </div>
 
@@ -965,91 +1013,6 @@ function ContractStep({ job, reload, riderName, c }: { job: AdminRequest; reload
       ) : (
         <BigBtn label={generating ? "กำลังสร้างสัญญา..." : "สร้างสัญญาและบันทึก →"} loading={generating} onClick={handleGenerate} />
       )}
-    </div>
-  );
-}
-
-// ── Payment Step ───────────────────────────────────────────────────────────────
-function PaymentStep({ job, reload, c }: { job: AdminRequest; reload: () => void; c: TC }) {
-  const [cashPhotoUrl, setCashPhotoUrl] = useState<string | null>(null);
-  const cashFileRef = useRef<HTMLInputElement>(null!);
-  const [uploading, setUploading] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [transferRequested, setTransferRequested] = useState(false);
-  const [error, setError] = useState("");
-  const price = job.inspection?.actualPrice ?? job.device.estimatedPrice;
-  const isCash = job.payment.method === "cash";
-
-  async function handleCashPhoto(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]; if (!file) return;
-    setUploading(true);
-    try {
-      const compressed = await compressImage(file);
-      const url = await uploadPhoto(compressed, `rider/${job.id}/cash-${Date.now()}.jpg`);
-      setCashPhotoUrl(url);
-    } catch { setError("อัปโหลดรูปไม่สำเร็จ"); }
-    finally { setUploading(false); e.target.value = ""; }
-  }
-
-  async function handleCompleteCash() {
-    if (!cashPhotoUrl) { setError("กรุณาถ่ายรูปมอบเงิน"); return; }
-    setBusy(true);
-    const result = await riderCompleteCash(job.id, cashPhotoUrl);
-    if (!result.success) { setError((result as { success:false;error?:string }).error ?? "เกิดข้อผิดพลาด"); setBusy(false); return; }
-    reload();
-  }
-
-  async function handleRequestTransfer() {
-    setBusy(true);
-    await riderRequestTransfer(job.id);
-    setTransferRequested(true);
-    setBusy(false);
-    reload();
-  }
-
-  async function handleCompleteTransfer() {
-    setBusy(true);
-    await riderCompleteTransfer(job.id);
-    reload();
-  }
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <div style={{ background: c.CARD, borderRadius: 14, padding: 16, border: `1px solid ${c.BORDER}` }}>
-        <p style={{ margin: "0 0 4px", fontSize: 12, color: c.TEXT2 }}>ยอดชำระ</p>
-        <p style={{ margin: "0 0 12px", fontSize: 32, fontWeight: 800, color: c.ACCENT }}>฿{price.toLocaleString("th-TH")}</p>
-        <p style={{ margin: 0, fontSize: 13, color: c.TEXT }}>วิธีชำระ: <strong>{isCash ? "เงินสด" : "โอนเงิน"}</strong></p>
-        {!isCash && job.payment.bankName && (
-          <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 4 }}>
-            <FieldRow label="ธนาคาร" value={job.payment.bankName} c={c} />
-            {job.payment.accountName   && <FieldRow label="ชื่อบัญชี"  value={job.payment.accountName}   c={c} />}
-            {job.payment.accountNumber && <FieldRow label="เลขบัญชี"   value={job.payment.accountNumber} c={c} />}
-          </div>
-        )}
-      </div>
-
-      {isCash && (
-        <div style={{ background: c.CARD, borderRadius: 14, padding: 14, border: `1px solid ${c.BORDER}` }}>
-          <p style={{ margin: "0 0 10px", fontSize: 13, fontWeight: 600, color: c.TEXT }}>ถ่ายรูปมอบเงินสด</p>
-          {cashPhotoUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={cashPhotoUrl} alt="มอบเงิน" style={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 8, marginBottom: 8 }} />
-          )}
-          <button onClick={()=>cashFileRef.current?.click()} disabled={uploading} style={{ width: "100%", padding: "12px", borderRadius: 10, border: `1.5px dashed ${c.BORDER}`, background: c.CARD, color: c.TEXT2, fontSize: 13, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: uploading ? 0.6 : 1 }}>
-            <Camera size={16} />{uploading ? "กำลังอัปโหลด..." : cashPhotoUrl ? "เปลี่ยนรูป" : "ถ่ายรูปมอบเงิน"}
-          </button>
-          <input ref={cashFileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleCashPhoto} />
-        </div>
-      )}
-
-      {error && <p style={{ margin: 0, fontSize: 13, color: c.RED }}>{error}</p>}
-
-      {isCash
-        ? <BigBtn label="ยืนยันรับเงินสด ✓" loading={busy} disabled={!cashPhotoUrl} onClick={handleCompleteCash} />
-        : transferRequested
-          ? <BigBtn label="ยืนยันโอนเงินสำเร็จ ✓" loading={busy} onClick={handleCompleteTransfer} />
-          : <BigBtn label="แจ้ง Finance โอนเงิน →" color="#0A84FF" textColor="#fff" loading={busy} onClick={handleRequestTransfer} />
-      }
     </div>
   );
 }
@@ -1138,9 +1101,8 @@ export default function JobWizardPage() {
   const deviceImg = getDeviceImage(job.device.model);
   const mapsUrl   = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent("เดอะแพลนท์ วงแหวน-รังสิต อำเภอธัญบุรี ปทุมธานี 12110")}&destination=${encodeURIComponent(job.appointment.location)}`;
 
-  const isContracted = !!job.payment.contractSignedAt;
-  const isCancelled  = job.status === "cancelled";
-  const isCompleted  = job.status === "completed";
+  const isCancelled = job.status === "cancelled";
+  const isCompleted = job.status === "completed";
 
   return (
     <div style={{ height:"100%", overflow:"hidden", background:BG, display:"flex", flexDirection:"column" }}>
@@ -1295,7 +1257,7 @@ export default function JobWizardPage() {
               {job.status === "price_negotiation" && (
                 <PriceNegotiationStep job={job} reload={reload} c={c} />
               )}
-              {job.status === "contracting" && !isContracted && (
+              {job.status === "contracting" && (
                 <>
                   <div style={{ background:CARD, borderRadius:14, padding:"12px 14px", border:`1px solid ${BORDER}` }}>
                     <p style={{ margin:"0 0 4px", fontSize:12, color:TEXT2 }}>ราคาตกลง</p>
@@ -1304,11 +1266,7 @@ export default function JobWizardPage() {
                   <ContractStep job={job} reload={reload} riderName={riderName} c={c} />
                 </>
               )}
-              {job.status === "contracting" && isContracted && (
-                <div style={{ background:"rgba(74,222,128,0.08)", border:`1px solid ${GREEN}`, borderRadius:14, padding:"14px 16px" }}>
-                  <p style={{ margin:0, fontSize:14, fontWeight:700, color:GREEN }}>✓ สัญญาสร้างแล้ว — ดำเนินการชำระเงิน</p>
-                </div>
-              )}
+              {/* contracting + signed → completed immediately via handleGenerate, so this state should not be reached */}
             </div>
           ) : step < 3 ? (
             <LockedStepRow label="ราคา/สัญญา" c={c} />
@@ -1324,11 +1282,6 @@ export default function JobWizardPage() {
           ) : isCancelled ? (
             <div style={{ background:"rgba(255,69,58,0.08)", border:`1px solid rgba(255,69,58,0.3)`, borderRadius:14, padding:16 }}>
               <p style={{ margin:0, fontSize:14, fontWeight:700, color:RED }}>งานถูกยกเลิก</p>
-            </div>
-          ) : step === 3 && isContracted ? (
-            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              <div style={{ background:CARD, borderRadius:14, padding:"10px 14px", border:`1px solid ${BORDER}`, fontSize:13, fontWeight:700, color:TEXT }}>การชำระเงิน</div>
-              <PaymentStep job={job} reload={reload} c={c} />
             </div>
           ) : step < 4 ? (
             <LockedStepRow label="จบ" c={c} />
