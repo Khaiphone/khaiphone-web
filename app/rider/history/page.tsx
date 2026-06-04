@@ -74,7 +74,7 @@ export default function HistoryPage() {
           {[
             { label: "งานสำเร็จ", value: stats.completedJobs, color: GREEN },
             { label: "ยกเลิก",    value: stats.cancelledJobs, color: RED   },
-            { label: "รายได้",    value: `฿${fmt(stats.totalEarnings)}`, color: ACCENT, small: true },
+            { label: "มูลค่า",    value: `฿${fmt(stats.totalEarnings)}`, color: ACCENT, small: true },
           ].map(({ label, value, color, small }) => (
             <div key={label} style={{ background: CARD2, borderRadius: 12, padding: "12px 10px", textAlign: "center" }}>
               <p style={{ margin: 0, fontSize: small ? 14 : 24, fontWeight: 800, color }}>{value}</p>

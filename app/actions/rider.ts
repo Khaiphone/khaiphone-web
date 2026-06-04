@@ -90,7 +90,7 @@ export async function fetchRiderHomeData(riderId: string) {
     supabase.from("requests").select("*").eq("rider_id", riderId)
       .in("status", ["confirmed"]).order("appt_date", { ascending: true }),
     supabase.from("requests").select("*").eq("rider_id", riderId)
-      .in("status", ["pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting"])
+      .in("status", ["pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting", "awaiting_transfer"])
       .order("appt_date", { ascending: true }),
     supabase.from("requests")
       .select("status, actual_price, estimated_price")
@@ -129,7 +129,7 @@ export async function fetchRiderJobs(riderId: string): Promise<AdminRequest[]> {
     .from("requests")
     .select("*")
     .eq("rider_id", riderId)
-    .in("status", ["pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting"])
+    .in("status", ["pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting", "awaiting_transfer"])
     .order("appt_date", { ascending: true });
   if (error) { console.error("fetchRiderJobs:", error); return []; }
   return (data ?? []).map(mapRow);
@@ -155,7 +155,7 @@ export async function fetchRiderHistory(riderId: string, months = 3): Promise<Ad
     .from("requests")
     .select("*")
     .eq("rider_id", riderId)
-    .in("status", ["completed", "cancelled", "rejected"])
+    .in("status", ["completed", "cancelled", "no_show", "rejected"])
     .gte("created_at", since.toISOString())
     .order("created_at", { ascending: false });
   return (data ?? []).map(mapRow);
@@ -726,7 +726,7 @@ export async function fetchRiderStats(riderId: string) {
 
   const jobs = data ?? [];
   const completed = jobs.filter(j => j.status === "completed");
-  const cancelled = jobs.filter(j => j.status === "cancelled");
+  const cancelled = jobs.filter(j => ["cancelled", "no_show", "rejected"].includes(j.status));
 
   return {
     totalJobs:     jobs.length,
