@@ -1441,7 +1441,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                  request.payment.method === "transfer" &&
                  !request.payment.slipUrl && (
                   <div style={{ marginBottom: 14 }}>
-                    <p style={{ margin: "0 0 6px", fontSize: 11, fontWeight: 600, color: GOLD }}>รอดำเนินการ</p>
+                    <p style={{ margin: "0 0 6px", fontSize: 11, fontWeight: 600, color: "#EF4444" }}>รอดำเนินการ</p>
                     <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 600, color: TEXT2 }}>
                       โอนเงิน ฿{(request.inspection?.actualPrice ?? request.device.estimatedPrice).toLocaleString("th-TH")} ให้ลูกค้า
                     </p>
