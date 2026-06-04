@@ -693,7 +693,7 @@ export async function getDocumentSignedUrl(requestId: string, storagePath: strin
   // Verify caller has access to this request
   const { data: req } = await supabase
     .from("requests")
-    .select("assigned_to, rider_id, staff_user_id")
+    .select("assigned_to, rider_id")
     .eq("id", requestId)
     .single();
   if (!req) return null;
