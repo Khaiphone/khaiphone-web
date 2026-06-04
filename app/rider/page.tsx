@@ -53,6 +53,23 @@ export default function RiderHomePage() {
       setLoading(false);
     }
     loadData(userId);
+
+    // Real-time: reload when any request assigned to this rider is updated
+    const ch = supabase
+      .channel(`rider-home-${userId}`)
+      .on("broadcast", { event: "updated" }, () => loadData(userId))
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "requests" },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (payload: any) => { if (payload.new?.rider_id === userId) loadData(userId); })
+      .subscribe();
+
+    const onVisible = () => { if (document.visibilityState === "visible") loadData(userId); };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      supabase.removeChannel(ch);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [userId, loadData]);
 
   async function toggleOnline() {
