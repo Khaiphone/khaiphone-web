@@ -1289,6 +1289,53 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                       </div>
                     )}
 
+                    {/* Apple Check (SICKW) */}
+                    {request.inspection.sickw_report && (() => {
+                      const raw = request.inspection!.sickw_report!;
+                      const map: Record<string, string> = {};
+                      for (const line of raw.split("\n")) {
+                        const idx = line.indexOf(": ");
+                        if (idx > 0) map[line.slice(0, idx).trim()] = line.slice(idx + 2).trim();
+                      }
+                      const icloud = (map["iCloud Lock"] ?? map["iCloud Status"] ?? "").toLowerCase();
+                      const mdm    = (map["MDM Lock"] ?? "").toLowerCase();
+                      const issues: string[] = [];
+                      if (icloud.includes("on"))   issues.push("iCloud Lock เปิดอยู่");
+                      if (icloud.includes("lost")) issues.push("Find My / Lost");
+                      if (mdm === "on")            issues.push("MDM Lock เปิดอยู่");
+                      const passed = issues.length === 0;
+                      return (
+                        <div style={{ marginBottom: 16 }}>
+                          <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>ผลตรวจสอบ Apple</p>
+                          <div style={{ borderRadius: 10, border: `1px solid ${passed ? "#86efac" : "#fca5a5"}`, background: passed ? "#F0FDF4" : "#FFF5F5", padding: "10px 12px", marginBottom: 6 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: passed ? 0 : 6 }}>
+                              <span style={{ fontSize: 15 }}>{passed ? "✅" : "🚫"}</span>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: passed ? "#166534" : "#991b1b" }}>
+                                {passed ? "ผ่านการตรวจสอบ" : `ไม่ผ่าน — ${issues.join(", ")}`}
+                              </span>
+                            </div>
+                            {[
+                              ["รุ่น",        map["Device Configuration"] || map["Model Name"]],
+                              ["iCloud",      map["iCloud Lock"] ?? map["iCloud Status"]],
+                              ["MDM Lock",    map["MDM Lock"]],
+                              ["Carrier Lock",map["Unlock Status"] ?? map["Sim-Lock"]],
+                              ["ประกัน",      map["Limited Warranty"]],
+                              ["หมดประกัน",   map["Coverage End Date"] ?? map["Coverage End"]],
+                            ].filter(([, v]) => v).map(([label, value]) => (
+                              <div key={label as string} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginTop: 4 }}>
+                                <span style={{ color: "#6B7280" }}>{label}</span>
+                                <span style={{ fontWeight: 500 }}>{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <details style={{ fontSize: 12 }}>
+                            <summary style={{ cursor: "pointer", color: "#0369A1", userSelect: "none" }}>ดูรายงานเต็ม</summary>
+                            <pre style={{ margin: "6px 0 0", padding: "10px 12px", borderRadius: 8, background: "#F8F8FA", fontSize: 11, lineHeight: 1.6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{raw}</pre>
+                          </details>
+                        </div>
+                      );
+                    })()}
+
                     {/* Functional tests */}
                     {(request.inspection.functionalTests ?? []).length > 0 && (
                       <div style={{ marginBottom: 16 }}>
