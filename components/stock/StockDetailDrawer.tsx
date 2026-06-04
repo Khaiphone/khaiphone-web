@@ -1307,13 +1307,17 @@ function Row({ label, value, mono, c }: { label: string; value: string; mono?: b
 function DocCard({ label, requestRef, docType, itemId, c }: { label: string; requestRef: string | undefined; docType: "contract" | "receipt"; itemId: string; c: ReturnType<typeof useThemeColors> }) {
   async function handleOpen() {
     if (!requestRef) return;
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.write("<p style='font-family:sans-serif;padding:20px'>กำลังโหลดเอกสาร...</p>");
+
     const signedUrl = await getStockDocumentSignedUrl(requestRef, docType);
-    if (!signedUrl) return;
+    if (!signedUrl) { win.close(); return; }
     const resp = await fetch(signedUrl);
     const html = await resp.text();
     const blob = new Blob([html], { type: "text/html" });
     const blobUrl = URL.createObjectURL(blob);
-    window.open(blobUrl, "_blank");
+    win.location.href = blobUrl;
     setTimeout(() => URL.revokeObjectURL(blobUrl), 10_000);
     await logDocumentView(itemId, label);
   }

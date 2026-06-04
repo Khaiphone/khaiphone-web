@@ -525,13 +525,18 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   }
 
   async function openAdminDoc(storagePath: string) {
+    // Open window immediately (within click event) to avoid popup blocker
+    const win = window.open("", "_blank");
+    if (!win) { setSaveError("กรุณาอนุญาต popup จาก browser"); return; }
+    win.document.write("<p style='font-family:sans-serif;padding:20px'>กำลังโหลดเอกสาร...</p>");
+
     const signedUrl = await getDocumentSignedUrl(id, storagePath);
-    if (!signedUrl) { setSaveError("ไม่มีสิทธิ์เปิดเอกสารนี้"); return; }
+    if (!signedUrl) { win.close(); setSaveError("ไม่มีสิทธิ์เปิดเอกสารนี้"); return; }
     const resp = await fetch(signedUrl);
     const html = await resp.text();
     const blob = new Blob([html], { type: "text/html" });
     const url  = URL.createObjectURL(blob);
-    window.open(url, "_blank");
+    win.location.href = url;
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
   }
 
