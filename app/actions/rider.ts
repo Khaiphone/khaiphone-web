@@ -266,6 +266,30 @@ export async function riderArriveJob(id: string) {
   return { success: true as const };
 }
 
+// ─── Auto-save SICKW result immediately after check ──────────────────────────
+export async function riderAutoSaveSickw(
+  id: string,
+  data: { serial?: string; sickw_report: string }
+): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data: req } = await supabase.from("requests").select("inspection").eq("id", id).single();
+  const { error } = await supabase
+    .from("requests")
+    .update({
+      inspection: {
+        ...(req?.inspection ?? {}),
+        ...(data.serial ? { serial: data.serial } : {}),
+        sickw_report: data.sickw_report,
+      },
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  if (error) return { success: false, error: error.message };
+  after(() => broadcastRequestUpdate(id));
+  return { success: true };
+}
+
 // ─── Save inspection data ─────────────────────────────────────────────────────
 export async function riderSaveInspection(id: string, inspection: {
   imei?: string;

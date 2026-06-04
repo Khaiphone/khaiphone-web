@@ -9,7 +9,7 @@ import type { SickwResult } from "@/app/actions/device-scan";
 import {
   fetchRiderJob, fetchRiderJobs,
   riderAcceptJob, riderStartJob, riderArriveJob, riderNoShow,
-  riderSaveInspection, riderConfirmPrice, riderAdjustPrice,
+  riderSaveInspection, riderAutoSaveSickw, riderConfirmPrice, riderAdjustPrice,
   riderCustomerAccepted, riderCustomerRejected,
   riderCompleteCash, riderCompleteTransfer, riderRequestTransfer,
   riderRequestHelp,
@@ -301,7 +301,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   const scanRef = useRef<HTMLInputElement>(null!);
   const [scanning,     setScanning]     = useState(false);
   const [sickwResult,  setSickwResult]  = useState<SickwResult | null>(null);
-  const [sickwRaw,     setSickwRaw]     = useState("");
+  const [sickwRaw,     setSickwRaw]     = useState((job.inspection as { sickw_report?: string } | undefined)?.sickw_report ?? "");
   const [sickwExpanded,setSickwExpanded]= useState(false);
   const [sickwError,   setSickwError]   = useState("");
   const [sickwLoading, setSickwLoading] = useState(false);
@@ -343,7 +343,10 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
       setSickwLoading(true);
       const sickw = await checkSickw(result.serial);
       if (!sickw.success) setSickwError(sickw.error ?? "เช็ค SICKW ไม่ได้");
-      else if (sickw.data) applySickwData(sickw.data);
+      else if (sickw.data) {
+        applySickwData(sickw.data);
+        if (sickw.data.rawText) riderAutoSaveSickw(job.id, { serial: result.serial, sickw_report: sickw.data.rawText });
+      }
       setSickwLoading(false);
     } catch { setError("สแกนไม่สำเร็จ กรุณากรอกเอง"); }
     finally { setScanning(false); if (scanRef.current) scanRef.current.value = ""; }
@@ -355,7 +358,10 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
     setSickwLoading(true); setSickwResult(null); setSickwError("");
     const res = await checkSickw(id);
     if (!res.success) setSickwError(res.error ?? "เช็ค SICKW ไม่ได้");
-    else if (res.data) applySickwData(res.data);
+    else if (res.data) {
+      applySickwData(res.data);
+      if (res.data.rawText) riderAutoSaveSickw(job.id, { serial: id.length >= 10 && !id.match(/^\d{15}$/) ? id : undefined, sickw_report: res.data.rawText });
+    }
     setSickwLoading(false);
   }
 
