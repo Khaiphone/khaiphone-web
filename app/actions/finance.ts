@@ -254,25 +254,33 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
   };
 }
 
-export async function fetchFinanceIncome(): Promise<FinanceIncome[]> {
+export async function fetchFinanceIncome(dateFrom = "", dateTo = ""): Promise<FinanceIncome[]> {
   await requireAuth();
   const supabase = createServerClient();
+  const dateFilter = dateFrom && dateTo;
   const [{ data }, { data: directData }, { data: buyerData }] = await Promise.all([
-    supabase
-      .from("requests")
-      .select("id, order_number, device_model, device_storage, actual_price, estimated_price, sell_price, sell_date, source")
-      .eq("status", "completed")
-      .eq("stock_status", "sold")
-      .not("sell_price", "is", null)
-      .not("sell_date", "is", null)
-      .order("sell_date", { ascending: false }),
-    supabase
-      .from("stocks")
-      .select("id, model, storage, cost_price, shipping_cost, other_cost, sold_price, sold_at, buyer_name, sale_type")
-      .eq("status", "ขายแล้ว")
-      .is("request_ref", null)
-      .not("sold_price", "is", null)
-      .not("sold_at", "is", null),
+    (() => {
+      let q = supabase
+        .from("requests")
+        .select("id, order_number, device_model, device_storage, actual_price, estimated_price, sell_price, sell_date, source")
+        .eq("status", "completed")
+        .eq("stock_status", "sold")
+        .not("sell_price", "is", null)
+        .not("sell_date", "is", null);
+      if (dateFilter) q = q.gte("sell_date", dateFrom).lte("sell_date", dateTo);
+      return q.order("sell_date", { ascending: false });
+    })(),
+    (() => {
+      let q = supabase
+        .from("stocks")
+        .select("id, model, storage, cost_price, shipping_cost, other_cost, sold_price, sold_at, buyer_name, sale_type")
+        .eq("status", "ขายแล้ว")
+        .is("request_ref", null)
+        .not("sold_price", "is", null)
+        .not("sold_at", "is", null);
+      if (dateFilter) q = q.gte("sold_at", dateFrom).lte("sold_at", dateTo + "T23:59:59");
+      return q;
+    })(),
     supabase
       .from("stocks")
       .select("request_ref, buyer_name")
@@ -319,14 +327,15 @@ export async function fetchFinanceIncome(): Promise<FinanceIncome[]> {
   return [...fromRequests, ...fromStocks].sort((a, b) => b.date.localeCompare(a.date));
 }
 
-export async function fetchFinancePurchases(): Promise<FinancePurchase[]> {
+export async function fetchFinancePurchases(dateFrom = "", dateTo = ""): Promise<FinancePurchase[]> {
   await requireAuth();
   const supabase = createServerClient();
-  const { data } = await supabase
+  let q = supabase
     .from("requests")
     .select("id, order_number, device_model, device_storage, actual_price, estimated_price, sell_price, stock_status, customer_name, source, created_at")
-    .eq("status", "completed")
-    .order("created_at", { ascending: false });
+    .eq("status", "completed");
+  if (dateFrom && dateTo) q = q.gte("created_at", dateFrom).lte("created_at", dateTo + "T23:59:59");
+  const { data } = await q.order("created_at", { ascending: false });
 
   return (data ?? []).map((row) => ({
     id: row.id,
@@ -342,25 +351,34 @@ export async function fetchFinancePurchases(): Promise<FinancePurchase[]> {
   }));
 }
 
-export async function fetchFinanceProfitByModel(): Promise<{
+export async function fetchFinanceProfitByModel(dateFrom = "", dateTo = ""): Promise<{
   kpi: { totalRevenue: number; totalCost: number; netProfit: number; margin: number };
   byModel: FinanceProfitByModel[];
 }> {
   await requireAuth();
   const supabase = createServerClient();
+  const dateFilter = dateFrom && dateTo;
   const [{ data }, { data: directData }] = await Promise.all([
-    supabase
-      .from("requests")
-      .select("device_model, actual_price, estimated_price, sell_price")
-      .eq("status", "completed")
-      .eq("stock_status", "sold")
-      .not("sell_price", "is", null),
-    supabase
-      .from("stocks")
-      .select("model, cost_price, shipping_cost, other_cost, sold_price")
-      .eq("status", "ขายแล้ว")
-      .is("request_ref", null)
-      .not("sold_price", "is", null),
+    (() => {
+      let q = supabase
+        .from("requests")
+        .select("device_model, actual_price, estimated_price, sell_price")
+        .eq("status", "completed")
+        .eq("stock_status", "sold")
+        .not("sell_price", "is", null);
+      if (dateFilter) q = q.gte("sell_date", dateFrom).lte("sell_date", dateTo);
+      return q;
+    })(),
+    (() => {
+      let q = supabase
+        .from("stocks")
+        .select("model, cost_price, shipping_cost, other_cost, sold_price")
+        .eq("status", "ขายแล้ว")
+        .is("request_ref", null)
+        .not("sold_price", "is", null);
+      if (dateFilter) q = q.gte("sold_at", dateFrom).lte("sold_at", dateTo + "T23:59:59");
+      return q;
+    })(),
   ]);
 
   type Entry = { model: string; cost: number; sell: number };
@@ -398,39 +416,53 @@ export async function fetchFinanceProfitByModel(): Promise<{
   return { kpi: { totalRevenue, totalCost, netProfit, margin }, byModel };
 }
 
-export async function fetchFinanceCashFlow(): Promise<{
+export async function fetchFinanceCashFlow(dateFrom = "", dateTo = ""): Promise<{
   summary: FinanceCashFlowSummary;
   entries: FinanceCashFlowEntry[];
 }> {
   await requireAuth();
   const supabase = createServerClient();
+  const dateFilter = dateFrom && dateTo;
 
   const [{ data: purchases }, { data: sales }, { data: directBuys }, { data: directSales }] = await Promise.all([
-    supabase
-      .from("requests")
-      .select("id, order_number, device_model, actual_price, estimated_price, customer_name, created_at")
-      .eq("status", "completed")
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("requests")
-      .select("id, order_number, device_model, sell_price, sell_date")
-      .eq("status", "completed")
-      .eq("stock_status", "sold")
-      .not("sell_price", "is", null)
-      .not("sell_date", "is", null)
-      .order("sell_date", { ascending: true }),
-    supabase
-      .from("stocks")
-      .select("id, model, cost_price, shipping_cost, other_cost, received_at, created_at")
-      .is("request_ref", null)
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("stocks")
-      .select("id, model, sold_price, sold_at")
-      .eq("status", "ขายแล้ว")
-      .is("request_ref", null)
-      .not("sold_price", "is", null)
-      .not("sold_at", "is", null),
+    (() => {
+      let q = supabase
+        .from("requests")
+        .select("id, order_number, device_model, actual_price, estimated_price, customer_name, created_at")
+        .eq("status", "completed");
+      if (dateFilter) q = q.gte("created_at", dateFrom).lte("created_at", dateTo + "T23:59:59");
+      return q.order("created_at", { ascending: true });
+    })(),
+    (() => {
+      let q = supabase
+        .from("requests")
+        .select("id, order_number, device_model, sell_price, sell_date")
+        .eq("status", "completed")
+        .eq("stock_status", "sold")
+        .not("sell_price", "is", null)
+        .not("sell_date", "is", null);
+      if (dateFilter) q = q.gte("sell_date", dateFrom).lte("sell_date", dateTo);
+      return q.order("sell_date", { ascending: true });
+    })(),
+    (() => {
+      let q = supabase
+        .from("stocks")
+        .select("id, model, cost_price, shipping_cost, other_cost, received_at, created_at")
+        .is("request_ref", null);
+      if (dateFilter) q = q.gte("created_at", dateFrom).lte("created_at", dateTo + "T23:59:59");
+      return q.order("created_at", { ascending: true });
+    })(),
+    (() => {
+      let q = supabase
+        .from("stocks")
+        .select("id, model, sold_price, sold_at")
+        .eq("status", "ขายแล้ว")
+        .is("request_ref", null)
+        .not("sold_price", "is", null)
+        .not("sold_at", "is", null);
+      if (dateFilter) q = q.gte("sold_at", dateFrom).lte("sold_at", dateTo + "T23:59:59");
+      return q;
+    })(),
   ]);
 
   type Raw = { datetime: string; description: string; entryType: "in" | "out"; amount: number; id: string };
@@ -502,20 +534,27 @@ export type FinanceAuditEntry = {
 };
 
 
-export async function fetchFinanceAudit(): Promise<FinanceAuditEntry[]> {
+export async function fetchFinanceAudit(dateFrom = "", dateTo = ""): Promise<FinanceAuditEntry[]> {
   await requireAuth();
   const supabase = createServerClient();
+  const dateFilter = dateFrom && dateTo;
   const [{ data }, { data: expenseLogs }] = await Promise.all([
-    supabase
-      .from("requests")
-      .select("id, order_number, device_model, status_log, stock_status, sell_date, sell_price, created_at")
-      .order("created_at", { ascending: false })
-      .limit(200),
-    supabase
-      .from("finance_audit_logs")
-      .select("*")
-      .order("datetime", { ascending: false })
-      .limit(200),
+    (() => {
+      let q = supabase
+        .from("requests")
+        .select("id, order_number, device_model, status_log, stock_status, sell_date, sell_price, created_at")
+        .order("created_at", { ascending: false });
+      if (dateFilter) q = q.gte("created_at", dateFrom).lte("created_at", dateTo + "T23:59:59");
+      return q.limit(200);
+    })(),
+    (() => {
+      let q = supabase
+        .from("finance_audit_logs")
+        .select("*")
+        .order("datetime", { ascending: false });
+      if (dateFilter) q = q.gte("datetime", dateFrom).lte("datetime", dateTo + "T23:59:59");
+      return q.limit(200);
+    })(),
   ]);
 
   const entries: FinanceAuditEntry[] = [];
@@ -588,13 +627,12 @@ export type Expense = {
   createdAt: string;
 };
 
-export async function fetchExpenses(): Promise<Expense[]> {
+export async function fetchExpenses(dateFrom = "", dateTo = ""): Promise<Expense[]> {
   await requireAuth();
   const supabase = createServerClient();
-  const { data, error } = await supabase
-    .from("expenses")
-    .select("*")
-    .order("date", { ascending: false });
+  let q = supabase.from("expenses").select("*");
+  if (dateFrom && dateTo) q = q.gte("date", dateFrom).lte("date", dateTo);
+  const { data, error } = await q.order("date", { ascending: false });
   if (error) return [];
   return (data ?? []).map((r) => ({
     id: r.id,

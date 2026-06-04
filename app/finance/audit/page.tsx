@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { fetchFinanceAudit } from '@/app/actions/finance'
 import type { FinanceAuditEntry } from '@/app/actions/finance'
+import { useFinanceDate } from '@/app/components/finance/FinanceDateContext'
 
 const CARD = 'var(--f-card)'
 const BORDER = 'var(--f-border)'
@@ -26,13 +27,15 @@ function fmtDT(iso: string) {
 }
 
 export default function AuditPage() {
+  const { dateFrom, dateTo } = useFinanceDate()
   const [logs, setLogs] = useState<FinanceAuditEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState(0)
 
   useEffect(() => {
-    fetchFinanceAudit().then(d => { setLogs(d); setLoading(false) })
-  }, [])
+    setLoading(true)
+    fetchFinanceAudit(dateFrom, dateTo).then(d => { setLogs(d); setLoading(false) })
+  }, [dateFrom, dateTo])
 
   const filtered = logs.filter(log => {
     if (activeTab === 0) return true

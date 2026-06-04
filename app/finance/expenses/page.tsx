@@ -10,6 +10,7 @@ import {
   deleteExpense,
 } from '@/app/actions/finance'
 import type { Expense, ExpenseStatus } from '@/app/actions/finance'
+import { useFinanceDate } from '@/app/components/finance/FinanceDateContext'
 
 const CARD = 'var(--f-card)'
 const BORDER = 'var(--f-border)'
@@ -54,6 +55,7 @@ const EMPTY_FORM = {
 }
 
 export default function ExpensesPage() {
+  const { dateFrom, dateTo } = useFinanceDate()
   const [items, setItems] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -69,9 +71,9 @@ export default function ExpensesPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    setItems(await fetchExpenses())
+    setItems(await fetchExpenses(dateFrom, dateTo))
     setLoading(false)
-  }, [])
+  }, [dateFrom, dateTo])
 
   useEffect(() => { load() }, [load])
 

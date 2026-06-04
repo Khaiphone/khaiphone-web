@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { fetchFinanceCashFlow } from '@/app/actions/finance'
 import type { FinanceCashFlowEntry, FinanceCashFlowSummary } from '@/app/actions/finance'
+import { useFinanceDate } from '@/app/components/finance/FinanceDateContext'
 
 const CARD = 'var(--f-card)'
 const BORDER = 'var(--f-border)'
@@ -20,18 +21,20 @@ const fadeUp = {
 const TABS = ['ทั้งหมด', 'รับเข้า', 'จ่ายออก']
 
 export default function CashFlowPage() {
+  const { dateFrom, dateTo } = useFinanceDate()
   const [entries, setEntries] = useState<FinanceCashFlowEntry[]>([])
   const [summary, setSummary] = useState<FinanceCashFlowSummary>({ totalIn: 0, totalOut: 0, closing: 0 })
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState(0)
 
   useEffect(() => {
-    fetchFinanceCashFlow().then((d) => {
+    setLoading(true)
+    fetchFinanceCashFlow(dateFrom, dateTo).then((d) => {
       setEntries(d.entries)
       setSummary(d.summary)
       setLoading(false)
     })
-  }, [])
+  }, [dateFrom, dateTo])
 
   const filtered = entries.filter((e: FinanceCashFlowEntry) => {
     if (activeTab === 0) return true

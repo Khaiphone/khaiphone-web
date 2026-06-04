@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Search } from 'lucide-react'
 import { fetchFinanceIncome } from '@/app/actions/finance'
 import type { FinanceIncome } from '@/app/actions/finance'
+import { useFinanceDate } from '@/app/components/finance/FinanceDateContext'
 
 const CARD = 'var(--f-card)'
 const BORDER = 'var(--f-border)'
@@ -32,6 +33,7 @@ function formatDate(d: string) {
 }
 
 export default function IncomePage() {
+  const { dateFrom, dateTo } = useFinanceDate()
   const [items, setItems] = useState<FinanceIncome[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -39,8 +41,9 @@ export default function IncomePage() {
   const perPage = 10
 
   useEffect(() => {
-    fetchFinanceIncome().then((d) => { setItems(d); setLoading(false) })
-  }, [])
+    setLoading(true)
+    fetchFinanceIncome(dateFrom, dateTo).then((d) => { setItems(d); setLoading(false) })
+  }, [dateFrom, dateTo])
 
   const filtered = items.filter((r) => {
     if (!search) return true

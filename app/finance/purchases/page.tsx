@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Search, Trash2 } from 'lucide-react'
 import { fetchFinancePurchases, deletePurchaseRecord } from '@/app/actions/finance'
 import type { FinancePurchase } from '@/app/actions/finance'
+import { useFinanceDate } from '@/app/components/finance/FinanceDateContext'
 import { supabase } from '@/lib/supabase'
 import { fetchMyProfile } from '@/app/actions/admin-users'
 
@@ -32,6 +33,7 @@ function formatDate(iso: string) {
 }
 
 export default function PurchasesPage() {
+  const { dateFrom, dateTo } = useFinanceDate()
   const [items, setItems] = useState<FinancePurchase[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -41,7 +43,11 @@ export default function PurchasesPage() {
   const perPage = 10
 
   useEffect(() => {
-    fetchFinancePurchases().then((d) => { setItems(d); setLoading(false) })
+    setLoading(true)
+    fetchFinancePurchases(dateFrom, dateTo).then((d) => { setItems(d); setLoading(false) })
+  }, [dateFrom, dateTo])
+
+  useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return
       const profile = await fetchMyProfile(user.id)

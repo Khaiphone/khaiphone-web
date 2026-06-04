@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Link2, Check, AlertCircle, Plus, X } from 'lucide-react'
 import { fetchFinanceIncome } from '@/app/actions/finance'
 import type { FinanceIncome } from '@/app/actions/finance'
+import { useFinanceDate } from '@/app/components/finance/FinanceDateContext'
 
 const CARD = 'var(--f-card)'
 const BORDER = 'var(--f-border)'
@@ -26,6 +27,7 @@ function fmtDate(s: string) {
 }
 
 export default function ReconcilePage() {
+  const { dateFrom, dateTo } = useFinanceDate()
   const [bankList, setBankList] = useState<BankTx[]>([])
   const [sysList, setSysList] = useState<SysTx[]>([])
   const [loading, setLoading] = useState(true)
@@ -36,7 +38,8 @@ export default function ReconcilePage() {
 
   useEffect(() => {
     try { setBankList(JSON.parse(localStorage.getItem(BANK_LS) ?? '[]')) } catch { setBankList([]) }
-    fetchFinanceIncome().then((income: FinanceIncome[]) => {
+    setLoading(true)
+    fetchFinanceIncome(dateFrom, dateTo).then((income: FinanceIncome[]) => {
       setSysList(income.map(r => ({
         id: r.id,
         refNumber: r.refNumber,
@@ -47,7 +50,7 @@ export default function ReconcilePage() {
       })))
       setLoading(false)
     })
-  }, [])
+  }, [dateFrom, dateTo])
 
   function saveBank(next: BankTx[]) {
     setBankList(next)

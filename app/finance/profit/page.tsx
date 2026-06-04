@@ -6,6 +6,7 @@ import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recha
 import KpiCard from '@/app/components/finance/KpiCard'
 import { fetchFinanceProfitByModel } from '@/app/actions/finance'
 import type { FinanceProfitByModel } from '@/app/actions/finance'
+import { useFinanceDate } from '@/app/components/finance/FinanceDateContext'
 
 const CARD = 'var(--f-card)'
 const BORDER = 'var(--f-border)'
@@ -21,6 +22,7 @@ const fadeUp = {
 }
 
 export default function ProfitPage() {
+  const { dateFrom, dateTo } = useFinanceDate()
   const [data, setData] = useState<{
     kpi: { totalRevenue: number; totalCost: number; netProfit: number; margin: number }
     byModel: FinanceProfitByModel[]
@@ -28,8 +30,9 @@ export default function ProfitPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchFinanceProfitByModel().then((d) => { setData(d); setLoading(false) })
-  }, [])
+    setLoading(true)
+    fetchFinanceProfitByModel(dateFrom, dateTo).then((d) => { setData(d); setLoading(false) })
+  }, [dateFrom, dateTo])
 
   if (loading || !data) {
     return (

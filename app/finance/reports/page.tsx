@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { FileText, TrendingUp, TrendingDown, BarChart2, Banknote, ShoppingCart, Download, Loader } from 'lucide-react'
 import { fetchFinanceIncome, fetchFinancePurchases, fetchFinanceProfitByModel, fetchFinanceCashFlow } from '@/app/actions/finance'
+import { useFinanceDate } from '@/app/components/finance/FinanceDateContext'
 
 const CARD = 'var(--f-card)'
 const BORDER = 'var(--f-border)'
@@ -31,6 +32,7 @@ function thaiDate() {
 type ReportKey = 'income' | 'expenses' | 'profit' | 'cashflow' | 'purchases' | 'financial'
 
 export default function ReportsPage() {
+  const { dateFrom, dateTo } = useFinanceDate()
   const [loading, setLoading] = useState<ReportKey | null>(null)
   const [toast, setToast] = useState('')
 
@@ -43,7 +45,7 @@ export default function ReportsPage() {
     setLoading(key)
     try {
       if (key === 'income') {
-        const data = await fetchFinanceIncome()
+        const data = await fetchFinanceIncome(dateFrom, dateTo)
         const rows = [
           ['วันที่ขาย', 'เลขรายการ', 'ลูกค้า', 'สินค้า', 'ช่องทาง', 'ต้นทุน', 'ราคาขาย', 'กำไร'],
           ...data.map(r => [r.date, r.refNumber, r.customerName, `${r.model} ${r.storage}`, r.source, String(r.costPrice), String(r.sellPrice), String(r.profit)]),
@@ -51,7 +53,7 @@ export default function ReportsPage() {
         downloadCSV(rows, `รายงานรายรับ_${thaiDate()}.csv`)
         showToast('ดาวน์โหลดรายงานรายรับสำเร็จ')
       } else if (key === 'purchases') {
-        const data = await fetchFinancePurchases()
+        const data = await fetchFinancePurchases(dateFrom, dateTo)
         const rows = [
           ['วันที่รับซื้อ', 'เลขรายการ', 'รุ่น', 'ต้นทุน', 'ผู้ขาย', 'ราคาขาย', 'กำไร', 'สถานะ'],
           ...data.map(r => {
@@ -62,7 +64,7 @@ export default function ReportsPage() {
         downloadCSV(rows, `รายงานการรับซื้อ_${thaiDate()}.csv`)
         showToast('ดาวน์โหลดรายงานการรับซื้อสำเร็จ')
       } else if (key === 'profit') {
-        const { kpi, byModel } = await fetchFinanceProfitByModel()
+        const { kpi, byModel } = await fetchFinanceProfitByModel(dateFrom, dateTo)
         const rows = [
           ['รุ่น', 'จำนวนเครื่อง', 'ต้นทุนเฉลี่ย', 'ราคาขายเฉลี่ย', 'กำไรเฉลี่ย', 'Margin %', 'กำไรรวม'],
           ...byModel.map(m => [m.model, String(m.count), String(m.costAvg), String(m.sellAvg), String(m.profitAvg), `${m.margin.toFixed(1)}%`, String(m.totalProfit)]),
@@ -76,7 +78,7 @@ export default function ReportsPage() {
         downloadCSV(rows, `รายงานกำไร_${thaiDate()}.csv`)
         showToast('ดาวน์โหลดรายงานกำไรสำเร็จ')
       } else if (key === 'cashflow') {
-        const { summary, entries } = await fetchFinanceCashFlow()
+        const { summary, entries } = await fetchFinanceCashFlow(dateFrom, dateTo)
         const rows = [
           ['วันที่/เวลา', 'รายการ', 'รับเข้า', 'จ่ายออก', 'ยอดคงเหลือ'],
           ...entries.map(e => [e.datetime, e.description, e.amountIn != null ? String(e.amountIn) : '', e.amountOut != null ? String(e.amountOut) : '', String(e.balance)]),
@@ -88,7 +90,7 @@ export default function ReportsPage() {
         downloadCSV(rows, `รายงานกระแสเงินสด_${thaiDate()}.csv`)
         showToast('ดาวน์โหลดรายงานกระแสเงินสดสำเร็จ')
       } else if (key === 'financial') {
-        const [income, purchases, { kpi }] = await Promise.all([fetchFinanceIncome(), fetchFinancePurchases(), fetchFinanceProfitByModel()])
+        const [income, purchases, { kpi }] = await Promise.all([fetchFinanceIncome(dateFrom, dateTo), fetchFinancePurchases(dateFrom, dateTo), fetchFinanceProfitByModel(dateFrom, dateTo)])
         const rows = [
           ['งบการเงิน', '', ''],
           ['', '', ''],
