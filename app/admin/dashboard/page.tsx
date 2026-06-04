@@ -8,8 +8,8 @@ import { saveSubscription, sendTestPush } from "@/app/actions/push";
 import { supabase } from "@/lib/supabase";
 import { useAdminTheme } from "@/lib/admin-theme";
 import type { AdminRequest } from "@/lib/types/admin";
-import type { AdminRole } from "@/app/actions/admin-users";
-import type { Permission } from "@/lib/admin-permissions";
+import { useAdminRole } from "@/app/admin/role-context";
+import { cacheGet, cacheSet } from "@/app/admin/cache";
 import RequestCard from "../../components/admin/RequestCard";
 
 const GOLD   = "var(--admin-gold)";
@@ -37,10 +37,9 @@ function StatCard({ label, value, color, href }: { label: string; value: number;
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { userId, role, permissions } = useAdminRole();
   const [requests,    setRequests]    = useState<AdminRequest[]>([]);
   const [loading,     setLoading]     = useState(true);
-  const [role,        setRole]        = useState<AdminRole | null>(null);
-  const [permissions, setPermissions] = useState<Permission[]>([]);
   const [unreadCount,  setUnreadCount]  = useState(0);
   const [activity,     setActivity]     = useState<Awaited<ReturnType<typeof fetchRecentActivity>>>([]);
   const [notifStatus,  setNotifStatus]  = useState<"default" | "granted" | "denied" | "unsupported" | "loading">("loading");
@@ -49,25 +48,24 @@ export default function DashboardPage() {
   const { dark, toggle } = useAdminTheme();
 
   useEffect(() => {
-    // getSession() reads from localStorage — no network call
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) { setLoading(false); return; }
-      const data = await fetchDashboardData(session.user.id);
-      setRole(data.role);
-      setPermissions(data.permissions);
+    if (!userId) return;
+    const cached = cacheGet<AdminRequest[]>("admin:requests");
+    if (cached) { setRequests(cached); setLoading(false); }
+    fetchDashboardData(userId).then(data => {
       staffUserIdRef.current = data.staffUserId;
       setRequests(data.requests);
+      cacheSet("admin:requests", data.requests);
       setLoading(false);
       fetchRecentActivity().then(setActivity);
     });
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     const refetch = () => {
       const now = Date.now();
       if (now - lastRefetchRef.current < 30_000) return;
       lastRefetchRef.current = now;
-      fetchRequests(staffUserIdRef.current).then(d => setRequests(d));
+      fetchRequests(staffUserIdRef.current).then(d => { setRequests(d); cacheSet("admin:requests", d); });
     };
     window.addEventListener("focus", refetch);
     return () => window.removeEventListener("focus", refetch);

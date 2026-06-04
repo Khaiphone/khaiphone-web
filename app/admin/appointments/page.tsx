@@ -4,8 +4,9 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Clock, Loader2 } from "lucide-react";
 import { fetchDashboardData } from "@/app/actions/admin-requests";
-import { supabase } from "@/lib/supabase";
 import type { AdminRequest } from "@/lib/types/admin";
+import { useAdminRole } from "@/app/admin/role-context";
+import { cacheGet, cacheSet } from "@/app/admin/cache";
 import StatusBadge from "../../components/admin/StatusBadge";
 
 const BG     = "var(--admin-bg)";
@@ -39,6 +40,7 @@ function fmtMonth(d: Date) {
 
 export default function AppointmentsPage() {
   const router  = useRouter();
+  const { userId } = useAdminRole();
   const baseDay = new Date();
   baseDay.setHours(0, 0, 0, 0);
 
@@ -52,13 +54,15 @@ export default function AppointmentsPage() {
   const [loading,      setLoading]      = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) { setLoading(false); return; }
-      const data = await fetchDashboardData(session.user.id);
+    if (!userId) return;
+    const cached = cacheGet<AdminRequest[]>("admin:requests");
+    if (cached) { setRequests(cached); setLoading(false); }
+    fetchDashboardData(userId).then(data => {
       setRequests(data.requests);
+      cacheSet("admin:requests", data.requests);
       setLoading(false);
     });
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     if (todayRef.current && stripRef.current) {

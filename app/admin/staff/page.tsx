@@ -7,8 +7,8 @@ import {
   fetchAdminUsers, inviteStaff, updateAdminUser, deleteAdminUser, updateAdminPermissions, sendPasswordReset, resetPasswordDirect,
 } from "@/app/actions/admin-users";
 import { PERMISSION_LABELS } from "@/lib/admin-permissions";
-import { supabase } from "@/lib/supabase";
 import type { AdminUserRow, AdminRole, Permission } from "@/app/actions/admin-users";
+import { useAdminRole } from "@/app/admin/role-context";
 
 const BG = "var(--admin-bg)";
 const CARD = "var(--admin-card)";
@@ -29,6 +29,7 @@ const ROLE_COLOR: Record<AdminRole, { icon: string; bg: string }> = {
 
 export default function StaffPage() {
   const router = useRouter();
+  const { userId: myUserId } = useAdminRole();
   const [users, setUsers]     = useState<AdminUserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -41,12 +42,7 @@ export default function StaffPage() {
   const [resetting, setResetting]         = useState<string | null>(null);
   const [resetMsg, setResetMsg]           = useState<Record<string, string>>({});
   const [directReset, setDirectReset]     = useState<{ id: string; tempPassword: string } | null>(null);
-  const [myUserId, setMyUserId]           = useState<string | null>(null);
   const [expandedPerms, setExpandedPerms] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setMyUserId(data.user?.id ?? null));
-  }, []);
 
   async function load() {
     const data = await fetchAdminUsers();

@@ -11,7 +11,7 @@ import { fetchPricingConfig } from "@/app/actions/pricing-config";
 import { DEFAULT_PRICING_CONFIG, getModelTypeOpts } from "@/lib/pricing-defaults";
 import type { ProductRow } from "@/app/actions/products";
 import type { PricingGroup } from "@/lib/pricing-defaults";
-import { supabase } from "@/lib/supabase";
+import { useAdminRole } from "@/app/admin/role-context";
 
 const BG     = "#F5F5F7";
 const CARD   = "#FFFFFF";
@@ -37,6 +37,7 @@ function autoCalcPrice(basePrice: number, storageIdx: number, totalStorages: num
 export default function ProductDetailPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
+  const { userEmail: currentUserEmail } = useAdminRole();
 
   const [product, setProduct]         = useState<ProductRow | null>(null);
   const [globalGroups, setGlobalGroups] = useState<PricingGroup[]>(DEFAULT_PRICING_CONFIG.groups);
@@ -57,11 +58,6 @@ export default function ProductDetailPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved]   = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [currentUserEmail, setCurrentUserEmail] = useState<string | undefined>();
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setCurrentUserEmail(data.user?.email));
-  }, []);
 
   useEffect(() => {
     Promise.all([fetchProductById(id), fetchPricingConfig()]).then(([p, cfg]) => {

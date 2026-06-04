@@ -523,6 +523,16 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
     setTimeout(() => setCopiedField(f => f === field ? null : f), 2000);
   }
 
+  async function openAdminDoc(storagePath: string) {
+    const { data: { publicUrl } } = supabase.storage.from("inspection-photos").getPublicUrl(storagePath);
+    const resp = await fetch(publicUrl);
+    const html = await resp.text();
+    const blob = new Blob([html], { type: "text/html" });
+    const url  = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  }
+
   async function copyTrackingLink() {
     if (!request) return;
     const phone = request.customer.phone.replace(/\D/g, "");
@@ -1348,20 +1358,14 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
             request.contractUrl ? (
               <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
                 <button
-                  onClick={() => {
-                    const { data: { publicUrl } } = supabase.storage.from("inspection-photos").getPublicUrl(request.contractUrl!);
-                    window.open(publicUrl, "_blank");
-                  }}
+                  onClick={() => openAdminDoc(request.contractUrl!)}
                   style={{ flex: 1, background: "#1a1a2e", border: "none", borderRadius: 12, padding: "13px", color: "#F0C040", fontSize: 14, fontWeight: 700, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit" }}
                 >
                   ดูสัญญาซื้อขาย ↗
                 </button>
                 {request.receiptUrl && (
                   <button
-                    onClick={() => {
-                      const { data: { publicUrl } } = supabase.storage.from("inspection-photos").getPublicUrl(request.receiptUrl!);
-                      window.open(publicUrl, "_blank");
-                    }}
+                    onClick={() => openAdminDoc(request.receiptUrl!)}
                     style={{ flex: 1, background: "#1a1a2e", border: "none", borderRadius: 12, padding: "13px", color: "#F0C040", fontSize: 14, fontWeight: 700, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit" }}
                   >
                     ดูใบรับเงิน ↗

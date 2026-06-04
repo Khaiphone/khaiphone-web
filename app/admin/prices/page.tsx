@@ -5,7 +5,7 @@ import { ChevronLeft, Plus, Check, Eye, EyeOff, ChevronRight, Layers, X, Refresh
 import { useRouter } from "next/navigation";
 import { fetchProducts, updateProduct, createProduct, deleteProduct, bulkUpdateProductPrices, syncProductsFromLib, syncStorageFromLib } from "@/app/actions/products";
 import type { ProductRow } from "@/app/actions/products";
-import { supabase } from "@/lib/supabase";
+import { useAdminRole } from "@/app/admin/role-context";
 
 const BG     = "#F5F5F7";
 const CARD   = "#FFFFFF";
@@ -46,6 +46,7 @@ function storageSortKey(storage: string): number {
 
 export default function PricesPage() {
   const router = useRouter();
+  const { userEmail: currentUserEmail } = useAdminRole();
   const [products, setProducts]   = useState<ProductRow[]>([]);
   const [loading, setLoading]     = useState(true);
   const [tab, setTab]             = useState<Category>("iphone");
@@ -55,7 +56,6 @@ export default function PricesPage() {
   const [newProduct, setNewProduct] = useState(EMPTY_NEW);
   const [adding, setAdding]       = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [currentUserEmail, setCurrentUserEmail] = useState<string | undefined>();
 
   // Sync
   const [syncing, setSyncing] = useState(false);
@@ -119,7 +119,6 @@ export default function PricesPage() {
 
   useEffect(() => {
     load();
-    supabase.auth.getUser().then(({ data }) => setCurrentUserEmail(data.user?.email));
   }, []);
 
   const visible = useMemo(() => {

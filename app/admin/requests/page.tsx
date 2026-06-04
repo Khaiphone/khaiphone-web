@@ -8,6 +8,8 @@ import { supabase } from "@/lib/supabase";
 import type { AdminRequest, RequestStatus } from "@/lib/types/admin";
 import RequestCard from "../../components/admin/RequestCard";
 import FilterBottomSheet, { type FilterState } from "../../components/admin/FilterBottomSheet";
+import { useAdminRole } from "@/app/admin/role-context";
+import { cacheGet, cacheSet } from "@/app/admin/cache";
 
 const BG     = "var(--admin-bg)";
 const CARD   = "var(--admin-card)";
@@ -42,23 +44,27 @@ export default function RequestsPage() {
   const staffUserIdRef = useRef<string | undefined>(undefined);
   const lastRefetchRef = useRef(0);
 
+  const { userId } = useAdminRole();
+
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) { setLoading(false); return; }
-      const data = await fetchDashboardData(session.user.id);
+    if (!userId) return;
+    const cached = cacheGet<AdminRequest[]>("admin:requests");
+    if (cached) { setRequests(cached); setLoading(false); }
+    fetchDashboardData(userId).then(data => {
       staffUserIdRef.current = data.staffUserId;
       if (data.staffUserId) setAssignedOnly(true);
       setRequests(data.requests);
+      cacheSet("admin:requests", data.requests);
       setLoading(false);
     });
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     const refetch = () => {
       const now = Date.now();
       if (now - lastRefetchRef.current < 30_000) return;
       lastRefetchRef.current = now;
-      fetchRequests(staffUserIdRef.current).then(d => setRequests(d));
+      fetchRequests(staffUserIdRef.current).then(d => { setRequests(d); cacheSet("admin:requests", d); });
     };
 
     // Realtime — รับคำขอใหม่ + สถานะเปลี่ยนทันที
