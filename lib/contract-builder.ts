@@ -235,6 +235,11 @@ export function buildContractPage(dev: ContractDevice, devIdx: number, isFirst: 
   return p;
 }
 
+export const SLIP_PLACEHOLDER = '<div style="margin:12px 0;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 13px;font-size:10.5px;color:#92400e">⚠ ยังไม่มีหลักฐานการโอนเงิน</div>';
+
+export const SLIP_BLOCK = (slipDataUrl: string) =>
+  `<div style="margin:12px 0;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden"><div style="background:#f5f4f0;padding:7px 11px;border-bottom:1px solid #e5e7eb;font-size:10.5px;font-weight:700;color:#333">📎 หลักฐานการรับเงิน</div><div style="padding:12px;text-align:center;background:#fafafa"><img src="${slipDataUrl}" style="max-width:280px;max-height:380px;border-radius:6px;border:1px solid #e5e7eb"></div></div>`;
+
 export function buildReceiptPage(dev: ContractDevice, devIdx: number, isFirst: boolean, ctx: ContractCtx): string {
   const { docNo, totalDevices, dateStr, timeStr, dateShort, genTs, logoSrc,
     cName, cPhone, cId, cEmail, payTh, payMethod, dobStr,

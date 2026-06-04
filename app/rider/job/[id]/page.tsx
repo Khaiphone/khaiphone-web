@@ -11,14 +11,14 @@ import {
   riderCustomerAccepted, riderCustomerRejected,
   riderCompleteCash, riderCompleteTransfer, riderRequestTransfer,
 } from "@/app/actions/rider";
-import { saveContractUrls, markContractSigned } from "@/app/actions/admin-requests";
+import { saveContractUrls, markContractSigned, savePaymentSlip } from "@/app/actions/admin-requests";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
 import { validateImageFile } from "@/lib/validate-file";
 import { useRiderTheme } from "@/app/rider/theme";
 import { fetchMyProfile } from "@/app/actions/admin-users";
 import type { AdminRequest, InspectionCriterion, FunctionalTest } from "@/lib/types/admin";
-import { FONT_LINK, DOC_CSS, buildContractPage, buildReceiptPage, thDate, thTime, shortDate } from "@/lib/contract-builder";
+import { FONT_LINK, DOC_CSS, buildContractPage, buildReceiptPage, thDate, thTime, shortDate, SLIP_PLACEHOLDER, SLIP_BLOCK } from "@/lib/contract-builder";
 import type { ContractDevice, ContractCtx } from "@/lib/contract-builder";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -600,11 +600,13 @@ function ContractStep({ job, reload, riderName, c }: { job: AdminRequest; reload
   const [contractSigned, setContractSigned] = useState(!!job.payment.contractSignedAt);
   const [transferBusy, setTransferBusy] = useState(false);
   const [transferNotified, setTransferNotified] = useState(false);
-  const [slipDataUrl, setSlipDataUrl] = useState<string | null>(null);
-  const [slipStorageUrl, setSlipStorageUrl] = useState<string | null>(null);
   const [slipUploading, setSlipUploading] = useState(false);
   const [completingBusy, setCompletingBusy] = useState(false);
   const slipFileRef = useRef<HTMLInputElement>(null!);
+
+  // Animate when slip arrives via real-time
+  const [slipJustArrived, setSlipJustArrived] = useState(false);
+  const prevSlipRef = useRef(job.payment.slipUrl);
 
   const inputSt: React.CSSProperties = { width: "100%", padding: "9px 11px", borderRadius: 8, border: `1px solid ${c.BORDER}`, background: c.CARD2, fontSize: 14, color: c.TEXT, fontFamily: "inherit", outline: "none" };
   const labelSt: React.CSSProperties = { display: "block", fontSize: 12, fontWeight: 600, color: c.TEXT2, marginBottom: 4 };
@@ -688,17 +690,24 @@ function ContractStep({ job, reload, riderName, c }: { job: AdminRequest; reload
     window.open(publicUrl, "_blank");
   }
 
-  async function handleSlipPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+  useEffect(() => {
+    if (job.payment.slipUrl && !prevSlipRef.current) {
+      setSlipJustArrived(true);
+      const t = setTimeout(() => setSlipJustArrived(false), 3000);
+      return () => clearTimeout(t);
+    }
+    prevSlipRef.current = job.payment.slipUrl;
+  }, [job.payment.slipUrl]);
+
+  async function handleRiderSlipUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return;
     const v = validateImageFile(file); if (!v.valid) { alert((v as { valid:false;error:string }).error); return; }
     setSlipUploading(true);
     try {
       const compressed = await compressImage(file);
-      const reader = new FileReader();
-      reader.onload = ev => setSlipDataUrl(ev.target!.result as string);
-      reader.readAsDataURL(compressed);
       const storageUrl = await uploadPhoto(compressed, `rider/${job.id}/slip-${Date.now()}.jpg`);
-      setSlipStorageUrl(storageUrl);
+      await savePaymentSlip(job.id, storageUrl);
+      // job.payment.slipUrl จะอัปเดตผ่าน real-time subscription
     } catch { setError("อัปโหลดสลิปไม่สำเร็จ"); }
     finally { setSlipUploading(false); e.target.value = ""; }
   }
@@ -711,9 +720,37 @@ function ContractStep({ job, reload, riderName, c }: { job: AdminRequest; reload
   }
 
   async function handleCompleteTransfer() {
+    const slipUrl = job.payment.slipUrl;
+    if (!slipUrl) { setError("ยังไม่มีสลิปโอนเงิน"); return; }
     setCompletingBusy(true);
-    await riderCompleteTransfer(job.id, slipStorageUrl ?? undefined);
-    reload();
+    setError("");
+    try {
+      // Patch receipt HTML: inject slip image into the stored HTML file
+      if (job.receiptUrl) {
+        try {
+          const { data: { publicUrl: receiptPublicUrl } } = supabase.storage.from("inspection-photos").getPublicUrl(job.receiptUrl);
+          const [receiptResp, slipResp] = await Promise.all([
+            fetch(receiptPublicUrl),
+            fetch(slipUrl),
+          ]);
+          let receiptHtml = await receiptResp.text();
+          const slipBlob = await slipResp.blob();
+          const slipDataUrl = await new Promise<string>(res => {
+            const rd = new FileReader(); rd.onload = () => res(rd.result as string); rd.readAsDataURL(slipBlob);
+          });
+          receiptHtml = receiptHtml.replace(SLIP_PLACEHOLDER, SLIP_BLOCK(slipDataUrl));
+          const rBlob = new Blob([receiptHtml], { type: "text/html;charset=utf-8" });
+          await supabase.storage.from("inspection-photos").upload(job.receiptUrl, rBlob, { upsert: true, contentType: "text/html" });
+        } catch (e) {
+          console.error("Receipt slip patch failed (non-fatal):", e);
+        }
+      }
+      await riderCompleteTransfer(job.id, slipUrl);
+      reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "เกิดข้อผิดพลาด");
+      setCompletingBusy(false);
+    }
   }
 
   async function handleGenerate() {
@@ -943,6 +980,22 @@ function ContractStep({ job, reload, riderName, c }: { job: AdminRequest; reload
 
           {payMethod === "transfer" && (
             <>
+              <style>{`
+                @keyframes slip-arrive {
+                  0%   { opacity: 0; transform: translateY(12px) scale(0.97); }
+                  60%  { opacity: 1; transform: translateY(-3px) scale(1.01); }
+                  100% { opacity: 1; transform: translateY(0) scale(1); }
+                }
+                @keyframes pulse-ring {
+                  0%, 100% { box-shadow: 0 0 0 0 rgba(74,222,128,0.35); }
+                  50%       { box-shadow: 0 0 0 8px rgba(74,222,128,0); }
+                }
+                @keyframes waiting-pulse {
+                  0%, 100% { opacity: 1; }
+                  50%       { opacity: 0.45; }
+                }
+              `}</style>
+
               {/* Step 1: Notify Finance */}
               <div style={{ background: c.CARD, border: `1px solid ${c.BORDER}`, borderRadius: 12, padding: "14px 16px" }}>
                 <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: c.TEXT }}>📤 แจ้ง Finance โอนเงิน</p>
@@ -960,20 +1013,52 @@ function ContractStep({ job, reload, riderName, c }: { job: AdminRequest; reload
                 />
               </div>
 
-              {/* Step 2: Upload slip + confirm */}
-              <div style={{ background: c.CARD, border: `1px solid ${c.BORDER}`, borderRadius: 12, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: c.TEXT }}>📎 ยืนยันโอนสำเร็จ</p>
-                <p style={{ margin: 0, fontSize: 12, color: c.TEXT2 }}>อัปโหลดสลิปหลังจาก Finance โอนแล้ว แล้วกดยืนยัน</p>
-                {slipDataUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={slipDataUrl} alt="สลิปโอนเงิน" style={{ width: "100%", maxHeight: 240, objectFit: "contain", borderRadius: 8, border: `1px solid ${c.GREEN}` }} />
+              {/* Step 2: Slip — single source of truth: job.payment.slipUrl */}
+              <div style={{ background: c.CARD, border: `1px solid ${job.payment.slipUrl ? c.GREEN : c.BORDER}`, borderRadius: 12, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10, transition: "border-color 0.4s" }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: c.TEXT }}>💳 หลักฐานการโอนเงิน</p>
+
+                {job.payment.slipUrl ? (
+                  <div style={{ animation: slipJustArrived ? "slip-arrive 0.4s ease-out" : "none", display: "flex", flexDirection: "column", gap: 10 }}>
+                    {/* Success banner */}
+                    <div style={{ background: "rgba(74,222,128,0.10)", border: `1px solid ${c.GREEN}`, borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, animation: slipJustArrived ? "pulse-ring 0.6s ease-out" : "none" }}>
+                      <span style={{ fontSize: 20 }}>✅</span>
+                      <div>
+                        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: c.GREEN }}>
+                          {slipJustArrived ? "Finance โอนเงินแล้ว!" : "มีสลิปโอนเงินแล้ว"}
+                        </p>
+                        <p style={{ margin: 0, fontSize: 11, color: c.TEXT2 }}>กดยืนยันเพื่อจบงาน</p>
+                      </div>
+                    </div>
+                    {/* Slip image */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={job.payment.slipUrl} alt="สลิปโอนเงิน" style={{ width: "100%", maxHeight: 280, objectFit: "contain", borderRadius: 10, border: `1px solid ${c.GREEN}` }} />
+                    {/* Allow replacing */}
+                    <button onClick={() => slipFileRef.current?.click()} disabled={slipUploading} style={{ background: "none", border: "none", color: c.TEXT2, fontSize: 12, cursor: "pointer", fontFamily: "inherit", padding: 0, textDecoration: "underline", opacity: slipUploading ? 0.5 : 1 }}>
+                      {slipUploading ? "กำลังอัปโหลด..." : "เปลี่ยนสลิป"}
+                    </button>
+                    <BigBtn label="ยืนยันโอนสำเร็จ →" color={c.GREEN} loading={completingBusy} onClick={handleCompleteTransfer} />
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {/* Waiting indicator */}
+                    <div style={{ background: c.CARD2, borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, animation: "waiting-pulse 2s ease-in-out infinite" }}>
+                      <span style={{ fontSize: 22 }}>⏳</span>
+                      <div>
+                        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: c.TEXT }}>รอ Finance แนบสลิป...</p>
+                        <p style={{ margin: 0, fontSize: 11, color: c.TEXT2 }}>สลิปจะปรากฏที่นี่ทันทีที่โอนแล้ว</p>
+                      </div>
+                    </div>
+                    {/* Or rider uploads themselves */}
+                    <p style={{ margin: 0, fontSize: 12, color: c.TEXT2, textAlign: "center" }}>— หรือ —</p>
+                    <button onClick={() => slipFileRef.current?.click()} disabled={slipUploading} style={{ width: "100%", padding: "12px", borderRadius: 10, border: `1.5px dashed ${c.BORDER}`, background: c.CARD, color: c.TEXT2, fontSize: 13, cursor: slipUploading ? "default" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: slipUploading ? 0.6 : 1 }}>
+                      <Camera size={16} />
+                      {slipUploading ? "กำลังอัปโหลด..." : "📎 ฉันโอนเองและแนบสลิป"}
+                    </button>
+                    <BigBtn label="ยืนยันโอนสำเร็จ →" disabled loading={completingBusy} onClick={handleCompleteTransfer} />
+                  </div>
                 )}
-                <button onClick={() => slipFileRef.current?.click()} disabled={slipUploading} style={{ width: "100%", padding: "12px", borderRadius: 10, border: `1.5px dashed ${slipDataUrl ? c.GREEN : c.BORDER}`, background: slipDataUrl ? "rgba(74,222,128,0.06)" : c.CARD, color: slipDataUrl ? c.GREEN : c.TEXT2, fontSize: 13, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: slipUploading ? 0.6 : 1 }}>
-                  <Camera size={16} />
-                  {slipUploading ? "กำลังอัปโหลด..." : slipDataUrl ? "เปลี่ยนสลิป ✓" : "ถ่าย/อัปโหลดสลิป"}
-                </button>
-                <input ref={slipFileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleSlipPhoto} />
-                <BigBtn label="ยืนยันโอนสำเร็จ →" loading={completingBusy} onClick={handleCompleteTransfer} />
+
+                <input ref={slipFileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleRiderSlipUpload} />
               </div>
             </>
           )}

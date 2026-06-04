@@ -592,6 +592,7 @@ export async function savePaymentSlip(id: string, slipUrl: string) {
     .update({ payment_slip_url: slipUrl, updated_at: now })
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
+  after(() => broadcastRequestUpdate(id));
   return { success: true as const };
 }
 
