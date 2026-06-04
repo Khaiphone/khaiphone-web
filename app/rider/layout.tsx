@@ -113,6 +113,14 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
     document.body.style.background = BG;
   }, [BG]);
 
+  // iOS Safari scrolls window when keyboard opens even with overflow:hidden,
+  // causing the header to disappear offscreen. Reset immediately on every scroll.
+  useEffect(() => {
+    const resetScroll = () => { if (window.scrollY !== 0) window.scrollTo(0, 0); };
+    window.addEventListener("scroll", resetScroll);
+    return () => window.removeEventListener("scroll", resetScroll);
+  }, []);
+
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) { router.replace("/admin/login"); return; }
