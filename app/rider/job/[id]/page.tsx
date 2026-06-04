@@ -329,17 +329,19 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
     try {
       const compressed = await compressImage(file);
       const buf = await compressed.arrayBuffer();
-      const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+      const bytes = new Uint8Array(buf);
+      let binary = "";
+      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+      const b64 = btoa(binary);
       const result = await scanDeviceInfo(b64);
       if (result.error) { setError(result.error); return; }
-      if (result.serial) {
-        setSerial(result.serial);
-        setSickwLoading(true);
-        const sickw = await checkSickw(result.serial);
-        if (!sickw.success) setSickwError(sickw.error ?? "เช็ค SICKW ไม่ได้");
-        else if (sickw.data) applySickwData(sickw.data);
-        setSickwLoading(false);
-      }
+      if (!result.serial) { setError("อ่าน S/N ไม่ได้ — ถ่ายให้ชัดขึ้น หรือกรอกเอง"); return; }
+      setSerial(result.serial);
+      setSickwLoading(true);
+      const sickw = await checkSickw(result.serial);
+      if (!sickw.success) setSickwError(sickw.error ?? "เช็ค SICKW ไม่ได้");
+      else if (sickw.data) applySickwData(sickw.data);
+      setSickwLoading(false);
     } catch { setError("สแกนไม่สำเร็จ กรุณากรอกเอง"); }
     finally { setScanning(false); if (scanRef.current) scanRef.current.value = ""; }
   }
