@@ -361,14 +361,14 @@ export default function JobDetailPage() {
         ) : job.status === "price_negotiation" ? (
           <>
             <BigBtn label="ดูสถานะราคา →" onClick={() => router.push(`/rider/job/${id}/price`)} />
-            <BigBtn label="แก้ไขการตรวจเครื่อง" color={BORDER} textColor={TEXT} onClick={() => router.push(`/rider/job/${id}/inspect`)} outline />
+            {job.inspection && <BigBtn label="แก้ไขการตรวจเครื่อง" color={BORDER} textColor={TEXT} onClick={() => router.push(`/rider/job/${id}/inspect`)} outline />}
           </>
         ) : job.status === "contracting" ? (
           <>
             {job.payment.contractSignedAt
               ? <BigBtn label="ไปหน้าชำระเงิน →" onClick={() => router.push(`/rider/job/${id}/payment`)} />
               : <BigBtn label="ไปหน้าสัญญา →" onClick={() => router.push(`/rider/job/${id}/contract`)} />}
-            <BigBtn label="แก้ไขการตรวจเครื่อง" color={BORDER} textColor={TEXT} onClick={() => router.push(`/rider/job/${id}/inspect`)} outline />
+            {job.inspection && <BigBtn label="แก้ไขการตรวจเครื่อง" color={BORDER} textColor={TEXT} onClick={() => router.push(`/rider/job/${id}/inspect`)} outline />}
           </>
 
         ) : job.status === "completed" ? (
