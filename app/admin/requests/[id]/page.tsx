@@ -1215,6 +1215,16 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                 request.inspection?.inspectedAt ? (
                   <div style={{ marginTop: 4 }}>
 
+                    {/* Source label */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#F0F9FF", border: "1px solid #BAE6FD", borderRadius: 8, padding: "7px 10px", marginBottom: 14 }}>
+                      <span style={{ fontSize: 13 }}>📋</span>
+                      <p style={{ margin: 0, fontSize: 12, color: "#0369A1", fontWeight: 600 }}>
+                        ผลตรวจสภาพจากเจ้าหน้าที่หน้างาน
+                        {request.riderName ? ` · ${request.riderName}` : ""}
+                        {request.inspection.inspectedAt ? ` · ${fmtDateTime(request.inspection.inspectedAt)} น.` : ""}
+                      </p>
+                    </div>
+
                     {/* Criteria: stated vs actual */}
                     {(request.inspection.criteria ?? []).length > 0 && (
                       <div style={{ marginBottom: 16 }}>
