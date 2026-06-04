@@ -45,6 +45,7 @@ export async function scanDeviceInfo(
 }
 
 export type SickwResult = {
+  imei?: string;
   device?: string;
   carrier?: string;
   carrierLock?: string;
@@ -55,7 +56,7 @@ export type SickwResult = {
 };
 
 export async function checkSickw(
-  imei: string
+  identifier: string  // accepts IMEI or Serial Number
 ): Promise<{ success: boolean; data?: SickwResult; error?: string }> {
   await requireAuth();
 
@@ -66,7 +67,7 @@ export async function checkSickw(
   if (!serviceId) return { success: false, error: "ยังไม่ได้ตั้งค่า SICKW_SERVICE_ID" };
 
   try {
-    const url = `https://sickw.com/api.php?format=json&key=${encodeURIComponent(apiKey)}&imei=${encodeURIComponent(imei)}&service=${encodeURIComponent(serviceId)}`;
+    const url = `https://sickw.com/api.php?format=json&key=${encodeURIComponent(apiKey)}&imei=${encodeURIComponent(identifier)}&service=${encodeURIComponent(serviceId)}`;
     const res  = await fetch(url, { next: { revalidate: 0 } });
     const json = await res.json();
 
@@ -78,6 +79,7 @@ export async function checkSickw(
     return {
       success: true,
       data: {
+        imei:          r.IMEI          ?? r.Imei          ?? r.imei,
         device:        r.Device        ?? r.device        ?? r.Model ?? r.model,
         carrier:       r.Carrier       ?? r.carrier,
         carrierLock:   r.CarrierLock   ?? r.simlock        ?? r.sim_lock,

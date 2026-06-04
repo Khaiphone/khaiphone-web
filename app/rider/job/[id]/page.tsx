@@ -306,24 +306,39 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   const [error, setError] = useState("");
 
   async function handleScan(file: File) {
-    setScanning(true); setError("");
+    setScanning(true); setError(""); setSickwResult(null); setSickwError("");
     try {
       const compressed = await compressImage(file);
       const buf = await compressed.arrayBuffer();
       const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
       const result = await scanDeviceInfo(b64);
       if (result.error) { setError(result.error); return; }
-      if (result.serial) setSerial(result.serial);
+      if (result.serial) {
+        setSerial(result.serial);
+        // Auto-check SICKW with Serial Number
+        setSickwLoading(true);
+        const sickw = await checkSickw(result.serial);
+        if (!sickw.success) setSickwError(sickw.error ?? "เช็ค SICKW ไม่ได้");
+        else {
+          setSickwResult(sickw.data ?? null);
+          if (sickw.data?.imei) setImei(sickw.data.imei);
+        }
+        setSickwLoading(false);
+      }
     } catch { setError("สแกนไม่สำเร็จ กรุณากรอกเอง"); }
     finally { setScanning(false); if (scanRef.current) scanRef.current.value = ""; }
   }
 
   async function handleSickwCheck() {
-    if (!imei.trim()) return;
+    const id = serial.trim() || imei.trim();
+    if (!id) return;
     setSickwLoading(true); setSickwResult(null); setSickwError("");
-    const res = await checkSickw(imei.trim());
-    if (!res.success) { setSickwError(res.error ?? "เช็ค SICKW ไม่ได้"); }
-    else              { setSickwResult(res.data ?? null); }
+    const res = await checkSickw(id);
+    if (!res.success) setSickwError(res.error ?? "เช็ค SICKW ไม่ได้");
+    else {
+      setSickwResult(res.data ?? null);
+      if (res.data?.imei) setImei(res.data.imei);
+    }
     setSickwLoading(false);
   }
 
@@ -484,11 +499,11 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
         </div>
         <Card c={c}>
           <div style={{ padding: "12px 16px", borderBottom: `1px solid ${c.BORDER}` }}>
-            <p style={{ margin: "0 0 4px", fontSize: 11, color: c.TEXT2 }}>IMEI</p>
+            <p style={{ margin: "0 0 4px", fontSize: 11, color: c.TEXT2 }}>Serial Number</p>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <input value={imei} onChange={e => { setImei(e.target.value); setSickwResult(null); setSickwError(""); }} placeholder="กรอก IMEI หรือ *#06#"
-                style={{ flex: 1, background: "none", border: "none", color: c.TEXT, fontSize: 15, fontFamily: "inherit", outline: "none" }} />
-              {imei.trim().length >= 14 && (
+              <input value={serial} onChange={e => { setSerial(e.target.value.toUpperCase()); setSickwResult(null); setSickwError(""); }} placeholder="กรอก Serial"
+                style={{ flex: 1, background: "none", border: "none", color: c.TEXT, fontSize: 15, fontFamily: "inherit", outline: "none", textTransform: "uppercase" }} />
+              {serial.trim().length >= 10 && !sickwResult && (
                 <button onClick={handleSickwCheck} disabled={sickwLoading}
                   style={{ flexShrink: 0, padding: "5px 10px", borderRadius: 8, background: "rgba(10,132,255,0.15)", border: "1px solid rgba(10,132,255,0.4)", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5, opacity: sickwLoading ? 0.6 : 1 }}>
                   {sickwLoading ? <Loader2 size={13} color="#0A84FF" style={{ animation: "spin 0.8s linear infinite" }} /> : <ShieldCheck size={13} color="#0A84FF" />}
@@ -497,9 +512,14 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
               )}
             </div>
           </div>
-          {(sickwResult || sickwError) && (
+          {(sickwResult || sickwError || sickwLoading) && (
             <div style={{ padding: "12px 16px", borderBottom: `1px solid ${c.BORDER}`, background: "rgba(10,132,255,0.05)" }}>
-              {sickwError ? (
+              {sickwLoading ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Loader2 size={14} color="#0A84FF" style={{ animation: "spin 0.8s linear infinite" }} />
+                  <span style={{ fontSize: 12, color: c.TEXT2 }}>กำลังเช็ค SICKW...</span>
+                </div>
+              ) : sickwError ? (
                 <p style={{ margin: 0, fontSize: 12, color: c.RED }}>{sickwError}</p>
               ) : sickwResult && (
                 <>
@@ -529,9 +549,9 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
             </div>
           )}
           <div style={{ padding: "12px 16px", borderBottom: `1px solid ${c.BORDER}` }}>
-            <p style={{ margin: "0 0 4px", fontSize: 11, color: c.TEXT2 }}>Serial Number</p>
-            <input value={serial} onChange={e => setSerial(e.target.value.toUpperCase())} placeholder="กรอก Serial"
-              style={{ width: "100%", background: "none", border: "none", color: c.TEXT, fontSize: 15, fontFamily: "inherit", outline: "none", textTransform: "uppercase" }} />
+            <p style={{ margin: "0 0 4px", fontSize: 11, color: c.TEXT2 }}>IMEI</p>
+            <input value={imei} onChange={e => setImei(e.target.value)} placeholder="กรอก IMEI (ไม่บังคับ)"
+              style={{ width: "100%", background: "none", border: "none", color: c.TEXT, fontSize: 15, fontFamily: "inherit", outline: "none" }} />
           </div>
           <div style={{ padding: "12px 16px", borderBottom: `1px solid ${c.BORDER}` }}>
             <p style={{ margin: "0 0 4px", fontSize: 11, color: c.TEXT2 }}>Battery Health</p>
