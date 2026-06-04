@@ -447,7 +447,7 @@ export async function updateStatus(
         color:          current.device_color ?? "",
         imei:           insp.imei   ?? "",
         serial:         insp.serial ?? "",
-        grade:          insp.result === "matched" ? "A" : insp.result === "adjusted" ? "B" : "A",
+        grade:          insp.conditionGrade ?? (insp.result === "matched" ? "A" : insp.result === "adjusted" ? "B" : "A"),
         battery_health: insp.batteryHealth ?? 0,
         cycle_count:    insp.batteryCycles ?? 0,
         icloud_status:  "", carrier_lock:  "", accessories:  "",

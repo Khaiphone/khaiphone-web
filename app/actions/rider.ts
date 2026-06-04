@@ -41,7 +41,7 @@ async function autoCreateStock(requestId: string) {
     color:          current.device_color   ?? "",
     imei:           insp.imei    ?? "",
     serial:         insp.serial  ?? "",
-    grade:          insp.result === "matched" ? "A" : insp.result === "adjusted" ? "B" : "A",
+    grade:          insp.conditionGrade ?? (insp.result === "matched" ? "A" : insp.result === "adjusted" ? "B" : "A"),
     battery_health: insp.batteryHealth ?? 0,
     cycle_count:    insp.batteryCycles ?? 0,
     icloud_status:  "", carrier_lock: "", accessories: "",
@@ -305,6 +305,8 @@ export async function riderSaveInspection(id: string, inspection: {
   deliveryPhotoUrl?: string;
   sickw_report?: string;
   accessories?: string[];
+  conditionGrade?: string;
+  conditionLabel?: string;
 }) {
   await requireAuth();
   const supabase = createServerClient();

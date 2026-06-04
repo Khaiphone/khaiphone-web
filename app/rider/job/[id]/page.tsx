@@ -57,6 +57,22 @@ const FUNCTIONAL_DEFAULTS: FunctionalTest[] = [
   { label: "ปุ่มด้านข้าง / Volume", pass: true },
 ];
 
+const GRADE_OPTIONS: { value: string; color: string }[] = [
+  { value: "A",  color: "#22c55e" },
+  { value: "A-", color: "#84cc16" },
+  { value: "B+", color: "#eab308" },
+  { value: "B",  color: "#f97316" },
+  { value: "B-", color: "#fb923c" },
+  { value: "C",  color: "#ef4444" },
+];
+
+const CONDITION_OPTIONS: { value: string; color: string }[] = [
+  { value: "สภาพดีมาก", color: "#22c55e" },
+  { value: "สภาพดี",    color: "#84cc16" },
+  { value: "สภาพพอใช้", color: "#eab308" },
+  { value: "มีตำหนิ",   color: "#ef4444" },
+];
+
 // ── Utilities ──────────────────────────────────────────────────────────────────
 
 function getDeviceImage(model: string): string {
@@ -308,6 +324,8 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   const savedAcc = (job.inspection as { accessories?: string[] } | undefined)?.accessories;
   const [accessories, setAccessories] = useState<string[]>(savedAcc ?? ["ตัวเครื่อง"]);
   const [accessoriesOther, setAccessoriesOther] = useState("");
+  const [conditionGrade, setConditionGrade] = useState<string>((job.inspection as { conditionGrade?: string } | undefined)?.conditionGrade ?? "");
+  const [conditionLabel, setConditionLabel] = useState<string>((job.inspection as { conditionLabel?: string } | undefined)?.conditionLabel ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -450,6 +468,8 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
         criteria: criteriaArr, functionalTests: functional, photos,
         sickw_report: sickwRaw || undefined,
         accessories: accList.length ? accList : undefined,
+        conditionGrade: conditionGrade || undefined,
+        conditionLabel: conditionLabel || undefined,
       });
       if (!result.success) { setError((result as { success: false; error?: string }).error ?? "เกิดข้อผิดพลาด"); return; }
       setShowPrice(true);
@@ -733,6 +753,53 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
         <div style={{ padding: "0 16px 12px" }}>
           <input placeholder="อื่นๆ (เช่น คู่มือ, หูฟัง)" value={accessoriesOther} onChange={e => setAccessoriesOther(e.target.value)}
             style={{ width: "100%", background: "none", border: `1px solid ${c.BORDER}`, borderRadius: 8, padding: "8px 10px", color: c.TEXT, fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+        </div>
+      </Card>
+
+      {/* Overall Assessment */}
+      <Card c={c}>
+        <CardHead icon={null} title="สรุปการประเมิน" c={c} />
+        <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <p style={{ margin: "0 0 8px", fontSize: 11, color: c.TEXT2, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>เกรด</p>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {GRADE_OPTIONS.map(g => {
+                const active = conditionGrade === g.value;
+                return (
+                  <button key={g.value} onClick={() => setConditionGrade(prev => prev === g.value ? "" : g.value)}
+                    style={{ minWidth: 48, padding: "8px 14px", borderRadius: 9, border: `2px solid ${active ? g.color : c.BORDER}`, background: active ? `${g.color}22` : c.CARD2, color: active ? g.color : c.TEXT2, fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", transition: "border-color 0.15s, background 0.15s" }}>
+                    {g.value}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <p style={{ margin: "0 0 8px", fontSize: 11, color: c.TEXT2, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>สภาพสินค้า</p>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {CONDITION_OPTIONS.map(o => {
+                const active = conditionLabel === o.value;
+                return (
+                  <button key={o.value} onClick={() => setConditionLabel(prev => prev === o.value ? "" : o.value)}
+                    style={{ padding: "8px 14px", borderRadius: 9, border: `2px solid ${active ? o.color : c.BORDER}`, background: active ? `${o.color}22` : c.CARD2, color: active ? o.color : c.TEXT2, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit", transition: "border-color 0.15s, background 0.15s" }}>
+                    {o.value}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          {(conditionGrade || conditionLabel) && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 9, background: c.CARD2, border: `1px solid ${c.BORDER}` }}>
+              {conditionGrade && (
+                <span style={{ padding: "3px 12px", borderRadius: 6, background: `${GRADE_OPTIONS.find(g => g.value === conditionGrade)?.color ?? c.ACCENT}22`, color: GRADE_OPTIONS.find(g => g.value === conditionGrade)?.color ?? c.ACCENT, fontWeight: 700, fontSize: 14 }}>
+                  {conditionGrade}
+                </span>
+              )}
+              {conditionLabel && (
+                <span style={{ fontSize: 13, color: c.TEXT, fontWeight: 500 }}>{conditionLabel}</span>
+              )}
+            </div>
+          )}
         </div>
       </Card>
 
@@ -1059,7 +1126,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
         model: r.device.model,
         storage: r.device.storage,
         color: deviceColor,
-        condition: r.device.condition,
+        condition: (r.inspection as { conditionLabel?: string } | undefined)?.conditionLabel || r.device.condition,
         imei,
         serial,
         accessories: accList,
