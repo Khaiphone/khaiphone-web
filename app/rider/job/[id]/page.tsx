@@ -1171,8 +1171,22 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
       const printCSS = "@media print{.header,.footer{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{max-width:none}}";
       const wrap = (body: string) => `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">${FONT_LINK}<style>${DOC_CSS}${printCSS}</style></head><body>${body}</body></html>`;
 
-      // Lightweight HTML (no base64 photos) — stored in Supabase storage
-      const ctxLight = { ...ctx, idPhotoDataUrl: null, custProdPhotoDataUrl: null, slipImgSrc: "" };
+      // Upload photos to storage for permanent legal record
+      const uploadImg = async (dataUrl: string, path: string): Promise<string | null> => {
+        try {
+          const blob = await (await fetch(dataUrl)).blob();
+          const { data } = await supabase.storage.from("inspection-photos").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+          if (!data) return null;
+          return supabase.storage.from("inspection-photos").getPublicUrl(data.path).data.publicUrl;
+        } catch { return null; }
+      };
+      const [idPhotoUrl, custProdUrl] = await Promise.all([
+        idPhotoDataUrl  ? uploadImg(idPhotoDataUrl,  `rider/${job.id}/id-card.jpg`)   : Promise.resolve(null),
+        custProdPhotoDataUrl ? uploadImg(custProdPhotoDataUrl, `rider/${job.id}/cust-prod.jpg`) : Promise.resolve(null),
+      ]);
+
+      // Stored HTML uses storage URLs (small) instead of base64 data URLs (large)
+      const ctxLight = { ...ctx, idPhotoDataUrl: idPhotoUrl, custProdPhotoDataUrl: custProdUrl, slipImgSrc: "" };
       const cBodyLight = buildContractPage(dev, 0, true, ctxLight);
       const rBodyLight = buildReceiptPage(dev, 0, true, ctxLight);
 
