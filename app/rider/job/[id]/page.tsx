@@ -576,6 +576,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
   const [address, setAddress] = useState(job.customer.address ?? "");
   const [serial, setSerial] = useState((job.inspection?.serial ?? "").toUpperCase());
   const [imei, setImei] = useState(job.inspection?.imei ?? "");
+  const [deviceColor, setDeviceColor] = useState(job.device.color ?? "");
   const [accessories, setAccessories] = useState<string[]>(["ตัวเครื่อง"]);
   const [accessoriesOther, setAccessoriesOther] = useState("");
   const [txDate, setTxDate] = useState(new Date().toISOString().slice(0, 10));
@@ -760,7 +761,13 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
   }
 
   async function handleGenerate() {
-    setGenerating(true); setError("");
+    setError("");
+    const idDigits = idNumber.replace(/\D/g, "");
+    if (!buyerName.trim())       { setError("กรุณากรอกชื่อ-นามสกุลผู้ขาย"); return; }
+    if (idDigits.length !== 13)  { setError("กรุณากรอกเลขบัตรประชาชนให้ครบ 13 หลัก"); return; }
+    if (!imei.trim())            { setError("กรุณากรอก IMEI"); return; }
+    if (!serial.trim())          { setError("กรุณากรอก Serial Number"); return; }
+    setGenerating(true);
     try {
       const r = job;
       const now = new Date();
@@ -783,7 +790,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
         label: "",
         model: r.device.model,
         storage: r.device.storage,
-        color: r.device.color ?? "",
+        color: deviceColor,
         condition: r.device.condition,
         imei,
         serial,
@@ -870,8 +877,9 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
+      <fieldset disabled={contractSigned} style={{ border: "none", padding: 0, margin: 0, opacity: contractSigned ? 0.55 : 1 }}>
       <div style={{ background: c.CARD, border: `1px solid ${c.BORDER}`, borderRadius: 14, overflow: "hidden" }}>
-        <div style={{ padding: "10px 14px", borderBottom: `1px solid ${c.BORDER}`, background: c.CARD2, fontSize: 13, fontWeight: 700, color: c.TEXT }}>ข้อมูลสัญญา</div>
+        <div style={{ padding: "10px 14px", borderBottom: `1px solid ${c.BORDER}`, background: c.CARD2, fontSize: 13, fontWeight: 700, color: c.TEXT }}>ข้อมูลสัญญา {contractSigned && <span style={{ fontSize: 11, color: c.GREEN, marginLeft: 6 }}>✓ ล็อกแล้ว</span>}</div>
         <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
 
           <div><label style={labelSt}>ชื่อ-นามสกุลผู้ขาย</label>
@@ -895,6 +903,9 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
             <div><label style={labelSt}>Serial Number</label>
               <input value={serial} onChange={e=>setSerial(e.target.value.toUpperCase())} style={{ ...inputSt, fontFamily:"monospace", textTransform:"uppercase" }} /></div>
           </div>
+
+          <div><label style={labelSt}>สีตัวเครื่อง</label>
+            <input value={deviceColor} onChange={e=>setDeviceColor(e.target.value)} placeholder="เช่น Black Titanium, Natural" style={inputSt} /></div>
 
           <div><label style={labelSt}>วิธีชำระเงิน</label>
             <select value={payMethod} onChange={e=>setPayMethod(e.target.value as "cash"|"transfer")} style={{ ...inputSt, appearance:"none", WebkitAppearance:"none" }}>
@@ -971,6 +982,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
           )}
         </div>
       </div>
+      </fieldset>
 
       {error && <p style={{ margin: 0, fontSize: 13, color: c.RED }}>{error}</p>}
 
