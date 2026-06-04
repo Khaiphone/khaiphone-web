@@ -1366,32 +1366,30 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         {/* J. Contract button — rider job: view only; branch job: generate */}
         {(["contracting", "awaiting_transfer", "completed"] as RequestStatus[]).includes(request.status) && (
           request.riderId ? (
-            /* Rider is handling this job — admin can only view, not regenerate */
             request.contractUrl ? (
               <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
                 <button
                   onClick={() => openAdminDoc(request.contractUrl!)}
-                  style={{ flex: 1, background: "#1a1a2e", border: "none", borderRadius: 12, padding: "13px", color: "#F0C040", fontSize: 14, fontWeight: 700, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit" }}
+                  style={{ flex: 1, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "13px", color: TEXT, fontSize: 14, fontWeight: 600, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit" }}
                 >
                   ดูสัญญาซื้อขาย ↗
                 </button>
                 {request.receiptUrl && (
                   <button
                     onClick={() => openAdminDoc(request.receiptUrl!)}
-                    style={{ flex: 1, background: "#1a1a2e", border: "none", borderRadius: 12, padding: "13px", color: "#F0C040", fontSize: 14, fontWeight: 700, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit" }}
+                    style={{ flex: 1, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "13px", color: TEXT, fontSize: 14, fontWeight: 600, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit" }}
                   >
                     ดูใบรับเงิน ↗
                   </button>
                 )}
               </div>
             ) : (
-              <div style={{ marginBottom: 10, background: "#F8F8FA", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "14px", textAlign: "center" }}>
+              <div style={{ marginBottom: 10, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "14px", textAlign: "center" }}>
                 <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 600, color: TEXT2 }}>รอไรเดอร์ออกเอกสาร</p>
                 <p style={{ margin: 0, fontSize: 12, color: TEXT3 }}>สัญญาและใบรับเงินจะปรากฏที่นี่เมื่อไรเดอร์บันทึก</p>
               </div>
             )
           ) : (
-            /* Branch/manual job — admin generates contract */
             <button
               onClick={async () => {
                 const effectiveColor = request.device.color || currentColorDraft;
@@ -1406,7 +1404,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                 }
                 router.push(`/admin/requests/${id}/contract`);
               }}
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "#1a1a2e", border: "none", borderRadius: 12, padding: "14px", color: "#F0C040", fontSize: 15, fontWeight: 700, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit", marginBottom: 10 }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: GOLD, border: "none", borderRadius: 12, padding: "14px", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit", marginBottom: 10 }}
             >
               ออกสัญญาซื้อขาย + ใบรับเงิน
             </button>
@@ -1437,32 +1435,32 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                 {(request.status === "contracting" || request.status === "awaiting_transfer") &&
                  request.payment.method === "transfer" &&
                  !request.payment.slipUrl && (
-                  <div style={{ borderLeft: "3px solid #1a1a2e", background: "#F8F8FA", borderRadius: "0 8px 8px 0", padding: "12px 14px", marginBottom: 14 }}>
-                    <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#888" }}>รอดำเนินการ</p>
-                    <p style={{ margin: "0 0 8px", fontSize: 15, fontWeight: 700, color: "#111" }}>
+                  <div style={{ borderLeft: `3px solid ${GOLD}`, background: BG, borderRadius: "0 10px 10px 0", padding: "12px 14px", marginBottom: 14 }}>
+                    <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: GOLD }}>รอดำเนินการ</p>
+                    <p style={{ margin: "0 0 6px", fontSize: 15, fontWeight: 700, color: TEXT }}>
                       โอนเงิน ฿{(request.inspection?.actualPrice ?? request.device.estimatedPrice).toLocaleString("th-TH")} ให้ลูกค้า
                     </p>
-                    <p style={{ margin: "0 0 10px", fontSize: 12, color: "#555", lineHeight: 1.5 }}>
+                    <p style={{ margin: "0 0 10px", fontSize: 12, color: TEXT2, lineHeight: 1.5 }}>
                       โอนเสร็จแล้วแนบสลิปด้านล่าง ไรเดอร์จะเห็นทันที
                     </p>
                     {(request.payment.bankName || request.payment.accountNumber || request.payment.accountName) && (
-                      <div style={{ background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 6, overflow: "hidden" }}>
+                      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, overflow: "hidden" }}>
                         {request.payment.bankName && (
                           <div style={{ display: "flex", borderBottom: request.payment.accountName || request.payment.accountNumber ? `1px solid ${BORDER}` : "none", padding: "7px 10px", gap: 8 }}>
-                            <span style={{ fontSize: 11, color: "#888", minWidth: 56 }}>ธนาคาร</span>
-                            <span style={{ fontSize: 12, fontWeight: 600, color: "#111" }}>{request.payment.bankName}</span>
+                            <span style={{ fontSize: 11, color: TEXT3, minWidth: 56 }}>ธนาคาร</span>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: TEXT }}>{request.payment.bankName}</span>
                           </div>
                         )}
                         {request.payment.accountName && (
                           <div style={{ display: "flex", borderBottom: request.payment.accountNumber ? `1px solid ${BORDER}` : "none", padding: "7px 10px", gap: 8 }}>
-                            <span style={{ fontSize: 11, color: "#888", minWidth: 56 }}>ชื่อบัญชี</span>
-                            <span style={{ fontSize: 12, fontWeight: 600, color: "#111" }}>{request.payment.accountName}</span>
+                            <span style={{ fontSize: 11, color: TEXT3, minWidth: 56 }}>ชื่อบัญชี</span>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: TEXT }}>{request.payment.accountName}</span>
                           </div>
                         )}
                         {request.payment.accountNumber && (
                           <div style={{ display: "flex", padding: "7px 10px", gap: 8 }}>
-                            <span style={{ fontSize: 11, color: "#888", minWidth: 56 }}>เลขบัญชี</span>
-                            <span style={{ fontSize: 12, fontWeight: 600, color: "#111", fontFamily: "monospace", letterSpacing: "0.05em" }}>{request.payment.accountNumber}</span>
+                            <span style={{ fontSize: 11, color: TEXT3, minWidth: 56 }}>เลขบัญชี</span>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: TEXT, fontFamily: "monospace", letterSpacing: "0.05em" }}>{request.payment.accountNumber}</span>
                           </div>
                         )}
                       </div>
@@ -1501,9 +1499,9 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                       display: "block", width: "100%", borderRadius: 10, padding: "14px 0",
                       fontSize: 14, fontWeight: 700, cursor: slipUploading ? "default" : "pointer",
                       fontFamily: "inherit", touchAction: "manipulation", opacity: slipUploading ? 0.7 : 1,
-                      background: ["contracting","awaiting_transfer"].includes(request.status) && request.payment.method === "transfer" ? "#1a1a2e" : "#F5F5F7",
-                      color:      ["contracting","awaiting_transfer"].includes(request.status) && request.payment.method === "transfer" ? "#fff"  : TEXT2,
-                      border: "none",
+                      background: ["contracting","awaiting_transfer"].includes(request.status) && request.payment.method === "transfer" ? GOLD : BG,
+                      color:      ["contracting","awaiting_transfer"].includes(request.status) && request.payment.method === "transfer" ? "#fff" : TEXT2,
+                      border: ["contracting","awaiting_transfer"].includes(request.status) && request.payment.method === "transfer" ? "none" : `1px solid ${BORDER}`,
                     }}
                   >
                     {slipUploading ? "กำลังอัพโหลด..." : "แนบสลิปโอนเงิน"}
