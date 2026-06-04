@@ -313,7 +313,6 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
       const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
       const result = await scanDeviceInfo(b64);
       if (result.error) { setError(result.error); return; }
-      if (result.imei)   setImei(result.imei);
       if (result.serial) setSerial(result.serial);
     } catch { setError("สแกนไม่สำเร็จ กรุณากรอกเอง"); }
     finally { setScanning(false); if (scanRef.current) scanRef.current.value = ""; }

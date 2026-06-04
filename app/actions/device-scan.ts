@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/require-auth";
 
 export async function scanDeviceInfo(
   base64Image: string
-): Promise<{ imei?: string; serial?: string; error?: string }> {
+): Promise<{ serial?: string; error?: string }> {
   await requireAuth();
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -25,7 +25,7 @@ export async function scanDeviceInfo(
           },
           {
             type: "text",
-            text: 'This is a screenshot of an iPhone Settings > General > About screen. Extract ONLY the IMEI (15-digit number) and Serial Number values. Return valid JSON only: {"imei":"...","serial":"..."}. Use null for any value not visible.',
+            text: 'This is a screenshot of an iPhone Settings > General > About screen. Extract ONLY the Serial Number value. Return valid JSON only: {"serial":"..."}. Use null if not visible.',
           },
         ],
       }],
@@ -37,7 +37,6 @@ export async function scanDeviceInfo(
 
     const parsed = JSON.parse(match[0]);
     return {
-      imei:   parsed.imei   && parsed.imei   !== "null" ? String(parsed.imei)   : undefined,
       serial: parsed.serial && parsed.serial !== "null" ? String(parsed.serial) : undefined,
     };
   } catch (e) {
