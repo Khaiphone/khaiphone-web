@@ -1221,7 +1221,7 @@ function SellModelPageContent() {
     try { localStorage.setItem("khaiphone_submission", JSON.stringify({ ...submission, submittedAt: new Date().toISOString() })); } catch {}
     try { localStorage.removeItem(WIZARD_KEY); } catch {}
     try { localStorage.removeItem(BUNDLE_KEY); localStorage.removeItem(BUNDLE_RETURN_KEY); } catch {}
-    router.push(successUrl);
+    router.replace(successUrl);
   }
 
   const effectiveGroupOptions: PricingOption[][] = product

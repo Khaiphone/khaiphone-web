@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
-import { ArrowLeft, Phone, MapPin, Camera, AlertTriangle, CheckCircle2, ExternalLink } from "lucide-react";
+import { ArrowLeft, Phone, MapPin, Camera, AlertTriangle, CheckCircle2, ExternalLink, ScanLine, ShieldCheck, ShieldAlert, ShieldX, Loader2 } from "lucide-react";
+import { scanDeviceInfo, checkSickw } from "@/app/actions/device-scan";
+import type { SickwResult } from "@/app/actions/device-scan";
 import {
   fetchRiderJob, fetchRiderJobs,
   riderAcceptJob, riderStartJob, riderArriveJob, riderNoShow,
@@ -295,8 +297,36 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
     return init;
   });
   const [functional, setFunctional] = useState<FunctionalTest[]>(FUNCTIONAL_DEFAULTS.map(t => ({ ...t })));
+  const scanRef = useRef<HTMLInputElement>(null!);
+  const [scanning,     setScanning]     = useState(false);
+  const [sickwResult,  setSickwResult]  = useState<SickwResult | null>(null);
+  const [sickwError,   setSickwError]   = useState("");
+  const [sickwLoading, setSickwLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  async function handleScan(file: File) {
+    setScanning(true); setError("");
+    try {
+      const compressed = await compressImage(file);
+      const buf = await compressed.arrayBuffer();
+      const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+      const result = await scanDeviceInfo(b64);
+      if (result.error) { setError(result.error); return; }
+      if (result.imei)   setImei(result.imei);
+      if (result.serial) setSerial(result.serial);
+    } catch { setError("สแกนไม่สำเร็จ กรุณากรอกเอง"); }
+    finally { setScanning(false); if (scanRef.current) scanRef.current.value = ""; }
+  }
+
+  async function handleSickwCheck() {
+    if (!imei.trim()) return;
+    setSickwLoading(true); setSickwResult(null); setSickwError("");
+    const res = await checkSickw(imei.trim());
+    if (!res.success) { setSickwError(res.error ?? "เช็ค SICKW ไม่ได้"); }
+    else              { setSickwResult(res.data ?? null); }
+    setSickwLoading(false);
+  }
 
   // Price confirm sub-step (shown after inspection saved)
   const [showPrice, setShowPrice] = useState(!!job.inspection);
@@ -443,13 +473,62 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
 
       {/* Device info */}
       <div>
-        <SectionLabel c={c}>ข้อมูลเครื่อง</SectionLabel>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: c.TEXT2, textTransform: "uppercase", letterSpacing: 0.8 }}>ข้อมูลเครื่อง</p>
+          <button onClick={() => scanRef.current?.click()} disabled={scanning}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 10, background: "rgba(74,222,128,0.15)", border: `1px solid ${c.ACCENT}`, cursor: "pointer", fontFamily: "inherit", opacity: scanning ? 0.7 : 1 }}>
+            {scanning ? <Loader2 size={14} color={c.ACCENT} style={{ animation: "spin 0.8s linear infinite" }} /> : <ScanLine size={14} color={c.ACCENT} />}
+            <span style={{ fontSize: 13, fontWeight: 600, color: c.ACCENT }}>{scanning ? "กำลังอ่าน..." : "สแกน About"}</span>
+          </button>
+          <input ref={scanRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }}
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleScan(f); }} />
+        </div>
         <Card c={c}>
           <div style={{ padding: "12px 16px", borderBottom: `1px solid ${c.BORDER}` }}>
             <p style={{ margin: "0 0 4px", fontSize: 11, color: c.TEXT2 }}>IMEI</p>
-            <input value={imei} onChange={e => setImei(e.target.value)} placeholder="กรอก IMEI หรือ *#06#"
-              style={{ width: "100%", background: "none", border: "none", color: c.TEXT, fontSize: 15, fontFamily: "inherit", outline: "none" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input value={imei} onChange={e => { setImei(e.target.value); setSickwResult(null); setSickwError(""); }} placeholder="กรอก IMEI หรือ *#06#"
+                style={{ flex: 1, background: "none", border: "none", color: c.TEXT, fontSize: 15, fontFamily: "inherit", outline: "none" }} />
+              {imei.trim().length >= 14 && (
+                <button onClick={handleSickwCheck} disabled={sickwLoading}
+                  style={{ flexShrink: 0, padding: "5px 10px", borderRadius: 8, background: "rgba(10,132,255,0.15)", border: "1px solid rgba(10,132,255,0.4)", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5, opacity: sickwLoading ? 0.6 : 1 }}>
+                  {sickwLoading ? <Loader2 size={13} color="#0A84FF" style={{ animation: "spin 0.8s linear infinite" }} /> : <ShieldCheck size={13} color="#0A84FF" />}
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "#0A84FF" }}>SICKW</span>
+                </button>
+              )}
+            </div>
           </div>
+          {(sickwResult || sickwError) && (
+            <div style={{ padding: "12px 16px", borderBottom: `1px solid ${c.BORDER}`, background: "rgba(10,132,255,0.05)" }}>
+              {sickwError ? (
+                <p style={{ margin: 0, fontSize: 12, color: c.RED }}>{sickwError}</p>
+              ) : sickwResult && (
+                <>
+                  {(sickwResult.icloudStatus?.toLowerCase().includes("on") || sickwResult.carrierLock?.toLowerCase().includes("lock")) && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, padding: "6px 10px", borderRadius: 8, background: "rgba(255,69,58,0.12)", border: "1px solid rgba(255,69,58,0.3)" }}>
+                      <ShieldX size={14} color={c.RED} />
+                      <span style={{ fontSize: 12, fontWeight: 600, color: c.RED }}>ตรวจพบการล็อค — ตรวจสอบกับลูกค้า</span>
+                    </div>
+                  )}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {[
+                      ["รุ่น", sickwResult.device],
+                      ["iCloud", sickwResult.icloudStatus],
+                      ["Carrier Lock", sickwResult.carrierLock],
+                      ["Blacklist", sickwResult.blacklist],
+                      ["ประกัน", sickwResult.warrantyStatus],
+                      ["หมดประกัน", sickwResult.warrantyDate],
+                    ].filter(([, v]) => v).map(([label, value]) => (
+                      <div key={label as string} style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                        <span style={{ color: c.TEXT2 }}>{label}</span>
+                        <span style={{ color: c.TEXT, fontWeight: 500 }}>{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
           <div style={{ padding: "12px 16px", borderBottom: `1px solid ${c.BORDER}` }}>
             <p style={{ margin: "0 0 4px", fontSize: 11, color: c.TEXT2 }}>Serial Number</p>
             <input value={serial} onChange={e => setSerial(e.target.value.toUpperCase())} placeholder="กรอก Serial"
