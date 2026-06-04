@@ -741,33 +741,50 @@ export async function fetchRiderEarnings(riderId: string) {
   await requireAuth();
   const supabase = createServerClient();
 
-  const now   = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-  const weekStart = new Date(now);
+  const now        = new Date();
+  const today      = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  const weekStart  = new Date(now);
   weekStart.setDate(now.getDate() - now.getDay());
   weekStart.setHours(0, 0, 0, 0);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
   const { data } = await supabase
     .from("requests")
-    .select("status, actual_price, estimated_price, created_at, device_model, device_storage, order_number")
+    .select("status, actual_price, estimated_price, created_at, device_model, device_storage, order_number, status_log")
     .eq("rider_id", riderId)
-    .eq("status", "completed")
+    .in("status", ["completed", "cancelled", "no_show", "rejected"])
     .gte("created_at", monthStart)
     .order("created_at", { ascending: false });
 
-  const jobs = data ?? [];
+  const jobs      = data ?? [];
+  const completed = jobs.filter(j => j.status === "completed");
+  const todayDone = completed.filter(j => j.created_at >= today);
+  const weekDone  = completed.filter(j => j.created_at >= weekStart.toISOString());
 
-  const sum = (list: typeof jobs) =>
-    list.reduce((s, j) => s + ((j.actual_price ?? j.estimated_price) || 0), 0);
+  const totalValue = completed.reduce((s, j) => s + ((j.actual_price ?? j.estimated_price) || 0), 0);
 
-  const todayJobs   = jobs.filter(j => j.created_at >= today);
-  const weekJobs    = jobs.filter(j => j.created_at >= weekStart.toISOString());
+  const successRate = jobs.length > 0 ? Math.round((completed.length / jobs.length) * 100) : null;
+
+  // Average duration: en_route → completed from status_log
+  const durations: number[] = [];
+  for (const job of completed) {
+    const log = (job.status_log ?? []) as Array<{ status: string; timestamp: string }>;
+    const start = log.find(l => l.status === "en_route")?.timestamp;
+    const end   = [...log].reverse().find(l => l.status === "completed")?.timestamp;
+    if (start && end) {
+      const mins = (new Date(end).getTime() - new Date(start).getTime()) / 60_000;
+      if (mins > 0 && mins < 600) durations.push(mins);
+    }
+  }
+  const avgDurationMin = durations.length > 0
+    ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+    : null;
 
   return {
-    today:  { count: todayJobs.length,  total: sum(todayJobs)  },
-    week:   { count: weekJobs.length,   total: sum(weekJobs)   },
-    month:  { count: jobs.length,       total: sum(jobs)       },
+    completed: { today: todayDone.length, week: weekDone.length, month: completed.length },
+    totalValue,
+    successRate,
+    avgDurationMin,
     recent: jobs.slice(0, 20),
   };
 }

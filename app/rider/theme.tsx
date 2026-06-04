@@ -13,6 +13,7 @@ export const DARK = {
   BLUE:      "#0A84FF",
   TEXT:      "#F2F2F7",
   TEXT2:     "#8E8E93",
+  TEXT3:     "#636366",
   CARD_SKEL: "#2C2C2E",
 };
 
@@ -27,6 +28,7 @@ export const LIGHT = {
   BLUE:      "#1D4ED8",
   TEXT:      "#1C1C1E",
   TEXT2:     "#48484A",
+  TEXT3:     "#8E8E93",
   CARD_SKEL: "#D8D8DC",
 };
 

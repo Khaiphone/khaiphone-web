@@ -15,7 +15,7 @@ import { RiderSessionContext } from "@/app/rider/context";
 
 const NAV = [
   { href: "/rider",          label: "หน้าแรก",   icon: Home       },
-  { href: "/rider/earnings", label: "รายได้",    icon: Wallet     },
+  { href: "/rider/earnings", label: "ผลงาน",     icon: Wallet     },
   { href: "/rider/history",  label: "งานของฉัน", icon: Clock      },
   { href: "/rider/account",  label: "โปรไฟล์",   icon: UserCircle },
 ] as const;
