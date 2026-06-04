@@ -1341,26 +1341,60 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
           </Card>
         )}
 
-        {/* J. Contract & Payment Slip (shown when contracting or completed) */}
+        {/* J. Contract button — rider job: view only; branch job: generate */}
         {(["contracting", "completed"] as RequestStatus[]).includes(request.status) && (
-          <button
-            onClick={async () => {
-              const effectiveColor = request.device.color || currentColorDraft;
-              if (!effectiveColor) {
-                setShowColorError(true);
-                inspectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                return;
-              }
-              if (!request.device.color && currentColorDraft) {
-                await updateDeviceColor(id, currentColorDraft);
-                setRequest(prev => prev ? { ...prev, device: { ...prev.device, color: currentColorDraft } } : prev);
-              }
-              router.push(`/admin/requests/${id}/contract`);
-            }}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "#1a1a2e", border: "none", borderRadius: 12, padding: "14px", color: "#F0C040", fontSize: 15, fontWeight: 700, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit", marginBottom: 10 }}
-          >
-            📄 ออกสัญญาซื้อขาย + ใบรับเงิน
-          </button>
+          request.riderId ? (
+            /* Rider is handling this job — admin can only view, not regenerate */
+            request.contractUrl ? (
+              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                <button
+                  onClick={() => {
+                    const { data: { publicUrl } } = supabase.storage.from("inspection-photos").getPublicUrl(request.contractUrl!);
+                    window.open(publicUrl, "_blank");
+                  }}
+                  style={{ flex: 1, background: "#1a1a2e", border: "none", borderRadius: 12, padding: "13px", color: "#F0C040", fontSize: 14, fontWeight: 700, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit" }}
+                >
+                  ดูสัญญาซื้อขาย ↗
+                </button>
+                {request.receiptUrl && (
+                  <button
+                    onClick={() => {
+                      const { data: { publicUrl } } = supabase.storage.from("inspection-photos").getPublicUrl(request.receiptUrl!);
+                      window.open(publicUrl, "_blank");
+                    }}
+                    style={{ flex: 1, background: "#1a1a2e", border: "none", borderRadius: 12, padding: "13px", color: "#F0C040", fontSize: 14, fontWeight: 700, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit" }}
+                  >
+                    ดูใบรับเงิน ↗
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div style={{ marginBottom: 10, background: "#F8F8FA", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "14px", textAlign: "center" }}>
+                <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 600, color: TEXT2 }}>รอไรเดอร์ออกเอกสาร</p>
+                <p style={{ margin: 0, fontSize: 12, color: TEXT3 }}>สัญญาและใบรับเงินจะปรากฏที่นี่เมื่อไรเดอร์บันทึก</p>
+              </div>
+            )
+          ) : (
+            /* Branch/manual job — admin generates contract */
+            <button
+              onClick={async () => {
+                const effectiveColor = request.device.color || currentColorDraft;
+                if (!effectiveColor) {
+                  setShowColorError(true);
+                  inspectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  return;
+                }
+                if (!request.device.color && currentColorDraft) {
+                  await updateDeviceColor(id, currentColorDraft);
+                  setRequest(prev => prev ? { ...prev, device: { ...prev.device, color: currentColorDraft } } : prev);
+                }
+                router.push(`/admin/requests/${id}/contract`);
+              }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "#1a1a2e", border: "none", borderRadius: 12, padding: "14px", color: "#F0C040", fontSize: 15, fontWeight: 700, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit", marginBottom: 10 }}
+            >
+              ออกสัญญาซื้อขาย + ใบรับเงิน
+            </button>
+          )
         )}
         {(["contracting", "completed"] as RequestStatus[]).includes(request.status) && (
           <Card>
