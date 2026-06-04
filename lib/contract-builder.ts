@@ -117,10 +117,12 @@ export function buildContractPage(dev: ContractDevice, devIdx: number, isFirst: 
         <div class="icard-hd"><div class="hd-num">1</div> ผู้รับซื้อ</div>
         <div class="icard-body">
           <div style="font-weight:700;font-size:13px;color:#1a1a2e;margin-bottom:5px">Khaiphone.com</div>
-          <div style="font-size:10px;color:#666;line-height:1.5;margin-bottom:8px">ประกอบธุรกิจรับซื้อ-ขายโทรศัพท์มือถือ</div>
+          <div style="font-size:10px;color:#666;line-height:1.5;margin-bottom:6px">ประกอบธุรกิจรับซื้อ-ขายโทรศัพท์มือถือ<br>และอุปกรณ์อิเล็กทรอนิกส์มือสอง</div>
           <div class="shop-row">📞 โทรศัพท์: 095-553-5167</div>
+          <div class="shop-row">💬 LINE: @khaiphone</div>
           <div class="shop-row">🌐 เว็บไซต์: khaiphone.com</div>
-          ${officerId || staffName ? `<div style="margin-top:7px;padding:6px 9px;background:#1a1a2e;border-radius:6px"><div style="font-size:8px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">เจ้าหน้าที่ผู้ดำเนินการ</div>${officerId ? `<div style="font-size:10px;font-weight:800;color:#FFD700;font-family:monospace;letter-spacing:.5px">${esc(officerId)}</div>` : ""}<div style="font-size:11px;font-weight:600;color:#fff;margin-top:1px">${esc(staffName || "—")}</div></div>` : ""}
+          <div style="font-size:9px;color:#aaa;margin:4px 0 6px">ต่อไปในสัญญานี้เรียกว่า "ผู้รับซื้อ"</div>
+          ${officerId || staffName ? `<div style="margin-top:2px;padding:6px 9px;background:#1a1a2e;border-radius:6px"><div style="font-size:8px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">เจ้าหน้าที่ผู้ดำเนินการ</div>${officerId ? `<div style="font-size:10px;font-weight:800;color:#FFD700;font-family:monospace;letter-spacing:.5px">${esc(officerId)}</div>` : ""}<div style="font-size:11px;font-weight:600;color:#fff;margin-top:1px">${esc(staffName || "—")}</div></div>` : ""}
         </div>
       </div>
       <div class="icard">
@@ -224,11 +226,13 @@ export function buildContractPage(dev: ContractDevice, devIdx: number, isFirst: 
     <div>
       <div style="font-size:11px;font-weight:700;color:#FFD700;margin-bottom:4px">🛡️ การยืนยันเอกสารดิจิทัล</div>
       <div class="fv-row"><span class="fv-lbl">Document ID :</span><span class="fv-val">${contractNo}</span></div>
+      <div class="fv-row"><span class="fv-lbl">Request ID :</span><span class="fv-val">${esc(ctx.docNo)}</span></div>
       <div class="fv-row"><span class="fv-lbl">Document Generated :</span><span class="fv-val">${genTs}</span></div>
+      <div class="fv-row"><span class="fv-lbl">ตรวจสอบเอกสารได้ที่ :</span><span class="fv-val">khaiphone.com/verify</span></div>
     </div>
     <div style="text-align:right">
       <div class="footer-brand">Khaiphone.com</div>
-      <div class="footer-info">รับซื้อ-ขาย Apple มือสอง<br>📞 095-553-5167 &nbsp;🌐 khaiphone.com</div>
+      <div class="footer-info">รับซื้อ-ขาย Apple มือสอง<br>📞 095-553-5167 &nbsp;💬 LINE: @khaiphone<br>🌐 khaiphone.com</div>
     </div>
   </div>`;
 

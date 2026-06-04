@@ -16,7 +16,7 @@ import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
 import { validateImageFile } from "@/lib/validate-file";
 import { useRiderTheme } from "@/app/rider/theme";
-import { fetchMyProfile } from "@/app/actions/admin-users";
+import { fetchMyProfile, fetchAdminUsers } from "@/app/actions/admin-users";
 import type { AdminRequest, InspectionCriterion, FunctionalTest } from "@/lib/types/admin";
 import { FONT_LINK, DOC_CSS, buildContractPage, buildReceiptPage, thDate, thTime, shortDate, SLIP_PLACEHOLDER, SLIP_BLOCK } from "@/lib/contract-builder";
 import type { ContractDevice, ContractCtx } from "@/lib/contract-builder";
@@ -565,7 +565,7 @@ function PriceNegotiationStep({ job, reload, c }: { job: AdminRequest; reload: (
 }
 
 // ── Contract Step ──────────────────────────────────────────────────────────────
-function ContractStep({ job, reload, riderName, c }: { job: AdminRequest; reload: () => void; riderName: string; c: TC }) {
+function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequest; reload: () => void; riderName: string; officerId: string; c: TC }) {
   const [buyerName, setBuyerName] = useState(job.customer.name);
   const [payMethod, setPayMethod] = useState<"cash"|"transfer">(job.payment.method as "cash"|"transfer");
   const [bankName, setBankName] = useState(job.payment.bankName ?? "");
@@ -808,7 +808,7 @@ function ContractStep({ job, reload, riderName, c }: { job: AdminRequest; reload
         payTh: payMethod === "cash" ? "เงินสด" : "โอนผ่านธนาคาร",
         dobStr: dob ? thDate(dob+"T00:00:00") : "",
         staffName: riderName,
-        officerId: "",
+        officerId,
         bankName,
         accountName,
         accountNumber,
@@ -1081,6 +1081,7 @@ export default function JobWizardPage() {
   const [loading, setLoading]       = useState(true);
   const [busy, setBusy]             = useState(false);
   const [riderName, setRiderName]   = useState("");
+  const [officerId, setOfficerId]   = useState("");
   const [showNoShow, setShowNoShow] = useState(false);
   const [blockingJob, setBlockingJob] = useState<string | null>(null);
   const [startError, setStartError]   = useState("");
@@ -1101,7 +1102,13 @@ export default function JobWizardPage() {
   useEffect(() => {
     reload();
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user?.id) fetchMyProfile(session.user.id).then(p => { if (p?.name) setRiderName(p.name); }).catch(()=>{});
+      if (!session?.user?.id) return;
+      const uid = session.user.id;
+      fetchMyProfile(uid).then(p => { if (p?.name) setRiderName(p.name); }).catch(()=>{});
+      fetchAdminUsers().then(list => {
+        const idx = list.findIndex(u => u.user_id === uid);
+        if (idx >= 0) setOfficerId(`EMP-${String(idx + 1).padStart(3, "0")}`);
+      }).catch(()=>{});
     });
   }, [reload]);
 
@@ -1316,7 +1323,7 @@ export default function JobWizardPage() {
                     <p style={{ margin:"0 0 4px", fontSize:12, color:TEXT2 }}>ราคาตกลง</p>
                     <p style={{ margin:0, fontSize:24, fontWeight:800, color:ACCENT }}>฿{price.toLocaleString("th-TH")}</p>
                   </div>
-                  <ContractStep job={job} reload={reload} riderName={riderName} c={c} />
+                  <ContractStep job={job} reload={reload} riderName={riderName} officerId={officerId} c={c} />
                 </>
               )}
             </div>
