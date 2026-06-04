@@ -308,6 +308,32 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  // Parse saved raw text back into SickwResult on mount (avoids re-paying for check)
+  useEffect(() => {
+    if (sickwRaw && !sickwResult) {
+      const map: Record<string, string> = {};
+      for (const line of sickwRaw.split("\n")) {
+        const idx = line.indexOf(": ");
+        if (idx > 0) map[line.slice(0, idx).trim()] = line.slice(idx + 2).trim();
+      }
+      const cfg = map["Device Configuration"] ?? "";
+      const cfgParts = cfg.split(",");
+      const colorFromCfg = cfgParts.length >= 5 ? cfgParts[4].trim() : undefined;
+      const colorFromModel = (map["Model Name"] ?? "").match(/\d+\s*[GT]B\s+(.+)$/i)?.[1]?.trim();
+      setSickwResult({
+        imei:          map["IMEI"],
+        device:        cfg || map["Model Name"],
+        color:         colorFromCfg ?? colorFromModel,
+        carrierLock:   map["Unlock Status"] ?? map["Sim-Lock"],
+        icloudStatus:  [map["iCloud Lock"], map["iCloud Status"]].filter(Boolean).join(" / ") || undefined,
+        blacklist:     map["Blacklist"],
+        warrantyStatus: map["Limited Warranty"],
+        rawText:       sickwRaw,
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sickwRaw]);
+
   function applySickwData(data: import("@/app/actions/device-scan").SickwResult) {
     setSickwResult(data);
     if (data.rawText) setSickwRaw(data.rawText);
