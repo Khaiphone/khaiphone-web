@@ -25,7 +25,7 @@ export async function scanDeviceInfo(
           },
           {
             type: "text",
-            text: 'This is a screenshot of an iPhone Settings > General > About screen (may be in English or Thai). Find the Serial Number (labeled "Serial Number" in English or "หมายเลขซีเรียล" in Thai) — it is a 10–12 character alphanumeric code like "F2LJH0X7XY". Return valid JSON only: {"serial":"..."}. Use null if not visible.',
+            text: 'This is a screenshot of an iPhone/iPad Settings > General > About screen (may be in English or Thai). Find the Serial Number (labeled "Serial Number" in English or "เลขประจำเครื่อง" in Thai) — it is a 10–12 character alphanumeric code like "F2LJH0X7XY" or "CG6WXV7CJP". Do NOT return the Model Number ("หมายเลขรุ่น" / "MYWV3KH/A" style). Return valid JSON only: {"serial":"..."}. Use null if not visible.',
           },
         ],
       }],
