@@ -701,10 +701,8 @@ export async function addStockSlips(id: string, newUrls: string[]): Promise<{ su
 }
 
 export async function deleteStockItem(id: string): Promise<{ success: boolean; error?: string }> {
-  const user = await requireAuth();
+  await requireAuth();
   const supabase = createServerClient();
-  const { data: profile } = await supabase.from("admin_users").select("role").eq("user_id", user.id).single();
-  if (profile?.role !== "owner") return { success: false, error: "เฉพาะเจ้าของเท่านั้นที่ลบได้" };
   const { error } = await supabase.from("stocks").delete().eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };
