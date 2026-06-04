@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
-import { ArrowLeft, Phone, MapPin, Camera, AlertTriangle, CheckCircle2, ExternalLink, ScanLine, ShieldCheck, ShieldAlert, ShieldX, Loader2 } from "lucide-react";
+import { ArrowLeft, Phone, MapPin, Camera, AlertTriangle, CheckCircle2, ExternalLink, ScanLine, ShieldCheck, ShieldAlert, ShieldX, Loader2, RefreshCw } from "lucide-react";
 import { scanDeviceInfo, checkSickw } from "@/app/actions/device-scan";
 import type { SickwResult } from "@/app/actions/device-scan";
 import {
@@ -564,6 +564,13 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
                   style={{ flexShrink: 0, padding: "5px 10px", borderRadius: 8, background: "rgba(10,132,255,0.15)", border: "1px solid rgba(10,132,255,0.4)", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5, opacity: sickwLoading ? 0.6 : 1 }}>
                   {sickwLoading ? <Loader2 size={13} color="#0A84FF" style={{ animation: "spin 0.8s linear infinite" }} /> : <ShieldCheck size={13} color="#0A84FF" />}
                   <span style={{ fontSize: 12, fontWeight: 600, color: "#0A84FF" }}>ตรวจสอบ Apple</span>
+                </button>
+              )}
+              {serial.trim().length >= 10 && sickwResult && !sickwLoading && (
+                <button onClick={() => { setSickwResult(null); setSickwRaw(""); setSickwError(""); handleSickwCheck(); }}
+                  style={{ flexShrink: 0, padding: "5px 10px", borderRadius: 8, background: "rgba(255,159,10,0.12)", border: "1px solid rgba(255,159,10,0.4)", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}>
+                  <RefreshCw size={13} color="#FF9F0A" />
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "#FF9F0A" }}>ตรวจซ้ำ</span>
                 </button>
               )}
             </div>
