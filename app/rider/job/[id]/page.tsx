@@ -887,13 +887,20 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
           canvas.width = img.width * scale; canvas.height = img.height * scale;
           const ctx = canvas.getContext("2d")!;
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          const fs = Math.max(18, Math.floor(canvas.width / 18));
-          ctx.save(); ctx.globalAlpha = 0.72; ctx.fillStyle = "#DC2626";
-          ctx.font = `bold ${fs}px Arial,sans-serif`; ctx.textAlign = "center";
-          ctx.translate(canvas.width/2, canvas.height/2); ctx.rotate(-22*Math.PI/180);
-          ctx.fillText("ใช้สำหรับขายโทรศัพท์ให้ Khaiphone.com เท่านั้น", 0, 0);
-          ctx.font = `${Math.floor(fs*.75)}px Arial,sans-serif`;
-          ctx.fillText(`วันที่ ${thDate(txDate+"T00:00:00")}`, 0, fs*1.4);
+          // Base font on shorter dimension so it looks consistent regardless of orientation
+          const shortSide = Math.min(canvas.width, canvas.height);
+          const fs = Math.max(16, Math.floor(shortSide / 14));
+          const maxW = shortSide * 0.85;
+          ctx.save();
+          ctx.globalAlpha = 0.70;
+          ctx.fillStyle = "#DC2626";
+          ctx.textAlign = "center";
+          ctx.translate(canvas.width / 2, canvas.height / 2);
+          ctx.rotate(-22 * Math.PI / 180);
+          ctx.font = `bold ${fs}px Arial,sans-serif`;
+          ctx.fillText("ใช้สำหรับขายให้ Khaiphone.com เท่านั้น", 0, 0, maxW);
+          ctx.font = `${Math.floor(fs * 0.78)}px Arial,sans-serif`;
+          ctx.fillText(`วันที่ ${thDate(txDate + "T00:00:00")}`, 0, fs * 1.5, maxW);
           ctx.restore();
           resolve(canvas.toDataURL("image/jpeg", 0.88));
         };
@@ -1224,6 +1231,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
               <Camera size={16} />{idPhotoDataUrl ? "เปลี่ยนรูปบัตร" : "ถ่ายบัตรประชาชน"}
             </button>
             <input ref={idFileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleIdPhoto} />
+            {!idPhotoDataUrl && !ocrLoading && <p style={{ margin: "6px 0 0", fontSize: 11, color: c.TEXT2, textAlign: "center" }}>📱 หมุนโทรศัพท์แนวนอน เพื่อให้บัตรเต็มเฟรมและ OCR แม่นขึ้น</p>}
             {ocrLoading && <p style={{ margin: "6px 0 0", fontSize: 12, color: c.ACCENT, textAlign: "center" }}>🔍 กำลังอ่านข้อมูลจากบัตร...</p>}
             {ocrError && !ocrLoading && <p style={{ margin: "6px 0 0", fontSize: 12, color: c.RED }}>⚠️ {ocrError} — กรอกข้อมูลเองได้เลย</p>}
             {idPhotoDataUrl && !ocrLoading && !ocrError && <p style={{ margin: "6px 0 0", fontSize: 12, color: "#30D158", textAlign: "center" }}>✓ อ่านข้อมูลจากบัตรแล้ว — ตรวจสอบด้านล่าง</p>}
