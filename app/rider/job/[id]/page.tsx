@@ -915,6 +915,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
   // Post-generation state
   const isCompleted = job.status === "completed";
   const [contractSigned, setContractSigned] = useState(!!job.payment.contractSignedAt || job.status === "awaiting_transfer");
+  const [isEditing, setIsEditing] = useState(false);
   const [transferBusy, setTransferBusy] = useState(false);
   const [transferNotified, setTransferNotified] = useState(job.status === "awaiting_transfer");
   const [slipUploading, setSlipUploading] = useState(false);
@@ -1199,6 +1200,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
       contractHTMLRef.current = cBody;
       receiptHTMLRef.current  = rBody;
 
+      setIsEditing(false);
       if (payMethod === "cash") {
         await riderCompleteCash(job.id, paymentPhotoStorageUrl ?? "");
         reload();
@@ -1223,10 +1225,17 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
-      <fieldset disabled={isCompleted} style={{ border: "none", padding: 0, margin: 0, opacity: isCompleted ? 0.55 : 1 }}>
+      <fieldset disabled={isCompleted || (contractSigned && !isEditing)} style={{ border: "none", padding: 0, margin: 0, opacity: isCompleted || (contractSigned && !isEditing) ? 0.55 : 1 }}>
       <div style={{ background: c.CARD, border: `1px solid ${c.BORDER}`, borderRadius: 14, overflow: "hidden" }}>
         <div style={{ padding: "10px 14px", borderBottom: `1px solid ${c.BORDER}`, background: c.CARD2, fontSize: 13, fontWeight: 700, color: c.TEXT }}>
-          ข้อมูลสัญญา {isCompleted && <span style={{ fontSize: 11, color: c.GREEN, marginLeft: 6 }}>✓ ล็อกแล้ว</span>}
+          ข้อมูลสัญญา{" "}
+          {isCompleted
+            ? <span style={{ fontSize: 11, color: c.GREEN, marginLeft: 6 }}>✓ ล็อกถาวร</span>
+            : contractSigned && !isEditing
+              ? <span style={{ fontSize: 11, color: "#f97316", marginLeft: 6 }}>✓ ออกสัญญาแล้ว</span>
+              : contractSigned && isEditing
+                ? <span style={{ fontSize: 11, color: "#3b82f6", marginLeft: 6 }}>✏️ กำลังแก้ไข</span>
+                : null}
         </div>
         <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
 
@@ -1362,8 +1371,15 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
         </div>
       )}
 
-      {!isCompleted && (
-        <BigBtn label={generating ? "กำลังสร้างสัญญา..." : contractSigned ? "สร้างสัญญาใหม่ →" : "สร้างสัญญาและบันทึก →"} loading={generating} onClick={handleGenerate} />
+      {!isCompleted && contractSigned && !isEditing && (
+        <BigBtn label="✏️ แก้ไขสัญญา" color={c.CARD2} textColor={c.TEXT} onClick={() => setIsEditing(true)} />
+      )}
+      {!isCompleted && (!contractSigned || isEditing) && (
+        <BigBtn
+          label={generating ? "กำลังสร้างสัญญา..." : isEditing ? "สร้างสัญญาใหม่ →" : "สร้างสัญญาและบันทึก →"}
+          loading={generating}
+          onClick={handleGenerate}
+        />
       )}
 
       {contractSigned && (
