@@ -821,7 +821,10 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
   const [serial, setSerial] = useState((job.inspection?.serial ?? "").toUpperCase());
   const [imei, setImei] = useState(job.inspection?.imei ?? "");
   const [deviceColor, setDeviceColor] = useState(job.device.color ?? "");
-  const [txDate, setTxDate] = useState(new Date().toISOString().slice(0, 10));
+  const [txDate, setTxDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
 
   const [guardianConfirmed, setGuardianConfirmed] = useState(false);
   const [idPhotoDataUrl, setIdPhotoDataUrl] = useState<string | null>(null);
