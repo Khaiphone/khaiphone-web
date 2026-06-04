@@ -18,6 +18,8 @@ import { validateImageFile } from "@/lib/validate-file";
 import { useRiderTheme } from "@/app/rider/theme";
 import { fetchMyProfile } from "@/app/actions/admin-users";
 import type { AdminRequest, InspectionCriterion, FunctionalTest } from "@/lib/types/admin";
+import { FONT_LINK, DOC_CSS, buildContractPage, buildReceiptPage, thDate, thTime, shortDate } from "@/lib/contract-builder";
+import type { ContractDevice, ContractCtx } from "@/lib/contract-builder";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const STEPS = ["รับงาน", "เดินทาง", "ตรวจเครื่อง", "ราคา/สัญญา", "จบ"];
@@ -52,43 +54,7 @@ const FUNCTIONAL_DEFAULTS: FunctionalTest[] = [
   { label: "ปุ่มด้านข้าง / Volume", pass: true },
 ];
 
-const FONT_LINK = '<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">';
-const DOC_CSS = '*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Sarabun",sans-serif;max-width:780px;margin:0 auto;font-size:11px;color:#1a1a1a;line-height:1.6;background:#fff}.header{background:linear-gradient(135deg,#1a1a2e,#2a2a4e);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}.logo-area{display:flex;align-items:center;gap:10px;min-width:160px}.logo-name{color:#FFD700;font-size:14px;font-weight:800}.logo-sub{color:rgba(255,255,255,.6);font-size:9px;margin-top:1px}.title-center{text-align:center;flex:1}.title-center h1{color:#FFD700;font-size:15px;font-weight:800}.title-center .between{color:rgba(255,255,255,.8);font-size:11px;margin-top:3px}.cno-box{background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.35);border-radius:8px;padding:9px 13px;text-align:right;min-width:160px}.cno-label{color:rgba(255,255,255,.5);font-size:8.5px;text-transform:uppercase;letter-spacing:.5px}.cno-value{color:#FFD700;font-size:15px;font-weight:800;font-family:monospace;letter-spacing:.5px;margin:2px 0}.cno-date{color:rgba(255,255,255,.65);font-size:10px}.content{padding:14px 20px}.top3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}.icard{border:1px solid #e5e7eb;border-radius:8px;overflow:hidden}.icard-hd{background:#f5f4f0;padding:7px 11px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:7px;font-size:10.5px;font-weight:700;color:#333}.hd-num{width:18px;height:18px;border-radius:5px;background:#1a1a2e;color:#FFD700;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0}.icard-body{padding:9px 11px;font-size:10.5px}.f{display:flex;flex-direction:column;margin-bottom:4px}.fl{font-size:9px;color:#aaa;text-transform:uppercase;letter-spacing:.4px}.fv{font-size:11px;font-weight:500;color:#1a1a1a;border-bottom:1px solid #f0f0f0;padding-bottom:2px;min-height:16px}.price-big{font-size:28px;font-weight:800;color:#c9a84c;font-family:monospace;text-align:center;padding:5px 0;line-height:1}.price-label{font-size:9px;color:#aaa;text-align:center;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}.pay-badge{display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:3px 8px;font-size:10px;font-weight:600;color:#15803d;margin-bottom:6px}.sec{font-size:10px;font-weight:700;color:#1a1a2e;border-left:3px solid #c9a84c;padding-left:8px;margin:12px 0 7px;text-transform:uppercase;letter-spacing:.5px}.dtable{width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:10px}.dtable th{background:#1a1a2e;color:#FFD700;padding:6px 9px;text-align:left;font-weight:600;font-size:9.5px}.dtable td{padding:5px 9px;border-bottom:1px solid #f0f0f0;vertical-align:top}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:10px}.terms-ol{counter-reset:tc;list-style:none;padding:0;margin:0 0 8px}.terms-ol li{counter-increment:tc;padding:4px 0 4px 22px;position:relative;font-size:10.5px;border-bottom:1px solid #f8f8f8;line-height:1.5}.terms-ol li::before{content:counter(tc)".";position:absolute;left:0;top:4px;font-weight:700;color:#c9a84c}.check-list{list-style:none;padding:0;margin:0}.check-list li{padding:2px 0 2px 14px;position:relative;font-size:10.5px}.check-list li::before{content:"•";position:absolute;left:0;color:#c9a84c;font-weight:700}.pdpa-box{background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:10px 13px;font-size:10.5px}.pdpa-title{font-weight:700;color:#92400e;margin-bottom:5px}.pdpa-list{list-style:none;padding:0;margin:0}.pdpa-list li{padding:2px 0 2px 16px;position:relative;color:#78350f}.pdpa-list li::before{content:"✓";position:absolute;left:0;color:#c9a84c;font-weight:700}.id-photo-wrap{border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:10px 0}.id-photo-hd{background:#f5f4f0;padding:7px 11px;border-bottom:1px solid #e5e7eb;font-size:10.5px;font-weight:700;color:#333}.id-photo-wrap img{width:100%;max-height:200px;object-fit:contain;display:block;background:#f9f9f9}.footer{background:#1a1a2e;color:rgba(255,255,255,.65);padding:10px 20px;display:flex;align-items:flex-start;justify-content:space-between;font-size:9.5px;margin-top:14px}.fv-row{display:flex;gap:6px;margin-bottom:1px}.fv-lbl{color:rgba(255,255,255,.45)}.fv-val{color:#FFD700;font-family:monospace}.footer-brand{color:#FFD700;font-size:14px;font-weight:800;margin-bottom:3px}.footer-info{color:rgba(255,255,255,.5);font-size:9px;line-height:1.7}.rejected-box{background:#fef2f2;border:1px solid #fecaca;border-radius:5px;padding:7px 9px;font-size:10px;color:#991b1b;margin-top:8px;line-height:1.7}@media print{.header,.footer{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{max-width:none}}';
-
 // ── Utilities ──────────────────────────────────────────────────────────────────
-function esc(s: string) {
-  return (s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-function thDate(iso: string) {
-  return new Date(iso).toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" });
-}
-function thTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
-}
-function shortDate(iso: string) {
-  const d = new Date(iso);
-  return `${String(d.getDate()).padStart(2,"0")} / ${String(d.getMonth()+1).padStart(2,"0")} / ${d.getFullYear()+543}`;
-}
-function bahtWords(amount: number): string {
-  const n = Math.round(amount);
-  if (n === 0) return "(ศูนย์บาทถ้วน)";
-  const u = ["","หนึ่ง","สอง","สาม","สี่","ห้า","หก","เจ็ด","แปด","เก้า"];
-  const p = ["","สิบ","ร้อย","พัน","หมื่น","แสน"];
-  function chunk(m: number): string {
-    if (m === 0) return "";
-    const s = String(m); let out = "";
-    for (let i = 0; i < s.length; i++) {
-      const d = +s[i]; const pos = s.length - 1 - i;
-      if (d === 0) continue;
-      if (pos === 1) { if (d === 1) out += "สิบ"; else if (d === 2) out += "ยี่สิบ"; else out += u[d] + "สิบ"; }
-      else if (pos === 0 && d === 1 && m >= 10) out += "เอ็ด";
-      else out += u[d] + p[pos];
-    }
-    return out;
-  }
-  const mil = Math.floor(n / 1_000_000); const rem = n % 1_000_000;
-  return `(${mil > 0 ? chunk(mil) + "ล้าน" : ""}${rem > 0 ? chunk(rem) : ""}บาทถ้วน)`;
-}
 
 function getDeviceImage(model: string): string {
   const m = model.toLowerCase();
@@ -761,140 +727,61 @@ function ContractStep({ job, reload, riderName, c }: { job: AdminRequest; reload
       const dateShort = shortDate(txDate+"T00:00:00");
       const genTs = `${String(now.getDate()).padStart(2,"0")}/${String(now.getMonth()+1).padStart(2,"0")}/${now.getFullYear()} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}:${String(now.getSeconds()).padStart(2,"0")}`;
 
-      const cName  = buyerName.trim() || r.customer.name;
-      const cPhone = r.customer.phone;
-      const cId    = idNumber || "—";
-      const cAddr  = address || "—";
-      const cEmail = r.customer.email || "—";
-      const payTh  = payMethod === "cash" ? "เงินสด" : "โอนผ่านธนาคาร";
-      const dobStr = dob ? thDate(dob+"T00:00:00") : "";
-      const accStr = esc([...accessories, ...(accessoriesOther.trim() ? [accessoriesOther.trim()] : [])].join(", ") || "—");
-      const price  = r.inspection?.actualPrice ?? r.device.estimatedPrice;
-
       let logoSrc = "/logo-icon.webp";
       try {
         const resp = await fetch("/logo-icon.webp"); const blob = await resp.blob();
         logoSrc = await new Promise<string>(res => { const rd = new FileReader(); rd.onload = ()=>res(rd.result as string); rd.readAsDataURL(blob); });
       } catch {}
 
-      function contractPage(): string {
-        let p = `<div class="header">
-          <div class="logo-area"><img src="${logoSrc}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0">
-          <div><div class="logo-name">Khaiphone.com</div><div class="logo-sub">รับซื้อ-ขาย Apple มือสอง</div></div></div>
-          <div class="title-center"><h1>สัญญาซื้อขายโทรศัพท์มือถือมือสอง</h1><div class="between">ระหว่าง <strong>ผู้ขาย</strong> และ <strong style="color:#FFD700">Khaiphone.com</strong></div></div>
-          <div class="cno-box"><div class="cno-label">เลขที่สัญญา</div><div class="cno-value">${esc(docNo)}</div><div class="cno-date">วันที่ ${dateStr}<br>เวลา ${timeStr} น.</div></div>
-        </div>
-        <div class="content">
-          <div class="top3">
-            <div class="icard"><div class="icard-hd"><div class="hd-num">1</div> ผู้รับซื้อ</div><div class="icard-body">
-              <div style="font-weight:700;font-size:13px;color:#1a1a2e;margin-bottom:5px">Khaiphone.com</div>
-              <div style="font-size:10px;color:#666;line-height:1.5;margin-bottom:8px">ประกอบธุรกิจรับซื้อ-ขายโทรศัพท์มือถือ</div>
-              ${riderName ? `<div style="margin-top:8px;padding:6px 9px;background:#1a1a2e;border-radius:6px"><div style="font-size:8px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">เจ้าหน้าที่ผู้ดำเนินการ</div><div style="font-size:11px;font-weight:600;color:#fff">${esc(riderName)}</div></div>` : ""}
-            </div></div>
-            <div class="icard"><div class="icard-hd"><div class="hd-num">2</div> ผู้ขาย</div><div class="icard-body">
-              <div class="f"><span class="fl">ชื่อ-นามสกุล</span><span class="fv">${esc(cName)}</span></div>
-              <div class="f"><span class="fl">เลขบัตรประชาชน</span><span class="fv" style="font-family:monospace">${esc(cId)}</span></div>
-              ${dobStr ? `<div class="f"><span class="fl">วันเกิด</span><span class="fv">${esc(dobStr)}</span></div>` : ""}
-              <div class="f"><span class="fl">ที่อยู่</span><span class="fv" style="white-space:pre-line">${esc(cAddr)}</span></div>
-              <div class="f"><span class="fl">เบอร์โทร</span><span class="fv">${esc(cPhone)}</span></div>
-              <div class="f"><span class="fl">อีเมล</span><span class="fv">${esc(cEmail)}</span></div>
-            </div></div>
-            <div class="icard"><div class="icard-hd"><div class="hd-num">3</div> ราคาและการชำระเงิน</div><div class="icard-body">
-              <div class="price-label">ราคาซื้อขายรวม</div>
-              <div class="price-big">${price.toLocaleString("th-TH")}</div>
-              <div style="text-align:center;font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:4px">บาท</div>
-              <div style="text-align:center;font-size:10px;color:#666;margin-bottom:7px">${bahtWords(price)}</div>
-              <div class="pay-badge">✓ ${payTh}</div>
-              ${payMethod==="transfer" ? `<div class="f"><span class="fl">ธนาคาร</span><span class="fv">${esc(bankName||"—")}</span></div><div class="f"><span class="fl">ชื่อบัญชี</span><span class="fv">${esc(accountName||"—")}</span></div><div class="f"><span class="fl">เลขบัญชี</span><span class="fv" style="font-family:monospace">${esc(accountNumber||"—")}</span></div>` : ""}
-            </div></div>
-          </div>
-          <div class="sec">📱 รายละเอียดทรัพย์สิน</div>
-          <table class="dtable">
-            <tr><th>ประเภท</th><th>IMEI</th><th>ยี่ห้อ/รุ่น</th><th>Serial Number</th></tr>
-            <tr><td>โทรศัพท์มือถือ</td><td style="font-family:monospace">${esc(imei||"—")}</td><td style="font-weight:600">${esc(r.device.model)}</td><td style="font-family:monospace">${esc(serial||"—")}</td></tr>
-            <tr><th>ความจุ</th><th>สภาพ</th><th>สี</th><th>อุปกรณ์</th></tr>
-            <tr><td>${esc(r.device.storage)}</td><td>${esc(r.device.condition)}</td><td>${esc(r.device.color||"—")}</td><td>${accStr}</td></tr>
-          </table>
-          <div class="two-col">
-            <div>
-              <div class="sec">✅ ข้อตกลงของผู้ขาย</div>
-              <ol class="terms-ol">
-                <li>ผู้ขายเป็นเจ้าของทรัพย์สินโดยชอบด้วยกฎหมาย และมีสิทธิ์ขาย โอน และส่งมอบทรัพย์สิน</li>
-                <li>ทรัพย์สินไม่ได้มาจากการกระทำผิดกฎหมาย ลักทรัพย์ ฉ้อโกง หรือยักยอก</li>
-                <li>ผู้ขายได้ลบข้อมูลส่วนตัวทั้งหมดแล้ว และยินยอมให้รีเซ็ตอุปกรณ์</li>
-                <li>ผู้ขายรับรองว่าไม่มี iCloud lock, MDM หรือระบบล็อคใดๆ</li>
-                <li>หากตรวจพบข้อมูลเป็นเท็จ ผู้ขายยอมรับผิดชอบค่าเสียหายทั้งหมด</li>
-              </ol>
-            </div>
-            <div>
-              <div class="sec">🔒 PDPA</div>
-              <div class="pdpa-box"><div class="pdpa-title">การคุ้มครองข้อมูลส่วนบุคคล</div>
-              <ul class="pdpa-list"><li>ใช้ในการทำธุรกรรมซื้อขาย</li><li>ตรวจสอบและยืนยันตัวตน</li><li>ป้องกันการทุจริต</li><li>จัดเก็บเป็นหลักฐานทางกฎหมาย</li></ul>
-              </div>
-              <div class="rejected-box" style="background:#fef2f2">หากตรวจพบความผิดปกติ ผู้รับซื้อมีสิทธิ์<br>• ปรับราคา<br>• ยกเลิกธุรกรรม<br>• ระงับการชำระเงิน</div>
-            </div>
-          </div>
-          ${idPhotoDataUrl ? `<div class="id-photo-wrap"><div class="id-photo-hd">📷 สำเนาบัตรประชาชน (มี Watermark)</div><img src="${idPhotoDataUrl}" alt="บัตรประชาชน"></div>` : ""}
-          ${custProdPhotoDataUrl ? `<div class="id-photo-wrap"><div class="id-photo-hd">📸 รูปลูกค้าพร้อมสินค้า</div><img src="${custProdPhotoDataUrl}" alt="ลูกค้าพร้อมสินค้า" style="max-height:300px;object-fit:contain"></div>` : ""}
-        </div>
-        <div class="footer">
-          <div><div style="font-size:11px;font-weight:700;color:#FFD700;margin-bottom:4px">🛡️ ยืนยันเอกสารดิจิทัล</div>
-          <div class="fv-row"><span class="fv-lbl">Document ID :</span><span class="fv-val">${esc(docNo)}</span></div>
-          <div class="fv-row"><span class="fv-lbl">Generated :</span><span class="fv-val">${genTs}</span></div></div>
-          <div style="text-align:right"><div class="footer-brand">Khaiphone.com</div><div class="footer-info">รับซื้อ-ขาย Apple มือสอง<br>📞 095-553-5167</div></div>
-        </div>`;
-        return p;
-      }
+      const devPrice = r.inspection?.actualPrice ?? r.device.estimatedPrice;
+      const accList = [...accessories, ...(accessoriesOther.trim() ? [accessoriesOther.trim()] : [])];
 
-      function receiptPage(): string {
-        return `<div class="header">
-          <div class="logo-area"><img src="${logoSrc}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0">
-          <div><div class="logo-name">Khaiphone.com</div><div class="logo-sub">รับซื้อ-ขาย Apple มือสอง</div></div></div>
-          <div class="title-center"><h1>ใบสำคัญรับเงิน</h1><div class="between">PAYMENT RECEIPT</div></div>
-          <div class="cno-box"><div class="cno-label">เลขที่ใบรับเงิน</div><div class="cno-value">${esc(docNo)}-R</div><div class="cno-date">วันที่ ${dateStr}<br>เวลา ${timeStr} น.</div></div>
-        </div>
-        <div class="content">
+      const dev: ContractDevice = {
+        label: "",
+        model: r.device.model,
+        storage: r.device.storage,
+        color: r.device.color ?? "",
+        condition: r.device.condition,
+        imei,
+        serial,
+        accessories: accList,
+        price: devPrice,
+        criteria: (r.inspection?.criteria ?? []) as ContractDevice["criteria"],
+        issues: r.inspection?.issues ?? [],
+        functionalTests: (r.inspection?.functionalTests ?? []) as ContractDevice["functionalTests"],
+        warrantyExpiry: r.inspection?.warrantyExpiry,
+        batteryCycles: r.inspection?.batteryCycles,
+        batteryHealth: r.inspection?.batteryHealth,
+      };
 
-          <div class="two-col" style="margin-bottom:12px">
-            <div class="icard"><div class="icard-hd"><div class="hd-num">1</div> ผู้รับเงิน (ผู้ขาย)</div><div class="icard-body">
-              <div class="f"><span class="fl">ชื่อ-นามสกุล</span><span class="fv" style="font-size:13px;font-weight:700;color:#1a1a2e">${esc(cName)}</span></div>
-              <div class="f"><span class="fl">เลขบัตร</span><span class="fv" style="font-family:monospace">${esc(cId)}</span></div>
-              <div class="f"><span class="fl">เบอร์โทร</span><span class="fv">${esc(cPhone)}</span></div>
-            </div></div>
-            <div class="icard"><div class="icard-hd"><div class="hd-num">2</div> ผู้จ่ายเงิน</div><div class="icard-body">
-              <div style="font-weight:700;font-size:13px;color:#1a1a2e;margin-bottom:5px">Khaiphone.com</div>
-              <div style="font-size:10px;color:#666">📞 095-553-5167</div>
-            </div></div>
-          </div>
-          <div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:12px">
-            <div style="background:#1a1a2e;padding:10px 14px;text-align:center">
-              <div style="font-size:9px;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:2px">จำนวนเงิน</div>
-              <div style="font-size:30px;font-weight:800;color:#FFD700;font-family:monospace">${price.toLocaleString("th-TH")}</div>
-              <div style="font-size:13px;font-weight:700;color:rgba(255,255,255,.8)">บาท</div>
-              <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:3px">${bahtWords(price)}</div>
-            </div>
-            <div style="padding:10px 12px;font-size:10.5px;line-height:1.8">
-              <div style="display:flex;justify-content:space-between"><span style="color:#aaa">รุ่น</span><span style="font-weight:600">${esc(r.device.model)} ${esc(r.device.storage)}</span></div>
-              <div style="display:flex;justify-content:space-between"><span style="color:#aaa">วิธีชำระ</span><span style="font-weight:600">${payTh}</span></div>
-              ${payMethod==="transfer" ? `<div style="display:flex;justify-content:space-between"><span style="color:#aaa">ธนาคาร</span><span style="font-weight:600">${esc(bankName||"—")}</span></div><div style="display:flex;justify-content:space-between"><span style="color:#aaa">เลขบัญชี</span><span style="font-weight:600;font-family:monospace">${esc(accountNumber||"—")}</span></div>` : ""}
-            </div>
-          </div>
-          <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:12px 14px;font-size:10.5px;color:#166534">
-            ข้าพเจ้า <strong>${esc(cName)}</strong> ได้รับเงินจำนวน <strong>${price.toLocaleString("th-TH")} บาทถ้วน</strong> จาก <strong>${esc(riderName||"Khaiphone.com")}</strong> เป็นค่าขายโทรศัพท์ <strong>${esc(r.device.model)}</strong> ตามสัญญาเลขที่ <strong>${esc(docNo)}</strong> เรียบร้อยแล้ว
-          </div>
-          ${idPhotoDataUrl ? `<div class="id-photo-wrap"><div class="id-photo-hd">📷 สำเนาบัตรประชาชน (มี Watermark)</div><img src="${idPhotoDataUrl}" alt="บัตรประชาชน"></div>` : ""}
-          ${custProdPhotoDataUrl ? `<div class="id-photo-wrap"><div class="id-photo-hd">📸 รูปลูกค้าพร้อมสินค้า</div><img src="${custProdPhotoDataUrl}" alt="ลูกค้าพร้อมสินค้า" style="max-height:300px;object-fit:contain"></div>` : ""}
-          ${paymentPhotoDataUrl ? `<div class="id-photo-wrap"><div class="id-photo-hd">${payMethod === "cash" ? "💵 หลักฐานมอบเงินสด" : "📎 หลักฐานการโอนเงิน (สลิป)"}</div><img src="${paymentPhotoDataUrl}" alt="หลักฐานชำระเงิน" style="max-height:340px;object-fit:contain"></div>` : ""}
-        </div>
-        <div class="footer">
-          <div><div class="fv-row"><span class="fv-lbl">Document ID :</span><span class="fv-val">${esc(docNo)}-R</span></div>
-          <div class="fv-row"><span class="fv-lbl">Generated :</span><span class="fv-val">${genTs}</span></div></div>
-          <div style="text-align:right"><div class="footer-brand">Khaiphone.com</div><div class="footer-info">รับซื้อ-ขาย Apple มือสอง</div></div>
-        </div>`;
-      }
+      const ctx: ContractCtx = {
+        docNo,
+        totalDevices: 1,
+        dateStr,
+        timeStr,
+        dateShort,
+        genTs,
+        logoSrc,
+        cName: buyerName.trim() || r.customer.name,
+        cPhone: r.customer.phone,
+        cId: idNumber || "—",
+        cAddr: address || "—",
+        cEmail: r.customer.email || "—",
+        payMethod,
+        payTh: payMethod === "cash" ? "เงินสด" : "โอนผ่านธนาคาร",
+        dobStr: dob ? thDate(dob+"T00:00:00") : "",
+        staffName: riderName,
+        officerId: "",
+        bankName,
+        accountName,
+        accountNumber,
+        idPhotoDataUrl,
+        custProdPhotoDataUrl,
+        slipImgSrc: paymentPhotoDataUrl ?? "",
+      };
 
-      const cBody = contractPage();
-      const rBody = receiptPage();
+      const cBody = buildContractPage(dev, 0, true, ctx);
+      const rBody = buildReceiptPage(dev, 0, true, ctx);
       const printCSS = "@media print{.header,.footer{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{max-width:none}}";
       const wrap = (body: string) => `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">${FONT_LINK}<style>${DOC_CSS}${printCSS}</style></head><body>${body}</body></html>`;
 
