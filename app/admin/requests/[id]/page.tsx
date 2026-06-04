@@ -158,7 +158,20 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   // Contract & slip
   const [slipUploading, setSlipUploading] = useState(false);
   const [linkCopied,    setLinkCopied]    = useState(false);
-  const slipFileRef = useRef<HTMLInputElement>(null);
+  const slipFileRef    = useRef<HTMLInputElement>(null);
+  const financeRef     = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to finance section when transfer is pending
+  useEffect(() => {
+    if (!request) return;
+    const needsTransfer =
+      (request.status === "contracting" || request.status === "awaiting_transfer") &&
+      request.payment.method === "transfer" &&
+      !request.payment.slipUrl;
+    if (needsTransfer) {
+      setTimeout(() => financeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 400);
+    }
+  }, [request?.id, request?.status]);
 
   // Copy bank info
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -1440,9 +1453,9 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                 {(request.status === "contracting" || request.status === "awaiting_transfer") &&
                  request.payment.method === "transfer" &&
                  !request.payment.slipUrl && (
-                  <div style={{ marginBottom: 14 }}>
-                    <p style={{ margin: "0 0 6px", fontSize: 11, fontWeight: 600, color: "#EF4444" }}>รอดำเนินการ</p>
-                    <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 600, color: TEXT2 }}>
+                  <div ref={financeRef} style={{ marginBottom: 14 }}>
+                    <p style={{ margin: "0 0 6px", fontSize: 13, fontWeight: 700, color: "#EF4444" }}>รอดำเนินการ</p>
+                    <p style={{ margin: "0 0 8px", fontSize: 15, fontWeight: 700, color: TEXT }}>
                       โอนเงิน ฿{(request.inspection?.actualPrice ?? request.device.estimatedPrice).toLocaleString("th-TH")} ให้ลูกค้า
                     </p>
                     {(request.payment.bankName || request.payment.accountName || request.payment.accountNumber) && (
