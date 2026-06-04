@@ -109,6 +109,11 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    document.documentElement.style.background = BG;
+    document.body.style.background = BG;
+  }, [BG]);
+
+  useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) { router.replace("/admin/login"); return; }
       const [profile, online] = await Promise.all([
