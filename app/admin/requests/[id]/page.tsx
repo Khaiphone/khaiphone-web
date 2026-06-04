@@ -1441,19 +1441,20 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                  request.payment.method === "transfer" &&
                  !request.payment.slipUrl && (
                   <div style={{ marginBottom: 14 }}>
-                    <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 700, color: TEXT }}>
+                    <p style={{ margin: "0 0 6px", fontSize: 11, fontWeight: 600, color: GOLD }}>รอดำเนินการ</p>
+                    <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 600, color: TEXT2 }}>
                       โอนเงิน ฿{(request.inspection?.actualPrice ?? request.device.estimatedPrice).toLocaleString("th-TH")} ให้ลูกค้า
                     </p>
                     {(request.payment.bankName || request.payment.accountName || request.payment.accountNumber) && (
                       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                         {request.payment.bankName && (
-                          <p style={{ margin: 0, fontSize: 12, color: TEXT2 }}>{request.payment.bankName}</p>
+                          <p style={{ margin: 0, fontSize: 12, color: TEXT3 }}>{request.payment.bankName}</p>
                         )}
                         {request.payment.accountName && (
-                          <p style={{ margin: 0, fontSize: 12, color: TEXT2 }}>{request.payment.accountName}</p>
+                          <p style={{ margin: 0, fontSize: 12, color: TEXT3 }}>{request.payment.accountName}</p>
                         )}
                         {request.payment.accountNumber && (
-                          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: TEXT, fontFamily: "monospace", letterSpacing: "0.05em" }}>{request.payment.accountNumber}</p>
+                          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: TEXT2, fontFamily: "monospace", letterSpacing: "0.05em" }}>{request.payment.accountNumber}</p>
                         )}
                       </div>
                     )}
