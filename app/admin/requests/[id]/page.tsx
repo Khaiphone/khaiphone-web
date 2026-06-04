@@ -1440,33 +1440,20 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                 {(request.status === "contracting" || request.status === "awaiting_transfer") &&
                  request.payment.method === "transfer" &&
                  !request.payment.slipUrl && (
-                  <div style={{ borderLeft: `3px solid ${GOLD}`, background: BG, borderRadius: "0 10px 10px 0", padding: "12px 14px", marginBottom: 14 }}>
-                    <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: GOLD }}>รอดำเนินการ</p>
-                    <p style={{ margin: "0 0 6px", fontSize: 15, fontWeight: 700, color: TEXT }}>
+                  <div style={{ marginBottom: 14 }}>
+                    <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 700, color: TEXT }}>
                       โอนเงิน ฿{(request.inspection?.actualPrice ?? request.device.estimatedPrice).toLocaleString("th-TH")} ให้ลูกค้า
                     </p>
-                    <p style={{ margin: "0 0 10px", fontSize: 12, color: TEXT2, lineHeight: 1.5 }}>
-                      โอนเสร็จแล้วแนบสลิปด้านล่าง ไรเดอร์จะเห็นทันที
-                    </p>
-                    {(request.payment.bankName || request.payment.accountNumber || request.payment.accountName) && (
-                      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, overflow: "hidden" }}>
+                    {(request.payment.bankName || request.payment.accountName || request.payment.accountNumber) && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                         {request.payment.bankName && (
-                          <div style={{ display: "flex", borderBottom: request.payment.accountName || request.payment.accountNumber ? `1px solid ${BORDER}` : "none", padding: "7px 10px", gap: 8 }}>
-                            <span style={{ fontSize: 11, color: TEXT3, minWidth: 56 }}>ธนาคาร</span>
-                            <span style={{ fontSize: 12, fontWeight: 600, color: TEXT }}>{request.payment.bankName}</span>
-                          </div>
+                          <p style={{ margin: 0, fontSize: 12, color: TEXT2 }}>{request.payment.bankName}</p>
                         )}
                         {request.payment.accountName && (
-                          <div style={{ display: "flex", borderBottom: request.payment.accountNumber ? `1px solid ${BORDER}` : "none", padding: "7px 10px", gap: 8 }}>
-                            <span style={{ fontSize: 11, color: TEXT3, minWidth: 56 }}>ชื่อบัญชี</span>
-                            <span style={{ fontSize: 12, fontWeight: 600, color: TEXT }}>{request.payment.accountName}</span>
-                          </div>
+                          <p style={{ margin: 0, fontSize: 12, color: TEXT2 }}>{request.payment.accountName}</p>
                         )}
                         {request.payment.accountNumber && (
-                          <div style={{ display: "flex", padding: "7px 10px", gap: 8 }}>
-                            <span style={{ fontSize: 11, color: TEXT3, minWidth: 56 }}>เลขบัญชี</span>
-                            <span style={{ fontSize: 12, fontWeight: 600, color: TEXT, fontFamily: "monospace", letterSpacing: "0.05em" }}>{request.payment.accountNumber}</span>
-                          </div>
+                          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: TEXT, fontFamily: "monospace", letterSpacing: "0.05em" }}>{request.payment.accountNumber}</p>
                         )}
                       </div>
                     )}
