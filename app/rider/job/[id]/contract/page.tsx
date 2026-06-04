@@ -8,6 +8,7 @@ import { saveContractUrls, markContractSigned } from "@/app/actions/admin-reques
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
 import { validateImageFile } from "@/lib/validate-file";
+import { scanIdCard } from "@/app/actions/device-scan";
 import { useRiderTheme } from "@/app/rider/theme";
 import type { AdminRequest } from "@/lib/types/admin";
 
@@ -84,6 +85,8 @@ export default function RiderContractPage() {
   // Photos
   const [idPhotoDataUrl,       setIdPhotoDataUrl]       = useState<string | null>(null);
   const [deliveryPhotoDataUrl, setDeliveryPhotoDataUrl] = useState<string | null>(null);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrError,   setOcrError]   = useState("");
   const idFileRef       = useRef<HTMLInputElement>(null!);
   const deliveryFileRef = useRef<HTMLInputElement>(null!);
   const [uploading, setUploading] = useState(false);
@@ -141,6 +144,37 @@ export default function RiderContractPage() {
     const check = validateImageFile(file);
     if (!check.valid) { alert(check.error); return; }
     const compressed = await compressImage(file);
+
+    // OCR before watermark (watermark may cover text)
+    setOcrLoading(true);
+    setOcrError("");
+    try {
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const url = ev.target!.result as string;
+          resolve(url.split(",")[1]);
+        };
+        reader.readAsDataURL(compressed as File);
+      });
+      const result = await scanIdCard(base64);
+      if (result.data) {
+        const d = result.data;
+        if (d.nameTh && !buyerName) setBuyerName(d.nameTh);
+        if (d.id && !idNumber) setIdNumber(
+          d.id.replace(/(\d)(\d{4})(\d{5})(\d{2})(\d)/, "$1-$2-$3-$4-$5")
+        );
+        if (d.dob && !dob) setDob(d.dob);
+        if (d.address && !address) setAddress(d.address);
+      } else if (result.error) {
+        setOcrError(result.error);
+      }
+    } catch {
+      setOcrError("สแกนบัตรไม่สำเร็จ");
+    } finally {
+      setOcrLoading(false);
+    }
+
     const dataUrl = await applyWatermark(compressed);
     setIdPhotoDataUrl(dataUrl);
   }
@@ -625,6 +659,15 @@ export default function RiderContractPage() {
               </button>
               <input ref={idFileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }}
                 onChange={handleIdPhoto} />
+              {ocrLoading && (
+                <p style={{ margin: "8px 0 0", fontSize: 12, color: ACCENT, textAlign: "center" }}>🔍 กำลังอ่านข้อมูลจากบัตร...</p>
+              )}
+              {ocrError && !ocrLoading && (
+                <p style={{ margin: "8px 0 0", fontSize: 12, color: "#FF453A" }}>⚠️ {ocrError} — กรอกข้อมูลเองได้เลย</p>
+              )}
+              {idPhotoDataUrl && !ocrLoading && !ocrError && (
+                <p style={{ margin: "8px 0 0", fontSize: 12, color: "#30D158", textAlign: "center" }}>✓ อ่านข้อมูลจากบัตรแล้ว — ตรวจสอบด้านล่าง</p>
+              )}
             </div>
 
             {/* Delivery Photo */}

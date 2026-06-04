@@ -44,6 +44,69 @@ export async function scanDeviceInfo(
   }
 }
 
+export type IdCardResult = {
+  id?: string;        // 13-digit ID number, digits only
+  nameTh?: string;    // ชื่อ-สกุล ภาษาไทย
+  nameEn?: string;    // Full name in English (if visible)
+  dob?: string;       // YYYY-MM-DD (converted from พ.ศ.)
+  address?: string;   // ที่อยู่ตามบัตร
+};
+
+export async function scanIdCard(
+  base64Image: string
+): Promise<{ data?: IdCardResult; error?: string }> {
+  await requireAuth();
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return { error: "ANTHROPIC_API_KEY not configured" };
+
+  try {
+    const client = new Anthropic({ apiKey });
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 400,
+      messages: [{
+        role: "user",
+        content: [
+          {
+            type: "image",
+            source: { type: "base64", media_type: "image/jpeg", data: base64Image },
+          },
+          {
+            type: "text",
+            text: `This is a Thai national ID card (บัตรประชาชนไทย). Extract these fields and return JSON only:
+- "id": 13-digit ID number (เลขประจำตัวประชาชน), digits only no dashes
+- "name_th": Thai name (ชื่อ นามสกุล in Thai script, e.g. "นายสมชาย ใจดี")
+- "name_en": English name if shown (e.g. "Mr. Somchai Jaidee"), null if not visible
+- "dob": date of birth YYYY-MM-DD — Thai ID cards use Buddhist Era (พ.ศ.), subtract 543 to get AD year (e.g. ๒๒ ก.ค. ๒๕๓๔ = 1991-07-22)
+- "address": full address string as shown (บ้านเลขที่ + ถนน + ตำบล/แขวง + อำเภอ/เขต + จังหวัด), on one line
+
+Return ONLY valid JSON: {"id":"...","name_th":"...","name_en":"...","dob":"YYYY-MM-DD","address":"..."}
+Use null for any field not clearly visible.`,
+          },
+        ],
+      }],
+    });
+
+    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    const match = text.match(/\{[\s\S]*?\}/);
+    if (!match) return { error: "อ่านบัตรไม่ได้ — ลองถ่ายใหม่ให้ชัดขึ้น" };
+
+    const parsed = JSON.parse(match[0]);
+    return {
+      data: {
+        id:      parsed.id      && parsed.id      !== "null" ? String(parsed.id).replace(/\D/g, "") : undefined,
+        nameTh:  parsed.name_th && parsed.name_th !== "null" ? String(parsed.name_th).trim()        : undefined,
+        nameEn:  parsed.name_en && parsed.name_en !== "null" ? String(parsed.name_en).trim()        : undefined,
+        dob:     parsed.dob     && parsed.dob     !== "null" ? String(parsed.dob)                   : undefined,
+        address: parsed.address && parsed.address !== "null" ? String(parsed.address).trim()        : undefined,
+      },
+    };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "เกิดข้อผิดพลาด" };
+  }
+}
+
 export type SickwResult = {
   imei?: string;
   device?: string;
