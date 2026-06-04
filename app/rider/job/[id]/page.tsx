@@ -11,7 +11,7 @@ import {
   riderCustomerAccepted, riderCustomerRejected,
   riderCompleteCash, riderCompleteTransfer, riderRequestTransfer,
 } from "@/app/actions/rider";
-import { saveContractUrls, markContractSigned, savePaymentSlip } from "@/app/actions/admin-requests";
+import { saveContractUrls, markContractSigned, savePaymentSlip, getDocumentSignedUrl } from "@/app/actions/admin-requests";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
 import { validateImageFile } from "@/lib/validate-file";
@@ -684,10 +684,16 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
     setAccessories(prev => prev.includes(acc) ? prev.filter(a=>a!==acc) : [...prev, acc]);
   }
 
-  function openStoredDoc(path: string | undefined) {
+  async function openStoredDoc(path: string | undefined) {
     if (!path) return;
-    const { data: { publicUrl } } = supabase.storage.from("inspection-photos").getPublicUrl(path);
-    window.open(publicUrl, "_blank");
+    const signedUrl = await getDocumentSignedUrl(job.id, path);
+    if (!signedUrl) return;
+    const resp = await fetch(signedUrl);
+    const html = await resp.text();
+    const blob = new Blob([html], { type: "text/html" });
+    const url  = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
   }
 
   useEffect(() => {

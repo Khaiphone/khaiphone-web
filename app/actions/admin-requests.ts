@@ -685,6 +685,37 @@ export async function deleteRequest(id: string) {
   return { success: true as const };
 }
 
+// ─── Signed URL for contract documents (PDPA: access-controlled, 60s expiry) ─
+export async function getDocumentSignedUrl(requestId: string, storagePath: string): Promise<string | null> {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+
+  // Verify caller has access to this request
+  const { data: req } = await supabase
+    .from("requests")
+    .select("assigned_to, rider_id, staff_user_id")
+    .eq("id", requestId)
+    .single();
+  if (!req) return null;
+
+  const { data: profile } = await supabase
+    .from("admin_users")
+    .select("role")
+    .eq("user_id", user.id)
+    .single();
+
+  const isOwner       = profile?.role === "owner";
+  const isAssignee    = req.assigned_to === user.id;
+  const isRider       = req.rider_id   === user.id;
+  if (!isOwner && !isAssignee && !isRider) return null;
+
+  const { data, error } = await supabase.storage
+    .from("inspection-photos")
+    .createSignedUrl(storagePath, 60);
+  if (error) { console.error("getDocumentSignedUrl:", error); return null; }
+  return data.signedUrl;
+}
+
 // ─── Save contract + receipt URLs ────────────────────────────────────────────
 export async function saveContractUrls(
   id: string,

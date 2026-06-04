@@ -12,6 +12,7 @@ import {
   updateAppointment, updatePayment, updatePrice,
   markContractSigned, savePaymentSlip, updateDeviceColor,
   assignRequest, assignRider, deleteRequest, updateCustomer, updateDevice,
+  getDocumentSignedUrl,
 } from "@/app/actions/admin-requests";
 import { fetchAdminUsers, fetchMyRole, fetchMyProfile } from "@/app/actions/admin-users";
 import type { AdminUserRow } from "@/app/actions/admin-users";
@@ -524,8 +525,9 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   }
 
   async function openAdminDoc(storagePath: string) {
-    const { data: { publicUrl } } = supabase.storage.from("inspection-photos").getPublicUrl(storagePath);
-    const resp = await fetch(publicUrl);
+    const signedUrl = await getDocumentSignedUrl(id, storagePath);
+    if (!signedUrl) { setSaveError("ไม่มีสิทธิ์เปิดเอกสารนี้"); return; }
+    const resp = await fetch(signedUrl);
     const html = await resp.text();
     const blob = new Blob([html], { type: "text/html" });
     const url  = URL.createObjectURL(blob);
