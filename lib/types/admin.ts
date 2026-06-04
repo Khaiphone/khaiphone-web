@@ -99,6 +99,7 @@ export interface InspectionData {
   batteryCycles?: number;
   batteryHealth?: number;
   extraInspections?: ExtraDeviceInspection[];
+  sickw_report?: string;
 }
 
 export interface AdminRequest {

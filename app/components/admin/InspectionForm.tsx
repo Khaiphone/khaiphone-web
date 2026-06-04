@@ -161,9 +161,11 @@ export default function InspectionForm({
   const showHealth = iphoneSeries > 0; // all iPhones have battery health; 15+ also shows cycles
   const [imeiError,    setImeiError]    = useState(false);
   const [serialError,  setSerialError]  = useState(false);
-  const [sickwResult,  setSickwResult]  = useState<SickwResult | null>(null);
-  const [sickwError,   setSickwError]   = useState("");
-  const [sickwLoading, setSickwLoading] = useState(false);
+  const [sickwResult,   setSickwResult]   = useState<SickwResult | null>(null);
+  const [sickwRaw,      setSickwRaw]      = useState(existing?.sickw_report ?? "");
+  const [sickwExpanded, setSickwExpanded] = useState(false);
+  const [sickwError,    setSickwError]    = useState("");
+  const [sickwLoading,  setSickwLoading]  = useState(false);
   const [uploading,    setUploading]    = useState(false);
   const [uploadErr,    setUploadErr]   = useState<string | null>(null);
   const [photoSaving,  setPhotoSaving] = useState(false);
@@ -406,6 +408,7 @@ export default function InspectionForm({
       warrantyExpiry: warrantyExpiry.trim() || undefined,
       batteryCycles:  batteryCycles.trim() ? Number(batteryCycles) : undefined,
       batteryHealth:  batteryHealth.trim() ? Number(batteryHealth) : undefined,
+      sickw_report:   sickwRaw || existing?.sickw_report || undefined,
       extraInspections: extraStates.length > 0 ? extraStates.map(e => ({
         model:          e.model,
         storage:        e.storage,
@@ -428,6 +431,7 @@ export default function InspectionForm({
 
   function applySickwData(data: SickwResult) {
     setSickwResult(data);
+    if (data.rawText) setSickwRaw(data.rawText);
     if (data.imei) { setImei(data.imei); setImeiError(false); }
     if (data.color) {
       setColorDraft(data.color);
@@ -437,9 +441,9 @@ export default function InspectionForm({
     }
     if (data.warrantyStatus) {
       const ws = data.warrantyStatus.toLowerCase();
-      if (ws.includes("expir") || ws.includes("out of") || ws.includes("หมด")) {
+      if (ws === "no" || ws.includes("expir") || ws.includes("out of") || ws.includes("หมด")) {
         setWarrantyExpiry("expired");
-      } else if (ws.includes("active") || ws.includes("valid") || ws.includes("cover")) {
+      } else if (ws === "yes" || ws.includes("active") || ws.includes("valid") || ws.includes("cover")) {
         if (data.warrantyDate) {
           const parsed = new Date(data.warrantyDate);
           if (!isNaN(parsed.getTime())) setWarrantyExpiry(parsed.toISOString().slice(0, 10));
@@ -602,6 +606,32 @@ export default function InspectionForm({
               <span style={{ fontSize: 11, fontWeight: 700, color: "#DC2626" }}>ควรแจ้งผู้บริหารก่อนรับเครื่อง</span>
             </div>
           )}
+          {sickwRaw && (
+            <div style={{ padding: "8px 12px", borderTop: "1px solid #BFDBFE" }}>
+              <button onClick={() => setSickwExpanded(p => !p)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 11, color: "#1D4ED8", fontFamily: "inherit" }}>
+                {sickwExpanded ? "▲ ซ่อนรายงานเต็ม" : "▼ ดูรายงานเต็ม (SICKW)"}
+              </button>
+              {sickwExpanded && (
+                <pre style={{ margin: "6px 0 0", padding: "8px 10px", borderRadius: 6, background: "#F1F5F9", fontSize: 10, lineHeight: 1.6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", color: "#1E293B" }}>{sickwRaw}</pre>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+      {!sickwResult && sickwRaw && (
+        <div style={{ marginTop: 8, background: "#F8FAFF", border: "1px solid #BFDBFE", borderRadius: 10, overflow: "hidden" }}>
+          <div style={{ padding: "8px 12px", borderBottom: "1px solid #BFDBFE", display: "flex", alignItems: "center", gap: 6 }}>
+            <ShieldCheck size={13} color="#1D4ED8" />
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#1D4ED8" }}>รายงาน SICKW (บันทึกไว้แล้ว)</span>
+          </div>
+          <div style={{ padding: "8px 12px" }}>
+            <button onClick={() => setSickwExpanded(p => !p)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 11, color: "#1D4ED8", fontFamily: "inherit" }}>
+              {sickwExpanded ? "▲ ซ่อนรายงาน" : "▼ ดูรายงาน SICKW"}
+            </button>
+            {sickwExpanded && (
+              <pre style={{ margin: "6px 0 0", padding: "8px 10px", borderRadius: 6, background: "#F1F5F9", fontSize: 10, lineHeight: 1.6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", color: "#1E293B" }}>{sickwRaw}</pre>
+            )}
+          </div>
         </div>
       )}
       </div>

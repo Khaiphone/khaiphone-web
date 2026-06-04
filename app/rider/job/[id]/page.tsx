@@ -301,6 +301,8 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   const scanRef = useRef<HTMLInputElement>(null!);
   const [scanning,     setScanning]     = useState(false);
   const [sickwResult,  setSickwResult]  = useState<SickwResult | null>(null);
+  const [sickwRaw,     setSickwRaw]     = useState("");
+  const [sickwExpanded,setSickwExpanded]= useState(false);
   const [sickwError,   setSickwError]   = useState("");
   const [sickwLoading, setSickwLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -308,13 +310,14 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
 
   function applySickwData(data: import("@/app/actions/device-scan").SickwResult) {
     setSickwResult(data);
+    if (data.rawText) setSickwRaw(data.rawText);
     if (data.imei) setImei(data.imei);
     if (data.color) setColor(data.color);
     if (data.warrantyStatus) {
       const ws = data.warrantyStatus.toLowerCase();
-      if (ws.includes("expir") || ws.includes("out of") || ws.includes("หมด")) {
+      if (ws === "no" || ws.includes("expir") || ws.includes("out of") || ws.includes("หมด")) {
         setWarrantyStatus("expired");
-      } else if (ws.includes("active") || ws.includes("valid") || ws.includes("cover")) {
+      } else if (ws === "yes" || ws.includes("active") || ws.includes("valid") || ws.includes("cover")) {
         setWarrantyStatus("valid");
         if (data.warrantyDate) {
           const parsed = new Date(data.warrantyDate);
@@ -399,6 +402,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
         batteryHealth: battery ? parseInt(battery) : undefined,
         warrantyExpiry: warrantyValue,
         criteria: criteriaArr, functionalTests: functional, photos,
+        sickw_report: sickwRaw || undefined,
       });
       if (!result.success) { setError((result as { success: false; error?: string }).error ?? "เกิดข้อผิดพลาด"); return; }
       setShowPrice(true);
@@ -558,6 +562,16 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
                       </div>
                     ))}
                   </div>
+                  {sickwRaw && (
+                    <div style={{ marginTop: 8 }}>
+                      <button onClick={() => setSickwExpanded(p => !p)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 12, color: "#0A84FF", fontFamily: "inherit" }}>
+                        {sickwExpanded ? "▲ ซ่อนรายงานเต็ม" : "▼ ดูรายงานเต็ม (SICKW)"}
+                      </button>
+                      {sickwExpanded && (
+                        <pre style={{ margin: "6px 0 0", padding: "10px 12px", borderRadius: 8, background: c.CARD2, fontSize: 11, lineHeight: 1.6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", color: c.TEXT }}>{sickwRaw}</pre>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
             </div>

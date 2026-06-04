@@ -54,14 +54,38 @@ export type SickwResult = {
   blacklist?: string;
   warrantyStatus?: string;
   warrantyDate?: string;
+  rawText?: string;
 };
+
+function parseSickwText(raw: string): Record<string, string> {
+  const map: Record<string, string> = {};
+  const lines = raw.split(/<br\s*\/?>/i).flatMap(l => l.split(/\r?\n/));
+  for (const line of lines) {
+    const clean = line.replace(/<[^>]+>/g, "").trim();
+    const idx = clean.indexOf(": ");
+    if (idx > 0) {
+      const key = clean.slice(0, idx).trim();
+      const val = clean.slice(idx + 2).trim();
+      if (key && val) map[key] = val;
+    }
+  }
+  return map;
+}
+
+function parseShortDate(s: string): string | undefined {
+  // "Ends on MM/DD/YY" or bare "MM/DD/YY" / "MM/DD/YYYY"
+  const m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if (!m) return undefined;
+  const year = m[3].length === 2 ? `20${m[3]}` : m[3];
+  return `${year}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
+}
 
 export async function checkSickw(
   identifier: string  // accepts IMEI or Serial Number
 ): Promise<{ success: boolean; data?: SickwResult; error?: string }> {
   await requireAuth();
 
-  const apiKey   = process.env.SICKW_API_KEY;
+  const apiKey    = process.env.SICKW_API_KEY;
   const serviceId = process.env.SICKW_SERVICE_ID;
 
   if (!apiKey)    return { success: false, error: "ยังไม่ได้ตั้งค่า SICKW_API_KEY" };
@@ -82,21 +106,39 @@ export async function checkSickw(
       };
     }
 
-    const r = typeof json.result === "string"
-      ? {} as Record<string, string>
+    // Service 72 returns result as plain text; other services may return an object
+    const rawText: string = typeof json.result === "string"
+      ? json.result.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").trim()
+      : Object.entries(json.result as Record<string, string>)
+          .map(([k, v]) => `${k}: ${v}`).join("\n");
+    const r: Record<string, string> = typeof json.result === "string"
+      ? parseSickwText(json.result)
       : json.result as Record<string, string>;
+
+    // Extract color from "Device Configuration: SVC,MODEL,REGION,STORAGE,COLOR,..."
+    const devConfig = r["Device Configuration"] ?? "";
+    const configParts = devConfig.split(",");
+    const colorFromConfig = configParts.length >= 5 ? configParts[4].trim() : undefined;
+
+    const warrantyDate =
+      parseShortDate(r["Coverage Duration"] ?? "") ??
+      parseShortDate(r["Coverage End"] ?? "") ??
+      r["WarrantyDate"] ?? r["warranty_date"];
+
     return {
       success: true,
       data: {
-        imei:          r.IMEI          ?? r.Imei          ?? r.imei,
-        device:        r.Device        ?? r.device        ?? r.Model ?? r.model,
-        color:         r.Color         ?? r.color         ?? r.Colour ?? r.colour,
-        carrier:       r.Carrier       ?? r.carrier,
-        carrierLock:   r.CarrierLock   ?? r.simlock        ?? r.sim_lock,
-        icloudStatus:  r.iCloudStatus  ?? r.icloud_status  ?? r.iCloudLock ?? r.icloud,
-        blacklist:     r.Blacklist      ?? r.blacklist,
-        warrantyStatus:r.WarrantyStatus ?? r.warranty_status ?? r.warranty,
-        warrantyDate:  r.WarrantyDate   ?? r.warranty_date,
+        imei:          r["IMEI"]          ?? r.IMEI   ?? r.Imei  ?? r.imei,
+        device:        r["Device Configuration"] ?? r.Device ?? r.device ?? r.Model ?? r.model,
+        color:         colorFromConfig    ?? r.Color  ?? r.color ?? r.Colour ?? r.colour,
+        carrier:       r["Carrier"]       ?? r.Carrier ?? r.carrier,
+        carrierLock:   r["Unlock Status"] ?? r["Sim-Lock"] ?? r.CarrierLock ?? r.simlock,
+        icloudStatus:  [r["iCloud Lock"], r["iCloud Status"]].filter(Boolean).join(" / ") ||
+                       r.iCloudStatus ?? r.icloud_status ?? r.icloud,
+        blacklist:     r["Blacklist"]     ?? r.blacklist,
+        warrantyStatus: r["Limited Warranty"] ?? r.WarrantyStatus ?? r.warranty_status ?? r.warranty,
+        warrantyDate,
+        rawText,
       },
     };
   } catch (e) {
