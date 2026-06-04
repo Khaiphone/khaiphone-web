@@ -89,6 +89,7 @@ function stepFromStatus(status: string): number {
   if (status === "inspecting")        return 2;
   if (status === "price_negotiation") return 3;
   if (status === "contracting")       return 3;
+  if (status === "awaiting_transfer") return 3;
   if (status === "completed")         return 4;
   if (status === "cancelled")         return 4;
   return 0;
@@ -599,9 +600,9 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
   const receiptHTMLRef = useRef("");
 
   // Post-generation state
-  const [contractSigned, setContractSigned] = useState(!!job.payment.contractSignedAt);
+  const [contractSigned, setContractSigned] = useState(!!job.payment.contractSignedAt || job.status === "awaiting_transfer");
   const [transferBusy, setTransferBusy] = useState(false);
-  const [transferNotified, setTransferNotified] = useState(false);
+  const [transferNotified, setTransferNotified] = useState(job.status === "awaiting_transfer");
   const [slipUploading, setSlipUploading] = useState(false);
   const [completingBusy, setCompletingBusy] = useState(false);
   const slipFileRef = useRef<HTMLInputElement>(null!);
@@ -1329,7 +1330,7 @@ export default function JobWizardPage() {
               {job.status === "price_negotiation" && (
                 <PriceNegotiationStep job={job} reload={reload} c={c} />
               )}
-              {job.status === "contracting" && (
+              {(job.status === "contracting" || job.status === "awaiting_transfer") && (
                 <>
                   <div style={{ background:CARD, borderRadius:14, padding:"12px 14px", border:`1px solid ${BORDER}` }}>
                     <p style={{ margin:"0 0 4px", fontSize:12, color:TEXT2 }}>ราคาตกลง</p>

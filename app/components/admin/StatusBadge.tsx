@@ -7,6 +7,7 @@ const STATUS_CONFIG: Record<RequestStatus, { label: string; color: string; bg: s
   confirmed:         { label: "ยืนยันนัดหมาย",     color: "#5B21B6", bg: "#EDE9FE", dot: "#8B5CF6" },
   price_negotiation: { label: "รอยืนยันราคา",       color: "#92400E", bg: "#FEF3C7", dot: "#F59E0B" },
   contracting:       { label: "กำลังทำสัญญา",       color: "#3730A3", bg: "#E0E7FF", dot: "#4F46E5" },
+  awaiting_transfer: { label: "รอโอนเงิน",           color: "#1E40AF", bg: "#DBEAFE", dot: "#3B82F6" },
   completed:         { label: "เสร็จสิ้น",           color: "#065F46", bg: "#D1FAE5", dot: "#10B981" },
   cancelled:         { label: "ยกเลิกนัดหมาย",     color: "#991B1B", bg: "#FEE2E2", dot: "#EF4444" },
   no_show:           { label: "ลูกค้าไม่อยู่",     color: "#9A3412", bg: "#FFEDD5", dot: "#F97316" },

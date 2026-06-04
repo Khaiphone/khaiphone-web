@@ -25,6 +25,7 @@ const STATUS_TABS: Array<{ value: RequestStatus | "all"; label: string }> = [
   { value: "inspecting",        label: "ติดต่อกลับแล้ว"   },
   { value: "confirmed",         label: "ยืนยันนัดหมาย"    },
   { value: "price_negotiation", label: "รอยืนยันราคา"     },
+  { value: "awaiting_transfer", label: "รอโอนเงิน"        },
   { value: "completed",         label: "เสร็จสิ้น"        },
   { value: "cancelled",         label: "ยกเลิกนัดหมาย"   },
   { value: "no_show",           label: "ลูกค้าไม่อยู่"   },

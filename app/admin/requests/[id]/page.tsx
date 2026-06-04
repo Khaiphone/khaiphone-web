@@ -1364,7 +1364,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         )}
 
         {/* J. Contract button — rider job: view only; branch job: generate */}
-        {(["contracting", "completed"] as RequestStatus[]).includes(request.status) && (
+        {(["contracting", "awaiting_transfer", "completed"] as RequestStatus[]).includes(request.status) && (
           request.riderId ? (
             /* Rider is handling this job — admin can only view, not regenerate */
             request.contractUrl ? (
@@ -1412,7 +1412,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
             </button>
           )
         )}
-        {(["contracting", "completed"] as RequestStatus[]).includes(request.status) && (
+        {(["contracting", "awaiting_transfer", "completed"] as RequestStatus[]).includes(request.status) && (
           <Card>
             <div style={{ padding: "16px" }}>
               <SectionLabel>สัญญาและการชำระเงิน</SectionLabel>
@@ -1434,9 +1434,8 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
               <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 12 }}>
 
                 {/* Finance action banner — shown when transfer is pending slip */}
-                {request.status === "contracting" &&
+                {(request.status === "contracting" || request.status === "awaiting_transfer") &&
                  request.payment.method === "transfer" &&
-                 request.payment.contractSignedAt &&
                  !request.payment.slipUrl && (
                   <div style={{ borderLeft: "3px solid #1a1a2e", background: "#F8F8FA", borderRadius: "0 8px 8px 0", padding: "12px 14px", marginBottom: 14 }}>
                     <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#888" }}>รอดำเนินการ</p>
@@ -1502,8 +1501,8 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                       display: "block", width: "100%", borderRadius: 10, padding: "14px 0",
                       fontSize: 14, fontWeight: 700, cursor: slipUploading ? "default" : "pointer",
                       fontFamily: "inherit", touchAction: "manipulation", opacity: slipUploading ? 0.7 : 1,
-                      background: request.status === "contracting" && request.payment.method === "transfer" ? "#1a1a2e" : "#F5F5F7",
-                      color:      request.status === "contracting" && request.payment.method === "transfer" ? "#fff"  : TEXT2,
+                      background: ["contracting","awaiting_transfer"].includes(request.status) && request.payment.method === "transfer" ? "#1a1a2e" : "#F5F5F7",
+                      color:      ["contracting","awaiting_transfer"].includes(request.status) && request.payment.method === "transfer" ? "#fff"  : TEXT2,
                       border: "none",
                     }}
                   >

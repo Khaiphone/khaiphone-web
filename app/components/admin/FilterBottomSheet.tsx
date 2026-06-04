@@ -9,6 +9,7 @@ const STATUS_OPTIONS: Array<{ value: RequestStatus; label: string }> = [
   { value: "confirmed",        label: "ยืนยันนัดหมาย" },
   { value: "pickup_scheduled", label: "นัดรับเครื่อง" },
   { value: "inspecting",       label: "กำลังตรวจสอบ"  },
+  { value: "awaiting_transfer", label: "รอโอนเงิน"    },
   { value: "completed",        label: "เสร็จสิ้น"     },
   { value: "cancelled",        label: "ยกเลิก"        },
   { value: "no_show",          label: "ลูกค้าไม่อยู่" },

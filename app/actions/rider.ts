@@ -526,8 +526,8 @@ export async function riderRequestTransfer(id: string) {
 
   const note = `รอ Finance โอนเงิน ฿${(req?.actual_price ?? 0).toLocaleString("th-TH")} ให้ลูกค้า`;
   const { data: current } = await supabase.from("requests").select("status_log").eq("id", id).single();
-  const newLog = [...(current?.status_log ?? []), { status: "contracting", timestamp: now, note }];
-  await supabase.from("requests").update({ status_log: newLog, updated_at: now }).eq("id", id);
+  const newLog = [...(current?.status_log ?? []), { status: "awaiting_transfer", timestamp: now, note }];
+  await supabase.from("requests").update({ status: "awaiting_transfer", status_log: newLog, updated_at: now }).eq("id", id);
 
   after(async () => {
     await broadcastRequestUpdate(id);

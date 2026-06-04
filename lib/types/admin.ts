@@ -7,6 +7,7 @@ export type RequestStatus =
   | "en_route"
   | "price_negotiation"
   | "contracting"
+  | "awaiting_transfer"
   | "completed"
   | "cancelled"
   | "no_show"
@@ -21,6 +22,7 @@ export const STATUS_LABELS: Record<RequestStatus, string> = {
   en_route:          "ไรเดอร์กำลังเดินทาง",
   price_negotiation: "รอยืนยันราคา",
   contracting:       "กำลังทำสัญญา",
+  awaiting_transfer: "รอโอนเงิน",
   completed:         "เสร็จสิ้น",
   cancelled:         "ยกเลิก",
   no_show:           "ลูกค้าไม่อยู่",
@@ -36,6 +38,7 @@ export const STATUS_COLORS: Record<RequestStatus, { bg: string; text: string; bo
   en_route:          { bg: "rgba(234,179,8,0.15)",   text: "#EAB308", border: "rgba(234,179,8,0.3)"   },
   price_negotiation: { bg: "rgba(245,158,11,0.15)",  text: "#F59E0B", border: "rgba(245,158,11,0.3)"  },
   contracting:       { bg: "rgba(79,70,229,0.15)",   text: "#4F46E5", border: "rgba(79,70,229,0.3)"   },
+  awaiting_transfer: { bg: "rgba(59,130,246,0.15)",  text: "#3B82F6", border: "rgba(59,130,246,0.3)"  },
   completed:         { bg: "rgba(16,185,129,0.15)",  text: "#10B981", border: "rgba(16,185,129,0.3)"  },
   cancelled:         { bg: "rgba(239,68,68,0.15)",   text: "#EF4444", border: "rgba(239,68,68,0.3)"   },
   no_show:           { bg: "rgba(249,115,22,0.15)",  text: "#F97316", border: "rgba(249,115,22,0.3)"  },

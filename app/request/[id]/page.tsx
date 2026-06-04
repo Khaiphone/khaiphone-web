@@ -135,6 +135,8 @@ interface HeroConfig { badge: string; badgeBg: string; badgeColor: string; badge
 function getHeroConfig(doneUpTo: number, dbStatus?: string): HeroConfig {
   if (dbStatus === "en_route")
     return { badge: "ไรเดอร์กำลังเดินทาง", badgeBg: "rgba(234,179,8,0.15)",   badgeColor: "#EAB308", badgeBorder: "rgba(234,179,8,0.3)",   title: "ไรเดอร์กำลังเดินทางมาหาคุณ",        progress: 55  };
+  if (dbStatus === "awaiting_transfer")
+    return { badge: "รอโอนเงิน",            badgeBg: "rgba(59,130,246,0.15)",  badgeColor: "#3B82F6", badgeBorder: "rgba(59,130,246,0.3)",  title: "ทำสัญญาเสร็จแล้ว รอทีมงานโอนเงินให้คุณ", progress: 95 };
   if (doneUpTo >= 7) return { badge: "เสร็จสิ้น",          badgeBg: "rgba(16,185,129,0.15)",  badgeColor: "#10B981", badgeBorder: "rgba(16,185,129,0.3)",  title: "ธุรกรรมสำเร็จเรียบร้อย",            progress: 100 };
   if (doneUpTo === 6) return { badge: "กำลังทำสัญญา",      badgeBg: "rgba(16,185,129,0.15)",  badgeColor: "#10B981", badgeBorder: "rgba(16,185,129,0.3)",  title: "กำลังดำเนินการทำสัญญาซื้อขาย",     progress: 92  };
   if (doneUpTo === 5) return { badge: "รอยืนยันราคา",      badgeBg: "rgba(245,158,11,0.15)",  badgeColor: "#FBBF24", badgeBorder: "rgba(245,158,11,0.3)",  title: "กรุณายืนยันราคาที่เสนอใหม่",         progress: 80  };
@@ -148,6 +150,7 @@ function getHeroConfig(doneUpTo: number, dbStatus?: string): HeroConfig {
 function statusToDoneUpTo(status: string): number {
   switch (status) {
     case "completed":         return 7;
+    case "awaiting_transfer": return 7;
     case "contracting":       return 6;
     case "price_negotiation": return 5;
     case "inspecting":        return 4;
@@ -418,7 +421,7 @@ function RequestDetailInner() {
       if (["completed", "cancelled", "no_show", "rejected"].includes(dbReq.status)) {
         try { localStorage.removeItem("khaiphone_submission"); } catch {}
       }
-      const statusToStep: Record<string, number> = { pending: 1, confirmed: 3, pickup_scheduled: 3, en_route: 4, inspecting: 5, price_negotiation: 5, contracting: 6, completed: 7 };
+      const statusToStep: Record<string, number> = { pending: 1, confirmed: 3, pickup_scheduled: 3, en_route: 4, inspecting: 5, price_negotiation: 5, contracting: 6, awaiting_transfer: 7, completed: 7 };
       const ts: (string | null)[] = [dbReq.createdAt, null, null, null, null, null, null, null];
       dbReq.statusLog.forEach(log => {
         const step = statusToStep[log.status];
@@ -853,7 +856,7 @@ function RequestDetailInner() {
             })()}
 
             {/* Inspection results — only when full inspection saved (result field exists) */}
-            {inspection?.result && (dbStatus === "completed" || dbStatus === "contracting" || dbStatus === "price_negotiation" || dbStatus === "confirmed" || dbStatus === "rejected" || dbStatus === "cancelled") && (
+            {inspection?.result && (dbStatus === "completed" || dbStatus === "awaiting_transfer" || dbStatus === "contracting" || dbStatus === "price_negotiation" || dbStatus === "confirmed" || dbStatus === "rejected" || dbStatus === "cancelled") && (
               <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid #E5E7EB" }}>
                 <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
                   <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(184,134,11,0.1)" }}>

@@ -8,7 +8,8 @@ const THRESHOLDS: Record<string, number> = {
   en_route:         90,   // ออกเดินทางแต่ยังไม่ถึง > 90 นาที
   inspecting:       60,   // ตรวจเครื่องนานเกิน > 60 นาที
   price_negotiation: 120, // รอยืนยันราคา > 2 ชั่วโมง
-  contracting:      60,   // ทำสัญญานาน > 60 นาที
+  contracting:       60,  // ทำสัญญานาน > 60 นาที
+  awaiting_transfer: 30,  // รอ Finance โอนเงิน > 30 นาที
 };
 
 export async function GET(req: NextRequest) {
@@ -43,6 +44,7 @@ export async function GET(req: NextRequest) {
       inspecting:        "ตรวจเครื่องนานผิดปกติ",
       price_negotiation: "รอยืนยันราคานานเกิน",
       contracting:       "ทำสัญญานานผิดปกติ",
+      awaiting_transfer: "Finance ยังไม่ได้โอนเงิน",
     };
 
     await sendPushToOwners({
