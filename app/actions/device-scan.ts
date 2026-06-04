@@ -25,7 +25,7 @@ export async function scanDeviceInfo(
           },
           {
             type: "text",
-            text: 'This is a screenshot of an iPhone Settings > General > About screen. Extract ONLY the Serial Number value. Return valid JSON only: {"serial":"..."}. Use null if not visible.',
+            text: 'This is a screenshot of an iPhone Settings > General > About screen (may be in English or Thai). Find the Serial Number (labeled "Serial Number" in English or "หมายเลขซีเรียล" in Thai) — it is a 10–12 character alphanumeric code like "F2LJH0X7XY". Return valid JSON only: {"serial":"..."}. Use null if not visible.',
           },
         ],
       }],
