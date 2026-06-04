@@ -161,7 +161,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
   const isJobPage = /^\/rider\/job\//.test(pathname);
 
   return (
-    <div style={{ height: "100dvh", background: BG, color: TEXT, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", display: "flex", flexDirection: "column", overflowY: "auto", overscrollBehavior: "none" }}>
+    <div style={{ height: "100dvh", background: BG, color: TEXT, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", display: "flex", flexDirection: "column", overflow: "hidden", overscrollBehavior: "none" }}>
 
       {/* Header */}
       {!isJobPage && (
