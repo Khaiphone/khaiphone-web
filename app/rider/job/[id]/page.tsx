@@ -677,11 +677,56 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
         </Card>
       </div>
 
+      {/* ── SICKW Blocking Warning ─────────────────────────────────────────── */}
+      {(() => {
+        if (!sickwResult) return null;
+        const issues: string[] = [];
+        const icloud = sickwResult.icloudStatus?.toLowerCase() ?? "";
+        if (icloud.includes("lock") && icloud.includes("on")) issues.push("iCloud Lock เปิดอยู่ — เครื่องล็อคกับบัญชี Apple เดิม");
+        if (icloud.includes("lost")) issues.push("Find My iPhone / สถานะ Lost — เครื่องถูกรายงานสูญหาย");
+        const mdmLine = sickwRaw.split("\n").find(l => /^MDM Lock:/i.test(l));
+        if (mdmLine?.toLowerCase().includes(": on")) issues.push("MDM Lock เปิดอยู่ — เครื่องถูกล็อคโดยองค์กร");
+        const bl = sickwResult.blacklist?.toLowerCase() ?? "";
+        if (bl && !["clean", "ok", "no", "clear", "not"].some(s => bl.includes(s))) issues.push(`Blacklist: ${sickwResult.blacklist}`);
+        if (issues.length === 0) return null;
+        return (
+          <div style={{ borderRadius: 14, border: "1.5px solid rgba(255,69,58,0.5)", background: "rgba(255,69,58,0.08)", padding: "14px 16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <ShieldX size={18} color={c.RED} />
+              <span style={{ fontSize: 14, fontWeight: 700, color: c.RED }}>ไม่ผ่านการตรวจสอบ — ห้ามรับเครื่อง</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {issues.map(issue => (
+                <div key={issue} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                  <span style={{ fontSize: 16, lineHeight: 1 }}>🚫</span>
+                  <span style={{ fontSize: 13, color: c.RED, fontWeight: 500 }}>{issue}</span>
+                </div>
+              ))}
+            </div>
+            <p style={{ margin: "10px 0 0", fontSize: 12, color: c.TEXT2 }}>แจ้งลูกค้าและติดต่อ admin ก่อนดำเนินการต่อ</p>
+          </div>
+        );
+      })()}
+
       {error && <p style={{ margin: 0, fontSize: 13, color: c.RED }}>{error}</p>}
       {uploading && <p style={{ margin: 0, fontSize: 13, color: c.ACCENT, textAlign: "center" }}>กำลังอัปโหลดรูป...</p>}
 
-      <BigBtn label={uploading ? "กำลังอัปโหลดรูป..." : saving ? "กำลังบันทึก..." : "บันทึกและยืนยันราคา →"}
-        loading={saving} disabled={uploading} onClick={handleSave} />
+      {(() => {
+        const blocked = sickwResult ? (() => {
+          const icloud = sickwResult.icloudStatus?.toLowerCase() ?? "";
+          if (icloud.includes("lock") && icloud.includes("on")) return true;
+          if (icloud.includes("lost")) return true;
+          const mdmLine = sickwRaw.split("\n").find(l => /^MDM Lock:/i.test(l));
+          if (mdmLine?.toLowerCase().includes(": on")) return true;
+          const bl = sickwResult.blacklist?.toLowerCase() ?? "";
+          if (bl && !["clean", "ok", "no", "clear", "not"].some(s => bl.includes(s))) return true;
+          return false;
+        })() : false;
+        return (
+          <BigBtn label={uploading ? "กำลังอัปโหลดรูป..." : saving ? "กำลังบันทึก..." : "บันทึกและยืนยันราคา →"}
+            loading={saving} disabled={uploading || blocked} onClick={handleSave} />
+        );
+      })()}
     </div>
   );
 }
