@@ -6,7 +6,8 @@ export type Permission =
   | "view_reports"
   | "view_customers"
   | "view_payments"
-  | "manage_prices";
+  | "manage_prices"
+  | "delete_stock";
 
 export const PERMISSION_LABELS: Record<Permission, { label: string; sub: string }> = {
   receive_new_requests: { label: "รับคำขอใหม่",            sub: "รับแจ้งเตือนและเห็นคำขอทุกรายการ ไม่ใช่แค่งานที่ได้รับมอบหมาย" },
@@ -17,4 +18,5 @@ export const PERMISSION_LABELS: Record<Permission, { label: string; sub: string 
   view_customers:       { label: "ดูข้อมูลลูกค้า",          sub: "รายชื่อและประวัติลูกค้า"                                        },
   view_payments:        { label: "ดูการชำระเงิน",           sub: "ประวัติการจ่ายเงิน"                                             },
   manage_prices:        { label: "จัดการราคา / ค่าหัก",    sub: "แก้ราคารุ่น, ค่าหักมาตรฐาน"                                    },
+  delete_stock:         { label: "ลบสินค้าจาก Stock",      sub: "ลบรายการสต็อคที่กรอกผิดหรือไม่ต้องการ"                         },
 };
