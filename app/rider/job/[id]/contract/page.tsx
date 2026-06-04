@@ -615,23 +615,6 @@ export default function RiderContractPage() {
               </div>
             </div>
 
-            {/* Accessories — read-only, from inspection */}
-            {(() => {
-              const accList = (job.inspection as { accessories?: string[] } | undefined)?.accessories;
-              if (!accList?.length) return null;
-              return (
-                <div style={{ background: CARD, borderRadius: 14, padding: "14px 16px" }}>
-                  <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 700, color: TEXT }}>อุปกรณ์ที่ให้มา</p>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                    {accList.map(item => (
-                      <span key={item} style={{ padding: "4px 10px", borderRadius: 8, background: "rgba(74,222,128,0.12)", border: `1px solid ${ACCENT}`, color: ACCENT, fontSize: 13, fontWeight: 500 }}>✓ {item}</span>
-                    ))}
-                  </div>
-                  <p style={{ margin: "8px 0 0", fontSize: 11, color: TEXT2 }}>บันทึกไว้จากขั้นตอนตรวจเครื่อง — แก้ไขได้ที่หน้าตรวจสภาพ</p>
-                </div>
-              );
-            })()}
-
             {/* ID Card Photo */}
             <div style={{ background: CARD, borderRadius: 14, padding: "14px 16px" }}>
               <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: TEXT }}>ถ่ายบัตรประชาชนผู้ขาย</p>
