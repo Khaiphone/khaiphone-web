@@ -141,6 +141,10 @@ export default function InspectionForm({
   useEffect(() => {
     if (externalColorError) setColorError(true);
   }, [externalColorError]);
+
+  useEffect(() => {
+    if (existing?.sickw_report && !sickwRaw) setSickwRaw(existing.sickw_report);
+  }, [existing?.sickw_report]);
   const [criteria,       setCriteria]       = useState<CriterionRow[]>(() => buildInitCriteria(selections, existing));
   const [functionalTests, setFunctionalTests] = useState<FunctionalTest[]>(
     existing?.functionalTests ?? FUNCTIONAL_TEST_DEFAULTS.map(t => ({ ...t }))
