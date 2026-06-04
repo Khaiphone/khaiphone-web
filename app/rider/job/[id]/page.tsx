@@ -1225,7 +1225,9 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
 
       <fieldset disabled={isCompleted} style={{ border: "none", padding: 0, margin: 0, opacity: isCompleted ? 0.55 : 1 }}>
       <div style={{ background: c.CARD, border: `1px solid ${c.BORDER}`, borderRadius: 14, overflow: "hidden" }}>
-        <div style={{ padding: "10px 14px", borderBottom: `1px solid ${c.BORDER}`, background: c.CARD2, fontSize: 13, fontWeight: 700, color: c.TEXT }}>ข้อมูลสัญญา {isCompleted && <span style={{ fontSize: 11, color: c.GREEN, marginLeft: 6 }}>✓ ล็อกแล้ว</span>}</div>
+        <div style={{ padding: "10px 14px", borderBottom: `1px solid ${c.BORDER}`, background: c.CARD2, fontSize: 13, fontWeight: 700, color: c.TEXT }}>
+          ข้อมูลสัญญา {isCompleted && <span style={{ fontSize: 11, color: c.GREEN, marginLeft: 6 }}>✓ ล็อกแล้ว</span>}
+        </div>
         <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
 
           <div><label style={labelSt}>ชื่อ-นามสกุลผู้ขาย</label>
@@ -1299,12 +1301,12 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
             <input type="date" value={txDate} onChange={e=>setTxDate(e.target.value)} style={{ ...inputSt, appearance:"none" }} /></div>
 
         </div>
-      </div>
 
-      {/* Photos */}
-      <div style={{ background: c.CARD, border: `1px solid ${c.BORDER}`, borderRadius: 14, overflow: "hidden" }}>
-        <div style={{ padding: "10px 14px", borderBottom: `1px solid ${c.BORDER}`, background: c.CARD2, fontSize: 13, fontWeight: 700, color: c.TEXT }}>รูปประกอบสัญญา</div>
-        <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 14 }}>
+        {/* Photos — same card, divided by a section line */}
+        <div style={{ borderTop: `1px solid ${c.BORDER}`, padding: "10px 14px", background: c.CARD2, fontSize: 12, fontWeight: 700, color: c.TEXT2, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          รูปประกอบสัญญา
+        </div>
+        <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 18 }}>
           <div>
             <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 600, color: c.TEXT }}>สำเนาบัตรประชาชน (จะมี Watermark อัตโนมัติ)</p>
             {idPhotoDataUrl
@@ -1348,7 +1350,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
             </div>
           )}
         </div>
-      </div>
+      </div>  {/* end single card */}
       </fieldset>
 
       {error && <p style={{ margin: 0, fontSize: 13, color: c.RED }}>{error}</p>}
