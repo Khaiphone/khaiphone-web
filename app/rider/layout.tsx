@@ -7,7 +7,8 @@ import Image from "next/image";
 import { Home, Clock, Wallet, UserCircle, Bell } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { fetchMyProfile } from "@/app/actions/admin-users";
-import { fetchRiderOnlineStatus, fetchRiderNotifications } from "@/app/actions/rider";
+import { fetchRiderOnlineStatus, fetchRiderNotifications, fetchRiderHomeData } from "@/app/actions/rider";
+import { cacheSet } from "@/app/rider/cache";
 import { saveSubscription } from "@/app/actions/push";
 import { RiderThemeProvider, useRiderTheme } from "@/app/rider/theme";
 import { RiderSessionContext } from "@/app/rider/context";
@@ -127,9 +128,10 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) { router.replace("/admin/login"); return; }
+      const uid = session.user.id;
       const [profile, online] = await Promise.all([
-        fetchMyProfile(session.user.id),
-        fetchRiderOnlineStatus(session.user.id),
+        fetchMyProfile(uid),
+        fetchRiderOnlineStatus(uid),
       ]);
       if (!profile || (profile.role !== "owner" && profile.role !== "staff")) {
         router.replace("/admin/login");
@@ -138,10 +140,12 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
       setRiderName(profile.name ?? "ไรเดอร์");
       setRiderEmail(profile.email ?? "");
       setRiderRole(profile.role ?? "");
-      setUserId(session.user.id);
+      setUserId(uid);
       setIsOnline(online);
       setReady(true);
-      loadNotifs(session.user.id);
+      loadNotifs(uid);
+      // Prefetch home data so first visit to home tab is instant
+      fetchRiderHomeData(uid).then(d => cacheSet(`home:${uid}`, d));
     });
   }, [router, loadNotifs]);
 
