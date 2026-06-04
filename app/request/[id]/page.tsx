@@ -402,10 +402,10 @@ function RequestDetailInner() {
       setRequestDbId(dbReq.id);
       setSub(fromDb);
       // สำหรับ cancelled/rejected ใช้ step ล่าสุดก่อนยกเลิกใน timeline (ไม่ใช่ 0)
-      const isTerminal = dbReq.status === "cancelled" || dbReq.status === "rejected";
+      const isTerminal = ["cancelled", "no_show", "rejected"].includes(dbReq.status);
       if (isTerminal) {
         const lastMeaningfulLog = [...dbReq.statusLog]
-          .filter(l => l.status !== "cancelled" && l.status !== "rejected")
+          .filter(l => !["cancelled", "no_show", "rejected"].includes(l.status))
           .at(-1);
         setDoneUpTo(lastMeaningfulLog ? statusToDoneUpTo(lastMeaningfulLog.status) : 0);
       } else {
@@ -415,7 +415,7 @@ function RequestDetailInner() {
       setInspection(dbReq.inspection ?? null);
       setDbStatus(dbReq.status);
       // ล้าง localStorage เมื่อธุรกรรมเสร็จสิ้น หรือถูกยกเลิก/ไม่เข้าเงื่อนไข ทำให้ "ดูสถานะ" chip หายไป
-      if (dbReq.status === "completed" || dbReq.status === "cancelled" || dbReq.status === "rejected") {
+      if (["completed", "cancelled", "no_show", "rejected"].includes(dbReq.status)) {
         try { localStorage.removeItem("khaiphone_submission"); } catch {}
       }
       const statusToStep: Record<string, number> = { pending: 1, confirmed: 3, pickup_scheduled: 3, en_route: 4, inspecting: 5, price_negotiation: 5, contracting: 6, completed: 7 };
@@ -607,6 +607,8 @@ function RequestDetailInner() {
   const hero: HeroConfig =
     dbStatus === "cancelled"
       ? { badge: "ยกเลิกการขาย",   badgeBg: "rgba(156,163,175,0.15)", badgeColor: "#6B7280", badgeBorder: "rgba(156,163,175,0.3)", title: "คำขอถูกยกเลิกแล้ว",          progress: 0 }
+    : dbStatus === "no_show"
+      ? { badge: "ไม่พบลูกค้า",     badgeBg: "rgba(249,115,22,0.12)",  badgeColor: "#F97316", badgeBorder: "rgba(249,115,22,0.25)", title: "ไรเดอร์ถึงที่นัดแต่ไม่พบคุณ", progress: 0 }
     : dbStatus === "rejected"
       ? { badge: "ไม่เข้าเงื่อนไข", badgeBg: "rgba(239,68,68,0.12)",  badgeColor: "#F87171", badgeBorder: "rgba(239,68,68,0.25)",  title: "ไม่ผ่านเงื่อนไขการรับซื้อ",  progress: 0 }
     : getHeroConfig(doneUpTo, dbStatus);
@@ -658,7 +660,7 @@ function RequestDetailInner() {
                 </div>
               </div>
 
-              {dbStatus !== "cancelled" && dbStatus !== "rejected" && <div>
+              {!["cancelled","no_show","rejected"].includes(dbStatus ?? "") && <div>
                 <div className="flex justify-between mb-1.5">
                   <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>ความคืบหน้า</span>
                   <span className="text-xs font-semibold" style={{ color: "#F0C040" }}>{hero.progress}%</span>
@@ -683,26 +685,30 @@ function RequestDetailInner() {
               <StatusTimeline submittedAt={sub.submittedAt} doneUpTo={doneUpTo} stepTimestamps={stepTimestamps} currentStepRef={currentStepRef} />
             </div>
 
-            {/* Notice: cancelled or rejected */}
-            {(dbStatus === "cancelled" || dbStatus === "rejected") && (
-              <div className="rounded-2xl px-5 py-4 flex items-start gap-3" style={{ background: "#FEF2F2", border: "1px solid #FECACA" }}>
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "#FEE2E2" }}>
-                  <X size={16} style={{ color: "#EF4444" }} />
+            {/* Notice: cancelled / no_show / rejected */}
+            {(dbStatus === "cancelled" || dbStatus === "no_show" || dbStatus === "rejected") && (
+              <div className="rounded-2xl px-5 py-4 flex items-start gap-3" style={{ background: dbStatus === "no_show" ? "#FFF7ED" : "#FEF2F2", border: `1px solid ${dbStatus === "no_show" ? "#FED7AA" : "#FECACA"}` }}>
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: dbStatus === "no_show" ? "#FFEDD5" : "#FEE2E2" }}>
+                  <X size={16} style={{ color: dbStatus === "no_show" ? "#F97316" : "#EF4444" }} />
                 </div>
                 <div>
-                  <p className="text-sm font-bold" style={{ color: "#DC2626" }}>
-                    {dbStatus === "cancelled" ? "คำขอนี้ถูกยกเลิกแล้ว" : "อุปกรณ์ไม่ผ่านเงื่อนไขการรับซื้อ"}
+                  <p className="text-sm font-bold" style={{ color: dbStatus === "no_show" ? "#C2410C" : "#DC2626" }}>
+                    {dbStatus === "cancelled" ? "คำขอนี้ถูกยกเลิกแล้ว" : dbStatus === "no_show" ? "ไรเดอร์ถึงที่นัดแต่ไม่พบคุณ" : "อุปกรณ์ไม่ผ่านเงื่อนไขการรับซื้อ"}
                   </p>
-                  <p className="text-xs mt-1 leading-relaxed" style={{ color: "#B91C1C" }}>
+                  <p className="text-xs mt-1 leading-relaxed" style={{ color: dbStatus === "no_show" ? "#9A3412" : "#B91C1C" }}>
                     {dbStatus === "cancelled"
                       ? "หากต้องการขายอุปกรณ์ สามารถยื่นคำขอใหม่ได้ที่หน้าประเมินราคา หรือติดต่อทีมงานเพื่อสอบถามเพิ่มเติม"
+                      : dbStatus === "no_show"
+                      ? "หากยังต้องการขาย กรุณาติดต่อทีมงานเพื่อนัดหมายใหม่"
                       : "อุปกรณ์ไม่ผ่านเกณฑ์การตรวจสอบ หากมีข้อสงสัยกรุณาติดต่อทีมงาน"}
                   </p>
                   <div className="flex gap-2 mt-3">
-                    <a href="/sell" className="rounded-lg px-3 py-1.5 text-xs font-bold text-white" style={{ background: "#B8860B" }}>
-                      ประเมินราคาใหม่
-                    </a>
-                    <a href="tel:0955535167" className="rounded-lg px-3 py-1.5 text-xs font-semibold" style={{ background: "#FEE2E2", color: "#DC2626", border: "1px solid #FECACA" }}>
+                    {dbStatus !== "no_show" && (
+                      <a href="/sell" className="rounded-lg px-3 py-1.5 text-xs font-bold text-white" style={{ background: "#B8860B" }}>
+                        ประเมินราคาใหม่
+                      </a>
+                    )}
+                    <a href="tel:0955535167" className="rounded-lg px-3 py-1.5 text-xs font-semibold" style={{ background: dbStatus === "no_show" ? "#FFEDD5" : "#FEE2E2", color: dbStatus === "no_show" ? "#C2410C" : "#DC2626", border: `1px solid ${dbStatus === "no_show" ? "#FED7AA" : "#FECACA"}` }}>
                       โทรติดต่อเรา
                     </a>
                   </div>
@@ -711,7 +717,7 @@ function RequestDetailInner() {
             )}
 
             {/* Notice: wait for staff call (new / pending) */}
-            {doneUpTo <= 1 && dbStatus !== "cancelled" && dbStatus !== "rejected" && (
+            {doneUpTo <= 1 && !["cancelled","no_show","rejected"].includes(dbStatus ?? "") && (
               <div className="rounded-2xl px-5 py-4 flex items-start gap-3" style={{ background: "#EFF6FF", border: "1px solid #BFDBFE" }}>
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "#DBEAFE" }}>
                   <Phone size={15} style={{ color: "#2563EB" }} />
@@ -726,7 +732,7 @@ function RequestDetailInner() {
             )}
 
             {/* Notice: prepare ID card (confirmed / inspecting) */}
-            {doneUpTo >= 2 && doneUpTo < 5 && dbStatus !== "rejected" && dbStatus !== "cancelled" && (
+            {doneUpTo >= 2 && doneUpTo < 5 && !["cancelled","no_show","rejected"].includes(dbStatus ?? "") && (
               <div className="rounded-2xl px-5 py-4 flex items-start gap-3" style={{ background: "#FFFBEB", border: "1px solid #FDE68A" }}>
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "#FEF3C7" }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">

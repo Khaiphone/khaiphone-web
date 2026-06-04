@@ -399,13 +399,15 @@ export async function riderCustomerAccepted(id: string) {
   const now = new Date().toISOString();
 
   const { data: req } = await supabase
-    .from("requests").select("inspection, status_log, order_number, device_model").eq("id", id).single();
+    .from("requests").select("inspection, status_log, status, order_number, device_model").eq("id", id).single();
+
+  if (req?.status !== "price_negotiation") return { success: false as const, error: "สถานะไม่ถูกต้อง — อาจมีคนยืนยันไปแล้ว" };
 
   const updatedInspection = {
     ...(req?.inspection ?? {}),
     negotiationResponse: "accepted",
     negotiationRespondedAt: now,
-    negotiationRespondedBy: "staff",
+    negotiationRespondedBy: "rider",
   };
 
   const newLog = [
@@ -416,7 +418,7 @@ export async function riderCustomerAccepted(id: string) {
   const { error } = await supabase
     .from("requests")
     .update({ status: "contracting", status_log: newLog, inspection: updatedInspection, updated_at: now })
-    .eq("id", id);
+    .eq("id", id).eq("status", "price_negotiation");
   if (error) return { success: false as const, error: error.message };
   after(async () => {
     await broadcastRequestUpdate(id);
@@ -437,13 +439,15 @@ export async function riderCustomerRejected(id: string) {
   const now = new Date().toISOString();
 
   const { data: req } = await supabase
-    .from("requests").select("inspection, status_log, order_number, device_model").eq("id", id).single();
+    .from("requests").select("inspection, status_log, status, order_number, device_model").eq("id", id).single();
+
+  if (req?.status !== "price_negotiation") return { success: false as const, error: "สถานะไม่ถูกต้อง — อาจมีคนยืนยันไปแล้ว" };
 
   const updatedInspection = {
     ...(req?.inspection ?? {}),
     negotiationResponse: "rejected",
     negotiationRespondedAt: now,
-    negotiationRespondedBy: "staff",
+    negotiationRespondedBy: "rider",
   };
 
   const newLog = [
@@ -454,7 +458,7 @@ export async function riderCustomerRejected(id: string) {
   const { error } = await supabase
     .from("requests")
     .update({ status: "cancelled", status_log: newLog, inspection: updatedInspection, updated_at: now })
-    .eq("id", id);
+    .eq("id", id).eq("status", "price_negotiation");
   if (error) return { success: false as const, error: error.message };
   after(async () => {
     await broadcastRequestUpdate(id);
@@ -590,12 +594,12 @@ export async function riderNoShow(id: string) {
 
   const newLog = [
     ...(req?.status_log ?? []),
-    { status: "cancelled", timestamp: now, note: "ลูกค้าไม่อยู่ / ไม่รับสาย" },
+    { status: "no_show", timestamp: now, note: "ลูกค้าไม่อยู่ / ไม่รับสาย" },
   ];
 
   const { error } = await supabase
     .from("requests")
-    .update({ status: "cancelled", status_log: newLog, updated_at: now })
+    .update({ status: "no_show", status_log: newLog, updated_at: now })
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
 
@@ -606,6 +610,34 @@ export async function riderNoShow(id: string) {
       body: `${req?.device_model ?? ""} · ไรเดอร์ถึงที่แล้วแต่ไม่พบลูกค้า`,
       url: `/admin/requests/${id}`,
       tag: `noshow-${id}`,
+    }).catch(console.error);
+  });
+
+  return { success: true as const };
+}
+
+// ─── Rider requests help from owner ──────────────────────────────────────────
+export async function riderRequestHelp(id: string, message: string) {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+
+  const { data: req } = await supabase
+    .from("requests")
+    .select("order_number, device_model")
+    .eq("id", id).single();
+
+  const { data: profile } = await supabase
+    .from("admin_users").select("name").eq("user_id", user.id).single();
+
+  const riderName = profile?.name ?? "ไรเดอร์";
+
+  after(async () => {
+    await broadcastRequestUpdate(id);
+    await sendPushToOwners({
+      title: `🆘 ขอความช่วยเหลือ — ${req?.order_number ?? ""}`,
+      body: `${riderName}: ${message}`,
+      url: `/admin/requests/${id}`,
+      tag: `help-${id}-${Date.now()}`,
     }).catch(console.error);
   });
 

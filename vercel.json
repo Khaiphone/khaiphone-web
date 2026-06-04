@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/stuck-jobs",
+      "schedule": "*/30 * * * *"
+    }
+  ]
+}

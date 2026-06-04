@@ -54,8 +54,8 @@ export default function ReportsPage() {
   const statCards = [
     { label: "คำขอทั้งหมด",  value: inPeriod.length,                                                     color: "#3B82F6" },
     { label: "เสร็จสิ้น",    value: inPeriod.filter(r => r.status === "completed").length,               color: "#10B981" },
-    { label: "รอดำเนินการ",  value: inPeriod.filter(r => !["completed","cancelled","rejected"].includes(r.status)).length, color: GOLD },
-    { label: "ยกเลิก/ปฏิเสธ", value: inPeriod.filter(r => r.status === "cancelled" || r.status === "rejected").length, color: "#EF4444" },
+    { label: "รอดำเนินการ",  value: inPeriod.filter(r => !["completed","cancelled","no_show","rejected"].includes(r.status)).length, color: GOLD },
+    { label: "ยกเลิก/ปฏิเสธ", value: inPeriod.filter(r => ["cancelled","no_show","rejected"].includes(r.status)).length, color: "#EF4444" },
   ];
 
   return (

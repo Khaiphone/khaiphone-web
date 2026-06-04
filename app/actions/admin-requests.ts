@@ -6,6 +6,7 @@ import { requireAuth } from "@/lib/require-auth";
 import { broadcastRequestUpdate } from "@/lib/broadcast";
 import { sendPushToOwners, sendPushToUser } from "@/app/actions/push";
 import type { AdminRequest, RequestStatus, SellMethod, PayMethod } from "@/lib/types/admin";
+import { SLIP_PLACEHOLDER, SLIP_BLOCK } from "@/lib/contract-builder";
 import type { Permission } from "@/lib/admin-permissions";
 import type { AdminRole } from "@/app/actions/admin-users";
 
@@ -714,6 +715,49 @@ export async function getDocumentSignedUrl(requestId: string, storagePath: strin
     .createSignedUrl(storagePath, 60);
   if (error) { console.error("getDocumentSignedUrl:", error); return null; }
   return data.signedUrl;
+}
+
+// ─── Patch receipt HTML with slip image (server-side) ────────────────────────
+export async function patchReceiptWithSlip(requestId: string): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
+  const supabase = createServerClient();
+
+  const { data: req } = await supabase
+    .from("requests")
+    .select("receipt_url, payment_slip_url")
+    .eq("id", requestId)
+    .single();
+
+  if (!req?.receipt_url)      return { success: false, error: "ไม่พบ receipt URL" };
+  if (!req?.payment_slip_url) return { success: false, error: "ไม่พบสลิป" };
+
+  // Download receipt HTML
+  const { data: receiptData, error: dlErr } = await supabase.storage
+    .from("inspection-photos")
+    .download(req.receipt_url);
+  if (dlErr || !receiptData) return { success: false, error: "ดาวน์โหลด receipt ไม่สำเร็จ" };
+
+  let receiptHtml = await receiptData.text();
+  if (!receiptHtml.includes(SLIP_PLACEHOLDER)) return { success: true }; // already patched
+
+  // Download slip image and convert to data URL
+  const slipResp = await fetch(req.payment_slip_url);
+  if (!slipResp.ok) return { success: false, error: "ดาวน์โหลดสลิปไม่สำเร็จ" };
+  const slipBuffer = await slipResp.arrayBuffer();
+  const slipBase64 = Buffer.from(slipBuffer).toString("base64");
+  const contentType = slipResp.headers.get("content-type") ?? "image/jpeg";
+  const slipDataUrl = `data:${contentType};base64,${slipBase64}`;
+
+  receiptHtml = receiptHtml.replace(SLIP_PLACEHOLDER, SLIP_BLOCK(slipDataUrl));
+
+  const { error: upErr } = await supabase.storage
+    .from("inspection-photos")
+    .upload(req.receipt_url, new Blob([receiptHtml], { type: "text/html;charset=utf-8" }), {
+      upsert: true, contentType: "text/html",
+    });
+  if (upErr) return { success: false, error: upErr.message };
+
+  return { success: true };
 }
 
 // ─── Save contract + receipt URLs ────────────────────────────────────────────

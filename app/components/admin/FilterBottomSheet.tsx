@@ -11,6 +11,7 @@ const STATUS_OPTIONS: Array<{ value: RequestStatus; label: string }> = [
   { value: "inspecting",       label: "กำลังตรวจสอบ"  },
   { value: "completed",        label: "เสร็จสิ้น"     },
   { value: "cancelled",        label: "ยกเลิก"        },
+  { value: "no_show",          label: "ลูกค้าไม่อยู่" },
 ];
 
 const MODEL_OPTIONS = [

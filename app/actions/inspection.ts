@@ -112,11 +112,12 @@ async function _respondToNegotiation(
 
   const { data: current } = await supabase
     .from("requests")
-    .select("inspection, status_log")
+    .select("inspection, status_log, status")
     .eq("id", id)
     .single();
 
   if (!current?.inspection) return { success: false as const, error: "ไม่พบข้อมูลการตรวจสภาพ" };
+  if (current.status !== "price_negotiation") return { success: false as const, error: "สถานะไม่ถูกต้อง — อาจมีคนยืนยันไปแล้ว" };
 
   const newStatus: RequestStatus = accepted ? "contracting" : "cancelled";
   const note = accepted

@@ -9,6 +9,7 @@ export type RequestStatus =
   | "contracting"
   | "completed"
   | "cancelled"
+  | "no_show"
   | "rejected";
 
 export const STATUS_LABELS: Record<RequestStatus, string> = {
@@ -21,7 +22,8 @@ export const STATUS_LABELS: Record<RequestStatus, string> = {
   price_negotiation: "รอยืนยันราคา",
   contracting:       "กำลังทำสัญญา",
   completed:         "เสร็จสิ้น",
-  cancelled:         "ยกเลิกนัดหมาย",
+  cancelled:         "ยกเลิก",
+  no_show:           "ลูกค้าไม่อยู่",
   rejected:          "ไม่เข้าเงื่อนไข",
 };
 
@@ -36,6 +38,7 @@ export const STATUS_COLORS: Record<RequestStatus, { bg: string; text: string; bo
   contracting:       { bg: "rgba(79,70,229,0.15)",   text: "#4F46E5", border: "rgba(79,70,229,0.3)"   },
   completed:         { bg: "rgba(16,185,129,0.15)",  text: "#10B981", border: "rgba(16,185,129,0.3)"  },
   cancelled:         { bg: "rgba(239,68,68,0.15)",   text: "#EF4444", border: "rgba(239,68,68,0.3)"   },
+  no_show:           { bg: "rgba(249,115,22,0.15)",  text: "#F97316", border: "rgba(249,115,22,0.3)"  },
   rejected:          { bg: "rgba(107,114,128,0.15)", text: "#6B7280", border: "rgba(107,114,128,0.3)" },
 };
 

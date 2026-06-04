@@ -10,15 +10,16 @@ import {
   riderSaveInspection, riderConfirmPrice, riderAdjustPrice,
   riderCustomerAccepted, riderCustomerRejected,
   riderCompleteCash, riderCompleteTransfer, riderRequestTransfer,
+  riderRequestHelp,
 } from "@/app/actions/rider";
-import { saveContractUrls, markContractSigned, savePaymentSlip, getDocumentSignedUrl } from "@/app/actions/admin-requests";
+import { saveContractUrls, markContractSigned, savePaymentSlip, getDocumentSignedUrl, patchReceiptWithSlip } from "@/app/actions/admin-requests";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
 import { validateImageFile } from "@/lib/validate-file";
 import { useRiderTheme } from "@/app/rider/theme";
 import { fetchMyProfile, fetchAdminUsers } from "@/app/actions/admin-users";
 import type { AdminRequest, InspectionCriterion, FunctionalTest } from "@/lib/types/admin";
-import { FONT_LINK, DOC_CSS, buildContractPage, buildReceiptPage, thDate, thTime, shortDate, SLIP_PLACEHOLDER, SLIP_BLOCK } from "@/lib/contract-builder";
+import { FONT_LINK, DOC_CSS, buildContractPage, buildReceiptPage, thDate, thTime, shortDate } from "@/lib/contract-builder";
 import type { ContractDevice, ContractCtx } from "@/lib/contract-builder";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -732,26 +733,8 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
     setCompletingBusy(true);
     setError("");
     try {
-      // Patch receipt HTML: inject slip image into the stored HTML file
-      if (job.receiptUrl) {
-        try {
-          const { data: { publicUrl: receiptPublicUrl } } = supabase.storage.from("inspection-photos").getPublicUrl(job.receiptUrl);
-          const [receiptResp, slipResp] = await Promise.all([
-            fetch(receiptPublicUrl),
-            fetch(slipUrl),
-          ]);
-          let receiptHtml = await receiptResp.text();
-          const slipBlob = await slipResp.blob();
-          const slipDataUrl = await new Promise<string>(res => {
-            const rd = new FileReader(); rd.onload = () => res(rd.result as string); rd.readAsDataURL(slipBlob);
-          });
-          receiptHtml = receiptHtml.replace(SLIP_PLACEHOLDER, SLIP_BLOCK(slipDataUrl));
-          const rBlob = new Blob([receiptHtml], { type: "text/html;charset=utf-8" });
-          await supabase.storage.from("inspection-photos").upload(job.receiptUrl, rBlob, { upsert: true, contentType: "text/html" });
-        } catch (e) {
-          console.error("Receipt slip patch failed (non-fatal):", e);
-        }
-      }
+      // Patch receipt HTML server-side: inject slip image into the stored HTML file
+      await patchReceiptWithSlip(job.id).catch(e => console.error("Receipt slip patch failed (non-fatal):", e));
       await riderCompleteTransfer(job.id, slipUrl);
       reload();
     } catch (e) {
@@ -763,10 +746,11 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
   async function handleGenerate() {
     setError("");
     const idDigits = idNumber.replace(/\D/g, "");
-    if (!buyerName.trim())       { setError("กรุณากรอกชื่อ-นามสกุลผู้ขาย"); return; }
-    if (idDigits.length !== 13)  { setError("กรุณากรอกเลขบัตรประชาชนให้ครบ 13 หลัก"); return; }
-    if (!imei.trim())            { setError("กรุณากรอก IMEI"); return; }
-    if (!serial.trim())          { setError("กรุณากรอก Serial Number"); return; }
+    if (!buyerName.trim())                               { setError("กรุณากรอกชื่อ-นามสกุลผู้ขาย"); return; }
+    if (idDigits.length !== 13)                          { setError("กรุณากรอกเลขบัตรประชาชนให้ครบ 13 หลัก"); return; }
+    if (!imei.trim())                                    { setError("กรุณากรอก IMEI"); return; }
+    if (!serial.trim())                                  { setError("กรุณากรอก Serial Number"); return; }
+    if (payMethod === "cash" && !paymentPhotoStorageUrl) { setError("กรุณาถ่ายรูปหลักฐานมอบเงินก่อนสร้างสัญญา"); return; }
     setGenerating(true);
     try {
       const r = job;
@@ -1100,9 +1084,13 @@ export default function JobWizardPage() {
   const [busy, setBusy]             = useState(false);
   const [riderName, setRiderName]   = useState("");
   const [officerId, setOfficerId]   = useState("");
-  const [showNoShow, setShowNoShow] = useState(false);
+  const [showNoShow, setShowNoShow]   = useState(false);
   const [blockingJob, setBlockingJob] = useState<string | null>(null);
   const [startError, setStartError]   = useState("");
+  const [showHelp, setShowHelp]       = useState(false);
+  const [helpMsg, setHelpMsg]         = useState("");
+  const [helpSent, setHelpSent]       = useState(false);
+  const [helpBusy, setHelpBusy]       = useState(false);
 
   const reload = useCallback(async () => {
     const j = await fetchRiderJob(id);
@@ -1198,6 +1186,12 @@ export default function JobWizardPage() {
           <Phone size={16} color={GREEN} />
           <span style={{ fontSize:13, fontWeight:600, color:GREEN }}>โทร</span>
         </a>
+        {!isCancelled && !isCompleted && step > 0 && (
+          <button onClick={()=>{ setShowHelp(true); setHelpSent(false); setHelpMsg(""); }} style={{ background:"rgba(239,68,68,0.12)", borderRadius:10, padding:"8px 10px", border:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:4, flexShrink:0 }}>
+            <AlertTriangle size={15} color={RED} />
+            <span style={{ fontSize:12, fontWeight:700, color:RED }}>ขอความช่วยเหลือ</span>
+          </button>
+        )}
       </div>
 
       {/* Step bar */}
@@ -1366,6 +1360,47 @@ export default function JobWizardPage() {
 
         </div>
       </div>
+
+      {/* Help modal */}
+      {showHelp && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"flex-end", zIndex:50 }} onClick={()=>setShowHelp(false)}>
+          <div onClick={e=>e.stopPropagation()} style={{ width:"100%", background:CARD, borderRadius:"20px 20px 0 0", padding:"24px 20px", paddingBottom:"calc(24px + env(safe-area-inset-bottom))" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+              <AlertTriangle size={20} color={RED} />
+              <p style={{ margin:0, fontSize:16, fontWeight:700, color:TEXT }}>ขอความช่วยเหลือจาก Admin</p>
+            </div>
+            {helpSent ? (
+              <div style={{ background:"rgba(74,222,128,0.1)", border:`1px solid ${GREEN}`, borderRadius:12, padding:"14px 16px", marginBottom:16 }}>
+                <p style={{ margin:0, fontSize:14, fontWeight:700, color:GREEN }}>✓ ส่งแจ้งเตือนให้ Admin แล้ว</p>
+                <p style={{ margin:"4px 0 0", fontSize:12, color:TEXT2 }}>Admin จะติดต่อกลับในไม่ช้า</p>
+              </div>
+            ) : (
+              <>
+                <p style={{ margin:"0 0 10px", fontSize:13, color:TEXT2 }}>ระบุปัญหาที่พบ:</p>
+                <textarea
+                  value={helpMsg}
+                  onChange={e=>setHelpMsg(e.target.value)}
+                  placeholder="เช่น ลูกค้าไม่ยอมให้ตรวจ, เครื่องไม่ตรงรุ่น, ต้องการคำแนะนำ..."
+                  rows={3}
+                  style={{ width:"100%", padding:"10px 12px", borderRadius:10, border:`1px solid ${BORDER}`, background:BG, color:TEXT, fontSize:14, fontFamily:"inherit", outline:"none", resize:"none", boxSizing:"border-box", marginBottom:12 }}
+                />
+                <BigBtn
+                  label="ส่งแจ้งเตือน Admin →"
+                  color={RED} textColor="#fff"
+                  loading={helpBusy}
+                  disabled={!helpMsg.trim()}
+                  onClick={async ()=>{
+                    setHelpBusy(true);
+                    await riderRequestHelp(id, helpMsg.trim());
+                    setHelpSent(true); setHelpBusy(false);
+                  }}
+                />
+              </>
+            )}
+            <button onClick={()=>setShowHelp(false)} style={{ width:"100%", marginTop:8, background:"none", border:"none", color:TEXT2, fontSize:13, cursor:"pointer", fontFamily:"inherit", padding:"8px 0" }}>ปิด</button>
+          </div>
+        </div>
+      )}
 
       {/* No-show modal */}
       {showNoShow && (

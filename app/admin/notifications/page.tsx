@@ -23,6 +23,7 @@ const STATUS_LABELS: Record<string, string> = {
   price_negotiation: "รอยืนยันราคา",
   completed:         "เสร็จสิ้น",
   cancelled:         "ยกเลิก",
+  no_show:           "ลูกค้าไม่อยู่",
   rejected:          "ปฏิเสธ",
   pickup_scheduled:  "นัดรับเครื่อง",
 };
