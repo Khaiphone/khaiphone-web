@@ -54,9 +54,9 @@ export default function RiderHomePage() {
     }
     loadData(userId);
 
-    // Real-time: reload when any request assigned to this rider is updated
+    // Real-time: reload when any request is updated (broadcast uses "request-updates" channel)
     const ch = supabase
-      .channel(`rider-home-${userId}`)
+      .channel("request-updates")
       .on("broadcast", { event: "updated" }, () => loadData(userId))
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "requests" },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
