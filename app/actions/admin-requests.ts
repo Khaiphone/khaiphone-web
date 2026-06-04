@@ -314,6 +314,8 @@ export async function assignRider(id: string, riderId: string | null, riderName:
   const { error } = await supabase.from("requests").update(updatePayload).eq("id", id);
   if (error) return { success: false as const, error: error.message };
 
+  after(() => broadcastRequestUpdate(id));
+
   if (riderId) {
     const distText = distanceKm ? ` · ${distanceKm} กม.` : "";
     after(() => sendPushToUser(riderId, {
@@ -696,5 +698,6 @@ export async function saveContractUrls(
     .update({ contract_url: contractUrl, receipt_url: receiptUrl, updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) { console.error("saveContractUrls error:", error); return { success: false as const, error: error.message }; }
+  after(() => broadcastRequestUpdate(id));
   return { success: true as const };
 }
