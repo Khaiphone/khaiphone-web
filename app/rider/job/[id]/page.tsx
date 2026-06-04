@@ -1234,7 +1234,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
             : contractSigned && !isEditing
               ? <span style={{ fontSize: 11, color: "#f97316", marginLeft: 6 }}>✓ ออกสัญญาแล้ว</span>
               : contractSigned && isEditing
-                ? <span style={{ fontSize: 11, color: "#3b82f6", marginLeft: 6 }}>✏️ กำลังแก้ไข</span>
+                ? <span style={{ fontSize: 11, color: "#3b82f6", marginLeft: 6 }}>กำลังแก้ไข</span>
                 : null}
         </div>
         <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
@@ -1261,7 +1261,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
             return (
               <div style={{ borderRadius: 10, border: "1.5px solid rgba(255,69,58,0.5)", background: "rgba(255,69,58,0.08)", padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                  <span style={{ fontSize: 20, lineHeight: 1 }}>⚠️</span>
+                  <span style={{ fontSize: 20, lineHeight: 1, color: "#FF453A" }}>!</span>
                   <div>
                     <p style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 700, color: "#FF453A" }}>ผู้ขายอายุต่ำกว่า 20 ปี — ต้องมีผู้ปกครอง</p>
                     <p style={{ margin: 0, fontSize: 12, color: "#FF453A", opacity: 0.85 }}>ตามกฎหมาย ผู้เยาว์ต้องได้รับความยินยอมจากผู้ปกครองก่อนทำสัญญา</p>
@@ -1326,9 +1326,9 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
               <Camera size={16} />{idPhotoDataUrl ? "เปลี่ยนรูปบัตร" : "ถ่ายบัตรประชาชน"}
             </button>
             <input ref={idFileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleIdPhoto} />
-            {!idPhotoDataUrl && !ocrLoading && <p style={{ margin: "6px 0 0", fontSize: 11, color: c.TEXT2, textAlign: "center" }}>📱 ถ่ายแนวตั้ง เพื่อให้ OCR อ่านภาษาไทยได้แม่นขึ้น</p>}
-            {ocrLoading && <p style={{ margin: "6px 0 0", fontSize: 12, color: c.ACCENT, textAlign: "center" }}>🔍 กำลังอ่านข้อมูลจากบัตร...</p>}
-            {ocrError && !ocrLoading && <p style={{ margin: "6px 0 0", fontSize: 12, color: c.RED }}>⚠️ {ocrError} — กรอกข้อมูลเองได้เลย</p>}
+            {!idPhotoDataUrl && !ocrLoading && <p style={{ margin: "6px 0 0", fontSize: 11, color: c.TEXT2, textAlign: "center" }}>ถ่ายแนวตั้ง เพื่อให้ OCR อ่านภาษาไทยได้แม่นขึ้น</p>}
+            {ocrLoading && <p style={{ margin: "6px 0 0", fontSize: 12, color: c.ACCENT, textAlign: "center" }}>กำลังอ่านข้อมูลจากบัตร...</p>}
+            {ocrError && !ocrLoading && <p style={{ margin: "6px 0 0", fontSize: 12, color: c.RED }}>{ocrError} — กรอกข้อมูลเองได้เลย</p>}
             {idPhotoDataUrl && !ocrLoading && !ocrError && <p style={{ margin: "6px 0 0", fontSize: 12, color: "#30D158", textAlign: "center" }}>✓ อ่านข้อมูลจากบัตรแล้ว — ตรวจสอบด้านล่าง</p>}
           </div>
           <div>
@@ -1345,7 +1345,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
           {/* Payment evidence — cash only; transfer slip is captured after Finance transfers */}
           {payMethod === "cash" && (
             <div style={{ borderTop: `1px solid ${c.BORDER}`, paddingTop: 14 }}>
-              <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: c.TEXT }}>💵 หลักฐานมอบเงินสด</p>
+              <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: c.TEXT }}>หลักฐานมอบเงินสด</p>
               <p style={{ margin: "0 0 8px", fontSize: 12, color: c.TEXT2 }}>ถ่ายรูปขณะมอบเงิน — จะแนบในใบสำคัญรับเงิน</p>
               {paymentPhotoDataUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -1372,7 +1372,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
       )}
 
       {!isCompleted && contractSigned && !isEditing && (
-        <BigBtn label="✏️ แก้ไขสัญญา" color={c.CARD2} textColor={c.TEXT} onClick={() => setIsEditing(true)} />
+        <BigBtn label="แก้ไขสัญญา" color={c.CARD2} textColor={c.TEXT} onClick={() => setIsEditing(true)} />
       )}
       {!isCompleted && (!contractSigned || isEditing) && (
         <BigBtn
@@ -1405,7 +1405,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
 
               {/* Step 1: Notify Finance */}
               <div style={{ background: c.CARD, border: `1px solid ${c.BORDER}`, borderRadius: 12, padding: "14px 16px" }}>
-                <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: c.TEXT }}>📤 แจ้ง Finance โอนเงิน</p>
+                <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: c.TEXT }}>แจ้ง Finance โอนเงิน</p>
                 <p style={{ margin: "0 0 10px", fontSize: 12, color: c.TEXT2 }}>
                   กด "แจ้ง Finance" เพื่อให้ทีมโอน ฿{price.toLocaleString("th-TH")} ไปยังบัญชีลูกค้า
                 </p>
@@ -1422,13 +1422,13 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
 
               {/* Step 2: Slip — single source of truth: job.payment.slipUrl */}
               <div style={{ background: c.CARD, border: `1px solid ${job.payment.slipUrl ? c.GREEN : c.BORDER}`, borderRadius: 12, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10, transition: "border-color 0.4s" }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: c.TEXT }}>💳 หลักฐานการโอนเงิน</p>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: c.TEXT }}>หลักฐานการโอนเงิน</p>
 
                 {job.payment.slipUrl ? (
                   <div style={{ animation: slipJustArrived ? "slip-arrive 0.4s ease-out" : "none", display: "flex", flexDirection: "column", gap: 10 }}>
                     {/* Success banner */}
                     <div style={{ background: "rgba(74,222,128,0.10)", border: `1px solid ${c.GREEN}`, borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, animation: slipJustArrived ? "pulse-ring 0.6s ease-out" : "none" }}>
-                      <span style={{ fontSize: 20 }}>✅</span>
+                      <span style={{ fontSize: 20, color: c.GREEN }}>✓</span>
                       <div>
                         <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: c.GREEN }}>
                           {slipJustArrived ? "Finance โอนเงินแล้ว!" : "มีสลิปโอนเงินแล้ว"}
@@ -1449,7 +1449,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     {/* Waiting indicator */}
                     <div style={{ background: c.CARD2, borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, animation: "waiting-pulse 2s ease-in-out infinite" }}>
-                      <span style={{ fontSize: 22 }}>⏳</span>
+                      <span style={{ fontSize: 18, color: c.TEXT2 }}>—</span>
                       <div>
                         <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: c.TEXT }}>รอ Finance แนบสลิป...</p>
                         <p style={{ margin: 0, fontSize: 11, color: c.TEXT2 }}>สลิปจะปรากฏที่นี่ทันทีที่โอนแล้ว</p>
@@ -1459,7 +1459,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
                     <p style={{ margin: 0, fontSize: 12, color: c.TEXT2, textAlign: "center" }}>— หรือ —</p>
                     <button onClick={() => slipFileRef.current?.click()} disabled={slipUploading} style={{ width: "100%", padding: "12px", borderRadius: 10, border: `1.5px dashed ${c.BORDER}`, background: c.CARD, color: c.TEXT2, fontSize: 13, cursor: slipUploading ? "default" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: slipUploading ? 0.6 : 1 }}>
                       <Camera size={16} />
-                      {slipUploading ? "กำลังอัปโหลด..." : "📎 ฉันโอนเองและแนบสลิป"}
+                      {slipUploading ? "กำลังอัปโหลด..." : "ฉันโอนเองและแนบสลิป"}
                     </button>
                     <BigBtn label="ยืนยันโอนสำเร็จ →" disabled loading={completingBusy} onClick={handleCompleteTransfer} />
                   </div>
