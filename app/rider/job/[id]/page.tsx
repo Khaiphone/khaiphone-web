@@ -305,6 +305,9 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   const [sickwExpanded,setSickwExpanded]= useState(false);
   const [sickwError,   setSickwError]   = useState("");
   const [sickwLoading, setSickwLoading] = useState(false);
+  const savedAcc = (job.inspection as { accessories?: string[] } | undefined)?.accessories;
+  const [accessories, setAccessories] = useState<string[]>(savedAcc ?? ["ตัวเครื่อง"]);
+  const [accessoriesOther, setAccessoriesOther] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -404,6 +407,10 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   const [adjustReason, setAdjustReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  function toggleAcc(acc: string) {
+    setAccessories(prev => prev.includes(acc) ? prev.filter(a => a !== acc) : [...prev, acc]);
+  }
+
   async function handleSlotPhoto(key: string, file: File) {
     setUploading(true);
     try {
@@ -435,12 +442,14 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
       }));
       const warrantyValue = warrantyStatus === "expired" ? "expired" : warrantyExpiry || undefined;
       const photos = [...Object.values(slotPhotos).filter(Boolean), ...defectPhotos] as string[];
+      const accList = [...accessories, ...(accessoriesOther.trim() ? [accessoriesOther.trim()] : [])];
       const result = await riderSaveInspection(job.id, {
         imei, serial, color: color.trim() || undefined,
         batteryHealth: battery ? parseInt(battery) : undefined,
         warrantyExpiry: warrantyValue,
         criteria: criteriaArr, functionalTests: functional, photos,
         sickw_report: sickwRaw || undefined,
+        accessories: accList.length ? accList : undefined,
       });
       if (!result.success) { setError((result as { success: false; error?: string }).error ?? "เกิดข้อผิดพลาด"); return; }
       setShowPrice(true);
@@ -713,6 +722,20 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
         </Card>
       </div>
 
+      {/* Accessories */}
+      <Card c={c}>
+        <CardHead icon={null} title="อุปกรณ์ที่ให้มา" c={c} />
+        <div style={{ padding: "12px 16px", display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {["ตัวเครื่อง", "กล่อง", "สายชาร์จ", "หัวชาร์จ", "EarPods", "ฟิล์ม", "เคส"].map(a => (
+            <button key={a} onClick={() => toggleAcc(a)} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${accessories.includes(a) ? c.ACCENT : c.BORDER}`, background: accessories.includes(a) ? "rgba(74,222,128,0.12)" : c.CARD, color: accessories.includes(a) ? c.ACCENT : c.TEXT2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>{a}</button>
+          ))}
+        </div>
+        <div style={{ padding: "0 16px 12px" }}>
+          <input placeholder="อื่นๆ (เช่น คู่มือ, หูฟัง)" value={accessoriesOther} onChange={e => setAccessoriesOther(e.target.value)}
+            style={{ width: "100%", background: "none", border: `1px solid ${c.BORDER}`, borderRadius: 8, padding: "8px 10px", color: c.TEXT, fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+        </div>
+      </Card>
+
       {error && <p style={{ margin: 0, fontSize: 13, color: c.RED }}>{error}</p>}
       {uploading && <p style={{ margin: 0, fontSize: 13, color: c.ACCENT, textAlign: "center" }}>กำลังอัปโหลดรูป...</p>}
 
@@ -798,8 +821,6 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
   const [serial, setSerial] = useState((job.inspection?.serial ?? "").toUpperCase());
   const [imei, setImei] = useState(job.inspection?.imei ?? "");
   const [deviceColor, setDeviceColor] = useState(job.device.color ?? "");
-  const [accessories, setAccessories] = useState<string[]>(["ตัวเครื่อง"]);
-  const [accessoriesOther, setAccessoriesOther] = useState("");
   const [txDate, setTxDate] = useState(new Date().toISOString().slice(0, 10));
 
   const [idPhotoDataUrl, setIdPhotoDataUrl] = useState<string | null>(null);
@@ -902,10 +923,6 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
     finally { setPaymentPhotoUploading(false); e.target.value = ""; }
   }
 
-  function toggleAcc(acc: string) {
-    setAccessories(prev => prev.includes(acc) ? prev.filter(a=>a!==acc) : [...prev, acc]);
-  }
-
   async function openStoredDoc(path: string | undefined) {
     if (!path) return;
     const win = window.open("", "_blank");
@@ -992,7 +1009,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
       } catch {}
 
       const devPrice = r.inspection?.actualPrice ?? r.device.estimatedPrice;
-      const accList = [...accessories, ...(accessoriesOther.trim() ? [accessoriesOther.trim()] : [])];
+      const accList = r.inspection?.accessories ?? ["ตัวเครื่อง"];
 
       const dev: ContractDevice = {
         label: "",
@@ -1080,8 +1097,6 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
     const url = URL.createObjectURL(blob); window.open(url, "_blank"); setTimeout(()=>URL.revokeObjectURL(url), 60000);
   }
 
-  const accOptions = ["ตัวเครื่อง", "กล่อง", "สายชาร์จ", "หูฟัง", "ฟิล์ม", "เคส"];
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
@@ -1134,15 +1149,6 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
           <div><label style={labelSt}>วันที่ทำสัญญา</label>
             <input type="date" value={txDate} onChange={e=>setTxDate(e.target.value)} style={{ ...inputSt, appearance:"none" }} /></div>
 
-          <div>
-            <label style={labelSt}>อุปกรณ์ที่ให้มา</label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {accOptions.map(a => (
-                <button key={a} onClick={()=>toggleAcc(a)} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${accessories.includes(a) ? c.ACCENT : c.BORDER}`, background: accessories.includes(a) ? "rgba(74,222,128,0.12)" : c.CARD, color: accessories.includes(a) ? c.ACCENT : c.TEXT2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>{a}</button>
-              ))}
-            </div>
-            <input placeholder="อื่นๆ" value={accessoriesOther} onChange={e=>setAccessoriesOther(e.target.value)} style={{ ...inputSt, marginTop: 6 }} />
-          </div>
         </div>
       </div>
 

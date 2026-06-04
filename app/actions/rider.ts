@@ -304,6 +304,7 @@ export async function riderSaveInspection(id: string, inspection: {
   idCardPhotoUrl?: string;
   deliveryPhotoUrl?: string;
   sickw_report?: string;
+  accessories?: string[];
 }) {
   await requireAuth();
   const supabase = createServerClient();

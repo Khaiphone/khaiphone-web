@@ -79,8 +79,6 @@ export default function RiderContractPage() {
   const [address, setAddress]       = useState("");
   const [staffName, setStaffName]   = useState("");
   const [txDate, setTxDate]         = useState(new Date().toISOString().slice(0, 10));
-  const [accessories, setAccessories] = useState<string[]>(["ตัวเครื่อง"]);
-  const [accessoriesOther, setAccessoriesOther] = useState("");
 
   // Photos
   const [idPhotoDataUrl,       setIdPhotoDataUrl]       = useState<string | null>(null);
@@ -220,7 +218,8 @@ export default function RiderContractPage() {
       const price  = r.device.actualPrice ?? r.device.estimatedPrice;
       const payM   = r.payment.method;
       const payTh  = payM === "cash" ? "เงินสด" : "โอนผ่านธนาคาร";
-      const accStr = esc([...accessories, ...(accessoriesOther.trim() ? [accessoriesOther.trim()] : [])].join(", ") || "—");
+      const savedAccList = (r.inspection as { accessories?: string[] } | undefined)?.accessories ?? ["ตัวเครื่อง"];
+      const accStr = esc(savedAccList.join(", ") || "—");
 
       // Embed logo
       let logoSrc = "/logo-icon.webp";
@@ -616,32 +615,22 @@ export default function RiderContractPage() {
               </div>
             </div>
 
-            {/* Accessories */}
-            <div style={{ background: CARD, borderRadius: 14, padding: "14px 16px" }}>
-              <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: TEXT }}>อุปกรณ์ที่ให้มา</p>
-              {["ตัวเครื่อง", "กล่อง", "สายชาร์จ", "หัวชาร์จ", "EarPods", "ฟิล์ม/เคส"].map(item => (
-                <label key={item} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: `1px solid ${BORDER}`, cursor: "pointer" }}>
-                  <div style={{
-                    width: 20, height: 20, borderRadius: 5, border: `2px solid ${accessories.includes(item) ? ACCENT : BORDER}`,
-                    background: accessories.includes(item) ? ACCENT : "transparent", flexShrink: 0,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>
-                    {accessories.includes(item) && <span style={{ fontSize: 12, color: "#000", fontWeight: 700 }}>✓</span>}
+            {/* Accessories — read-only, from inspection */}
+            {(() => {
+              const accList = (job.inspection as { accessories?: string[] } | undefined)?.accessories;
+              if (!accList?.length) return null;
+              return (
+                <div style={{ background: CARD, borderRadius: 14, padding: "14px 16px" }}>
+                  <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 700, color: TEXT }}>อุปกรณ์ที่ให้มา</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {accList.map(item => (
+                      <span key={item} style={{ padding: "4px 10px", borderRadius: 8, background: "rgba(74,222,128,0.12)", border: `1px solid ${ACCENT}`, color: ACCENT, fontSize: 13, fontWeight: 500 }}>✓ {item}</span>
+                    ))}
                   </div>
-                  <span style={{ fontSize: 14, color: TEXT }}>{item}</span>
-                  <input type="checkbox" checked={accessories.includes(item)} onChange={e => {
-                    setAccessories(prev => e.target.checked ? [...prev, item] : prev.filter(x => x !== item));
-                  }} style={{ display: "none" }} />
-                </label>
-              ))}
-              <input
-                type="text"
-                value={accessoriesOther}
-                onChange={e => setAccessoriesOther(e.target.value)}
-                placeholder="อุปกรณ์อื่นๆ..."
-                style={{ ...inputSt, marginTop: 10 }}
-              />
-            </div>
+                  <p style={{ margin: "8px 0 0", fontSize: 11, color: TEXT2 }}>บันทึกไว้จากขั้นตอนตรวจเครื่อง — แก้ไขได้ที่หน้าตรวจสภาพ</p>
+                </div>
+              );
+            })()}
 
             {/* ID Card Photo */}
             <div style={{ background: CARD, borderRadius: 14, padding: "14px 16px" }}>

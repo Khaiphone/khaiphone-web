@@ -98,6 +98,7 @@ export interface InspectionData {
   warrantyExpiry?: string;
   batteryCycles?: number;
   batteryHealth?: number;
+  accessories?: string[];
   extraInspections?: ExtraDeviceInspection[];
   sickw_report?: string;
 }
