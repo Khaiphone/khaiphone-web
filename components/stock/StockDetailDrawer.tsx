@@ -7,7 +7,7 @@ import { useThemeColors, useStockTheme } from "./ThemeContext";
 import StockStatusBadge, { GradeBadge } from "./StatusBadge";
 import type { StockItem, StockStatus } from "@/lib/stock/types";
 import { STOCK_STATUS_COLORS } from "@/lib/stock/constants";
-import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos, updateStockDocuments, logDocumentView, confirmDelivery, confirmStockRecheck, addStockSlips } from "@/app/actions/stocks";
+import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos, updateStockDocuments, logDocumentView, confirmDelivery, confirmStockRecheck, addStockSlips, getStockDocumentSignedUrl } from "@/app/actions/stocks";
 import { fetchOverheadPerUnit } from "@/app/actions/finance";
 import SellModal from "./SellModal";
 import { supabase } from "@/lib/supabase";
@@ -981,12 +981,14 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                         <DocCard
                           label="สัญญาซื้อขาย"
-                          url={`/api/contract?order=${encodeURIComponent(item.requestRef)}&phone=${encodeURIComponent(item.sellerPhone)}&type=contract`}
+                          requestRef={item.requestRef}
+                          docType="contract"
                           itemId={item.id} c={c}
                         />
                         <DocCard
                           label="ใบสำคัญรับเงิน"
-                          url={`/api/contract?order=${encodeURIComponent(item.requestRef)}&phone=${encodeURIComponent(item.sellerPhone)}&type=receipt`}
+                          requestRef={item.requestRef}
+                          docType="receipt"
                           itemId={item.id} c={c}
                         />
                       </div>
@@ -1302,9 +1304,17 @@ function Row({ label, value, mono, c }: { label: string; value: string; mono?: b
   );
 }
 
-function DocCard({ label, url, itemId, c }: { label: string; url: string; itemId: string; c: ReturnType<typeof useThemeColors> }) {
+function DocCard({ label, requestRef, docType, itemId, c }: { label: string; requestRef: string | undefined; docType: "contract" | "receipt"; itemId: string; c: ReturnType<typeof useThemeColors> }) {
   async function handleOpen() {
-    window.open(url, "_blank", "noreferrer");
+    if (!requestRef) return;
+    const signedUrl = await getStockDocumentSignedUrl(requestRef, docType);
+    if (!signedUrl) return;
+    const resp = await fetch(signedUrl);
+    const html = await resp.text();
+    const blob = new Blob([html], { type: "text/html" });
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, "_blank");
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10_000);
     await logDocumentView(itemId, label);
   }
   return (

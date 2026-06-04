@@ -766,3 +766,37 @@ export async function fetchRequestDocuments(requestRef: string): Promise<{ contr
   if (!data) return null;
   return { contractUrl: data.contract_url ?? undefined, receiptUrl: data.receipt_url ?? undefined };
 }
+
+export async function getStockDocumentSignedUrl(
+  requestRef: string,
+  docType: "contract" | "receipt",
+): Promise<string | null> {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+
+  const { data: profile } = await supabase
+    .from("admin_users")
+    .select("role, permissions")
+    .eq("user_id", user.id)
+    .single();
+
+  const isOwner    = profile?.role === "owner";
+  const hasStock   = (profile?.permissions as string[] | null)?.includes("view_stock") ?? false;
+  if (!isOwner && !hasStock) return null;
+
+  const { data: req } = await supabase
+    .from("requests")
+    .select("contract_url, receipt_url")
+    .eq("order_number", requestRef)
+    .single();
+  if (!req) return null;
+
+  const storagePath = docType === "contract" ? req.contract_url : req.receipt_url;
+  if (!storagePath) return null;
+
+  const { data, error } = await supabase.storage
+    .from("inspection-photos")
+    .createSignedUrl(storagePath, 60);
+  if (error) { console.error("getStockDocumentSignedUrl:", error); return null; }
+  return data.signedUrl;
+}
