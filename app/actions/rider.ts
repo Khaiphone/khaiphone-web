@@ -208,7 +208,7 @@ export async function riderStartJob(id: string) {
     .from("requests")
     .select("order_number")
     .eq("rider_id", req?.rider_id ?? user.id)
-    .in("status", ["en_route", "inspecting", "price_negotiation", "contracting"])
+    .in("status", ["en_route", "inspecting", "price_negotiation", "contracting", "awaiting_transfer"])
     .neq("id", id);
 
   if (activeJobs && activeJobs.length > 0) {
@@ -678,15 +678,17 @@ export async function fetchRiderNotifications(riderId: string) {
     .eq("rider_id", riderId)
     .gte("updated_at", since);
 
-  const RELEVANT = new Set(["pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting", "completed", "cancelled"]);
+  const RELEVANT = new Set(["pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting", "awaiting_transfer", "completed", "cancelled", "no_show"]);
   const LABELS: Record<string, string> = {
     pickup_scheduled:  "รับงานแล้ว",
     en_route:          "ออกเดินทางแล้ว",
     inspecting:        "เริ่มตรวจเครื่อง",
     price_negotiation: "รอลูกค้ายืนยันราคา",
     contracting:       "กำลังทำสัญญา",
+    awaiting_transfer: "รอ Finance โอน",
     completed:         "งานเสร็จสิ้น",
     cancelled:         "งานถูกยกเลิก",
+    no_show:           "ลูกค้าไม่อยู่",
   };
 
   type Notif = { id: string; orderId: string; requestId: string; title: string; body: string; timestamp: string };
