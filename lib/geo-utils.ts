@@ -27,9 +27,9 @@ export function fmtEta(minutes: number): string {
   return `~${h}ชม. ${m > 0 ? `${m}นาที` : ""}`;
 }
 
-// Office location — Khaiphone HQ
-export const OFFICE_LAT = 14.0282;
-export const OFFICE_LNG = 100.7497;
+// Office location — Khaiphone HQ (The Plant วงแหวน-รังสิต)
+export const OFFICE_LAT = 14.0100;
+export const OFFICE_LNG = 100.7197;
 
 export function distanceToOfficeKm(lat: number, lng: number): number {
   return haversineKm(lat, lng, OFFICE_LAT, OFFICE_LNG);
