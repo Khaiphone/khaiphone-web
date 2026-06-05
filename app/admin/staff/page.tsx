@@ -117,6 +117,13 @@ export default function StaffPage() {
     setConfirmDelete(null);
   }
 
+  async function handleToggleRider(u: AdminUserRow) {
+    setUpdating(u.id);
+    await updateAdminUser(u.id, { is_rider: !u.is_rider });
+    setUsers(prev => prev.map(x => x.id === u.id ? { ...x, is_rider: !u.is_rider } : x));
+    setUpdating(null);
+  }
+
   async function handlePermissionToggle(u: AdminUserRow, perm: Permission) {
     const current = u.permissions ?? [];
     const next = current.includes(perm)
@@ -348,6 +355,25 @@ export default function StaffPage() {
                           }}
                         >
                           {u.active ? <><X size={11} /> ปิดใช้งาน</> : <><Check size={11} /> เปิดใช้งาน</>}
+                        </button>
+                      )}
+
+                      {/* Rider app access toggle (staff only — owners always have access) */}
+                      {u.role === "staff" && (
+                        <button
+                          onClick={() => handleToggleRider(u)}
+                          disabled={updating === u.id}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 5,
+                            padding: "5px 10px", borderRadius: 7,
+                            border: `1px solid ${u.is_rider ? "rgba(74,222,128,0.4)" : BORDER}`,
+                            background: u.is_rider ? "rgba(74,222,128,0.1)" : BG,
+                            fontSize: 12, color: u.is_rider ? "#16a34a" : TEXT2,
+                            cursor: "pointer", fontFamily: "inherit",
+                            opacity: updating === u.id ? 0.5 : 1,
+                          }}
+                        >
+                          {u.is_rider ? <><Check size={11} /> แอพไรเดอร์</> : <>แอพไรเดอร์</>}
                         </button>
                       )}
 

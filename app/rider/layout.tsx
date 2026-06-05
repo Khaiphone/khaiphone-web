@@ -147,7 +147,8 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
         fetchRiderOnlineStatus(uid),
         fetchRiderConsent(),
       ]);
-      if (!profile || (profile.role !== "owner" && profile.role !== "staff")) {
+      if (!profile) { router.replace("/admin/login"); return; }
+      if (profile.role !== "owner" && !profile.is_rider) {
         router.replace("/admin/login");
         return;
       }

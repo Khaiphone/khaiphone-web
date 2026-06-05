@@ -17,13 +17,14 @@ export type AdminUserRow = {
   permissions: Permission[];
   created_at: string;
   is_online?: boolean;
+  is_rider: boolean;
 };
 
-export async function fetchMyProfile(userId: string): Promise<{ name: string; role: AdminRole; email: string; permissions: Permission[] } | null> {
+export async function fetchMyProfile(userId: string): Promise<{ name: string; role: AdminRole; email: string; permissions: Permission[]; is_rider: boolean } | null> {
   const supabase = createServerClient();
   const { data } = await supabase
     .from("admin_users")
-    .select("name, role, email, permissions")
+    .select("name, role, email, permissions, is_rider")
     .eq("user_id", userId)
     .single();
   if (!data) return null;
@@ -32,6 +33,7 @@ export async function fetchMyProfile(userId: string): Promise<{ name: string; ro
     role: data.role as AdminRole,
     email: data.email,
     permissions: (data.permissions ?? []) as Permission[],
+    is_rider: data.is_rider ?? false,
   };
 }
 
@@ -132,7 +134,7 @@ export async function inviteStaff(
 
 export async function updateAdminUser(
   id: string,
-  updates: { name?: string; role?: AdminRole; active?: boolean },
+  updates: { name?: string; role?: AdminRole; active?: boolean; is_rider?: boolean },
 ) {
   await requireAuth();
   const supabase = createServerClient();
