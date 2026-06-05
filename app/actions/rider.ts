@@ -161,6 +161,60 @@ export async function fetchRiderHistory(riderId: string, months = 3): Promise<Ad
   return (data ?? []).map(mapRow);
 }
 
+// ─── Reject job before accepting (confirmed → unassigned, status stays confirmed) ─
+export async function riderRejectJob(id: string) {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+  const now = new Date().toISOString();
+
+  const { data: req } = await supabase
+    .from("requests")
+    .select("status, rider_id, status_log, order_number, device_model")
+    .eq("id", id).single();
+
+  if (req?.status !== "confirmed") return { success: false as const, error: "งานนี้ไม่สามารถปฏิเสธได้" };
+  if (req?.rider_id !== user.id)   return { success: false as const, error: "ไม่ใช่งานของคุณ" };
+
+  const newLog = [
+    ...(req?.status_log ?? []),
+    { status: "confirmed", timestamp: now, note: "ไรเดอร์ปฏิเสธรับงาน — รอมอบหมายใหม่" },
+  ];
+
+  const { error } = await supabase
+    .from("requests")
+    .update({ rider_id: null, rider_name: null, assigned_at: null, status_log: newLog, updated_at: now })
+    .eq("id", id).eq("rider_id", user.id);
+  if (error) return { success: false as const, error: error.message };
+
+  // Clear current_job_id and increment jobs_declined in shift
+  const { data: loc } = await supabase
+    .from("rider_locations").select("shift_id, current_job_id").eq("rider_id", user.id).single();
+  if (loc?.current_job_id === id) {
+    await supabase.from("rider_locations")
+      .update({ current_job_id: null, updated_at: now }).eq("rider_id", user.id);
+  }
+  if (loc?.shift_id) {
+    const { data: shift } = await supabase
+      .from("rider_shifts").select("jobs_declined").eq("id", loc.shift_id).single();
+    if (shift) {
+      await supabase.from("rider_shifts")
+        .update({ jobs_declined: (shift.jobs_declined ?? 0) + 1 }).eq("id", loc.shift_id);
+    }
+  }
+
+  after(async () => {
+    await broadcastRequestUpdate(id);
+    await sendPushToOwners({
+      title: `ไรเดอร์ปฏิเสธงาน — ${req?.order_number ?? ""}`,
+      body: `${req?.device_model ?? ""} · ต้องมอบหมายไรเดอร์ใหม่`,
+      url: `/admin/requests/${id}`,
+      tag: `rejected-rider-${id}`,
+    }).catch(console.error);
+  });
+
+  return { success: true as const };
+}
+
 // ─── Accept job (confirmed → pickup_scheduled) ────────────────────────────────
 export async function riderAcceptJob(id: string) {
   const user = await requireAuth();
@@ -507,6 +561,9 @@ export async function riderCustomerRejected(id: string) {
     .update({ status: "cancelled", status_log: newLog, inspection: updatedInspection, updated_at: now })
     .eq("id", id).eq("status", "price_negotiation");
   if (error) return { success: false as const, error: error.message };
+
+  await finishJobCleanup(supabase, user.id, now, false);
+
   after(async () => {
     await broadcastRequestUpdate(id);
     await sendPushToOwners({
@@ -517,6 +574,42 @@ export async function riderCustomerRejected(id: string) {
     }).catch(console.error);
   });
   return { success: true as const };
+}
+
+// ─── Clean up rider_locations after a job ends ───────────────────────────────
+async function finishJobCleanup(
+  supabase: ReturnType<typeof createServerClient>,
+  riderId: string,
+  now: string,
+  countAsCompleted: boolean,
+) {
+  const { data: loc } = await supabase
+    .from("rider_locations")
+    .select("shift_id")
+    .eq("rider_id", riderId)
+    .single();
+
+  await supabase
+    .from("rider_locations")
+    .update({ current_job_id: null, tracking_mode: "idle", updated_at: now })
+    .eq("rider_id", riderId);
+
+  if (loc?.shift_id) {
+    const { data: shift } = await supabase
+      .from("rider_shifts")
+      .select("jobs_completed, jobs_attempted")
+      .eq("id", loc.shift_id)
+      .single();
+    if (shift) {
+      await supabase
+        .from("rider_shifts")
+        .update({
+          jobs_attempted: (shift.jobs_attempted ?? 0) + 1,
+          ...(countAsCompleted ? { jobs_completed: (shift.jobs_completed ?? 0) + 1 } : {}),
+        })
+        .eq("id", loc.shift_id);
+    }
+  }
 }
 
 // ─── Complete job with cash payment ──────────────────────────────────────────
@@ -538,6 +631,8 @@ export async function riderCompleteCash(id: string, cashPhotoUrl: string) {
     .update({ status: "completed", status_log: newLog, payment_slip_url: cashPhotoUrl, updated_at: now })
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
+
+  await finishJobCleanup(supabase, user.id, now, true);
 
   after(async () => {
     await broadcastRequestUpdate(id);
@@ -616,6 +711,8 @@ export async function riderCompleteTransfer(id: string, slipUrl?: string) {
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
 
+  await finishJobCleanup(supabase, user.id, now, true);
+
   after(async () => {
     await broadcastRequestUpdate(id);
     await autoCreateStock(id);
@@ -632,7 +729,7 @@ export async function riderCompleteTransfer(id: string, slipUrl?: string) {
 
 // ─── No-show ──────────────────────────────────────────────────────────────────
 export async function riderNoShow(id: string) {
-  await requireAuth();
+  const user = await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
 
@@ -649,6 +746,8 @@ export async function riderNoShow(id: string) {
     .update({ status: "no_show", status_log: newLog, updated_at: now })
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
+
+  await finishJobCleanup(supabase, user.id, now, false);
 
   after(async () => {
     await broadcastRequestUpdate(id);

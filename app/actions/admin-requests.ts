@@ -429,6 +429,7 @@ export async function assignRider(id: string, riderId: string | null, riderName:
   const now = new Date().toISOString();
   const updatePayload: Record<string, unknown> = {
     rider_id: riderId, rider_name: riderName, updated_at: now,
+    assigned_at: riderId ? now : null,
   };
   if (distanceKm !== null) updatePayload.distance_km = distanceKm;
 
@@ -540,7 +541,7 @@ export async function autoAssignJobs(): Promise<{ assigned: number; skipped: num
   const [{ data: users }, { data: shifts }] = await Promise.all([
     supabase.from("admin_users").select("user_id, name").in("user_id", riderIds),
     shiftIds.length > 0
-      ? supabase.from("rider_shifts").select("id, jobs_completed").in("id", shiftIds)
+      ? supabase.from("rider_shifts").select("id, jobs_completed, jobs_attempted").in("id", shiftIds)
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -569,7 +570,7 @@ export async function autoAssignJobs(): Promise<{ assigned: number; skipped: num
     // Atomic update — WHERE rider_id IS NULL prevents race conditions
     const { data: updated } = await supabase
       .from("requests")
-      .update({ rider_id: best.rider_id, rider_name: riderName, updated_at: now })
+      .update({ rider_id: best.rider_id, rider_name: riderName, assigned_at: now, updated_at: now })
       .eq("id", job.id)
       .is("rider_id", null)
       .select("id");

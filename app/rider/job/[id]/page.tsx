@@ -8,7 +8,7 @@ import { scanDeviceInfo, checkSickw, scanIdCard } from "@/app/actions/device-sca
 import type { SickwResult } from "@/app/actions/device-scan";
 import {
   fetchRiderJob, fetchRiderJobs,
-  riderAcceptJob, riderStartJob, riderArriveJob, riderNoShow,
+  riderAcceptJob, riderRejectJob, riderStartJob, riderArriveJob, riderNoShow,
   riderSaveInspection, riderAutoSaveSickw, riderConfirmPrice, riderAdjustPrice,
   riderCustomerAccepted, riderCustomerRejected,
   riderCompleteCash, riderCompleteTransfer, riderRequestTransfer,
@@ -843,6 +843,7 @@ function PriceNegotiationStep({ job, reload, c }: { job: AdminRequest; reload: (
   async function handleRejected() {
     setBusy(true);
     await riderCustomerRejected(job.id);
+    setTrackingMode("idle");
     reload();
   }
 
@@ -1109,6 +1110,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
       // Patch receipt HTML server-side: inject slip image into the stored HTML file
       await patchReceiptWithSlip(job.id).catch(e => console.error("Receipt slip patch failed (non-fatal):", e));
       await riderCompleteTransfer(job.id, slipUrl);
+      setTrackingMode("idle");
       reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : "เกิดข้อผิดพลาด");
@@ -1224,6 +1226,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
       setIsEditing(false);
       if (payMethod === "cash") {
         await riderCompleteCash(job.id, paymentPhotoStorageUrl ?? "");
+        setTrackingMode("idle");
         reload();
       } else {
         setContractSigned(true);
@@ -1508,7 +1511,8 @@ export default function JobWizardPage() {
   const [busy, setBusy]             = useState(false);
   const [riderName, setRiderName]   = useState("");
   const [officerId, setOfficerId]   = useState("");
-  const [showNoShow, setShowNoShow]   = useState(false);
+  const [showNoShow,  setShowNoShow]  = useState(false);
+  const [showReject,  setShowReject]  = useState(false);
   const [blockingJob, setBlockingJob] = useState<string | null>(null);
   const [startError, setStartError]   = useState("");
   const [showHelp, setShowHelp]       = useState(false);
@@ -1558,6 +1562,11 @@ export default function JobWizardPage() {
     await riderAcceptJob(id);
     reload(); setBusy(false);
   }
+  async function handleReject() {
+    setBusy(true);
+    await riderRejectJob(id);
+    router.replace("/rider");
+  }
   async function handleStart() {
     setBusy(true); setStartError("");
     const result = await riderStartJob(id);
@@ -1574,6 +1583,7 @@ export default function JobWizardPage() {
   async function handleNoShow() {
     setBusy(true);
     await riderNoShow(id);
+    setTrackingMode("idle");
     router.replace("/rider");
   }
 
@@ -1677,7 +1687,7 @@ export default function JobWizardPage() {
               )}
 
               <BigBtn label="รับงานนี้ ✓" loading={busy} onClick={handleAccept} />
-              <BigBtn label="ปฏิเสธงาน" color={RED} textColor="#fff" outline onClick={()=>setShowNoShow(true)} />
+              <BigBtn label="ปฏิเสธงาน" color={RED} textColor="#fff" outline onClick={()=>setShowReject(true)} />
             </div>
           )}
 
@@ -1854,6 +1864,23 @@ export default function JobWizardPage() {
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
               <BigBtn label="ยืนยัน — ลูกค้าไม่อยู่" color={RED} textColor="#fff" onClick={handleNoShow} loading={busy} />
               <BigBtn label="ยกเลิก" color={BORDER} textColor={TEXT} onClick={()=>setShowNoShow(false)} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject job modal (before accepting) */}
+      {showReject && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"flex-end", zIndex:50 }} onClick={()=>setShowReject(false)}>
+          <div onClick={e=>e.stopPropagation()} style={{ width:"100%", background:CARD, borderRadius:"20px 20px 0 0", padding:"24px 20px", paddingBottom:"calc(24px + env(safe-area-inset-bottom))" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
+              <AlertTriangle size={20} color={RED} />
+              <p style={{ margin:0, fontSize:16, fontWeight:700, color:TEXT }}>ปฏิเสธงานนี้?</p>
+            </div>
+            <p style={{ margin:"0 0 20px", fontSize:13, color:TEXT2 }}>งานจะถูกส่งคืน admin เพื่อมอบหมายไรเดอร์คนอื่น</p>
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              <BigBtn label="ยืนยัน — ปฏิเสธงาน" color={RED} textColor="#fff" onClick={handleReject} loading={busy} />
+              <BigBtn label="ยกเลิก" color={BORDER} textColor={TEXT} onClick={()=>setShowReject(false)} />
             </div>
           </div>
         </div>

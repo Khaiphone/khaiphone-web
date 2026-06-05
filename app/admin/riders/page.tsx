@@ -57,7 +57,7 @@ type Job = {
 type AllShift = {
   id: string; rider_id: string; rider_name: string;
   clocked_in_at: string; clocked_out_at: string | null;
-  jobs_completed: number; total_distance_km: number | null; ended_reason: string | null;
+  jobs_completed: number; jobs_attempted: number; total_distance_km: number | null; ended_reason: string | null;
 };
 
 type SLAStatus = "overdue" | "warning" | "ok" | "none";
@@ -532,7 +532,7 @@ export default function PlannerDashboard() {
                       </div>
                       {/* Summary stats */}
                       <div style={{ display: "flex", gap: 6, fontSize: 10, flexWrap: "wrap" }}>
-                        <span style={{ color: GREEN, fontWeight: 600 }}>✅ {shift?.jobs_completed ?? 0} วันนี้</span>
+                        <span style={{ color: GREEN, fontWeight: 600 }}>✅ {shift?.jobs_completed ?? 0}/{shift?.jobs_attempted ?? 0} วันนี้</span>
                         {(r.active_jobs ?? []).length > 0 && (
                           <span style={{ color: ORANGE, fontWeight: 600 }}>📋 รับ {r.active_jobs.length} งาน</span>
                         )}
@@ -904,7 +904,7 @@ export default function PlannerDashboard() {
                       <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", justifyContent: "space-between" }}>
                           <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{s.rider_name}</span>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: GREEN }}>{s.jobs_completed} งาน</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: GREEN }}>{s.jobs_completed}/{s.jobs_attempted ?? 0} งาน</span>
                         </div>
                         <p style={{ margin: 0, fontSize: 11, color: TEXT2 }}>
                           {new Date(s.clocked_in_at).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })} – {s.clocked_out_at ? new Date(s.clocked_out_at).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }) : <span style={{ color: GREEN }}>กำลังทำงาน</span>}
