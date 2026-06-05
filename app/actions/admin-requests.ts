@@ -616,7 +616,8 @@ export async function backfillRequestCoords(): Promise<{ updated: number }> {
 
   if (!rows || rows.length === 0) return { updated: 0 };
 
-  console.log(`[backfill] Found ${rows.length} request(s) missing coords`);
+  const total = rows.length;
+  console.log(`[backfill] Found ${total} request(s) missing coords`);
   let updated = 0;
   for (const row of rows) {
     const geo = await geocodeLocation(row.appt_location as string);
@@ -641,8 +642,8 @@ export async function backfillRequestCoords(): Promise<{ updated: number }> {
     }
     await new Promise(r => setTimeout(r, 150));
   }
-  console.log(`[backfill] Done — updated ${updated}/${rows.length}`);
-  return { updated };
+  console.log(`[backfill] Done — updated ${updated}/${total}`);
+  return { total, updated };
 }
 
 // ─── Update appointment ───────────────────────────────────────────────────────

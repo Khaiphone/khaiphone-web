@@ -204,11 +204,12 @@ export default function RidersDashboard() {
           <button
             onClick={async () => {
               setSyncing(true);
-              const { updated } = await backfillRequestCoords();
+              const { total, updated } = await backfillRequestCoords();
               await loadJobs();
               setSyncing(false);
-              if (updated === 0) alert("ไม่มีงานที่ต้องซิงค์ (อาจ fail ดู Vercel logs)");
-              else alert(`ซิงค์พิกัดสำเร็จ ${updated} งาน`);
+              if (total === 0) alert("ทุกงานมีพิกัดครบแล้ว");
+              else if (updated === 0) alert(`พบ ${total} งานที่ขาดพิกัด แต่ geocoding ยังล้มเหลวทุกรายการ\nตรวจสอบว่า Geocoding API enable แล้ว`);
+              else alert(`ซิงค์พิกัดสำเร็จ ${updated}/${total} งาน`);
             }}
             disabled={syncing}
             style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.2)", color: syncing ? "rgba(255,255,255,.4)" : "#fff", borderRadius: 8, padding: "6px 12px", cursor: syncing ? "default" : "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit" }}
