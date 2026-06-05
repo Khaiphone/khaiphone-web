@@ -26,6 +26,8 @@ const BLUE   = "#2563eb";
 const PURPLE = "#7c3aed";
 const YELLOW = "#d97706";
 
+const RIDER_CAPACITY = 2; // max active jobs before rider is considered full
+
 const MODE_COLOR: Record<string, string> = {
   idle: GREEN, enroute: ORANGE, on_site: BLUE, return: PURPLE,
 };
@@ -176,15 +178,15 @@ function JobCard({
   const isOpen = assignDropdownJob === job.id;
 
   const ridersForAssign = riders
-    .filter(r => r.tracking_mode === "idle" && !r.current_job_id)
     .map(r => ({
-      rider_id: r.rider_id,
-      name: r.admin_users?.name ?? "ไรเดอร์",
-      distKm: job.appt_lat && job.appt_lng
+      rider_id:    r.rider_id,
+      name:        r.admin_users?.name ?? "ไรเดอร์",
+      activeCount: r.active_jobs?.length ?? 0,
+      distKm:      job.appt_lat && job.appt_lng
         ? haversineKm(r.lat, r.lng, job.appt_lat, job.appt_lng)
         : 0,
     }))
-    .sort((a, b) => a.distKm - b.distKm);
+    .sort((a, b) => a.activeCount - b.activeCount || a.distKm - b.distKm);
 
   return (
     <div
@@ -222,19 +224,29 @@ function JobCard({
               Assign <ChevronDown size={11} />
             </button>
             {isOpen && (
-              <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,.12)", zIndex: 200, minWidth: 180 }}>
+              <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,.12)", zIndex: 200, minWidth: 200 }}>
                 {ridersForAssign.length === 0 ? (
-                  <div style={{ padding: "10px 14px", fontSize: 12, color: TEXT2 }}>ไม่มีไรเดอร์ว่าง</div>
-                ) : ridersForAssign.map(r => (
-                  <button
-                    key={r.rider_id}
-                    onClick={() => onAssign(job.id, r.rider_id, r.name)}
-                    style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 14px", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, color: TEXT, textAlign: "left" }}
-                  >
-                    <span style={{ fontWeight: 600 }}>{r.name}</span>
-                    <span style={{ color: TEXT2, fontSize: 11 }}>{r.distKm.toFixed(1)} กม.</span>
-                  </button>
-                ))}
+                  <div style={{ padding: "10px 14px", fontSize: 12, color: TEXT2 }}>ไม่มีไรเดอร์ออนไลน์</div>
+                ) : ridersForAssign.map(r => {
+                  const isFull = r.activeCount >= RIDER_CAPACITY;
+                  return (
+                    <button
+                      key={r.rider_id}
+                      onClick={() => onAssign(job.id, r.rider_id, r.name)}
+                      style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 14px", border: "none", background: isFull ? "#FFF7ED" : "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, color: TEXT, textAlign: "left" }}
+                    >
+                      <div>
+                        <span style={{ fontWeight: 600 }}>{r.name}</span>
+                        {r.activeCount > 0 && (
+                          <span style={{ fontSize: 10, marginLeft: 6, fontWeight: 600, color: isFull ? RED : ORANGE }}>
+                            {isFull ? "⚠ งานเต็ม" : `📋 ${r.activeCount} งาน`}
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ color: TEXT2, fontSize: 11 }}>{r.distKm.toFixed(1)} กม.</span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -664,14 +676,14 @@ export default function PlannerDashboard() {
                 const isSelected = selectedJobId === job.id;
                 const mins = minutesToSLA(job.appt_date, job.appt_time);
                 const idleRidersForAssign = riders
-                  .filter(r => r.tracking_mode === "idle" && !r.current_job_id)
                   .map(r => ({
                     ...r,
+                    activeCount: r.active_jobs?.length ?? 0,
                     distKm: job.appt_lat && job.appt_lng
                       ? haversineKm(r.lat, r.lng, job.appt_lat!, job.appt_lng!)
                       : 0,
                   }))
-                  .sort((a, b) => a.distKm - b.distKm);
+                  .sort((a, b) => a.activeCount - b.activeCount || a.distKm - b.distKm);
                 return (
                   <AdvancedMarker key={job.id} position={{ lat: job.appt_lat!, lng: job.appt_lng! }} onClick={() => setSelectedJobId(isSelected ? null : job.id)}>
                     <div style={{ position: "relative" }}>
@@ -695,18 +707,19 @@ export default function PlannerDashboard() {
                           ) : (
                             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                               {idleRidersForAssign.length === 0 ? (
-                                <p style={{ margin: 0, fontSize: 12, color: TEXT2 }}>ไม่มีไรเดอร์ว่าง</p>
+                                <p style={{ margin: 0, fontSize: 12, color: TEXT2 }}>ไม่มีไรเดอร์</p>
                               ) : idleRidersForAssign.slice(0, 3).map(r => {
                                 const rName = r.admin_users?.name ?? "ไรเดอร์";
+                                const isFull = r.activeCount >= RIDER_CAPACITY;
                                 return (
                                   <button
                                     key={r.rider_id}
                                     disabled={assigning === job.id}
                                     onClick={e => { e.stopPropagation(); handleAssign(job.id, r.rider_id, rName); }}
-                                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: BLUE, border: "none", borderRadius: 8, padding: "8px 12px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: isFull ? "#FFF7ED" : BLUE, border: isFull ? `1px solid ${ORANGE}40` : "none", borderRadius: 8, padding: "8px 12px", color: isFull ? TEXT : "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
                                   >
-                                    <span>Assign → {rName}</span>
-                                    <span style={{ opacity: 0.8, fontSize: 11 }}>{r.distKm.toFixed(1)} กม.</span>
+                                    <span>Assign → {rName}{isFull ? " ⚠" : ""}</span>
+                                    <span style={{ opacity: 0.8, fontSize: 11, color: isFull ? ORANGE : undefined }}>{isFull ? `${r.activeCount} งาน · ` : ""}{r.distKm.toFixed(1)} กม.</span>
                                   </button>
                                 );
                               })}
@@ -816,15 +829,16 @@ export default function PlannerDashboard() {
                     </div>
                     {assignedJobs.map(job => {
                       const ridersForReassign = riders
-                        .filter(r => r.tracking_mode === "idle" && !r.current_job_id && r.rider_id !== job.rider_id)
+                        .filter(r => r.rider_id !== job.rider_id)
                         .map(r => ({
-                          rider_id: r.rider_id,
-                          name: r.admin_users?.name ?? "ไรเดอร์",
-                          distKm: job.appt_lat && job.appt_lng
+                          rider_id:    r.rider_id,
+                          name:        r.admin_users?.name ?? "ไรเดอร์",
+                          activeCount: r.active_jobs?.length ?? 0,
+                          distKm:      job.appt_lat && job.appt_lng
                             ? haversineKm(r.lat, r.lng, job.appt_lat!, job.appt_lng!)
                             : 0,
                         }))
-                        .sort((a, b) => a.distKm - b.distKm);
+                        .sort((a, b) => a.activeCount - b.activeCount || a.distKm - b.distKm);
                       const isReassignOpen = assignDropdownJob === job.id;
                       const isAssigning = assigning === job.id;
                       return (
@@ -844,17 +858,27 @@ export default function PlannerDashboard() {
                                 {isReassignOpen && (
                                   <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,.12)", zIndex: 200, minWidth: 180 }}>
                                     {ridersForReassign.length === 0 ? (
-                                      <div style={{ padding: "10px 14px", fontSize: 12, color: TEXT2 }}>ไม่มีไรเดอร์ว่างคนอื่น</div>
-                                    ) : ridersForReassign.map(r => (
-                                      <button
-                                        key={r.rider_id}
-                                        onClick={() => handleAssign(job.id, r.rider_id, r.name)}
-                                        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 14px", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, color: TEXT, textAlign: "left" }}
-                                      >
-                                        <span style={{ fontWeight: 600 }}>{r.name}</span>
-                                        <span style={{ color: TEXT2, fontSize: 11 }}>{r.distKm.toFixed(1)} กม.</span>
-                                      </button>
-                                    ))}
+                                      <div style={{ padding: "10px 14px", fontSize: 12, color: TEXT2 }}>ไม่มีไรเดอร์คนอื่น</div>
+                                    ) : ridersForReassign.map(r => {
+                                      const isFull = r.activeCount >= RIDER_CAPACITY;
+                                      return (
+                                        <button
+                                          key={r.rider_id}
+                                          onClick={() => handleAssign(job.id, r.rider_id, r.name)}
+                                          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 14px", border: "none", background: isFull ? "#FFF7ED" : "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, color: TEXT, textAlign: "left" }}
+                                        >
+                                          <div>
+                                            <span style={{ fontWeight: 600 }}>{r.name}</span>
+                                            {r.activeCount > 0 && (
+                                              <span style={{ fontSize: 10, marginLeft: 6, fontWeight: 600, color: isFull ? RED : ORANGE }}>
+                                                {isFull ? "⚠ งานเต็ม" : `📋 ${r.activeCount} งาน`}
+                                              </span>
+                                            )}
+                                          </div>
+                                          <span style={{ color: TEXT2, fontSize: 11 }}>{r.distKm.toFixed(1)} กม.</span>
+                                        </button>
+                                      );
+                                    })}
                                   </div>
                                 )}
                               </div>

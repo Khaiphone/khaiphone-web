@@ -488,6 +488,8 @@ export async function assignRider(id: string, riderId: string | null, riderName:
   return { success: true as const, distanceKm };
 }
 
+const RIDER_CAPACITY = 2; // must match the constant in the planner page
+
 // ─── Auto-assign all unassigned confirmed jobs to idle riders ─────────────────
 export async function autoAssignJobs(): Promise<{ assigned: number; skipped: number }> {
   await requireAuth();
@@ -515,6 +517,19 @@ export async function autoAssignJobs(): Promise<{ assigned: number; skipped: num
 
   const riderIds = locs.map(l => l.rider_id);
   const shiftIds = locs.map(l => l.shift_id).filter(Boolean) as string[];
+
+  // Fetch active job counts per rider to enforce capacity
+  const { data: activeJobRows } = await supabase
+    .from("requests")
+    .select("rider_id")
+    .in("rider_id", riderIds)
+    .in("status", ["confirmed", "pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting", "awaiting_transfer"]);
+
+  const activeCountMap: Record<string, number> = {};
+  for (const row of activeJobRows ?? []) {
+    if (row.rider_id) activeCountMap[row.rider_id] = (activeCountMap[row.rider_id] ?? 0) + 1;
+  }
+
   const [{ data: users }, { data: shifts }] = await Promise.all([
     supabase.from("admin_users").select("user_id, name").in("user_id", riderIds),
     shiftIds.length > 0
@@ -525,10 +540,11 @@ export async function autoAssignJobs(): Promise<{ assigned: number; skipped: num
   const { haversineKm } = await import("@/lib/geo-utils");
 
   let assigned = 0, skipped = 0;
-  const usedRiderIds = new Set<string>();
+  const pendingCountMap = { ...activeCountMap }; // tracks in-session additions
 
   for (const job of jobs) {
-    const available = locs.filter(r => !usedRiderIds.has(r.rider_id));
+    // Only riders under capacity (in-session count tracks jobs just assigned this run)
+    const available = locs.filter(r => (pendingCountMap[r.rider_id] ?? 0) < RIDER_CAPACITY);
     if (!available.length) { skipped++; continue; }
 
     // Score: distance × (1 + jobs_today × 0.2) — lower is better (balances workload)
@@ -552,7 +568,7 @@ export async function autoAssignJobs(): Promise<{ assigned: number; skipped: num
       .select("id");
 
     if (updated?.length) {
-      usedRiderIds.add(best.rider_id);
+      pendingCountMap[best.rider_id] = (pendingCountMap[best.rider_id] ?? 0) + 1;
       await supabase.from("rider_locations")
         .update({ current_job_id: job.id, updated_at: now })
         .eq("rider_id", best.rider_id);
