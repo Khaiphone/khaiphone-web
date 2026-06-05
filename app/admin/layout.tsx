@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   LayoutDashboard, ClipboardList, CalendarDays, Bell, MoreHorizontal, Moon, Sun,
-  Map, Users, ArrowLeft, BarChart2, Settings, HelpCircle, ChevronLeft, ChevronRight,
+  Map, Users, ArrowLeft, BarChart2, Settings, HelpCircle, ChevronLeft, ChevronRight, LogOut,
 } from "lucide-react";
 import BottomTabNav from "../components/admin/BottomTabNav";
 import { supabase } from "@/lib/supabase";
@@ -297,32 +297,41 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
             </>
           )}
 
-          <div style={{ padding: "16px 12px", borderTop: `1px solid ${sidebarBorder}`, display: "flex", flexDirection: "column", gap: 8 }}>
-            <button
-              onClick={toggle}
-              style={{
-                width: "100%", padding: "9px 12px", borderRadius: "10px",
-                background: "transparent", border: `1px solid ${sidebarBorder}`,
-                color: sidebarText2, fontSize: "13px", cursor: "pointer",
-                textAlign: "left", fontFamily: "inherit",
-                display: "flex", alignItems: "center", gap: 8,
-              }}
-            >
-              {dark ? <Sun size={14} /> : <Moon size={14} />}
-              {dark ? "Light Mode" : "Dark Mode"}
-            </button>
-            <button
-              onClick={() => { localStorage.removeItem("kp_admin_role"); supabase.auth.signOut().then(() => router.push("/admin/login")); }}
-              style={{
-                width: "100%", padding: "9px 12px", borderRadius: "10px",
-                background: "transparent", border: `1px solid ${sidebarBorder}`,
-                color: sidebarText2, fontSize: "13px", cursor: "pointer",
-                textAlign: "left", fontFamily: "inherit",
-              }}
-            >
-              ออกจากระบบ
-            </button>
-          </div>
+          {(() => {
+            const isCollapsed = collapsed && pathname.startsWith("/admin/riders");
+            return (
+              <div style={{ padding: "16px 10px", borderTop: `1px solid ${sidebarBorder}`, display: "flex", flexDirection: "column", gap: 8 }}>
+                <button
+                  onClick={toggle}
+                  title={isCollapsed ? (dark ? "Light Mode" : "Dark Mode") : undefined}
+                  style={{
+                    width: "100%", padding: "9px 12px", borderRadius: "10px",
+                    background: "transparent", border: `1px solid ${sidebarBorder}`,
+                    color: sidebarText2, fontSize: "13px", cursor: "pointer",
+                    fontFamily: "inherit", display: "flex", alignItems: "center",
+                    gap: isCollapsed ? 0 : 8, justifyContent: isCollapsed ? "center" : "flex-start",
+                  }}
+                >
+                  {dark ? <Sun size={14} /> : <Moon size={14} />}
+                  {!isCollapsed && (dark ? "Light Mode" : "Dark Mode")}
+                </button>
+                <button
+                  onClick={() => { localStorage.removeItem("kp_admin_role"); supabase.auth.signOut().then(() => router.push("/admin/login")); }}
+                  title={isCollapsed ? "ออกจากระบบ" : undefined}
+                  style={{
+                    width: "100%", padding: "9px 12px", borderRadius: "10px",
+                    background: "transparent", border: `1px solid ${sidebarBorder}`,
+                    color: sidebarText2, fontSize: "13px", cursor: "pointer",
+                    fontFamily: "inherit", display: "flex", alignItems: "center",
+                    gap: isCollapsed ? 0 : 8, justifyContent: isCollapsed ? "center" : "flex-start",
+                  }}
+                >
+                  <LogOut size={14} />
+                  {!isCollapsed && "ออกจากระบบ"}
+                </button>
+              </div>
+            );
+          })()}
         </aside>
 
         {/* ── Main Content ── */}
