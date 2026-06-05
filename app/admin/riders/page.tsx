@@ -131,6 +131,7 @@ export default function RidersDashboard() {
   const [dragJobId, setDragJobId] = useState<string | null>(null);
   const [dropTargetRider, setDropTargetRider] = useState<string | null>(null);
   const [assigning, setAssigning] = useState<string | null>(null);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const data = await fetchActiveRiders();
@@ -155,13 +156,14 @@ export default function RidersDashboard() {
 
   useEffect(() => {
     load();
+    loadJobs();
     const ch = supabase
       .channel("admin-rider-locations")
       .on("postgres_changes", { event: "*", schema: "public", table: "rider_locations" }, () => load())
       .subscribe();
     const interval = setInterval(load, 30_000);
     return () => { supabase.removeChannel(ch); clearInterval(interval); };
-  }, [load]);
+  }, [load, loadJobs]);
 
   useEffect(() => {
     if (sidebarTab === "shifts") loadShifts();
@@ -237,6 +239,39 @@ export default function RidersDashboard() {
                       {isSelected && (
                         <div style={{ position: "absolute", top: -36, left: "50%", transform: "translateX(-50%)", background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "3px 8px", fontSize: 12, fontWeight: 600, color: TEXT, whiteSpace: "nowrap", boxShadow: "0 2px 8px rgba(0,0,0,.15)" }}>
                           {name} · {MODE_LABEL[r.tracking_mode] ?? r.tracking_mode}
+                        </div>
+                      )}
+                    </div>
+                  </AdvancedMarker>
+                );
+              })}
+
+              {/* Job appointment markers */}
+              {unassignedJobs.filter(j => j.appt_lat && j.appt_lng).map(job => {
+                const mins = minutesUntilAppt(job.appt_date, job.appt_time);
+                const uColor = urgencyColor(mins);
+                const isSelected = selectedJobId === job.id;
+                return (
+                  <AdvancedMarker
+                    key={job.id}
+                    position={{ lat: job.appt_lat!, lng: job.appt_lng! }}
+                    onClick={() => setSelectedJobId(isSelected ? null : job.id)}
+                  >
+                    <div style={{ position: "relative" }}>
+                      <div style={{
+                        background: uColor, color: "#fff", fontSize: 10, fontWeight: 700,
+                        padding: "3px 7px", borderRadius: 6, whiteSpace: "nowrap",
+                        border: `1.5px solid rgba(255,255,255,0.7)`,
+                        boxShadow: "0 2px 6px rgba(0,0,0,.25)",
+                        cursor: "pointer",
+                      }}>
+                        📍 {job.order_number}
+                      </div>
+                      {isSelected && (
+                        <div style={{ position: "absolute", bottom: 32, left: "50%", transform: "translateX(-50%)", background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 10px", fontSize: 12, color: TEXT, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,.15)", minWidth: 160 }}>
+                          <p style={{ margin: "0 0 2px", fontWeight: 700 }}>#{job.order_number}</p>
+                          <p style={{ margin: "0 0 2px", color: TEXT2 }}>{job.device_model} · {job.customer_name}</p>
+                          {job.appt_time && <p style={{ margin: 0, color: uColor, fontWeight: 600 }}>🕐 {job.appt_time} น.{mins !== null ? ` · ${urgencyLabel(mins)}` : ""}</p>}
                         </div>
                       )}
                     </div>
