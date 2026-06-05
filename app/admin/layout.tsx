@@ -148,7 +148,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <AdminRoleProvider>
-      <div style={{ minHeight: "100vh", background: dark ? "#0F0F11" : "#F5F5F7", display: "flex", ...adminCssVars(dark) } as React.CSSProperties}>
+      <div style={{ minHeight: "100vh", background: dark ? "#0F0F11" : "#F5F5F7", display: "flex", "--admin-sidebar-w": `${sidebarW}px`, ...adminCssVars(dark) } as React.CSSProperties}>
 
         {/* ── Desktop Sidebar (md+) ── */}
         <aside
@@ -336,8 +336,8 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
         {/* ── Main Content ── */}
         <main
-          className="md:block"
-          style={{ flex: 1, minHeight: "100vh", paddingBottom: hideBottomNav ? 0 : "calc(env(safe-area-inset-bottom) + 72px)", marginLeft: `${sidebarW}px`, transition: "margin-left 0.2s ease" }}
+          className="md:block admin-main-content"
+          style={{ flex: 1, minHeight: "100vh", paddingBottom: hideBottomNav ? 0 : "calc(env(safe-area-inset-bottom) + 72px)", transition: "margin-left 0.2s ease" }}
         >
           {children}
         </main>

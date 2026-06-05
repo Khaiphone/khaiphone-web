@@ -7,6 +7,16 @@
   --browser-bar-h: 0px;
 }
 
+/* Admin layout: sidebar is hidden on mobile, so main content must have no left margin */
+.admin-main-content {
+  margin-left: 0 !important;
+}
+@media (min-width: 768px) {
+  .admin-main-content {
+    margin-left: var(--admin-sidebar-w, 220px) !important;
+  }
+}
+
 /* Sell-page sticky CTA: sits above MobileNav + Chrome Android's browser bar */
 .sell-sticky-cta {
   bottom: calc(4rem + var(--browser-bar-h));
