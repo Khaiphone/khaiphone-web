@@ -602,7 +602,7 @@ export async function addNote(
 }
 
 // ─── Backfill missing appt_lat/appt_lng for active requests ──────────────────
-export async function backfillRequestCoords(): Promise<{ updated: number }> {
+export async function backfillRequestCoords(): Promise<{ total: number; updated: number }> {
   await requireAuth();
   const supabase = createServerClient();
 
@@ -614,7 +614,7 @@ export async function backfillRequestCoords(): Promise<{ updated: number }> {
     .is("appt_lat", null)
     .in("status", ["new", "pending", "confirmed"]);
 
-  if (!rows || rows.length === 0) return { updated: 0 };
+  if (!rows || rows.length === 0) return { total: 0, updated: 0 };
 
   const total = rows.length;
   console.log(`[backfill] Found ${total} request(s) missing coords`);
