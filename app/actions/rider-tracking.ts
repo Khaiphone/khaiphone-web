@@ -176,7 +176,7 @@ export async function fetchActiveRiders() {
   const jobIds   = locs.map(l => l.current_job_id).filter(Boolean) as string[];
 
   const [{ data: users }, { data: shifts }, { data: jobs }] = await Promise.all([
-    supabase.from("admin_users").select("user_id, name, phone").in("user_id", riderIds),
+    supabase.from("admin_users").select("user_id, name").in("user_id", riderIds),
     shiftIds.length > 0
       ? supabase.from("rider_shifts").select("id, clocked_in_at, jobs_completed").in("id", shiftIds)
       : Promise.resolve({ data: [] }),
