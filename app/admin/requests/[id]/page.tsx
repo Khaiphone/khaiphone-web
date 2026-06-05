@@ -1068,7 +1068,12 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                   <option value="parcel">ส่งพัสดุ</option>
                 </select>
                 <label style={{ color: TEXT2, fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>สถานที่</label>
-                <input value={apptDraft.location} onChange={e => setApptDraft(p => ({ ...p, location: e.target.value }))} placeholder="ระบุสถานที่ หรือวาง Google Maps link" style={{ ...inputSt, marginBottom: "12px" }} />
+                <input value={apptDraft.location} onChange={e => setApptDraft(p => ({ ...p, location: e.target.value }))} placeholder="ระบุสถานที่ หรือวาง Google Maps link" style={{ ...inputSt, marginBottom: "6px" }} />
+                {apptDraft.location.includes("maps.app.goo.gl") && (
+                  <p style={{ color: "#B45309", fontSize: "12px", margin: "0 0 10px", lineHeight: 1.5 }}>
+                    ⚠️ ลิ้งสั้นนี้อ่านพิกัดไม่ได้ — ให้เปิดลิ้งในเบราว์เซอร์แล้วคัดลอก URL จาก address bar มาวางแทน หรือคัดลอกตัวเลขพิกัด เช่น <strong>13.778, 100.492</strong>
+                  </p>
+                )}
                 <EditBar onSave={saveAppt} onCancel={() => setEditAppt(false)} isSaving={saving === "appt"} />
               </>
             )}

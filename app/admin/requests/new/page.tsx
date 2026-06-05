@@ -565,7 +565,11 @@ export default function NewRequestPage() {
               placeholder={form.apptMethod === "branch" ? "เช่น สาขาสยาม" : "ชื่อสถานที่ หรือวางลิ้ง Google Maps"}
               style={inputSt}
             />
-            {form.apptMethod !== "branch" && (
+            {form.apptMethod !== "branch" && form.apptLocation.includes("maps.app.goo.gl") ? (
+              <p style={{ fontSize: 12, color: "#B45309", margin: "4px 0 0", lineHeight: 1.5 }}>
+                ⚠️ ลิ้งสั้นนี้อ่านพิกัดไม่ได้ — ให้เปิดลิ้งในเบราว์เซอร์แล้วคัดลอก URL จาก address bar มาวางแทน หรือคัดลอกตัวเลขพิกัด เช่น <strong>13.778, 100.492</strong>
+              </p>
+            ) : form.apptMethod !== "branch" && (
               <p style={{ fontSize: 11, color: TEXT3, margin: "4px 0 0" }}>พิมพ์เพื่อค้นหา หรือวางลิ้ง Google Maps / Plus Code</p>
             )}
           </div>
