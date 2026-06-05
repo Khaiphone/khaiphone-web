@@ -601,6 +601,41 @@ export async function addNote(
   return { success: true, notes: newNotes };
 }
 
+// ─── Backfill missing appt_lat/appt_lng for active requests ──────────────────
+export async function backfillRequestCoords(): Promise<{ updated: number }> {
+  await requireAuth();
+  const supabase = createServerClient();
+
+  const { data: rows } = await supabase
+    .from("requests")
+    .select("id, appt_location")
+    .not("appt_location", "is", null)
+    .neq("appt_location", "")
+    .is("appt_lat", null)
+    .in("status", ["new", "pending", "confirmed"]);
+
+  if (!rows || rows.length === 0) return { updated: 0 };
+
+  let updated = 0;
+  for (const row of rows) {
+    const geo = await geocodeLocation(row.appt_location as string);
+    if (!geo) continue;
+    await supabase
+      .from("requests")
+      .update({
+        appt_lat:      geo.lat,
+        appt_lng:      geo.lng,
+        ...(geo.resolvedAddress ? { appt_location: geo.resolvedAddress } : {}),
+        updated_at:    new Date().toISOString(),
+      })
+      .eq("id", row.id);
+    updated++;
+    await new Promise(r => setTimeout(r, 150)); // avoid geocoding rate limit
+  }
+
+  return { updated };
+}
+
 // ─── Update appointment ───────────────────────────────────────────────────────
 export async function updateAppointment(
   id: string,

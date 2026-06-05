@@ -6,7 +6,7 @@ import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps
 import { Navigation, Battery, Wifi, AlertTriangle, ChevronRight, Users, CheckCircle2, Clock, Settings, Smartphone } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { fetchActiveRiders, fetchAllRidersShifts, fetchUnassignedJobs } from "@/app/actions/rider-tracking";
-import { assignRider } from "@/app/actions/admin-requests";
+import { assignRider, backfillRequestCoords } from "@/app/actions/admin-requests";
 import { haversineKm, etaMinutes, fmtDistance, fmtEta, OFFICE_LAT, OFFICE_LNG } from "@/lib/geo-utils";
 
 const DARK = "#1a1a2e";
@@ -132,6 +132,7 @@ export default function RidersDashboard() {
   const [dropTargetRider, setDropTargetRider] = useState<string | null>(null);
   const [assigning, setAssigning] = useState<string | null>(null);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   const load = useCallback(async () => {
     const data = await fetchActiveRiders();
@@ -200,6 +201,13 @@ export default function RidersDashboard() {
           <Stat label="ออนไลน์" value={onlineCount} color={GREEN} icon={<Wifi size={14} />} />
           <Stat label="กลับออฟฟิศ" value={returningCount} color="#7c3aed" icon={<Navigation size={14} />} />
           <Stat label="กำลังทำงาน" value={busyCount} color={ORANGE} icon={<Clock size={14} />} />
+          <button
+            onClick={async () => { setSyncing(true); await backfillRequestCoords(); await loadJobs(); setSyncing(false); }}
+            disabled={syncing}
+            style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.2)", color: syncing ? "rgba(255,255,255,.4)" : "#fff", borderRadius: 8, padding: "6px 12px", cursor: syncing ? "default" : "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit" }}
+          >
+            <Navigation size={14} /> {syncing ? "กำลังซิงค์..." : "ซิงค์พิกัด"}
+          </button>
           <button onClick={() => router.push("/admin/riders/manage")} style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit" }}>
             <Settings size={14} /> จัดการ
           </button>
