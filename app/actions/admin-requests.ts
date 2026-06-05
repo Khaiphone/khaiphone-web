@@ -207,10 +207,16 @@ export async function createRequest(data: {
     device_selections: data.deviceSelections ?? {},
     appt_date:        data.apptDate,
     appt_time:        data.apptTime,
-    appt_location:    data.apptLocation,
-    ...(data.apptLat != null && data.apptLng != null
-      ? { appt_lat: data.apptLat, appt_lng: data.apptLng }
-      : await geocodeLocation(data.apptLocation ?? "").then(c => c ? { appt_lat: c.lat, appt_lng: c.lng } : {})),
+    ...(await (async () => {
+      if (data.apptLat != null && data.apptLng != null) {
+        return { appt_location: data.apptLocation, appt_lat: data.apptLat, appt_lng: data.apptLng };
+      }
+      const geo = await geocodeLocation(data.apptLocation ?? "");
+      return {
+        appt_location: geo?.resolvedAddress ?? data.apptLocation,
+        ...(geo ? { appt_lat: geo.lat, appt_lng: geo.lng } : {}),
+      };
+    })()),
     appt_method:      data.apptMethod,
     payment_method:         data.paymentMethod,
     payment_bank:           data.paymentBank           || null,
@@ -281,25 +287,38 @@ function extractCoordsFromMapsUrl(url: string): { lat: number; lng: number } | n
   return null;
 }
 
-async function geocodeLocation(location: string): Promise<{ lat: number; lng: number } | null> {
+async function geocodeLocation(location: string): Promise<{ lat: number; lng: number; resolvedAddress?: string } | null> {
   const trimmed = location.trim();
   if (!trimmed) return null;
 
-  // If it looks like a URL — try to pull coords directly (no API cost, exact accuracy)
+  const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+
+  // If it looks like a URL — extract coords, then reverse geocode for a readable address
   if (trimmed.startsWith("http")) {
-    const direct = extractCoordsFromMapsUrl(trimmed);
-    if (direct) return direct;
-    // Shortened link (maps.app.goo.gl, goo.gl/maps) — follow redirect then parse
-    try {
-      const res = await fetch(trimmed, { cache: "no-store", redirect: "follow" });
-      const fromRedirect = extractCoordsFromMapsUrl(res.url);
-      if (fromRedirect) return fromRedirect;
-    } catch { /* ignore */ }
-    return null;
+    let coords = extractCoordsFromMapsUrl(trimmed);
+    if (!coords) {
+      // Shortened link (maps.app.goo.gl, goo.gl/maps) — follow redirect then parse
+      try {
+        const res = await fetch(trimmed, { cache: "no-store", redirect: "follow" });
+        coords = extractCoordsFromMapsUrl(res.url);
+      } catch { /* ignore */ }
+    }
+    if (!coords) return null;
+
+    // Reverse geocode to get a human-readable address for display
+    if (key) {
+      try {
+        const rUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${coords.lat},${coords.lng}&key=${key}&language=th&region=th`;
+        const rRes = await fetch(rUrl, { cache: "no-store" });
+        const rData = await rRes.json();
+        const addr = rData?.results?.[0]?.formatted_address as string | undefined;
+        if (addr) return { ...coords, resolvedAddress: addr };
+      } catch { /* ignore */ }
+    }
+    return coords;
   }
 
   // Plain text / Plus Code / place name — use Geocoding API
-  const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
   if (!key) return null;
   try {
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(trimmed)}&key=${key}&language=th&region=th`;
@@ -580,16 +599,16 @@ export async function updateAppointment(
 ) {
   await requireAuth();
   const supabase = createServerClient();
-  const coords = await geocodeLocation(appt.location);
+  const geo = await geocodeLocation(appt.location);
   const { data: updated, error } = await supabase
     .from("requests")
     .update({
       appt_date:     appt.date,
       appt_time:     appt.time,
-      appt_location: appt.location,
+      appt_location: geo?.resolvedAddress ?? appt.location,
       appt_method:   appt.method,
       updated_at:    new Date().toISOString(),
-      ...(coords ? { appt_lat: coords.lat, appt_lng: coords.lng } : {}),
+      ...(geo ? { appt_lat: geo.lat, appt_lng: geo.lng } : {}),
     })
     .eq("id", id)
     .select("id");
