@@ -4,7 +4,7 @@ import { after } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/require-auth";
 import { broadcastRequestUpdate } from "@/lib/broadcast";
-import { sendPushToOwners, sendPushToUser } from "@/app/actions/push";
+import { sendPushToOwners, sendPushToUser, sendPushToNewRequestReceivers } from "@/app/actions/push";
 import type { AdminRequest, RequestStatus, SellMethod, PayMethod } from "@/lib/types/admin";
 import { SLIP_PLACEHOLDER, SLIP_BLOCK } from "@/lib/contract-builder";
 import type { Permission } from "@/lib/admin-permissions";
@@ -231,6 +231,15 @@ export async function createRequest(data: {
   if (error) return { success: false, error: error.message };
   const user = await requireAuth().catch(() => null);
   if (user) await logActivity({ requestId: row.id, orderNumber, action: "สร้างคำขอ", detail: `${data.deviceModel} · ${data.customerName}`, userId: user.id });
+
+  const sourceLabel = data.source === "line" ? "LINE" : data.source === "phone" ? "โทรศัพท์" : "Facebook";
+  after(() => sendPushToNewRequestReceivers({
+    title: `คำขอใหม่ (${sourceLabel}) — ${data.deviceModel} ${data.deviceStorage}`,
+    body:  `${data.customerName} · ฿${data.estimatedPrice.toLocaleString("th-TH")}`,
+    url:   `/admin/requests/${row.id}`,
+    tag:   "new-request",
+  }).catch(e => console.error("push error:", e)));
+
   return { success: true, orderNumber, id: row.id };
 }
 
