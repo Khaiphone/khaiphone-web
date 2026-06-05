@@ -405,10 +405,10 @@ export async function assignRider(id: string, riderId: string | null, riderName:
     return { success: false as const, error: "ไม่มีสิทธิ์มอบหมายงาน" };
   }
 
-  // Fetch address for distance calculation
+  // Fetch address, current rider, and status for this request
   const { data: req } = await supabase
     .from("requests")
-    .select("order_number, device_model, appt_location, status")
+    .select("order_number, device_model, appt_location, status, rider_id")
     .eq("id", id)
     .single();
 
@@ -419,23 +419,46 @@ export async function assignRider(id: string, riderId: string | null, riderName:
   // Calculate distance from store → customer address
   const distanceKm = riderId ? await fetchDistanceKm(req?.appt_location ?? "") : null;
 
+  const now = new Date().toISOString();
   const updatePayload: Record<string, unknown> = {
-    rider_id: riderId, rider_name: riderName, updated_at: new Date().toISOString(),
+    rider_id: riderId, rider_name: riderName, updated_at: now,
   };
   if (distanceKm !== null) updatePayload.distance_km = distanceKm;
 
   const { error } = await supabase.from("requests").update(updatePayload).eq("id", id);
   if (error) return { success: false as const, error: error.message };
 
+  // Sync rider_locations.current_job_id so the map shows correct status
+  const prevRiderId = req?.rider_id as string | null;
+  if (prevRiderId && prevRiderId !== riderId) {
+    // Clear previous rider's job
+    await supabase.from("rider_locations")
+      .update({ current_job_id: null, updated_at: now })
+      .eq("rider_id", prevRiderId);
+  }
+  if (riderId) {
+    await supabase.from("rider_locations")
+      .update({ current_job_id: id, updated_at: now })
+      .eq("rider_id", riderId);
+  }
+
   after(() => broadcastRequestUpdate(id));
 
   if (riderId) {
     const distText = distanceKm ? ` · ${distanceKm} กม.` : "";
+    // Notify the assigned rider
     after(() => sendPushToUser(riderId, {
       title: "งานใหม่มาแล้ว!",
       body:  `${req?.order_number ?? ""} · ${req?.device_model ?? ""}${distText}`,
       url:   `/rider`,
       tag:   `rider-assign-${id}`,
+    }).catch(console.error));
+    // Notify owners that a rider was assigned
+    after(() => sendPushToOwners({
+      title: `มอบหมายไรเดอร์แล้ว — ${req?.order_number ?? ""}`,
+      body:  `${riderName} รับงาน ${req?.device_model ?? ""}${distText}`,
+      url:   `/admin/requests/${id}`,
+      tag:   `rider-assign-admin-${id}`,
     }).catch(console.error));
   }
 

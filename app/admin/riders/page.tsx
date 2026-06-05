@@ -64,6 +64,8 @@ type UnassignedJob = {
   appt_time: string | null;
   appt_lat: number | null;
   appt_lng: number | null;
+  rider_id: string | null;
+  rider_name: string | null;
 };
 
 type AllShift = {
@@ -262,10 +264,10 @@ export default function RidersDashboard() {
                 );
               })}
 
-              {/* Job appointment markers */}
+              {/* Job appointment markers — all confirmed jobs (assigned + unassigned) */}
               {unassignedJobs.filter(j => j.appt_lat && j.appt_lng).map(job => {
                 const mins = minutesUntilAppt(job.appt_date, job.appt_time);
-                const uColor = urgencyColor(mins);
+                const uColor = job.rider_id ? "#7c3aed" : urgencyColor(mins);
                 const isSelected = selectedJobId === job.id;
                 return (
                   <AdvancedMarker
@@ -281,13 +283,14 @@ export default function RidersDashboard() {
                         boxShadow: "0 2px 6px rgba(0,0,0,.25)",
                         cursor: "pointer",
                       }}>
-                        📍 {job.order_number}
+                        {job.rider_id ? "🏍" : "📍"} {job.order_number}
                       </div>
                       {isSelected && (
                         <div style={{ position: "absolute", bottom: 32, left: "50%", transform: "translateX(-50%)", background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 10px", fontSize: 12, color: TEXT, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,.15)", minWidth: 160 }}>
                           <p style={{ margin: "0 0 2px", fontWeight: 700 }}>#{job.order_number}</p>
                           <p style={{ margin: "0 0 2px", color: TEXT2 }}>{job.device_model} · {job.customer_name}</p>
-                          {job.appt_time && <p style={{ margin: 0, color: uColor, fontWeight: 600 }}>🕐 {job.appt_time} น.{mins !== null ? ` · ${urgencyLabel(mins)}` : ""}</p>}
+                          {job.rider_id && <p style={{ margin: "0 0 2px", color: "#7c3aed", fontWeight: 600 }}>🏍 {job.rider_name ?? "ไรเดอร์"}</p>}
+                          {job.appt_time && <p style={{ margin: 0, color: uColor, fontWeight: 600 }}>🕐 {job.appt_time} น.{!job.rider_id && mins !== null ? ` · ${urgencyLabel(mins)}` : ""}</p>}
                         </div>
                       )}
                     </div>
@@ -324,12 +327,12 @@ export default function RidersDashboard() {
               </div>
               {jobsLoading ? (
                 <div style={{ padding: 24, textAlign: "center", color: TEXT2, fontSize: 13 }}>กำลังโหลด...</div>
-              ) : unassignedJobs.length === 0 ? (
+              ) : unassignedJobs.filter(j => !j.rider_id).length === 0 ? (
                 <div style={{ padding: 24, textAlign: "center" }}>
                   <CheckCircle2 size={28} color={GREEN} style={{ marginBottom: 6 }} />
                   <p style={{ margin: 0, fontSize: 13, color: TEXT2 }}>ไม่มีงานรอ Assign</p>
                 </div>
-              ) : unassignedJobs.map(job => {
+              ) : unassignedJobs.filter(j => !j.rider_id).map(job => {
                 const mins = minutesUntilAppt(job.appt_date, job.appt_time);
                 const uColor = urgencyColor(mins);
                 const uLabel = urgencyLabel(mins);
@@ -368,6 +371,25 @@ export default function RidersDashboard() {
                 );
               })}
 
+              {/* Assigned jobs */}
+              {unassignedJobs.filter(j => j.rider_id).length > 0 && (
+                <>
+                  <div style={{ padding: "10px 16px 6px", flexShrink: 0, borderTop: `1px solid ${BORDER}`, marginTop: 4 }}>
+                    <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#7c3aed", textTransform: "uppercase", letterSpacing: 0.5 }}>🏍 Assign แล้ว</p>
+                  </div>
+                  {unassignedJobs.filter(j => j.rider_id).map(job => (
+                    <div key={job.id} style={{ margin: "0 10px 8px", padding: "10px 12px", borderRadius: 10, border: `1.5px solid #7c3aed40`, background: "#f5f3ff", flexShrink: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>#{job.order_number}</span>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed", background: "#7c3aed15", padding: "2px 6px", borderRadius: 6 }}>🏍 {job.rider_name ?? "ไรเดอร์"}</span>
+                      </div>
+                      <p style={{ margin: "0 0 2px", fontSize: 13, color: TEXT }}>{job.device_model ?? "—"} · {job.customer_name ?? "—"}</p>
+                      {job.appt_time && <p style={{ margin: 0, fontSize: 11, color: TEXT2 }}>🕐 นัด {job.appt_time} น.</p>}
+                    </div>
+                  ))}
+                </>
+              )}
+
               {/* Online riders as drop targets */}
               <div style={{ borderTop: `2px dashed ${BORDER}`, margin: "4px 0 0", padding: "10px 16px 6px", flexShrink: 0 }}>
                 <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.5 }}>
@@ -380,7 +402,9 @@ export default function RidersDashboard() {
                 </div>
               ) : riders.map(r => {
                 const riderName = r.admin_users?.name ?? "ไรเดอร์";
-                const color = MODE_COLOR[r.tracking_mode] ?? BLUE;
+                const hasJob = r.current_job_id != null && r.tracking_mode === "idle";
+                const color = hasJob ? "#7c3aed" : (MODE_COLOR[r.tracking_mode] ?? BLUE);
+                const modeLabel = hasJob ? "รอรับงาน" : (MODE_LABEL[r.tracking_mode] ?? r.tracking_mode);
                 const isTarget = dropTargetRider === r.rider_id;
                 return (
                   <div
@@ -401,7 +425,7 @@ export default function RidersDashboard() {
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <div style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
                       <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{riderName}</span>
-                      <span style={{ fontSize: 11, padding: "1px 6px", borderRadius: 4, background: `${color}15`, color }}>{MODE_LABEL[r.tracking_mode] ?? r.tracking_mode}</span>
+                      <span style={{ fontSize: 11, padding: "1px 6px", borderRadius: 4, background: `${color}15`, color }}>{modeLabel}</span>
                     </div>
                     {isTarget && <p style={{ margin: "4px 0 0", fontSize: 11, color: BLUE, fontWeight: 600 }}>วางที่นี่เพื่อ Assign →</p>}
                   </div>
