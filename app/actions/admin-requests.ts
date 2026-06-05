@@ -300,7 +300,7 @@ async function geocodeLocation(location: string): Promise<{ lat: number; lng: nu
   const trimmed = location.trim();
   if (!trimmed) return null;
 
-  const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+  const key = process.env.GOOGLE_MAPS_SERVER_KEY ?? process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
 
   // If it looks like a URL — extract coords, then reverse geocode for a readable address
   if (trimmed.startsWith("http")) {
@@ -340,7 +340,7 @@ async function geocodeLocation(location: string): Promise<{ lat: number; lng: nu
 }
 
 async function fetchDistanceKm(destination: string): Promise<number | null> {
-  const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+  const key = process.env.GOOGLE_MAPS_SERVER_KEY ?? process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
   if (!key || !destination) return null;
   try {
     const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(STORE_ADDRESS)}&destinations=${encodeURIComponent(destination)}&key=${key}&mode=driving&language=th`;
