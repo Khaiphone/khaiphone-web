@@ -382,9 +382,26 @@ export default function PlannerDashboard() {
         <button
           onClick={handleAutoAssign}
           disabled={autoAssigning || unassignedJobs.length === 0 || idleRiders.length === 0}
-          style={{ display: "flex", alignItems: "center", gap: 6, background: autoAssigning ? "#f9fafb" : GOLD, border: autoAssigning ? `1px solid ${BORDER}` : "none", borderRadius: 12, padding: "10px 18px", cursor: autoAssigning ? "wait" : "pointer", color: autoAssigning ? TEXT2 : DARK, fontWeight: 800, fontSize: 13, fontFamily: "inherit", flexShrink: 0, opacity: (unassignedJobs.length === 0 || idleRiders.length === 0) && !autoAssigning ? 0.4 : 1, whiteSpace: "nowrap" }}
+          style={{
+            display: "flex", alignItems: "center", gap: 10,
+            background: autoAssigning ? "#fff" : DARK,
+            border: `1px solid ${autoAssigning ? BORDER : DARK}`,
+            borderRadius: 12, padding: "10px 16px",
+            cursor: autoAssigning ? "wait" : (unassignedJobs.length === 0 || idleRiders.length === 0) ? "not-allowed" : "pointer",
+            fontFamily: "inherit", flexShrink: 0, whiteSpace: "nowrap",
+            opacity: (unassignedJobs.length === 0 || idleRiders.length === 0) && !autoAssigning ? 0.4 : 1,
+            transition: "opacity 0.15s",
+          }}
         >
-          <Zap size={15} /> {autoAssigning ? "กำลัง Auto..." : "Auto Assign"}
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: autoAssigning ? "#f3f4f6" : `${GOLD}22`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Zap size={14} color={autoAssigning ? TEXT2 : GOLD} strokeWidth={2.5} />
+          </div>
+          <div style={{ textAlign: "left" }}>
+            <p style={{ margin: 0, fontSize: 11, color: autoAssigning ? TEXT2 : `${GOLD}99`, fontWeight: 500, lineHeight: 1 }}>AI จัดงาน</p>
+            <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 700, color: autoAssigning ? TEXT2 : "#fff", lineHeight: 1 }}>
+              {autoAssigning ? "กำลังจัดงาน..." : "Auto Assign"}
+            </p>
+          </div>
         </button>
       </div>
 
