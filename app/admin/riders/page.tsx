@@ -142,9 +142,12 @@ function Avatar({ name, size = 36 }: { name: string; size?: number }) {
   );
 }
 
-function StatCard({ icon: Icon, label, value, color, bg, bold }: { icon: LucideIcon; label: string; value: number | string; color: string; bg: string; bold?: boolean }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", borderRadius: 12, padding: "10px 14px", border: `1px solid ${BORDER}`, flex: 1, minWidth: 100 }}>
+function StatCard({ icon: Icon, label, value, color, bg, bold, href }: { icon: LucideIcon; label: string; value: number | string; color: string; bg: string; bold?: boolean; href?: string }) {
+  const inner = (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", borderRadius: 12, padding: "10px 14px", border: `1px solid ${BORDER}`, flex: 1, minWidth: 100, cursor: href ? "pointer" : "default", transition: "box-shadow 0.15s", textDecoration: "none" }}
+      onMouseEnter={e => { if (href) (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)"; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+    >
       <div style={{ width: 36, height: 36, borderRadius: 10, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
         <Icon size={18} color={color} strokeWidth={2} />
       </div>
@@ -154,6 +157,8 @@ function StatCard({ icon: Icon, label, value, color, bg, bold }: { icon: LucideI
       </div>
     </div>
   );
+  if (href) return <a href={href} style={{ flex: 1, minWidth: 100, textDecoration: "none" }}>{inner}</a>;
+  return <div style={{ flex: 1, minWidth: 100 }}>{inner}</div>;
 }
 
 // ─── JobCard sub-component ────────────────────────────────────────────────────
@@ -435,12 +440,12 @@ export default function PlannerDashboard() {
 
       {/* ── Stat bar ── */}
       <div style={{ padding: "10px 16px", display: "flex", gap: 8, flexShrink: 0, background: BG }}>
-        <StatCard icon={ClipboardList} label="งานใหม่"       value={todayStats.newCount}                                              color={BLUE}   bg="#EFF6FF" />
-        <StatCard icon={Clock}         label="รอ Assign"      value={unassignedJobs.length}                                           color={YELLOW} bg="#FFFBEB" bold={unassignedJobs.length > 0} />
-        <StatCard icon={Navigation}    label="กำลังเดินทาง"  value={riders.filter(r => r.tracking_mode === "enroute").length}        color={ORANGE} bg="#FFF7ED" />
-        <StatCard icon={Search}        label="ตรวจเครื่อง"   value={riders.filter(r => r.tracking_mode === "on_site").length}        color={BLUE}   bg="#EFF6FF" />
-        <StatCard icon={CheckCircle2}  label="เสร็จวันนี้"   value={todayStats.completedCount}                                       color={GREEN}  bg="#F0FDF4" />
-        <StatCard icon={UserCheck}     label="ไรเดอร์ว่าง"   value={idleRiders.length}                                               color={GREEN}  bg="#F0FDF4" bold={idleRiders.length > 0} />
+        <StatCard icon={ClipboardList} label="งานใหม่"       value={todayStats.newCount}                                              color={BLUE}   bg="#EFF6FF" href="/admin/requests?tab=new" />
+        <StatCard icon={Clock}         label="รอ Assign"      value={unassignedJobs.length}                                           color={YELLOW} bg="#FFFBEB" bold={unassignedJobs.length > 0} href="/admin/requests?tab=confirmed" />
+        <StatCard icon={Navigation}    label="กำลังเดินทาง"  value={riders.filter(r => r.tracking_mode === "enroute").length}        color={ORANGE} bg="#FFF7ED" href="/admin/requests?tab=en_route" />
+        <StatCard icon={Search}        label="ตรวจเครื่อง"   value={riders.filter(r => r.tracking_mode === "on_site").length}        color={BLUE}   bg="#EFF6FF" href="/admin/requests?tab=inspecting" />
+        <StatCard icon={CheckCircle2}  label="เสร็จวันนี้"   value={todayStats.completedCount}                                       color={GREEN}  bg="#F0FDF4" href="/admin/requests?tab=completed" />
+        <StatCard icon={UserCheck}     label="ไรเดอร์ว่าง"   value={idleRiders.length}                                               color={GREEN}  bg="#F0FDF4" bold={idleRiders.length > 0} href="/admin/riders/manage" />
         <button
           onClick={handleAutoAssign}
           disabled={autoAssigning || unassignedJobs.length === 0 || idleRiders.length === 0}
@@ -944,7 +949,7 @@ export default function PlannerDashboard() {
           ))}
         </div>
         <button
-          onClick={() => router.push("/admin/reports")}
+          onClick={() => router.push("/admin/riders/manage")}
           style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 16, padding: "8px 14px", borderRadius: 8, border: `1px solid ${BORDER}`, background: "#fff", color: TEXT, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", flexShrink: 0 }}
         >
           <BarChart2 size={14} color={BLUE} />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Search, SlidersHorizontal, X } from "lucide-react";
 import { fetchDashboardData, fetchRequests } from "@/app/actions/admin-requests";
 import { supabase } from "@/lib/supabase";
@@ -35,10 +35,14 @@ const STATUS_TABS: Array<{ value: RequestStatus | "all"; label: string }> = [
 const INIT_FILTER: FilterState = { statuses: [], model: "", priceMin: "", priceMax: "" };
 
 export default function RequestsPage() {
-  const router = useRouter();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
   const [requests,      setRequests]      = useState<AdminRequest[]>([]);
   const [loading,       setLoading]       = useState(true);
-  const [tab,           setTab]           = useState<RequestStatus | "all">("all");
+  const [tab,           setTab]           = useState<RequestStatus | "all">(() => {
+    const t = searchParams.get("tab") as RequestStatus | "all" | null;
+    return t ?? "all";
+  });
   const [query,         setQuery]         = useState("");
   const [filter,        setFilter]        = useState<FilterState>(INIT_FILTER);
   const [showFilter,    setShowFilter]    = useState(false);
