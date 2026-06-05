@@ -8,7 +8,7 @@ import type { LucideIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { fetchActiveRiders, fetchAllRidersShifts, fetchUnassignedJobs, fetchTodayRequestStats } from "@/app/actions/rider-tracking";
 import { assignRider, backfillRequestCoords, autoAssignJobs } from "@/app/actions/admin-requests";
-import { haversineKm, OFFICE_LAT, OFFICE_LNG } from "@/lib/geo-utils";
+import { haversineKm, etaMinutes, OFFICE_LAT, OFFICE_LNG } from "@/lib/geo-utils";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const GOLD   = "#c9a84c";
@@ -41,6 +41,7 @@ type ActiveRider = {
   current_job_id: string | null; shift_id: string | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   admin_users: any; rider_shifts: any; current_job: any;
+  active_jobs: Array<{ id: string; order_number: string; status: string; appt_time: string | null; appt_date: string | null; rider_id: string }>;
 };
 
 type Job = {
@@ -104,6 +105,26 @@ function shiftDuration(clockedIn: string, clockedOut?: string | null): string {
   const ms = (clockedOut ? new Date(clockedOut) : new Date()).getTime() - new Date(clockedIn).getTime();
   const h = Math.floor(ms / 3_600_000), m = Math.floor((ms % 3_600_000) / 60_000);
   return `${h}h ${m}m`;
+}
+
+// ─── Rider status helper ──────────────────────────────────────────────────────
+function getRiderStatus(r: ActiveRider): { label: string; color: string } {
+  const jobStatus = r.current_job?.status as string | undefined;
+  const mode = r.tracking_mode;
+  if (mode === "return")  return { label: "กลับออฟฟิศ", color: PURPLE };
+  if (mode === "enroute") return { label: "กำลังเดินทาง", color: ORANGE };
+  if (mode === "on_site") {
+    const map: Record<string, string> = {
+      inspecting:          "กำลังตรวจเครื่อง",
+      price_negotiation:   "กำลังต่อราคา",
+      contracting:         "ทำสัญญา",
+      awaiting_transfer:   "รอโอนเงิน",
+    };
+    return { label: map[jobStatus ?? ""] ?? "กับลูกค้า", color: BLUE };
+  }
+  if (jobStatus === "pickup_scheduled") return { label: "รับงานแล้ว", color: PURPLE };
+  if (r.current_job_id)                 return { label: "รอรับงาน",   color: PURPLE };
+  return { label: "ว่าง", color: GREEN };
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -464,13 +485,12 @@ export default function PlannerDashboard() {
                 ยังไม่มีไรเดอร์ออนไลน์
               </div>
             ) : riders.map(r => {
-              const name = r.admin_users?.name ?? "ไรเดอร์";
-              const hasJob = r.current_job_id != null && r.tracking_mode === "idle";
-              const color = hasJob ? PURPLE : (MODE_COLOR[r.tracking_mode] ?? BLUE);
-              const label = hasJob ? "รอรับงาน" : (MODE_LABEL[r.tracking_mode] ?? r.tracking_mode);
+              const name       = r.admin_users?.name ?? "ไรเดอร์";
               const isSelected = r.rider_id === selectedRiderId;
-              const shift = r.rider_shifts;
-              const battLow = r.battery_pct != null && r.battery_pct < 20;
+              const shift      = r.rider_shifts;
+              const battLow    = r.battery_pct != null && r.battery_pct < 20;
+              const statusInfo = getRiderStatus(r);
+              const otherJobs  = (r.active_jobs ?? []).filter(j => j.id !== r.current_job_id);
 
               return (
                 <div
@@ -480,45 +500,93 @@ export default function PlannerDashboard() {
                   onDrop={e => { e.preventDefault(); const jobId = e.dataTransfer.getData("jobId"); if (jobId) handleAssignDrop(jobId, r.rider_id, name); }}
                   onClick={() => setSelectedRiderId(r.rider_id === selectedRiderId ? null : r.rider_id)}
                   style={{
-                    padding: "10px 14px", borderBottom: `1px solid ${BORDER}`, cursor: "pointer",
-                    background: dropTargetRider === r.rider_id ? `${BLUE}08` : isSelected ? `${color}08` : "transparent",
-                    borderLeft: isSelected ? `3px solid ${color}` : "3px solid transparent",
+                    padding: "10px 12px", borderBottom: `1px solid ${BORDER}`, cursor: "pointer",
+                    background: dropTargetRider === r.rider_id ? `${BLUE}08` : isSelected ? `${statusInfo.color}06` : "transparent",
+                    borderLeft: isSelected ? `3px solid ${statusInfo.color}` : "3px solid transparent",
                     outline: dropTargetRider === r.rider_id ? `2px dashed ${BLUE}` : "none",
                     outlineOffset: -2, transition: "all 0.1s",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                    <Avatar name={name} size={34} />
+                  {/* Row 1: Avatar + Name + Status badge */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                    <Avatar name={name} size={32} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4, marginBottom: 2 }}>
                         <span style={{ fontSize: 13, fontWeight: 700, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</span>
-                        <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 99, background: `${color}15`, color, fontWeight: 700, flexShrink: 0, marginLeft: 4 }}>{label}</span>
+                        <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 99, background: `${statusInfo.color}15`, color: statusInfo.color, fontWeight: 700, flexShrink: 0, whiteSpace: "nowrap" }}>
+                          {statusInfo.label}
+                        </span>
                       </div>
-                      <div style={{ display: "flex", gap: 8, fontSize: 11, color: TEXT2, marginTop: 2 }}>
-                        {shift?.jobs_completed > 0 && <span>✅ {shift.jobs_completed} งาน</span>}
-                        {r.battery_pct != null && <span style={{ color: battLow ? RED : TEXT2 }}><Battery size={9} style={{ verticalAlign: "middle" }} /> {r.battery_pct}%</span>}
+                      {/* Summary stats */}
+                      <div style={{ display: "flex", gap: 6, fontSize: 10, flexWrap: "wrap" }}>
+                        <span style={{ color: GREEN, fontWeight: 600 }}>✅ {shift?.jobs_completed ?? 0} วันนี้</span>
+                        {(r.active_jobs ?? []).length > 0 && (
+                          <span style={{ color: ORANGE, fontWeight: 600 }}>📋 รับ {r.active_jobs.length} งาน</span>
+                        )}
+                        {r.battery_pct != null && (
+                          <span style={{ color: battLow ? RED : TEXT3 }}>🔋 {r.battery_pct}%</span>
+                        )}
                         <span style={{ color: TEXT3 }}>{lastSeen(r.last_heartbeat)}</span>
                       </div>
                     </div>
                   </div>
-                  {r.current_job && (
-                    <div style={{ fontSize: 11, color: BLUE, fontWeight: 600, marginTop: 2, paddingLeft: 42 }}>
-                      📱 #{r.current_job.order_number} · {r.current_job.device_model ?? "—"}
+
+                  {/* Current job block */}
+                  {r.current_job && (() => {
+                    const job = r.current_job;
+                    const hasCoords = job.appt_lat != null && job.appt_lng != null;
+                    const distKm = hasCoords ? haversineKm(r.lat, r.lng, job.appt_lat, job.appt_lng) : null;
+                    const eta    = distKm != null ? etaMinutes(distKm) : null;
+                    return (
+                      <div style={{ background: `${BLUE}06`, border: `1px solid ${BLUE}20`, borderRadius: 8, padding: "7px 10px", marginBottom: 4 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: BLUE, marginBottom: 2 }}>
+                          📋 #{job.order_number} · {job.device_model ?? "—"}
+                        </div>
+                        {job.customer_name && (
+                          <div style={{ fontSize: 10, color: TEXT2, marginBottom: 2 }}>👤 {job.customer_name}</div>
+                        )}
+                        {job.appt_location && (
+                          <div style={{ fontSize: 10, color: TEXT2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2 }}>
+                            📍 {job.appt_location}
+                          </div>
+                        )}
+                        <div style={{ display: "flex", gap: 8, fontSize: 10 }}>
+                          {distKm != null && (
+                            <span style={{ color: ORANGE, fontWeight: 600 }}>🛣 {distKm.toFixed(1)} กม. · ~{eta} นาที</span>
+                          )}
+                          {job.appt_time && (
+                            <span style={{ color: TEXT2 }}>🕐 {job.appt_time} น.</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Other pending jobs */}
+                  {otherJobs.length > 0 && (
+                    <div style={{ fontSize: 10, color: PURPLE, fontWeight: 600, marginBottom: 4 }}>
+                      📋 รอดำเนินการ: {otherJobs.map(j => `#${j.order_number}`).join(", ")}
                     </div>
                   )}
+
+                  {/* Battery alert */}
                   {battLow && (
-                    <div style={{ fontSize: 11, color: RED, fontWeight: 600, marginTop: 2, paddingLeft: 42, display: "flex", alignItems: "center", gap: 3 }}>
-                      <AlertTriangle size={10} /> แบตใกล้หมด
+                    <div style={{ fontSize: 10, color: RED, fontWeight: 600, display: "flex", alignItems: "center", gap: 3, marginBottom: 2 }}>
+                      <AlertTriangle size={9} /> แบตใกล้หมด
                     </div>
                   )}
+
+                  {/* Drop target hint */}
+                  {dropTargetRider === r.rider_id && dragJobId && (
+                    <div style={{ fontSize: 11, color: BLUE, fontWeight: 700, textAlign: "center", marginTop: 4 }}>⬇ วางที่นี่เพื่อ Assign</div>
+                  )}
+
+                  {/* Detail button when selected */}
                   {isSelected && (
                     <button
                       onClick={e => { e.stopPropagation(); router.push(`/admin/riders/${r.rider_id}`); }}
                       style={{ marginTop: 8, width: "100%", padding: "6px 0", borderRadius: 8, border: `1px solid ${BORDER}`, background: "#f9fafb", color: TEXT, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
                     >ดูรายละเอียด →</button>
-                  )}
-                  {dropTargetRider === r.rider_id && dragJobId && (
-                    <div style={{ marginTop: 6, fontSize: 11, color: BLUE, fontWeight: 700, textAlign: "center" }}>⬇ วางที่นี่เพื่อ Assign</div>
                   )}
                 </div>
               );

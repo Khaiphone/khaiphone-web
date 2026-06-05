@@ -193,14 +193,20 @@ export async function fetchActiveRiders() {
   const shiftIds = locs.map(l => l.shift_id).filter(Boolean) as string[];
   const jobIds   = locs.map(l => l.current_job_id).filter(Boolean) as string[];
 
-  const [{ data: users }, { data: shifts }, { data: jobs }] = await Promise.all([
+  const [{ data: users }, { data: shifts }, { data: jobs }, { data: activeJobs }] = await Promise.all([
     supabase.from("admin_users").select("user_id, name").in("user_id", riderIds),
     shiftIds.length > 0
       ? supabase.from("rider_shifts").select("id, clocked_in_at, jobs_completed").in("id", shiftIds)
       : Promise.resolve({ data: [] }),
     jobIds.length > 0
-      ? supabase.from("requests").select("id, order_number, device_model, customer_name, appt_location").in("id", jobIds)
+      ? supabase.from("requests")
+          .select("id, order_number, device_model, customer_name, appt_location, appt_lat, appt_lng, appt_time, appt_date, distance_km, status")
+          .in("id", jobIds)
       : Promise.resolve({ data: [] }),
+    supabase.from("requests")
+      .select("id, order_number, status, appt_time, appt_date, rider_id")
+      .in("rider_id", riderIds)
+      .in("status", ["confirmed", "pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting", "awaiting_transfer"]),
   ]);
 
   return locs.map(loc => ({
@@ -208,6 +214,7 @@ export async function fetchActiveRiders() {
     admin_users:  users?.find(u => u.user_id === loc.rider_id) ?? null,
     rider_shifts: shifts?.find(s => s.id === loc.shift_id) ?? null,
     current_job:  jobs?.find(j => j.id === loc.current_job_id) ?? null,
+    active_jobs:  (activeJobs ?? []).filter(j => j.rider_id === loc.rider_id),
   }));
 }
 
