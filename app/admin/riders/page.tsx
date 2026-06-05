@@ -3,9 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps";
-import { Navigation, Battery, Wifi, WifiOff, AlertTriangle, ChevronRight, Users, CheckCircle2, Clock } from "lucide-react";
+import { Navigation, Battery, Wifi, AlertTriangle, ChevronRight, Users, CheckCircle2, Clock, Settings, Smartphone } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { fetchActiveRiders } from "@/app/actions/rider-tracking";
+import { fetchActiveRiders, fetchAllRidersShifts } from "@/app/actions/rider-tracking";
 import { haversineKm, etaMinutes, fmtDistance, fmtEta, OFFICE_LAT, OFFICE_LNG } from "@/lib/geo-utils";
 
 const DARK = "#1a1a2e";
@@ -49,10 +49,23 @@ type ActiveRider = {
   admin_users: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   rider_shifts: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  current_job: any;
 };
 
-function shiftDuration(clockedIn: string): string {
-  const ms = Date.now() - new Date(clockedIn).getTime();
+type AllShift = {
+  id: string;
+  rider_id: string;
+  rider_name: string;
+  clocked_in_at: string;
+  clocked_out_at: string | null;
+  jobs_completed: number;
+  total_distance_km: number | null;
+  ended_reason: string | null;
+};
+
+function shiftDuration(clockedIn: string, clockedOut?: string | null): string {
+  const ms = (clockedOut ? new Date(clockedOut) : new Date()).getTime() - new Date(clockedIn).getTime();
   const h = Math.floor(ms / 3_600_000);
   const m = Math.floor((ms % 3_600_000) / 60_000);
   return `${h}h ${m}m`;
@@ -66,12 +79,19 @@ function lastSeen(iso: string): string {
   return `${m} นาทีที่แล้ว`;
 }
 
+function thTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+}
+
 export default function RidersDashboard() {
   const router = useRouter();
   const [riders, setRiders] = useState<ActiveRider[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRider, setSelectedRider] = useState<string | null>(null);
   const [mapCenter] = useState({ lat: OFFICE_LAT, lng: OFFICE_LNG });
+  const [sidebarTab, setSidebarTab] = useState<"riders" | "shifts">("riders");
+  const [allShifts, setAllShifts] = useState<AllShift[]>([]);
+  const [shiftsLoading, setShiftsLoading] = useState(false);
 
   const load = useCallback(async () => {
     const data = await fetchActiveRiders();
@@ -79,33 +99,33 @@ export default function RidersDashboard() {
     setLoading(false);
   }, []);
 
+  const loadShifts = useCallback(async () => {
+    setShiftsLoading(true);
+    const today = new Date().toISOString().split("T")[0];
+    const data = await fetchAllRidersShifts(today);
+    setAllShifts(data as AllShift[]);
+    setShiftsLoading(false);
+  }, []);
+
   useEffect(() => {
     load();
-
-    // Realtime: subscribe to rider_locations changes
     const ch = supabase
       .channel("admin-rider-locations")
-      .on("postgres_changes", {
-        event: "*",
-        schema: "public",
-        table: "rider_locations",
-      }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "rider_locations" }, () => load())
       .subscribe();
-
     const interval = setInterval(load, 30_000);
-
-    return () => {
-      supabase.removeChannel(ch);
-      clearInterval(interval);
-    };
+    return () => { supabase.removeChannel(ch); clearInterval(interval); };
   }, [load]);
 
-  const officeToRider = (r: ActiveRider) =>
-    haversineKm(OFFICE_LAT, OFFICE_LNG, r.lat, r.lng);
+  useEffect(() => {
+    if (sidebarTab === "shifts") loadShifts();
+  }, [sidebarTab, loadShifts]);
 
-  const onlineCount = riders.length;
+  const officeToRider = (r: ActiveRider) => haversineKm(OFFICE_LAT, OFFICE_LNG, r.lat, r.lng);
+
+  const onlineCount    = riders.length;
   const returningCount = riders.filter(r => r.tracking_mode === "return").length;
-  const busyCount = riders.filter(r => r.tracking_mode !== "idle").length;
+  const busyCount      = riders.filter(r => r.tracking_mode !== "idle").length;
 
   const selected = riders.find(r => r.rider_id === selectedRider);
 
@@ -118,10 +138,13 @@ export default function RidersDashboard() {
           <h1 style={{ margin: 0, color: GOLD, fontSize: 18, fontWeight: 800 }}>Rider Dashboard</h1>
           <p style={{ margin: 0, color: "rgba(255,255,255,.5)", fontSize: 12 }}>Live tracking — อัพเดตทุก 30 วินาที</p>
         </div>
-        <div style={{ display: "flex", gap: 16 }}>
+        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
           <Stat label="ออนไลน์" value={onlineCount} color={GREEN} icon={<Wifi size={14} />} />
           <Stat label="กลับออฟฟิศ" value={returningCount} color="#7c3aed" icon={<Navigation size={14} />} />
           <Stat label="กำลังทำงาน" value={busyCount} color={ORANGE} icon={<Clock size={14} />} />
+          <button onClick={() => router.push("/admin/riders/manage")} style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit" }}>
+            <Settings size={14} /> จัดการ
+          </button>
         </div>
       </div>
 
@@ -137,14 +160,12 @@ export default function RidersDashboard() {
               style={{ width: "100%", height: "100%" }}
               disableDefaultUI={false}
             >
-              {/* Office marker */}
               <AdvancedMarker position={{ lat: OFFICE_LAT, lng: OFFICE_LNG }}>
                 <div style={{ background: DARK, color: GOLD, fontSize: 11, fontWeight: 700, padding: "4px 8px", borderRadius: 6, border: `1px solid ${GOLD}`, whiteSpace: "nowrap" }}>
                   🏠 ออฟฟิศ
                 </div>
               </AdvancedMarker>
 
-              {/* Rider markers */}
               {riders.map(r => {
                 const color = MODE_COLOR[r.tracking_mode] ?? BLUE;
                 const isSelected = r.rider_id === selectedRider;
@@ -156,11 +177,7 @@ export default function RidersDashboard() {
                     onClick={() => setSelectedRider(r.rider_id === selectedRider ? null : r.rider_id)}
                   >
                     <div style={{ position: "relative" }}>
-                      <Pin
-                        background={color}
-                        borderColor={isSelected ? "#fff" : color}
-                        glyphColor="#fff"
-                      />
+                      <Pin background={color} borderColor={isSelected ? "#fff" : color} glyphColor="#fff" />
                       {isSelected && (
                         <div style={{ position: "absolute", top: -36, left: "50%", transform: "translateX(-50%)", background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "3px 8px", fontSize: 12, fontWeight: 600, color: TEXT, whiteSpace: "nowrap", boxShadow: "0 2px 8px rgba(0,0,0,.15)" }}>
                           {name} · {MODE_LABEL[r.tracking_mode] ?? r.tracking_mode}
@@ -177,103 +194,158 @@ export default function RidersDashboard() {
         {/* Sidebar */}
         <div style={{ background: CARD, borderLeft: `1px solid ${BORDER}`, overflowY: "auto", display: "flex", flexDirection: "column" }}>
 
-          {/* Selected rider detail */}
-          {selected && (
-            <div style={{ background: `${MODE_COLOR[selected.tracking_mode] ?? BLUE}10`, borderBottom: `2px solid ${MODE_COLOR[selected.tracking_mode] ?? BLUE}`, padding: "14px 16px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: TEXT }}>{selected.admin_users?.name ?? "ไรเดอร์"}</p>
-                <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 10, background: MODE_COLOR[selected.tracking_mode] ?? BLUE, color: "#fff" }}>
-                  {MODE_LABEL[selected.tracking_mode] ?? selected.tracking_mode}
-                </span>
+          {/* Tab header */}
+          <div style={{ display: "flex", borderBottom: `1px solid ${BORDER}`, flexShrink: 0 }}>
+            <button onClick={() => setSidebarTab("riders")} style={{ flex: 1, padding: "11px 0", border: "none", background: sidebarTab === "riders" ? `${BLUE}08` : "transparent", color: sidebarTab === "riders" ? BLUE : TEXT2, fontSize: 13, fontWeight: sidebarTab === "riders" ? 700 : 400, cursor: "pointer", fontFamily: "inherit", borderBottom: sidebarTab === "riders" ? `2px solid ${BLUE}` : "none" }}>
+              ไรเดอร์
+            </button>
+            <button onClick={() => setSidebarTab("shifts")} style={{ flex: 1, padding: "11px 0", border: "none", background: sidebarTab === "shifts" ? `${BLUE}08` : "transparent", color: sidebarTab === "shifts" ? BLUE : TEXT2, fontSize: 13, fontWeight: sidebarTab === "shifts" ? 700 : 400, cursor: "pointer", fontFamily: "inherit", borderBottom: sidebarTab === "shifts" ? `2px solid ${BLUE}` : "none" }}>
+              Shift วันนี้
+            </button>
+          </div>
+
+          {sidebarTab === "riders" ? (
+            <>
+              {/* Selected rider detail */}
+              {selected && (
+                <div style={{ background: `${MODE_COLOR[selected.tracking_mode] ?? BLUE}10`, borderBottom: `2px solid ${MODE_COLOR[selected.tracking_mode] ?? BLUE}`, padding: "14px 16px", flexShrink: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                    <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: TEXT }}>{selected.admin_users?.name ?? "ไรเดอร์"}</p>
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 10, background: MODE_COLOR[selected.tracking_mode] ?? BLUE, color: "#fff" }}>
+                      {MODE_LABEL[selected.tracking_mode] ?? selected.tracking_mode}
+                    </span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 12, color: TEXT2 }}>
+                    <span>📡 {lastSeen(selected.last_heartbeat)}</span>
+                    {selected.battery_pct != null && <span>🔋 {selected.battery_pct}%</span>}
+                    <span>📏 {fmtDistance(officeToRider(selected))} จากออฟฟิศ</span>
+                    <span>🕐 {fmtEta(etaMinutes(officeToRider(selected)))}</span>
+                  </div>
+                  {/* Current job */}
+                  {selected.current_job && (
+                    <div style={{ marginTop: 8, padding: "6px 10px", background: "rgba(255,255,255,.6)", borderRadius: 8, display: "flex", alignItems: "flex-start", gap: 8 }}>
+                      <Smartphone size={13} color={BLUE} style={{ marginTop: 2, flexShrink: 0 }} />
+                      <div>
+                        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: BLUE }}>#{selected.current_job.order_number}</p>
+                        <p style={{ margin: 0, fontSize: 12, color: TEXT }}>{selected.current_job.device_model ?? "—"} · {selected.current_job.customer_name ?? "—"}</p>
+                        {selected.current_job.appt_location && <p style={{ margin: "2px 0 0", fontSize: 11, color: TEXT2 }}>{selected.current_job.appt_location}</p>}
+                      </div>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => router.push(`/admin/riders/${selected.rider_id}`)}
+                    style={{ marginTop: 10, width: "100%", padding: "8px 0", borderRadius: 8, border: `1px solid ${BORDER}`, background: "#fff", color: TEXT, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                    ดูรายละเอียด →
+                  </button>
+                </div>
+              )}
+
+              {/* Rider list */}
+              <div style={{ flex: 1 }}>
+                <div style={{ padding: "12px 16px 8px", display: "flex", alignItems: "center", gap: 6 }}>
+                  <Users size={14} color={TEXT2} />
+                  <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                    ออนไลน์ {onlineCount} คน
+                  </p>
+                </div>
+
+                {loading ? (
+                  <div style={{ padding: 32, textAlign: "center", color: TEXT2, fontSize: 14 }}>กำลังโหลด...</div>
+                ) : riders.length === 0 ? (
+                  <div style={{ padding: 32, textAlign: "center" }}>
+                    <WifiOff size={32} color={BORDER} style={{ marginBottom: 8 }} />
+                    <p style={{ margin: 0, fontSize: 14, color: TEXT2 }}>ยังไม่มีไรเดอร์ออนไลน์</p>
+                  </div>
+                ) : riders.map(r => {
+                  const color = MODE_COLOR[r.tracking_mode] ?? BLUE;
+                  const name = r.admin_users?.name ?? "ไรเดอร์";
+                  const shift = r.rider_shifts;
+                  const distKm = officeToRider(r);
+                  const isReturn = r.tracking_mode === "return";
+                  const isSelected = r.rider_id === selectedRider;
+
+                  return (
+                    <div
+                      key={r.rider_id}
+                      onClick={() => setSelectedRider(r.rider_id === selectedRider ? null : r.rider_id)}
+                      style={{ padding: "12px 16px", borderBottom: `1px solid ${BORDER}`, cursor: "pointer", background: isSelected ? `${color}08` : "transparent", borderLeft: isSelected ? `3px solid ${color}` : "3px solid transparent", transition: "background 0.1s" }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: color }} />
+                          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT }}>{name}</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 11, padding: "2px 6px", borderRadius: 4, background: `${color}15`, color }}>{MODE_LABEL[r.tracking_mode] ?? r.tracking_mode}</span>
+                          <ChevronRight size={14} color={TEXT2} />
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", gap: 12, fontSize: 11, color: TEXT2 }}>
+                        {shift?.clocked_in_at && <span><Clock size={10} style={{ verticalAlign: "middle", marginRight: 2 }} />{shiftDuration(shift.clocked_in_at)}</span>}
+                        {shift?.jobs_completed > 0 && <span><CheckCircle2 size={10} style={{ verticalAlign: "middle", marginRight: 2 }} />{shift.jobs_completed} งาน</span>}
+                        {r.battery_pct != null && (
+                          <span style={{ color: r.battery_pct < 20 ? RED : TEXT2 }}>
+                            <Battery size={10} style={{ verticalAlign: "middle", marginRight: 2 }} />{r.battery_pct}%
+                          </span>
+                        )}
+                      </div>
+
+                      {r.current_job && (
+                        <div style={{ marginTop: 4, fontSize: 11, color: BLUE, fontWeight: 600 }}>
+                          <Smartphone size={10} style={{ verticalAlign: "middle", marginRight: 3 }} />
+                          #{r.current_job.order_number} · {r.current_job.device_model ?? "—"}
+                        </div>
+                      )}
+
+                      {isReturn && (
+                        <div style={{ marginTop: 4, fontSize: 11, color: "#7c3aed", fontWeight: 600 }}>
+                          🏠 กลับออฟฟิศ · {fmtDistance(distKm)} · {fmtEta(etaMinutes(distKm))}
+                        </div>
+                      )}
+
+                      {r.battery_pct != null && r.battery_pct < 20 && (
+                        <div style={{ marginTop: 4, fontSize: 11, color: RED, fontWeight: 600 }}>
+                          <AlertTriangle size={10} style={{ verticalAlign: "middle", marginRight: 2 }} />แบตใกล้หมด
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 12, color: TEXT2 }}>
-                <span>📡 {lastSeen(selected.last_heartbeat)}</span>
-                {selected.battery_pct != null && <span>🔋 {selected.battery_pct}%</span>}
-                <span>📏 {fmtDistance(officeToRider(selected))} จากออฟฟิศ</span>
-                <span>🕐 {fmtEta(etaMinutes(officeToRider(selected)))}</span>
+            </>
+          ) : (
+            /* Shifts tab */
+            <div style={{ flex: 1 }}>
+              <div style={{ padding: "12px 16px 8px" }}>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  Shift ทั้งหมดวันนี้
+                </p>
               </div>
-              <button
-                onClick={() => router.push(`/admin/riders/${selected.rider_id}`)}
-                style={{ marginTop: 10, width: "100%", padding: "8px 0", borderRadius: 8, border: `1px solid ${BORDER}`, background: "#fff", color: TEXT, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-                ดูรายละเอียด →
-              </button>
+              {shiftsLoading ? (
+                <div style={{ padding: 32, textAlign: "center", color: TEXT2, fontSize: 14 }}>กำลังโหลด...</div>
+              ) : allShifts.length === 0 ? (
+                <div style={{ padding: 32, textAlign: "center" }}>
+                  <Clock size={32} color={BORDER} style={{ marginBottom: 8 }} />
+                  <p style={{ margin: 0, fontSize: 14, color: TEXT2 }}>ยังไม่มี Shift วันนี้</p>
+                </div>
+              ) : allShifts.map((s, i) => (
+                <div key={s.id} style={{ padding: "12px 16px", borderBottom: i < allShifts.length - 1 ? `1px solid ${BORDER}` : "none" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{s.rider_name}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: GREEN }}>{s.jobs_completed} งาน</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: TEXT2 }}>
+                    {thTime(s.clocked_in_at)} – {s.clocked_out_at ? thTime(s.clocked_out_at) : <span style={{ color: GREEN, fontWeight: 600 }}>กำลังทำงาน</span>}
+                    {" · "}{shiftDuration(s.clocked_in_at, s.clocked_out_at)}
+                    {s.total_distance_km != null && s.total_distance_km > 0 && ` · ${s.total_distance_km.toFixed(0)} กม.`}
+                  </div>
+                  {s.ended_reason === "admin_closed" && <p style={{ margin: "2px 0 0", fontSize: 11, color: TEXT2 }}>ปิดโดย Admin</p>}
+                  {s.ended_reason === "auto_timeout" && <p style={{ margin: "2px 0 0", fontSize: 11, color: ORANGE }}>⚠ ปิดอัตโนมัติ</p>}
+                </div>
+              ))}
             </div>
           )}
-
-          {/* Rider list */}
-          <div style={{ flex: 1 }}>
-            <div style={{ padding: "12px 16px 8px", display: "flex", alignItems: "center", gap: 6 }}>
-              <Users size={14} color={TEXT2} />
-              <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                ออนไลน์ {onlineCount} คน
-              </p>
-            </div>
-
-            {loading ? (
-              <div style={{ padding: 32, textAlign: "center", color: TEXT2, fontSize: 14 }}>กำลังโหลด...</div>
-            ) : riders.length === 0 ? (
-              <div style={{ padding: 32, textAlign: "center" }}>
-                <WifiOff size={32} color={BORDER} style={{ marginBottom: 8 }} />
-                <p style={{ margin: 0, fontSize: 14, color: TEXT2 }}>ยังไม่มีไรเดอร์ออนไลน์</p>
-              </div>
-            ) : riders.map(r => {
-              const color = MODE_COLOR[r.tracking_mode] ?? BLUE;
-              const name = r.admin_users?.name ?? "ไรเดอร์";
-              const shift = r.rider_shifts;
-              const distKm = officeToRider(r);
-              const isReturn = r.tracking_mode === "return";
-              const isSelected = r.rider_id === selectedRider;
-
-              return (
-                <div
-                  key={r.rider_id}
-                  onClick={() => setSelectedRider(r.rider_id === selectedRider ? null : r.rider_id)}
-                  style={{
-                    padding: "12px 16px",
-                    borderBottom: `1px solid ${BORDER}`,
-                    cursor: "pointer",
-                    background: isSelected ? `${color}08` : "transparent",
-                    borderLeft: isSelected ? `3px solid ${color}` : "3px solid transparent",
-                    transition: "background 0.1s",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: color }} />
-                      <span style={{ fontSize: 14, fontWeight: 600, color: TEXT }}>{name}</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: 11, padding: "2px 6px", borderRadius: 4, background: `${color}15`, color }}>{MODE_LABEL[r.tracking_mode] ?? r.tracking_mode}</span>
-                      <ChevronRight size={14} color={TEXT2} />
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", gap: 12, fontSize: 11, color: TEXT2 }}>
-                    {shift?.clocked_in_at && <span><Clock size={10} style={{ verticalAlign: "middle", marginRight: 2 }} />{shiftDuration(shift.clocked_in_at)}</span>}
-                    {shift?.jobs_completed > 0 && <span><CheckCircle2 size={10} style={{ verticalAlign: "middle", marginRight: 2 }} />{shift.jobs_completed} งาน</span>}
-                    {r.battery_pct != null && (
-                      <span style={{ color: r.battery_pct < 20 ? RED : TEXT2 }}>
-                        <Battery size={10} style={{ verticalAlign: "middle", marginRight: 2 }} />{r.battery_pct}%
-                      </span>
-                    )}
-                  </div>
-
-                  {isReturn && (
-                    <div style={{ marginTop: 6, fontSize: 11, color: "#7c3aed", fontWeight: 600 }}>
-                      🏠 กลับออฟฟิศ · {fmtDistance(distKm)} · {fmtEta(etaMinutes(distKm))}
-                    </div>
-                  )}
-
-                  {r.battery_pct != null && r.battery_pct < 20 && (
-                    <div style={{ marginTop: 4, fontSize: 11, color: RED, fontWeight: 600 }}>
-                      <AlertTriangle size={10} style={{ verticalAlign: "middle", marginRight: 2 }} />
-                      แบตใกล้หมด
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
         </div>
       </div>
     </div>
@@ -289,4 +361,8 @@ function Stat({ label, value, color, icon }: { label: string; value: number; col
       <p style={{ margin: 0, color, fontSize: 20, fontWeight: 800 }}>{value}</p>
     </div>
   );
+}
+
+function WifiOff({ size, color, style }: { size: number; color: string; style?: React.CSSProperties }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={style}><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>;
 }

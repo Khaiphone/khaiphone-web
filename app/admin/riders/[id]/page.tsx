@@ -3,10 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { APIProvider, Map, AdvancedMarker, Polyline } from "@vis.gl/react-google-maps";
-import { ArrowLeft, Battery, MapPin, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Battery, MapPin, Clock, CheckCircle2, AlertTriangle, Settings, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { fetchRiderShiftStats, fetchRiderTrail } from "@/app/actions/rider-tracking";
-import { fetchActiveRiders } from "@/app/actions/rider-tracking";
+import { fetchRiderShiftStats, fetchRiderTrail, fetchActiveRiders, adminCloseRiderShift } from "@/app/actions/rider-tracking";
 import { fmtDistance, fmtEta, etaMinutes, distanceToOfficeKm, OFFICE_LAT, OFFICE_LNG } from "@/lib/geo-utils";
 
 const DARK = "#1a1a2e";
@@ -16,6 +15,7 @@ const TEXT = "#1a1a1a";
 const TEXT2 = "#6b7280";
 const GREEN = "#16a34a";
 const ACCENT = "#2563eb";
+const RED = "#dc2626";
 
 type Shift = {
   id: string;
@@ -49,10 +49,13 @@ export default function RiderDetailPage() {
 
   const [riderName, setRiderName] = useState("");
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number; mode: string; battery: number | null } | null>(null);
+  const [currentJob, setCurrentJob] = useState<{ order_number: string; device_model: string | null; customer_name: string | null; appt_location: string | null } | null>(null);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [trail, setTrail] = useState<TrailPoint[]>([]);
   const [tab, setTab] = useState<"today" | "week" | "month">("today");
   const [loading, setLoading] = useState(true);
+  const [closingShift, setClosingShift] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
 
   const dateRange = useCallback(() => {
     const now = new Date();
@@ -79,6 +82,7 @@ export default function RiderDetailPage() {
     if (me) {
       setRiderName(me.admin_users?.name ?? "ไรเดอร์");
       setCurrentLocation({ lat: me.lat, lng: me.lng, mode: me.tracking_mode, battery: me.battery_pct });
+      setCurrentJob(me.current_job ?? null);
 
       const since24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
       const trailData = await fetchRiderTrail(id, since24h);
@@ -96,6 +100,14 @@ export default function RiderDetailPage() {
     return () => { supabase.removeChannel(ch); };
   }, [id, load]);
 
+  async function handleCloseShift() {
+    setClosingShift(true);
+    await adminCloseRiderShift(id);
+    setShowCloseConfirm(false);
+    setClosingShift(false);
+    load();
+  }
+
   const totalJobs   = shifts.reduce((s, sh) => s + (sh.jobs_completed ?? 0), 0);
   const totalDistKm = shifts.reduce((s, sh) => s + (sh.total_distance_km ?? 0), 0);
   const openShift   = shifts.find(s => !s.clocked_out_at);
@@ -109,7 +121,7 @@ export default function RiderDetailPage() {
         <button onClick={() => router.back()} style={{ background: "none", border: "none", color: GOLD, cursor: "pointer", padding: 0 }}>
           <ArrowLeft size={20} />
         </button>
-        <div>
+        <div style={{ flex: 1 }}>
           <h1 style={{ margin: 0, color: GOLD, fontSize: 18, fontWeight: 800 }}>{riderName || "ไรเดอร์"}</h1>
           {currentLocation && (
             <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,.5)" }}>
@@ -118,8 +130,11 @@ export default function RiderDetailPage() {
             </p>
           )}
         </div>
+        <button onClick={() => router.push("/admin/riders/manage")} style={{ background: "none", border: "none", color: "rgba(255,255,255,.5)", cursor: "pointer", padding: 4 }}>
+          <Settings size={18} />
+        </button>
         {currentLocation?.battery != null && (
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 4, color: currentLocation.battery < 20 ? "#ef4444" : "rgba(255,255,255,.6)", fontSize: 13 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, color: currentLocation.battery < 20 ? "#ef4444" : "rgba(255,255,255,.6)", fontSize: 13 }}>
             <Battery size={14} />{currentLocation.battery}%
           </div>
         )}
@@ -130,12 +145,30 @@ export default function RiderDetailPage() {
         {/* Current shift */}
         {openShift && (
           <div style={{ background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "14px 18px" }}>
-            <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: TEXT2, textTransform: "uppercase" }}>Shift ปัจจุบัน</p>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: TEXT2, textTransform: "uppercase" }}>Shift ปัจจุบัน</p>
+              <button
+                onClick={() => setShowCloseConfirm(true)}
+                style={{ fontSize: 12, fontWeight: 600, color: RED, background: "rgba(220,38,38,0.08)", border: `1px solid rgba(220,38,38,0.2)`, borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontFamily: "inherit" }}
+              >
+                ปิด Shift แทน
+              </button>
+            </div>
             <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
               <Info label="เริ่มทำงาน" value={thTime(openShift.clocked_in_at)} />
               <Info label="ระยะเวลา" value={shiftDuration(openShift.clocked_in_at)} />
               <Info label="งานสำเร็จ" value={`${openShift.jobs_completed} งาน`} />
             </div>
+            {/* Current job */}
+            {currentJob && (
+              <div style={{ marginTop: 10, padding: "8px 12px", background: `${ACCENT}08`, border: `1px solid ${ACCENT}20`, borderRadius: 8 }}>
+                <p style={{ margin: "0 0 2px", fontSize: 11, fontWeight: 700, color: ACCENT }}>งานปัจจุบัน — #{currentJob.order_number}</p>
+                <p style={{ margin: 0, fontSize: 13, color: TEXT }}>
+                  {currentJob.device_model ?? "—"} · {currentJob.customer_name ?? "—"}
+                </p>
+                {currentJob.appt_location && <p style={{ margin: "2px 0 0", fontSize: 11, color: TEXT2 }}>{currentJob.appt_location}</p>}
+              </div>
+            )}
           </div>
         )}
 
@@ -166,22 +199,17 @@ export default function RiderDetailPage() {
               <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY ?? ""}>
                 <Map
                   defaultCenter={{ lat: currentLocation.lat, lng: currentLocation.lng }}
-                  defaultZoom={12}
+                  defaultZoom={13}
                   mapId="22ccc57d606934a9a2ae7032"
                   style={{ width: "100%", height: "100%" }}
                   disableDefaultUI
                 >
-                  {/* Office */}
                   <AdvancedMarker position={{ lat: OFFICE_LAT, lng: OFFICE_LNG }}>
                     <div style={{ background: DARK, color: GOLD, fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4 }}>🏠</div>
                   </AdvancedMarker>
-
-                  {/* Current position */}
                   <AdvancedMarker position={{ lat: currentLocation.lat, lng: currentLocation.lng }}>
                     <div style={{ width: 14, height: 14, borderRadius: "50%", background: ACCENT, border: "2px solid #fff", boxShadow: "0 0 6px rgba(37,99,235,.5)" }} />
                   </AdvancedMarker>
-
-                  {/* Trail polyline */}
                   {trail.length > 1 && (
                     <Polyline
                       path={trail.map(p => ({ lat: p.lat, lng: p.lng }))}
@@ -214,6 +242,9 @@ export default function RiderDetailPage() {
                   {s.ended_reason === "auto_timeout" && (
                     <p style={{ margin: "2px 0 0", fontSize: 11, color: "#f97316" }}><AlertTriangle size={10} style={{ verticalAlign: "middle" }} /> ปิด shift อัตโนมัติ</p>
                   )}
+                  {s.ended_reason === "admin_closed" && (
+                    <p style={{ margin: "2px 0 0", fontSize: 11, color: TEXT2 }}>ปิดโดย Admin</p>
+                  )}
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <p style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 700, color: GREEN }}>{s.jobs_completed} งาน</p>
@@ -225,6 +256,28 @@ export default function RiderDetailPage() {
         </div>
 
       </div>
+
+      {/* Close shift confirm */}
+      {showCloseConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+          onClick={() => setShowCloseConfirm(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, padding: 24, width: "100%", maxWidth: 360 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: TEXT }}>ปิด Shift แทนไรเดอร์?</p>
+              <button onClick={() => setShowCloseConfirm(false)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: TEXT2 }}><X size={18} /></button>
+            </div>
+            <p style={{ margin: "0 0 20px", fontSize: 14, color: TEXT2, lineHeight: 1.6 }}>
+              ระบบจะ clock-out ให้ <strong>{riderName}</strong> ทันที และบันทึกว่า "ปิดโดย Admin"
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setShowCloseConfirm(false)} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: `1px solid ${BORDER}`, background: "transparent", fontSize: 14, color: TEXT2, cursor: "pointer", fontFamily: "inherit" }}>ยกเลิก</button>
+              <button onClick={handleCloseShift} disabled={closingShift} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "none", background: RED, color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", opacity: closingShift ? 0.6 : 1 }}>
+                {closingShift ? "กำลังปิด..." : "ยืนยัน"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

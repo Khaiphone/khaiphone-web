@@ -173,19 +173,135 @@ export async function fetchActiveRiders() {
 
   const riderIds = locs.map(l => l.rider_id);
   const shiftIds = locs.map(l => l.shift_id).filter(Boolean) as string[];
+  const jobIds   = locs.map(l => l.current_job_id).filter(Boolean) as string[];
 
-  const [{ data: users }, { data: shifts }] = await Promise.all([
+  const [{ data: users }, { data: shifts }, { data: jobs }] = await Promise.all([
     supabase.from("admin_users").select("user_id, name, phone").in("user_id", riderIds),
     shiftIds.length > 0
       ? supabase.from("rider_shifts").select("id, clocked_in_at, jobs_completed").in("id", shiftIds)
+      : Promise.resolve({ data: [] }),
+    jobIds.length > 0
+      ? supabase.from("requests").select("id, order_number, device_model, customer_name, appt_location").in("id", jobIds)
       : Promise.resolve({ data: [] }),
   ]);
 
   return locs.map(loc => ({
     ...loc,
-    admin_users: users?.find(u => u.user_id === loc.rider_id) ?? null,
+    admin_users:  users?.find(u => u.user_id === loc.rider_id) ?? null,
     rider_shifts: shifts?.find(s => s.id === loc.shift_id) ?? null,
+    current_job:  jobs?.find(j => j.id === loc.current_job_id) ?? null,
   }));
+}
+
+// ─── Admin: force-close a rider's shift ──────────────────────────────────────
+export async function adminCloseRiderShift(riderId: string): Promise<{ success: true } | { success: false; error: string }> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const now = new Date().toISOString();
+
+  await supabase
+    .from("rider_shifts")
+    .update({ clocked_out_at: now, ended_reason: "admin_closed" })
+    .eq("rider_id", riderId)
+    .is("clocked_out_at", null);
+
+  await supabase
+    .from("rider_locations")
+    .update({ is_online: false, tracking_mode: "idle", current_job_id: null, updated_at: now })
+    .eq("rider_id", riderId);
+
+  await supabase
+    .from("admin_users")
+    .update({ is_online: false, last_seen_at: now })
+    .eq("user_id", riderId);
+
+  return { success: true };
+}
+
+// ─── Fetch all riders' shifts for a given date ────────────────────────────────
+export async function fetchAllRidersShifts(date: string) {
+  await requireAuth();
+  const supabase = createServerClient();
+
+  const { data: shifts } = await supabase
+    .from("rider_shifts")
+    .select("id, rider_id, clocked_in_at, clocked_out_at, jobs_completed, total_distance_km, ended_reason")
+    .gte("clocked_in_at", date)
+    .lte("clocked_in_at", date + "T23:59:59")
+    .order("clocked_in_at", { ascending: false });
+
+  if (!shifts || shifts.length === 0) return [];
+
+  const riderIds = [...new Set(shifts.map(s => s.rider_id))];
+  const { data: users } = await supabase
+    .from("admin_users")
+    .select("user_id, name")
+    .in("user_id", riderIds);
+
+  return shifts.map(s => ({
+    ...s,
+    rider_name: users?.find(u => u.user_id === s.rider_id)?.name ?? "ไรเดอร์",
+  }));
+}
+
+// ─── Fetch all riders (for management page) ───────────────────────────────────
+export async function fetchAllRidersList() {
+  await requireAuth();
+  const supabase = createServerClient();
+
+  const { data } = await supabase
+    .from("admin_users")
+    .select("user_id, name, phone, role, is_online, last_seen_at")
+    .order("name");
+
+  return data ?? [];
+}
+
+// ─── Admin: invite new rider by email ────────────────────────────────────────
+export async function adminInviteRider(email: string, name: string): Promise<{ success: true } | { success: false; error: string }> {
+  await requireAuth();
+  const supabase = createServerClient();
+
+  const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
+    redirectTo: "https://admin.khaiphone.com/rider/install",
+  });
+
+  if (error || !data.user) return { success: false, error: error?.message ?? "invite failed" };
+
+  await supabase.from("admin_users").upsert({
+    user_id:   data.user.id,
+    name,
+    role:      "staff",
+    is_online: false,
+  }, { onConflict: "user_id" });
+
+  return { success: true };
+}
+
+// ─── Admin: remove rider ──────────────────────────────────────────────────────
+export async function adminRemoveRider(riderId: string): Promise<{ success: true } | { success: false; error: string }> {
+  await requireAuth();
+  const supabase = createServerClient();
+
+  const now = new Date().toISOString();
+  await supabase
+    .from("rider_shifts")
+    .update({ clocked_out_at: now, ended_reason: "admin_removed" })
+    .eq("rider_id", riderId)
+    .is("clocked_out_at", null);
+
+  await supabase
+    .from("rider_locations")
+    .update({ is_online: false, updated_at: now })
+    .eq("rider_id", riderId);
+
+  const { error } = await supabase
+    .from("admin_users")
+    .delete()
+    .eq("user_id", riderId);
+
+  if (error) return { success: false, error: error.message };
+  return { success: true };
 }
 
 // ─── Fetch rider location history for trail map ───────────────────────────────
