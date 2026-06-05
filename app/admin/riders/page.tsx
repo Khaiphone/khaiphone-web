@@ -202,7 +202,14 @@ export default function RidersDashboard() {
           <Stat label="กลับออฟฟิศ" value={returningCount} color="#7c3aed" icon={<Navigation size={14} />} />
           <Stat label="กำลังทำงาน" value={busyCount} color={ORANGE} icon={<Clock size={14} />} />
           <button
-            onClick={async () => { setSyncing(true); await backfillRequestCoords(); await loadJobs(); setSyncing(false); }}
+            onClick={async () => {
+              setSyncing(true);
+              const { updated } = await backfillRequestCoords();
+              await loadJobs();
+              setSyncing(false);
+              if (updated === 0) alert("ไม่มีงานที่ต้องซิงค์ (อาจ fail ดู Vercel logs)");
+              else alert(`ซิงค์พิกัดสำเร็จ ${updated} งาน`);
+            }}
             disabled={syncing}
             style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.2)", color: syncing ? "rgba(255,255,255,.4)" : "#fff", borderRadius: 8, padding: "6px 12px", cursor: syncing ? "default" : "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit" }}
           >

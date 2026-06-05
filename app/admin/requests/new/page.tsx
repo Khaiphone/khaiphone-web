@@ -103,7 +103,7 @@ export default function NewRequestPage() {
   useEffect(() => {
     if (form.apptMethod === "branch") { setPinCoords(null); return; }
 
-    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
     if (!key) return;
 
     function initAc() {

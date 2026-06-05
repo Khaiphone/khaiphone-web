@@ -616,11 +616,15 @@ export async function backfillRequestCoords(): Promise<{ updated: number }> {
 
   if (!rows || rows.length === 0) return { updated: 0 };
 
+  console.log(`[backfill] Found ${rows.length} request(s) missing coords`);
   let updated = 0;
   for (const row of rows) {
     const geo = await geocodeLocation(row.appt_location as string);
-    if (!geo) continue;
-    await supabase
+    if (!geo) {
+      console.warn(`[backfill] geocoding failed for id=${row.id} location="${row.appt_location}"`);
+      continue;
+    }
+    const { error } = await supabase
       .from("requests")
       .update({
         appt_lat:      geo.lat,
@@ -629,10 +633,15 @@ export async function backfillRequestCoords(): Promise<{ updated: number }> {
         updated_at:    new Date().toISOString(),
       })
       .eq("id", row.id);
-    updated++;
-    await new Promise(r => setTimeout(r, 150)); // avoid geocoding rate limit
+    if (error) {
+      console.error(`[backfill] DB update failed id=${row.id}:`, error.message);
+    } else {
+      console.log(`[backfill] Updated id=${row.id} → lat=${geo.lat} lng=${geo.lng}`);
+      updated++;
+    }
+    await new Promise(r => setTimeout(r, 150));
   }
-
+  console.log(`[backfill] Done — updated ${updated}/${rows.length}`);
   return { updated };
 }
 
