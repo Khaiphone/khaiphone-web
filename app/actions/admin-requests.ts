@@ -608,6 +608,13 @@ export async function updateAppointment(
 ) {
   await requireAuth();
   const supabase = createServerClient();
+
+  const { data: prev } = await supabase
+    .from("requests")
+    .select("order_number, customer_name, device_model, appt_date, appt_time")
+    .eq("id", id)
+    .single();
+
   const geo = await geocodeLocation(appt.location);
   const { data: updated, error } = await supabase
     .from("requests")
@@ -623,6 +630,18 @@ export async function updateAppointment(
     .select("id");
   if (error) { console.error("updateAppointment error:", error); return { success: false, error: error.message }; }
   if (!updated || updated.length === 0) return { success: false, error: "ไม่พบคำขอในฐานข้อมูล" };
+
+  if (prev && (prev.appt_date !== appt.date || prev.appt_time !== appt.time)) {
+    const oldSlot = `${prev.appt_date || "?"} ${prev.appt_time || "?"}`;
+    const newSlot = `${appt.date} ${appt.time}`;
+    after(() => sendPushToNewRequestReceivers({
+      title: `เลื่อนนัดหมาย — ${prev.order_number}`,
+      body:  `${prev.customer_name} · ${prev.device_model}\n${oldSlot} → ${newSlot}`,
+      url:   `/admin/requests/${id}`,
+      tag:   "appt-updated",
+    }).catch(console.error));
+  }
+  after(() => broadcastRequestUpdate(id));
   return { success: true };
 }
 
@@ -633,6 +652,13 @@ export async function updatePayment(
 ) {
   await requireAuth();
   const supabase = createServerClient();
+
+  const { data: prev } = await supabase
+    .from("requests")
+    .select("order_number, customer_name, device_model, payment_method")
+    .eq("id", id)
+    .single();
+
   const { data: updated, error } = await supabase
     .from("requests")
     .update({
@@ -646,6 +672,17 @@ export async function updatePayment(
     .select("id");
   if (error) { console.error("updatePayment error:", error); return { success: false, error: error.message }; }
   if (!updated || updated.length === 0) return { success: false, error: "ไม่พบคำขอในฐานข้อมูล" };
+
+  if (prev && prev.payment_method !== pay.method) {
+    const methodLabel: Record<string, string> = { cash: "เงินสด", transfer: "โอนเงิน", promptpay: "พร้อมเพย์" };
+    after(() => sendPushToNewRequestReceivers({
+      title: `แก้ไขช่องทางรับเงิน — ${prev.order_number}`,
+      body:  `${prev.customer_name} · ${prev.device_model}\n${methodLabel[prev.payment_method] ?? prev.payment_method} → ${methodLabel[pay.method] ?? pay.method}`,
+      url:   `/admin/requests/${id}`,
+      tag:   "payment-updated",
+    }).catch(console.error));
+  }
+  after(() => broadcastRequestUpdate(id));
   return { success: true };
 }
 
@@ -685,6 +722,13 @@ export async function updatePrice(
 ) {
   await requireAuth();
   const supabase = createServerClient();
+
+  const { data: prev } = await supabase
+    .from("requests")
+    .select("order_number, customer_name, device_model, estimated_price")
+    .eq("id", id)
+    .single();
+
   const { data: updated, error } = await supabase
     .from("requests")
     .update({
@@ -696,6 +740,17 @@ export async function updatePrice(
     .select("id");
   if (error) { console.error("updatePrice error:", error); return { success: false, error: error.message }; }
   if (!updated || updated.length === 0) return { success: false, error: "ไม่พบคำขอในฐานข้อมูล" };
+
+  if (prev && prev.estimated_price !== estimatedPrice) {
+    const fmt = (n: number) => `฿${n.toLocaleString("th-TH")}`;
+    after(() => sendPushToNewRequestReceivers({
+      title: `แก้ไขราคา — ${prev.order_number}`,
+      body:  `${prev.customer_name} · ${prev.device_model}\n${fmt(prev.estimated_price)} → ${fmt(estimatedPrice)}`,
+      url:   `/admin/requests/${id}`,
+      tag:   "price-updated",
+    }).catch(console.error));
+  }
+  after(() => broadcastRequestUpdate(id));
   return { success: true };
 }
 
