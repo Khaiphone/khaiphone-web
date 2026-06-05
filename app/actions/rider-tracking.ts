@@ -432,9 +432,11 @@ export async function fetchTodayRequestStats() {
     .gte("created_at", today + "T00:00:00")
     .lte("created_at", today + "T23:59:59");
 
-  if (!data) return { newCount: 0, completedCount: 0, cancelledCount: 0 };
+  if (!data) return { totalCount: 0, newCount: 0, assignedCount: 0, completedCount: 0, cancelledCount: 0 };
   return {
-    newCount: data.filter(r => ["new", "pending", "contacted"].includes(r.status)).length,
+    totalCount:    data.length,
+    newCount:      data.filter(r => ["new", "pending", "contacted"].includes(r.status)).length,
+    assignedCount: data.filter(r => r.rider_id).length,
     completedCount: data.filter(r => r.status === "completed").length,
     cancelledCount: data.filter(r => ["cancelled", "no_show"].includes(r.status)).length,
   };

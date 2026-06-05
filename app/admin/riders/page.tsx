@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps";
-import { Battery, AlertTriangle, Settings, ChevronDown, X, Zap, RefreshCw, MapPin, Clock, CheckCircle, User } from "lucide-react";
+import { Battery, AlertTriangle, ChevronDown, X, Zap, RefreshCw, MapPin, Clock, User, CalendarDays, UserCheck, Wrench, CheckCircle2, XCircle, BarChart2, ArrowRight, Settings } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { fetchActiveRiders, fetchAllRidersShifts, fetchUnassignedJobs, fetchTodayRequestStats } from "@/app/actions/rider-tracking";
 import { assignRider, backfillRequestCoords, autoAssignJobs } from "@/app/actions/admin-requests";
@@ -232,7 +232,7 @@ export default function PlannerDashboard() {
   const [riders, setRiders] = useState<ActiveRider[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [allShifts, setAllShifts] = useState<AllShift[]>([]);
-  const [todayStats, setTodayStats] = useState({ newCount: 0, completedCount: 0, cancelledCount: 0 });
+  const [todayStats, setTodayStats] = useState({ totalCount: 0, newCount: 0, assignedCount: 0, completedCount: 0, cancelledCount: 0 });
   const [loading, setLoading] = useState(true);
 
   // UI state
@@ -677,7 +677,7 @@ export default function PlannerDashboard() {
                 )}
                 {unassignedJobs.length === 0 && (
                   <div style={{ padding: 32, textAlign: "center", color: TEXT2 }}>
-                    <CheckCircle size={28} color={GREEN} style={{ marginBottom: 6, display: "block", margin: "0 auto 8px" }} />
+                    <CheckCircle2 size={28} color={GREEN} style={{ marginBottom: 6, display: "block", margin: "0 auto 8px" }} />
                     <p style={{ margin: 0, fontSize: 13 }}>ไม่มีงานรอ Assign</p>
                   </div>
                 )}
@@ -729,22 +729,36 @@ export default function PlannerDashboard() {
       </div>
 
       {/* ── Summary bar ── */}
-      <div style={{ background: DARK, padding: "8px 20px", display: "flex", alignItems: "center", gap: 24, flexShrink: 0 }}>
-        <span style={{ color: "rgba(255,255,255,.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, flexShrink: 0 }}>สรุปวันนี้</span>
-        {[
-          { label: "Assign แล้ว", value: assignedJobs.length, color: PURPLE },
-          { label: "ไรเดอร์ออนไลน์", value: riders.length, color: GREEN },
-          { label: "กำลังทำงาน", value: busyRiders.length, color: ORANGE },
-          { label: "งานเสร็จ", value: todayStats.completedCount, color: GREEN },
-          { label: "งานรอ Assign", value: unassignedJobs.length, color: YELLOW },
-          { label: "ยกเลิก", value: todayStats.cancelledCount, color: RED },
-          { label: "Shift จบงาน", value: todayShiftJobs, color: BLUE },
-        ].map(({ label, value, color }) => (
-          <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 16, fontWeight: 800, color }}>{value}</span>
-            <span style={{ fontSize: 11, color: "rgba(255,255,255,.4)" }}>{label}</span>
-          </div>
-        ))}
+      <div style={{ background: "#fff", borderTop: `1px solid ${BORDER}`, padding: "10px 20px", display: "flex", alignItems: "center", gap: 0, flexShrink: 0 }}>
+        <p style={{ margin: "0 20px 0 0", fontSize: 12, fontWeight: 700, color: TEXT, whiteSpace: "nowrap" }}>สรุปภาพรวมวันนี้</p>
+        <div style={{ display: "flex", alignItems: "center", flex: 1, gap: 4 }}>
+          {([
+            { label: "รับงานทั้งหมด",     value: todayStats.totalCount,      icon: CalendarDays,  iconColor: BLUE,   bg: "#EFF6FF" },
+            { label: "Assign แล้ว",        value: todayStats.assignedCount,   icon: UserCheck,     iconColor: ORANGE, bg: "#FFF7ED" },
+            { label: "กำลังดำเนินการ",    value: busyRiders.length,           icon: Wrench,        iconColor: BLUE,   bg: "#EFF6FF" },
+            { label: "เสร็จสิ้น",         value: todayStats.completedCount,   icon: CheckCircle2,  iconColor: GREEN,  bg: "#F0FDF4" },
+            { label: "ยกเลิก",            value: todayStats.cancelledCount,   icon: XCircle,       iconColor: RED,    bg: "#FEF2F2" },
+            { label: "ค้าง",              value: unassignedJobs.length,       icon: Clock,         iconColor: "#9CA3AF", bg: "#F9FAFB" },
+          ] as const).map(({ label, value, icon: Icon, iconColor, bg }, i, arr) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, padding: "4px 16px", borderRight: i < arr.length - 1 ? `1px solid ${BORDER}` : "none" }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Icon size={18} color={iconColor} strokeWidth={2} />
+              </div>
+              <div>
+                <p style={{ margin: 0, fontSize: 11, color: TEXT2, whiteSpace: "nowrap" }}>{label}</p>
+                <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: TEXT, lineHeight: 1.1 }}>{value} <span style={{ fontSize: 11, fontWeight: 400, color: TEXT2 }}>งาน</span></p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={() => router.push("/admin/reports")}
+          style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 16, padding: "8px 14px", borderRadius: 8, border: `1px solid ${BORDER}`, background: "#fff", color: TEXT, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", flexShrink: 0 }}
+        >
+          <BarChart2 size={14} color={BLUE} />
+          ดูรายงานฉบับเต็ม
+          <ArrowRight size={13} color={ORANGE} />
+        </button>
       </div>
     </div>
   );
