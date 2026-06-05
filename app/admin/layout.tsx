@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   LayoutDashboard, ClipboardList, CalendarDays, Bell, MoreHorizontal, Moon, Sun,
-  Map, Users, ArrowLeft,
+  Map, Users, ArrowLeft, BarChart2, Settings, HelpCircle, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import BottomTabNav from "../components/admin/BottomTabNav";
 import { supabase } from "@/lib/supabase";
@@ -39,9 +39,12 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
   const isLogin  = pathname === "/admin/login" || pathname === "/admin/set-password";
-  const [ready, setReady] = useState(false);
-  const [role, setRole]   = useState<AdminRole | null>(null);
-  const { dark, toggle }  = useAdminTheme();
+  const [ready, setReady]             = useState(false);
+  const [role, setRole]               = useState<AdminRole | null>(null);
+  const [profileName, setProfileName] = useState<string | null>(null);
+  const [collapsed, setCollapsed]     = useState(false);
+  const { dark, toggle }              = useAdminTheme();
+  const sidebarW = collapsed ? 64 : 220;
 
   useEffect(() => {
     // PWA: swap manifest + add iOS meta tags for admin.khaiphone.com
@@ -114,6 +117,8 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       if (r) localStorage.setItem("kp_admin_role", r);
       setRole(r);
 
+      fetchMyProfile(session.user.id).then(p => { if (p) setProfileName(p.name); });
+
       if (r === "staff") {
         const profile = await fetchMyProfile(session.user.id);
         const perms = profile?.permissions ?? [];
@@ -149,7 +154,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         <aside
           className="hidden md:flex"
           style={{
-            width: 220,
+            width: sidebarW,
             background: sidebarBg,
             borderRight: `1px solid ${sidebarBorder}`,
             flexDirection: "column",
@@ -158,36 +163,98 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
             top: 0, left: 0, bottom: 0,
             zIndex: 10,
             padding: "24px 0",
+            transition: "width 0.2s ease",
+            overflow: "hidden",
           }}
         >
           {pathname.startsWith("/admin/riders") ? (
-            /* ── Rider system sidebar ── */
+            /* ── Rider system sidebar (upgraded) ── */
             <>
-              <div style={{ padding: "0 20px 24px", borderBottom: `1px solid ${sidebarBorder}` }}>
-                <p style={{ color: sidebarText, fontWeight: 700, fontSize: "15px", margin: 0 }}>ระบบไรเดอร์</p>
-                <p style={{ color: sidebarText2, fontSize: "12px", margin: "2px 0 0" }}>
-                  Admin · {role === "owner" ? "เจ้าของ" : "พนักงาน"}
-                </p>
+              {/* Logo header */}
+              <div style={{ padding: collapsed ? "0 0 20px" : "0 20px 20px", borderBottom: `1px solid ${sidebarBorder}`, display: "flex", alignItems: "center", gap: 10, justifyContent: collapsed ? "center" : "flex-start" }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: GOLD, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: dark ? "#1a1a2e" : "#fff", fontSize: 16, flexShrink: 0 }}>K</div>
+                {!collapsed && (
+                  <div>
+                    <p style={{ color: sidebarText, fontWeight: 800, fontSize: "14px", margin: 0, letterSpacing: 0.5 }}>KHAIPHONE</p>
+                    <p style={{ color: sidebarText2, fontSize: "11px", margin: 0 }}>ระบบไรเดอร์</p>
+                  </div>
+                )}
               </div>
-              <nav style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: "4px" }}>
+
+              {/* Nav items */}
+              <nav style={{ flex: 1, padding: "12px 10px", display: "flex", flexDirection: "column", gap: "2px", overflowY: "auto" }}>
                 {[
-                  { href: "/admin/riders",        label: "แผนที่สด",       icon: Map   },
-                  { href: "/admin/riders/manage", label: "จัดการไรเดอร์",  icon: Users },
+                  { href: "/admin/riders",        label: "หน้าควบคุมงาน", icon: Map            },
+                  { href: "/admin/requests",       label: "งานทั้งหมด",    icon: ClipboardList  },
+                  { href: "/admin/riders/manage",  label: "จัดการไรเดอร์", icon: Users          },
+                  { href: "/admin/reports",        label: "รายงาน / สถิติ",icon: BarChart2      },
+                  { href: "/admin/settings",       label: "ตั้งค่า",        icon: Settings       },
                 ].map(({ href, label, icon: Icon }) => {
                   const active = pathname === href || (href !== "/admin/riders" && pathname.startsWith(href));
                   return (
-                    <Link key={href} href={href} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "10px", color: active ? activeColor : sidebarText2, background: active ? activeBg : "transparent", textDecoration: "none", fontSize: "14px", fontWeight: active ? 600 : 400 }}>
+                    <Link key={href} href={href} title={collapsed ? label : undefined} style={{ display: "flex", alignItems: "center", gap: collapsed ? 0 : "10px", padding: "10px 12px", borderRadius: "10px", color: active ? activeColor : sidebarText2, background: active ? activeBg : "transparent", textDecoration: "none", fontSize: "13px", fontWeight: active ? 600 : 400, justifyContent: collapsed ? "center" : "flex-start" }}>
                       <Icon size={18} strokeWidth={active ? 2.5 : 2} />
-                      {label}
+                      {!collapsed && label}
                     </Link>
                   );
                 })}
-                <div style={{ height: 1, background: sidebarBorder, margin: "8px 4px" }} />
-                <Link href="/admin/dashboard" style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "10px", color: sidebarText2, textDecoration: "none", fontSize: "14px" }}>
-                  <ArrowLeft size={18} strokeWidth={2} />
-                  กลับหน้าหลัก
+
+                <div style={{ height: 1, background: sidebarBorder, margin: "6px 4px" }} />
+
+                <Link href="/admin/help" title={collapsed ? "ช่วยเหลือ" : undefined} style={{ display: "flex", alignItems: "center", gap: collapsed ? 0 : "10px", padding: "10px 12px", borderRadius: "10px", color: sidebarText2, textDecoration: "none", fontSize: "13px", justifyContent: collapsed ? "center" : "flex-start" }}>
+                  <HelpCircle size={18} strokeWidth={2} />
+                  {!collapsed && "ช่วยเหลือ"}
                 </Link>
               </nav>
+
+              {/* Version info */}
+              {!collapsed && (
+                <div style={{ padding: "10px 20px", borderTop: `1px solid ${sidebarBorder}` }}>
+                  <p style={{ margin: 0, fontSize: "11px", fontWeight: 700, color: sidebarText2 }}>เวอร์ชันระบบ v2.4.0</p>
+                  <p style={{ margin: "2px 0 4px", fontSize: "10px", color: sidebarText2 }}>
+                    อัพเดตล่าสุด {new Date().toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })}
+                  </p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e" }} />
+                    <span style={{ fontSize: "10px", color: "#22c55e", fontWeight: 600 }}>ระบบปกติ</span>
+                  </div>
+                </div>
+              )}
+
+              {/* User profile */}
+              <div
+                style={{ padding: collapsed ? "10px 0" : "10px 16px", borderTop: `1px solid ${sidebarBorder}`, display: "flex", alignItems: "center", gap: 10, justifyContent: collapsed ? "center" : "flex-start", cursor: "pointer" }}
+                onClick={() => router.push("/admin/profile")}
+                title={collapsed ? (profileName ?? "โปรไฟล์") : undefined}
+              >
+                {/* Avatar */}
+                {(() => {
+                  const name = profileName ?? "?";
+                  const initials = name.split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
+                  const hue = (name.charCodeAt(0) * 47 + (name.charCodeAt(1) ?? 0) * 23) % 360;
+                  return (
+                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: `hsl(${hue},55%,50%)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                      {initials}
+                    </div>
+                  );
+                })()}
+                {!collapsed && (
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: sidebarText, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profileName ?? "—"}</p>
+                    <p style={{ margin: 0, fontSize: "11px", color: sidebarText2 }}>{role === "owner" ? "Owner" : role === "staff" ? "Staff" : role ?? "—"}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Collapse toggle */}
+              <div style={{ padding: "8px 10px", borderTop: `1px solid ${sidebarBorder}` }}>
+                <button
+                  onClick={() => setCollapsed(c => !c)}
+                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 6, justifyContent: collapsed ? "center" : "flex-start", padding: "7px 10px", borderRadius: 8, border: `1px solid ${sidebarBorder}`, background: "transparent", color: sidebarText2, fontSize: "12px", cursor: "pointer", fontFamily: "inherit" }}
+                >
+                  {collapsed ? <ChevronRight size={14} /> : <><ChevronLeft size={14} /><span>ซ่อนเมนู</span></>}
+                </button>
+              </div>
             </>
           ) : (
             /* ── Normal admin sidebar ── */
@@ -260,8 +327,8 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
         {/* ── Main Content ── */}
         <main
-          className="md:ml-[220px]"
-          style={{ flex: 1, minHeight: "100vh", paddingBottom: hideBottomNav ? 0 : "calc(env(safe-area-inset-bottom) + 72px)" }}
+          className="md:block"
+          style={{ flex: 1, minHeight: "100vh", paddingBottom: hideBottomNav ? 0 : "calc(env(safe-area-inset-bottom) + 72px)", marginLeft: `${sidebarW}px`, transition: "margin-left 0.2s ease" }}
         >
           {children}
         </main>
