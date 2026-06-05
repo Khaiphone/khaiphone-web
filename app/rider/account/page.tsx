@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { UserCircle, LogOut, Wifi, WifiOff, ChevronRight, Moon, Sun } from "lucide-react";
+import { UserCircle, LogOut, Wifi, WifiOff, ChevronRight, Moon, Sun, ShieldX } from "lucide-react";
 import { Sk } from "@/app/rider/skeleton";
 import { supabase } from "@/lib/supabase";
 import { setRiderOnlineStatus } from "@/app/actions/rider";
+import { saveLocationConsent } from "@/app/actions/rider-tracking";
 import { useRiderTheme } from "@/app/rider/theme";
 import { useRiderSession } from "@/app/rider/context";
 
@@ -14,6 +15,8 @@ export default function AccountPage() {
   const { BG: _BG, CARD, BORDER, ACCENT, GREEN, RED, TEXT, TEXT2, isDark, toggleTheme } = useRiderTheme();
   const { userId, riderName, riderEmail, riderRole, isOnline, setIsOnline } = useRiderSession();
   const [toggling, setToggling] = useState(false);
+  const [showConsentRevoke, setShowConsentRevoke] = useState(false);
+  const [revoking, setRevoking] = useState(false);
 
   async function toggleOnline() {
     setToggling(true);
@@ -27,6 +30,14 @@ export default function AccountPage() {
     if (userId) await setRiderOnlineStatus(false).catch(() => {});
     await supabase.auth.signOut();
     router.replace("/admin/login");
+  }
+
+  async function handleRevokeConsent() {
+    setRevoking(true);
+    await saveLocationConsent(false);
+    setRevoking(false);
+    setShowConsentRevoke(false);
+    router.replace("/rider/consent");
   }
 
   // account page never shows a loading skeleton — data comes from context instantly
@@ -131,6 +142,13 @@ export default function AccountPage() {
           </div>
         </button>
 
+        <button
+          onClick={() => router.push("/rider/stats")}
+          style={{ width: "100%", padding: "16px 20px", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: "inherit", borderBottom: `1px solid ${BORDER}` }}
+        >
+          <span style={{ fontSize: 15, color: TEXT }}>สถิติการทำงาน (Shift)</span>
+          <ChevronRight size={16} color={TEXT2} />
+        </button>
         <a href="https://admin.khaiphone.com/admin/profile" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", textDecoration: "none", borderBottom: riderRole === "owner" ? `1px solid ${BORDER}` : "none" }}>
           <span style={{ fontSize: 15, color: TEXT }}>แก้ไขโปรไฟล์</span>
           <ChevronRight size={16} color={TEXT2} />
@@ -141,6 +159,23 @@ export default function AccountPage() {
             <ChevronRight size={16} color={TEXT2} />
           </a>
         )}
+      </div>
+
+      {/* Privacy / Consent */}
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, overflow: "hidden" }}>
+        <div style={{ padding: "14px 20px", borderBottom: `1px solid ${BORDER}` }}>
+          <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.5 }}>ความเป็นส่วนตัว</p>
+        </div>
+        <button
+          onClick={() => setShowConsentRevoke(true)}
+          style={{ width: "100%", padding: "16px 20px", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: "inherit" }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <ShieldX size={20} color={TEXT2} />
+            <span style={{ fontSize: 15, color: TEXT }}>ถอนความยินยอมการติดตามตำแหน่ง</span>
+          </div>
+          <ChevronRight size={16} color={TEXT2} />
+        </button>
       </div>
 
       {/* Logout */}
@@ -156,6 +191,37 @@ export default function AccountPage() {
         <LogOut size={18} />
         ออกจากระบบ
       </button>
+
+      {/* Consent revoke confirmation bottom sheet */}
+      {showConsentRevoke && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 50, display: "flex", alignItems: "flex-end" }} onClick={() => setShowConsentRevoke(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ width: "100%", background: CARD, borderRadius: "20px 20px 0 0", padding: "24px 20px", paddingBottom: "calc(24px + env(safe-area-inset-bottom))" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <ShieldX size={22} color={RED} />
+              <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: TEXT }}>ถอนความยินยอม</p>
+            </div>
+            <p style={{ margin: "0 0 20px", fontSize: 14, color: TEXT2, lineHeight: 1.6 }}>
+              หากถอนความยินยอม ระบบจะไม่สามารถติดตามตำแหน่งของคุณได้<br />
+              คุณจะต้องให้ความยินยอมใหม่ก่อนจึงจะใช้งานแอปได้อีกครั้ง
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <button
+                onClick={handleRevokeConsent}
+                disabled={revoking}
+                style={{ padding: "13px 0", borderRadius: 12, border: "none", background: `rgba(255,69,58,0.12)`, color: RED, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", opacity: revoking ? 0.6 : 1 }}
+              >
+                {revoking ? "กำลังบันทึก..." : "ยืนยันถอนความยินยอม"}
+              </button>
+              <button
+                onClick={() => setShowConsentRevoke(false)}
+                style={{ padding: "13px 0", borderRadius: 12, border: `1px solid ${BORDER}`, background: "transparent", color: TEXT2, fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                ยกเลิก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

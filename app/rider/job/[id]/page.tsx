@@ -19,6 +19,7 @@ import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
 import { validateImageFile } from "@/lib/validate-file";
 import { useRiderTheme } from "@/app/rider/theme";
+import { setTrackingMode } from "@/lib/rider-tracking";
 import { fetchMyProfile, fetchAdminUsers } from "@/app/actions/admin-users";
 import type { AdminRequest, InspectionCriterion, FunctionalTest } from "@/lib/types/admin";
 import { FONT_LINK, DOC_CSS, buildContractPage, buildReceiptPage, thDate, thTime, shortDate } from "@/lib/contract-builder";
@@ -1514,6 +1515,7 @@ export default function JobWizardPage() {
   const [helpMsg, setHelpMsg]         = useState("");
   const [helpSent, setHelpSent]       = useState(false);
   const [helpBusy, setHelpBusy]       = useState(false);
+  const [returningToOffice, setReturningToOffice] = useState(false);
 
   const reload = useCallback(async () => {
     const j = await fetchRiderJob(id);
@@ -1771,7 +1773,20 @@ export default function JobWizardPage() {
             <div style={{ background:"rgba(74,222,128,0.08)", border:`1px solid ${GREEN}`, borderRadius:14, padding:20, textAlign:"center" }}>
               <CheckCircle2 size={40} color={GREEN} style={{ marginBottom:8 }} />
               <p style={{ margin:"0 0 4px", fontSize:18, fontWeight:800, color:GREEN }}>งานเสร็จสิ้น!</p>
-              <p style={{ margin:0, fontSize:14, color:TEXT2 }}>฿{price.toLocaleString("th-TH")} · {job.orderNumber}</p>
+              <p style={{ margin:"0 0 16px", fontSize:14, color:TEXT2 }}>฿{price.toLocaleString("th-TH")} · {job.orderNumber}</p>
+              {!returningToOffice ? (
+                <button
+                  onClick={() => { setTrackingMode("return"); setReturningToOffice(true); }}
+                  style={{ width:"100%", padding:"12px 0", borderRadius:12, border:"none", background:"#1a1a2e", color:"#F0C040", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}
+                >
+                  🏠 เริ่มเดินทางกลับออฟฟิศ
+                </button>
+              ) : (
+                <div style={{ background:"rgba(124,58,237,0.1)", border:"1px solid rgba(124,58,237,0.3)", borderRadius:10, padding:"10px 14px" }}>
+                  <p style={{ margin:0, fontSize:14, fontWeight:700, color:"#7c3aed" }}>🏠 กำลังเดินทางกลับออฟฟิศ</p>
+                  <p style={{ margin:"4px 0 0", fontSize:12, color:TEXT2 }}>ระบบกำลังติดตามตำแหน่งของคุณ</p>
+                </div>
+              )}
             </div>
           ) : isCancelled ? (
             <div style={{ background:"rgba(255,69,58,0.08)", border:`1px solid rgba(255,69,58,0.3)`, borderRadius:14, padding:16 }}>

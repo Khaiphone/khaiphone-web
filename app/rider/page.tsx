@@ -4,7 +4,9 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, Banknote, ArrowUpDown, Package, Wifi, WifiOff, CheckCircle2, Navigation, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { fetchRiderHomeData, riderAcceptJob, setRiderOnlineStatus } from "@/app/actions/rider";
+import { fetchRiderHomeData, riderAcceptJob } from "@/app/actions/rider";
+import { openShift, closeShift, riderPingLocation } from "@/app/actions/rider-tracking";
+import { startTracking, stopTracking, setTrackingMode } from "@/lib/rider-tracking";
 import { Sk } from "@/app/rider/skeleton";
 import { useRiderTheme } from "@/app/rider/theme";
 import { useRiderSession } from "@/app/rider/context";
@@ -29,6 +31,7 @@ export default function RiderHomePage() {
   const { CARD, CARD2, BORDER, ACCENT, GREEN, TEXT, TEXT2 } = useRiderTheme();
   const { userId, isOnline, setIsOnline } = useRiderSession();
   const [toggling, setToggling]       = useState(false);
+  const [shiftId, setShiftId]         = useState<string | null>(null);
   const [pendingJobs, setPendingJobs] = useState<AdminRequest[]>([]);
   const [activeJobs, setActiveJobs]   = useState<AdminRequest[]>([]);
   const [stats, setStats]             = useState({ completedJobs: 0, totalEarnings: 0 });
@@ -76,9 +79,44 @@ export default function RiderHomePage() {
   async function toggleOnline() {
     setToggling(true);
     const next = !isOnline;
-    setIsOnline(next);
-    await setRiderOnlineStatus(next);
-    setToggling(false);
+    if (next) {
+      // Going online: get GPS first
+      const gpsOk = await new Promise<boolean>((resolve) => {
+        if (!("geolocation" in navigator)) { resolve(false); return; }
+        navigator.geolocation.getCurrentPosition(
+          () => resolve(true),
+          () => resolve(false),
+          { enableHighAccuracy: true, timeout: 8_000 }
+        );
+      });
+      if (!gpsOk) {
+        alert("ไม่สามารถรับพิกัด GPS ได้ กรุณาอนุญาตการเข้าถึงตำแหน่งในการตั้งค่า");
+        setToggling(false);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const res = await openShift(pos.coords.latitude, pos.coords.longitude);
+        if (res.success) {
+          setShiftId(res.shiftId);
+          setIsOnline(true);
+          const sid = res.shiftId;
+          await startTracking(async (payload) => {
+            await riderPingLocation({ ...payload, shiftId: sid, currentJobId: null });
+          });
+        }
+        setToggling(false);
+      }, () => setToggling(false), { enableHighAccuracy: true, timeout: 8_000 });
+    } else {
+      // Going offline
+      stopTracking();
+      const pos = await new Promise<GeolocationPosition | null>((resolve) => {
+        navigator.geolocation.getCurrentPosition(resolve, () => resolve(null), { timeout: 3_000 });
+      });
+      await closeShift(pos?.coords.latitude ?? null, pos?.coords.longitude ?? null);
+      setShiftId(null);
+      setIsOnline(false);
+      setToggling(false);
+    }
   }
 
   async function acceptJob(jobId: string) {

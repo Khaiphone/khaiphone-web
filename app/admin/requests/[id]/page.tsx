@@ -17,6 +17,7 @@ import {
 import { fetchAdminUsers, fetchMyRole, fetchMyProfile } from "@/app/actions/admin-users";
 import type { AdminUserRow } from "@/app/actions/admin-users";
 import { saveInspection, recordArrival, respondToNegotiation } from "@/app/actions/inspection";
+import { fetchRiderSuggestionsForRequest } from "@/app/actions/rider-tracking";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
 import { validateImageFile } from "@/lib/validate-file";
@@ -148,6 +149,12 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const [riderDraft,   setRiderDraft]   = useState<string>(""); // user_id or ""
   const [riderSaving,  setRiderSaving]  = useState(false);
   const [canAssign,    setCanAssign]    = useState(false);
+
+  // Smart rider suggestions
+  type RiderSuggestion = { rider_id: string; name: string; tracking_mode: string; battery_pct: number | null; distanceKm: number; etaMinutes: number; jobs_completed: number };
+  const [riderSuggestions, setRiderSuggestions] = useState<RiderSuggestion[]>([]);
+  const [suggestLoading,   setSuggestLoading]   = useState(false);
+  const [showSuggest,      setShowSuggest]      = useState(false);
 
   // Arrival photo
   const [showArrivalForm,   setShowArrivalForm]   = useState(false);
@@ -462,14 +469,24 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
 
   async function handleRiderAssign() {
     setRiderSaving(true);
-    const rider = staffList.find(s => s.user_id === riderDraft);
-    const result = await assignRider(id, riderDraft || null, rider?.name ?? null);
+    const rider = staffList.find(s => s.user_id === riderDraft) ?? riderSuggestions.find(s => s.rider_id === riderDraft);
+    const riderName = (rider as { name?: string })?.name ?? null;
+    const result = await assignRider(id, riderDraft || null, riderName);
     if (result.success) {
-      setRequest(prev => prev ? { ...prev, riderId: riderDraft || null, riderName: rider?.name ?? null } : prev);
+      setRequest(prev => prev ? { ...prev, riderId: riderDraft || null, riderName: riderName } : prev);
+      setShowSuggest(false);
     } else {
       setSaveError("มอบหมายไรเดอร์ไม่สำเร็จ");
     }
     setRiderSaving(false);
+  }
+
+  async function loadRiderSuggestions() {
+    setSuggestLoading(true);
+    setShowSuggest(true);
+    const res = await fetchRiderSuggestionsForRequest(id);
+    setRiderSuggestions(res.riders);
+    setSuggestLoading(false);
   }
 
   async function handleSlipUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -864,32 +881,88 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                   ⚠️ ต้องยืนยันนัดหมายก่อนมอบหมายไรเดอร์
                 </p>
               ) : canAssign ? (
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <select
-                    value={riderDraft}
-                    onChange={e => setRiderDraft(e.target.value)}
-                    style={{ flex: 1, padding: "8px 10px", borderRadius: 10, border: `1px solid ${BORDER}`, fontSize: 13, color: TEXT, background: "#F5F5F7", fontFamily: "inherit", outline: "none" }}
-                  >
-                    <option value="">— ยังไม่ได้มอบหมายไรเดอร์ —</option>
-                    {staffList.map(s => (
-                      <option key={s.user_id} value={s.user_id}>
-                        {s.is_online ? "● " : "○ "}{s.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={handleRiderAssign}
-                    disabled={riderSaving || riderDraft === (request.riderId ?? "")}
-                    style={{
-                      padding: "8px 14px", borderRadius: 10, border: "none",
-                      background: "#1a1a2e", color: "#F0C040", fontSize: 13, fontWeight: 600,
-                      cursor: "pointer", fontFamily: "inherit",
-                      opacity: (riderSaving || riderDraft === (request.riderId ?? "")) ? 0.5 : 1,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {riderSaving ? "..." : "มอบหมาย"}
-                  </button>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {/* Smart suggest toggle */}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      onClick={loadRiderSuggestions}
+                      style={{ padding: "7px 12px", borderRadius: 8, border: `1px solid #1a1a2e`, background: showSuggest ? "#1a1a2e" : "transparent", color: showSuggest ? "#F0C040" : "#1a1a2e", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+                    >
+                      {suggestLoading ? "⏳ กำลังโหลด..." : "🗺️ ดูไรเดอร์ออนไลน์"}
+                    </button>
+                    {showSuggest && (
+                      <button onClick={() => setShowSuggest(false)} style={{ padding: "7px 10px", borderRadius: 8, border: `1px solid ${BORDER}`, background: "transparent", color: TEXT2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>ซ่อน</button>
+                    )}
+                  </div>
+
+                  {/* Smart suggest list */}
+                  {showSuggest && !suggestLoading && (
+                    <div style={{ border: `1px solid ${BORDER}`, borderRadius: 10, overflow: "hidden" }}>
+                      {riderSuggestions.length === 0 ? (
+                        <p style={{ margin: 0, padding: "12px 14px", fontSize: 13, color: TEXT2 }}>ไม่มีไรเดอร์ออนไลน์ขณะนี้</p>
+                      ) : riderSuggestions.map((r, i) => {
+                        const modeLabel: Record<string, string> = { idle: "ว่าง", enroute: "กำลังเดินทาง", on_site: "กับลูกค้า", return: "กลับออฟฟิศ" };
+                        const modeColor: Record<string, string> = { idle: "#2563eb", enroute: "#ea580c", on_site: "#16a34a", return: "#7c3aed" };
+                        const isSelected = riderDraft === r.rider_id;
+                        return (
+                          <div key={r.rider_id}
+                            onClick={() => setRiderDraft(isSelected ? "" : r.rider_id)}
+                            style={{
+                              padding: "10px 14px", cursor: "pointer",
+                              borderBottom: i < riderSuggestions.length - 1 ? `1px solid ${BORDER}` : "none",
+                              background: isSelected ? "rgba(37,99,235,0.06)" : "transparent",
+                              borderLeft: isSelected ? "3px solid #2563eb" : "3px solid transparent",
+                              display: "flex", alignItems: "center", justifyContent: "space-between",
+                            }}
+                          >
+                            <div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{r.name}</span>
+                                <span style={{ fontSize: 11, padding: "1px 6px", borderRadius: 4, background: `${modeColor[r.tracking_mode] ?? "#2563eb"}18`, color: modeColor[r.tracking_mode] ?? "#2563eb" }}>
+                                  {modeLabel[r.tracking_mode] ?? r.tracking_mode}
+                                </span>
+                              </div>
+                              <div style={{ display: "flex", gap: 10, fontSize: 11, color: TEXT2 }}>
+                                {r.distanceKm > 0 && <span>📏 {r.distanceKm} กม. · ~{r.etaMinutes} นาที</span>}
+                                <span>✅ {r.jobs_completed} งาน</span>
+                                {r.battery_pct != null && <span style={{ color: r.battery_pct < 20 ? "#dc2626" : TEXT2 }}>🔋 {r.battery_pct}%</span>}
+                              </div>
+                            </div>
+                            {isSelected && <span style={{ color: "#2563eb", fontSize: 16 }}>✓</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Manual select fallback + confirm button */}
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <select
+                      value={riderDraft}
+                      onChange={e => setRiderDraft(e.target.value)}
+                      style={{ flex: 1, padding: "8px 10px", borderRadius: 10, border: `1px solid ${BORDER}`, fontSize: 13, color: TEXT, background: "#F5F5F7", fontFamily: "inherit", outline: "none" }}
+                    >
+                      <option value="">— เลือกไรเดอร์ —</option>
+                      {staffList.map(s => (
+                        <option key={s.user_id} value={s.user_id}>
+                          {s.is_online ? "● " : "○ "}{s.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleRiderAssign}
+                      disabled={riderSaving || !riderDraft || riderDraft === (request.riderId ?? "")}
+                      style={{
+                        padding: "8px 14px", borderRadius: 10, border: "none",
+                        background: "#1a1a2e", color: "#F0C040", fontSize: 13, fontWeight: 600,
+                        cursor: "pointer", fontFamily: "inherit",
+                        opacity: (riderSaving || !riderDraft || riderDraft === (request.riderId ?? "")) ? 0.5 : 1,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {riderSaving ? "..." : "มอบหมาย"}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

@@ -12,6 +12,8 @@ import { cacheSet } from "@/app/rider/cache";
 import { saveSubscription } from "@/app/actions/push";
 import { RiderThemeProvider, useRiderTheme } from "@/app/rider/theme";
 import { RiderSessionContext } from "@/app/rider/context";
+import { isStandalone } from "@/lib/pwa-detect";
+import { fetchRiderConsent } from "@/app/actions/rider-tracking";
 
 const NAV = [
   { href: "/rider",          label: "หน้าแรก",   icon: Home       },
@@ -126,17 +128,36 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // PWA install gate — bypass with ?dev=1 for development
+    const searchParams = new URLSearchParams(window.location.search);
+    const isDev = searchParams.get("dev") === "1";
+    const isInstallPage = pathname === "/rider/install";
+    const isConsentPage = pathname === "/rider/consent";
+
+    if (!isDev && !isStandalone() && !isInstallPage) {
+      router.replace("/rider/install");
+      return;
+    }
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) { router.replace("/admin/login"); return; }
       const uid = session.user.id;
-      const [profile, online] = await Promise.all([
+      const [profile, online, consent] = await Promise.all([
         fetchMyProfile(uid),
         fetchRiderOnlineStatus(uid),
+        fetchRiderConsent(),
       ]);
       if (!profile || (profile.role !== "owner" && profile.role !== "staff")) {
         router.replace("/admin/login");
         return;
       }
+
+      // Consent gate — skip for install/consent pages
+      if (!consent.consented && !isInstallPage && !isConsentPage) {
+        router.replace("/rider/consent");
+        return;
+      }
+
       setRiderName(profile.name ?? "ไรเดอร์");
       setRiderEmail(profile.email ?? "");
       setRiderRole(profile.role ?? "");
@@ -147,7 +168,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
       // Prefetch home data so first visit to home tab is instant
       fetchRiderHomeData(uid).then(d => cacheSet(`home:${uid}`, d));
     });
-  }, [router, loadNotifs]);
+  }, [router, loadNotifs, pathname]);
 
   useEffect(() => {
     if (!userId) return;
