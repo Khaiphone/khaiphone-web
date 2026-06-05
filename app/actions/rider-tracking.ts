@@ -249,11 +249,12 @@ export async function fetchAllRidersList() {
   await requireAuth();
   const supabase = createServerClient();
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("admin_users")
-    .select("user_id, name, phone, role, is_online, last_seen_at")
+    .select("user_id, name, email, role")
     .order("name");
 
+  if (error) console.error("fetchAllRidersList:", error.message);
   return data ?? [];
 }
 

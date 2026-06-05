@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, UserPlus, Trash2, Wifi, WifiOff, X, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, UserPlus, Trash2, X, CheckCircle2 } from "lucide-react";
 import { fetchAllRidersList, adminInviteRider, adminRemoveRider } from "@/app/actions/rider-tracking";
 
 const DARK = "#1a1a2e";
@@ -17,20 +17,9 @@ const BLUE = "#2563eb";
 type Rider = {
   user_id: string;
   name: string;
-  phone: string | null;
+  email: string | null;
   role: string;
-  is_online: boolean;
-  last_seen_at: string | null;
 };
-
-function lastSeen(iso: string | null): string {
-  if (!iso) return "ไม่เคยใช้งาน";
-  const sec = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (sec < 60) return "เพิ่งใช้งาน";
-  if (sec < 3600) return `${Math.floor(sec / 60)} นาทีที่แล้ว`;
-  if (sec < 86400) return `${Math.floor(sec / 3600)} ชั่วโมงที่แล้ว`;
-  return `${Math.floor(sec / 86400)} วันที่แล้ว`;
-}
 
 export default function ManageRidersPage() {
   const router = useRouter();
@@ -110,10 +99,8 @@ export default function ManageRidersPage() {
         ) : riders.map(r => (
           <div key={r.user_id} style={{ background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14 }}>
             {/* Avatar */}
-            <div style={{ width: 42, height: 42, borderRadius: "50%", background: r.is_online ? `${GREEN}20` : "#f3f4f6", border: `2px solid ${r.is_online ? GREEN : BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              {r.is_online
-                ? <Wifi size={18} color={GREEN} />
-                : <WifiOff size={18} color={TEXT2} />}
+            <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#f3f4f6", border: `2px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 18 }}>
+              👤
             </div>
             {/* Info */}
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -122,10 +109,9 @@ export default function ManageRidersPage() {
                 <span style={{ fontSize: 11, padding: "2px 7px", borderRadius: 10, background: r.role === "owner" ? `${GOLD}20` : `${BLUE}15`, color: r.role === "owner" ? "#92700c" : BLUE, fontWeight: 600 }}>
                   {ROLE_LABEL[r.role] ?? r.role}
                 </span>
-                {r.is_online && <span style={{ fontSize: 11, padding: "2px 7px", borderRadius: 10, background: `${GREEN}15`, color: GREEN, fontWeight: 600 }}>ออนไลน์</span>}
               </div>
               <p style={{ margin: "2px 0 0", fontSize: 12, color: TEXT2 }}>
-                {r.phone ?? "ไม่มีเบอร์"} · {lastSeen(r.last_seen_at)}
+                {r.email ?? "—"}
               </p>
             </div>
             {/* Remove button (don't allow removing owner) */}
