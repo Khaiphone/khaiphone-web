@@ -142,6 +142,20 @@ export async function saveLocationConsent(granted: boolean): Promise<void> {
   }, { onConflict: "user_id" });
 }
 
+// ─── Fetch active shift for auto-resume ──────────────────────────────────────
+export async function fetchActiveShift(): Promise<{ shiftId: string; currentJobId: string | null } | null> {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+
+  const [{ data: shift }, { data: loc }] = await Promise.all([
+    supabase.from("rider_shifts").select("id").eq("rider_id", user.id).is("clocked_out_at", null).maybeSingle(),
+    supabase.from("rider_locations").select("current_job_id").eq("rider_id", user.id).maybeSingle(),
+  ]);
+
+  if (!shift) return null;
+  return { shiftId: shift.id, currentJobId: loc?.current_job_id ?? null };
+}
+
 // ─── Fetch consent status ─────────────────────────────────────────────────────
 export async function fetchRiderConsent(): Promise<{ consented: boolean; grantedAt: string | null }> {
   const user = await requireAuth();

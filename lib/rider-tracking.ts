@@ -107,9 +107,10 @@ export async function startTracking(fn: PingFn): Promise<boolean> {
 
 function handleVisibility() {
   if (!document.hidden) {
+    restartInterval(); // browser may have throttled/killed the interval in background
     navigator.geolocation.getCurrentPosition(
       (pos) => { currentPos = pos; sendPing("foreground"); },
-      () => {},
+      () => { sendPing("foreground"); }, // send last known position even if fresh GPS fails
       { enableHighAccuracy: true, timeout: 5_000 }
     );
   }

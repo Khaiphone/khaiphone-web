@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { MapPin, Banknote, ArrowUpDown, Package, Wifi, WifiOff, CheckCircle2, Navigation, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { fetchRiderHomeData, riderAcceptJob } from "@/app/actions/rider";
-import { openShift, closeShift, riderPingLocation } from "@/app/actions/rider-tracking";
-import { startTracking, stopTracking, setTrackingMode } from "@/lib/rider-tracking";
+import { openShift, closeShift, riderPingLocation, fetchActiveShift } from "@/app/actions/rider-tracking";
+import { startTracking, stopTracking, setTrackingMode, isTracking } from "@/lib/rider-tracking";
 import { Sk } from "@/app/rider/skeleton";
 import { useRiderTheme } from "@/app/rider/theme";
 import { useRiderSession } from "@/app/rider/context";
@@ -75,6 +75,43 @@ export default function RiderHomePage() {
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [userId, loadData]);
+
+  // ── Auto-resume tracking (Grab-style) ────────────────────────────────────────
+  useEffect(() => {
+    if (!userId || !isOnline || isTracking()) return;
+
+    fetchActiveShift().then(shift => {
+      if (!shift) { setIsOnline(false); return; } // shift closed server-side
+      setShiftId(shift.shiftId);
+      const sid = shift.shiftId;
+      const jid = shift.currentJobId;
+      startTracking(async (payload) => {
+        await riderPingLocation({ ...payload, shiftId: sid, currentJobId: jid });
+      }).catch(() => {}); // GPS may be denied — silently skip, rider can retry via toggle
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, isOnline]);
+
+  // ── Reconnect when app comes back to foreground ───────────────────────────────
+  useEffect(() => {
+    if (!userId || !isOnline) return;
+
+    async function onVisible() {
+      if (document.visibilityState !== "visible" || isTracking()) return;
+      const shift = await fetchActiveShift();
+      if (!shift) { setIsOnline(false); return; }
+      setShiftId(shift.shiftId);
+      const sid = shift.shiftId;
+      const jid = shift.currentJobId;
+      await startTracking(async (payload) => {
+        await riderPingLocation({ ...payload, shiftId: sid, currentJobId: jid });
+      }).catch(() => {});
+    }
+
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, isOnline]);
 
   async function toggleOnline() {
     setToggling(true);
