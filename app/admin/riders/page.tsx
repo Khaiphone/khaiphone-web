@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
-import { Battery, AlertTriangle, ChevronDown, X, Zap, RefreshCw, MapPin, Clock, User, CalendarDays, UserCheck, Wrench, CheckCircle2, XCircle, BarChart2, ArrowRight, Settings, ClipboardList, Navigation, Search } from "lucide-react";
+import { Battery, AlertTriangle, ChevronDown, ChevronLeft, X, Zap, RefreshCw, MapPin, Clock, User, CalendarDays, UserCheck, Wrench, CheckCircle2, XCircle, BarChart2, ArrowRight, Settings, ClipboardList, Navigation, Search } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { fetchActiveRiders, fetchAllRidersShifts, fetchUnassignedJobs, fetchTodayRequestStats } from "@/app/actions/rider-tracking";
@@ -297,6 +297,7 @@ export default function PlannerDashboard() {
   const [syncing, setSyncing] = useState(false);
   const [assignDropdownJob, setAssignDropdownJob] = useState<string | null>(null);
   const [rightTab, setRightTab] = useState<"queue" | "shifts">("queue");
+  const [leftOpen, setLeftOpen] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Data fetchers
@@ -468,8 +469,8 @@ export default function PlannerDashboard() {
       {/* ── Main 3-column area ── */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
 
-        {/* ── LEFT: Rider list (272px) ── */}
-        <div style={{ width: 272, background: CARD, borderRight: `1px solid ${BORDER}`, display: "flex", flexDirection: "column", overflow: "hidden", flexShrink: 0 }}>
+        {/* ── LEFT: Rider list (collapsible) ── */}
+        <div style={{ width: leftOpen ? 272 : 0, background: CARD, borderRight: leftOpen ? `1px solid ${BORDER}` : "none", display: "flex", flexDirection: "column", overflow: "hidden", flexShrink: 0, transition: "width 0.2s ease" }}>
           <div style={{ padding: "12px 14px 8px", borderBottom: `1px solid ${BORDER}`, flexShrink: 0 }}>
             <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.5 }}>
               ไรเดอร์ ({riders.length})
@@ -596,6 +597,21 @@ export default function PlannerDashboard() {
 
         {/* ── CENTER: Map ── */}
         <div style={{ flex: 1, position: "relative" }}>
+          {/* Rider panel toggle */}
+          <button
+            onClick={() => setLeftOpen(p => !p)}
+            title={leftOpen ? "ซ่อนรายการไรเดอร์" : "แสดงรายการไรเดอร์"}
+            style={{
+              position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)",
+              zIndex: 10, background: "#fff", border: `1px solid ${BORDER}`,
+              borderRadius: "50%", width: 28, height: 28, padding: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,.18)", flexShrink: 0,
+            }}
+          >
+            <ChevronLeft size={15} color={TEXT2} style={{ transform: leftOpen ? "none" : "rotate(180deg)", transition: "transform 0.2s" }} />
+          </button>
+
           <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY ?? ""}>
             <Map
               defaultCenter={{ lat: OFFICE_LAT, lng: OFFICE_LNG }}
