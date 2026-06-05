@@ -227,19 +227,19 @@ function JobCard({
   );
 }
 
-// ─── Dashed lines: rider → assigned job ──────────────────────────────────────
-function DashedLines({ riders, jobs }: { riders: ActiveRider[]; jobs: Job[] }) {
+// ─── Dashed lines: selected rider → their assigned job ───────────────────────
+function DashedLines({ riders, jobs, selectedRiderId }: { riders: ActiveRider[]; jobs: Job[]; selectedRiderId: string | null }) {
   const map = useMap();
   useEffect(() => {
-    if (!map) return;
+    if (!map || !selectedRiderId) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const g = (window as any).google;
     if (!g) return;
+    const rider = riders.find(r => r.rider_id === selectedRiderId);
+    if (!rider) return;
     const lines: unknown[] = [];
     for (const job of jobs) {
-      if (!job.rider_id || !job.appt_lat || !job.appt_lng) continue;
-      const rider = riders.find(r => r.rider_id === job.rider_id);
-      if (!rider) continue;
+      if (job.rider_id !== selectedRiderId || !job.appt_lat || !job.appt_lng) continue;
       const line = new g.maps.Polyline({
         path: [{ lat: rider.lat, lng: rider.lng }, { lat: job.appt_lat, lng: job.appt_lng }],
         strokeOpacity: 0,
@@ -251,7 +251,7 @@ function DashedLines({ riders, jobs }: { riders: ActiveRider[]; jobs: Job[] }) {
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return () => lines.forEach((l: any) => l.setMap(null));
-  }, [map, riders, jobs]);
+  }, [map, riders, jobs, selectedRiderId]);
   return null;
 }
 
@@ -570,8 +570,8 @@ export default function PlannerDashboard() {
                 );
               })}
 
-              {/* Dashed lines: rider → assigned job */}
-              <DashedLines riders={riders} jobs={jobs} />
+              {/* Dashed line: selected rider → their assigned job */}
+              <DashedLines riders={riders} jobs={jobs} selectedRiderId={selectedRiderId} />
 
               {/* Job markers */}
               {jobs.filter(j => j.appt_lat && j.appt_lng).map(job => {
