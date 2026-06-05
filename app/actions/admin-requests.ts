@@ -120,10 +120,43 @@ function mapRow(row: any): AdminRequest {
   };
 }
 
+// ─── Reclaim jobs not accepted within 10 minutes (called lazily on page load) ─
+async function reclaimTimedOutJobs(supabase: ReturnType<typeof createServerClient>) {
+  const TIMEOUT_MINUTES = 10;
+  const cutoff = new Date(Date.now() - TIMEOUT_MINUTES * 60 * 1000).toISOString();
+  const now = new Date().toISOString();
+
+  const { data: timedOut } = await supabase
+    .from("requests")
+    .select("id, rider_id, status_log")
+    .eq("status", "confirmed")
+    .not("rider_id", "is", null)
+    .lt("assigned_at", cutoff);
+
+  for (const job of timedOut ?? []) {
+    const newLog = [
+      ...(job.status_log ?? []),
+      { status: "confirmed", timestamp: now, note: `ไม่รับงานภายใน ${TIMEOUT_MINUTES} นาที — ระบบดึงงานกลับ` },
+    ];
+    const { data: updated } = await supabase
+      .from("requests")
+      .update({ rider_id: null, rider_name: null, assigned_at: null, status_log: newLog, updated_at: now })
+      .eq("id", job.id).eq("status", "confirmed").not("rider_id", "is", null)
+      .select("id");
+    if (updated?.length) {
+      await supabase.from("rider_locations")
+        .update({ current_job_id: null, updated_at: now })
+        .eq("rider_id", job.rider_id).eq("current_job_id", job.id);
+      after(() => broadcastRequestUpdate(job.id).catch(console.error));
+    }
+  }
+}
+
 // ─── Fetch all requests (owner) or assigned-only (staff) ─────────────────────
 export async function fetchRequests(assignedToUserId?: string): Promise<AdminRequest[]> {
   await requireAuth();
   const supabase = createServerClient();
+  after(() => reclaimTimedOutJobs(supabase).catch(console.error));
   let query = supabase.from("requests").select("*")
     .neq("source", "manual")
     .order("created_at", { ascending: false });
