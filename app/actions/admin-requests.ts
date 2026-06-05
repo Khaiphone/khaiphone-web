@@ -302,6 +302,22 @@ async function geocodeLocation(location: string): Promise<{ lat: number; lng: nu
 
   const key = process.env.GOOGLE_MAPS_SERVER_KEY ?? process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
 
+  // Plain coordinate pair: "13.778680, 100.492925" or "13.778680,100.492925"
+  const coordPair = trimmed.match(/^(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)$/);
+  if (coordPair) {
+    const coords = { lat: parseFloat(coordPair[1]), lng: parseFloat(coordPair[2]) };
+    if (key) {
+      try {
+        const rUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${coords.lat},${coords.lng}&key=${key}&language=th&region=th`;
+        const rRes = await fetch(rUrl, { cache: "no-store" });
+        const rData = await rRes.json();
+        const addr = rData?.results?.[0]?.formatted_address as string | undefined;
+        if (addr) return { ...coords, resolvedAddress: addr };
+      } catch { /* ignore */ }
+    }
+    return coords;
+  }
+
   // If it looks like a URL — extract coords, then reverse geocode for a readable address
   if (trimmed.startsWith("http")) {
     let coords = extractCoordsFromMapsUrl(trimmed);
