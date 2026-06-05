@@ -83,7 +83,7 @@ export default function NewRequestPage() {
   const [priceOverride, setPriceOverride] = useState<string>("");
   const [saving,        setSaving]        = useState(false);
   const [error,        setError]        = useState<string | null>(null);
-  const [done,         setDone]         = useState<{ orderNumber: string; id: string } | null>(null);
+  const [done,         setDone]         = useState<{ orderNumber: string; id: string; phone: string } | null>(null);
   const [copied,       setCopied]       = useState(false);
   const [pinCoords,    setPinCoords]    = useState<{ lat: number; lng: number } | null>(null);
 
@@ -272,19 +272,18 @@ export default function NewRequestPage() {
     });
     setSaving(false);
     if (result.success) {
-      setDone({ orderNumber: result.orderNumber, id: result.id });
+      setDone({ orderNumber: result.orderNumber, id: result.id, phone: form.customerPhone.trim() });
     } else {
       setError(result.error);
     }
   }
 
-  function trackingUrl(orderNumber: string) {
-    const base = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL ?? "");
-    return `${base}/track?order=${orderNumber}`;
+  function trackingUrl(orderNumber: string, phone: string) {
+    return `https://khaiphone.com/request/${orderNumber}?phone=${encodeURIComponent(phone)}`;
   }
 
-  async function copyLink(orderNumber: string) {
-    const url = trackingUrl(orderNumber);
+  async function copyLink(orderNumber: string, phone: string) {
+    const url = trackingUrl(orderNumber, phone);
     try {
       await navigator.clipboard.writeText(url);
     } catch {
@@ -305,7 +304,7 @@ export default function NewRequestPage() {
 
   // ─── Success screen ────────────────────────────────────────────────────────
   if (done) {
-    const url = trackingUrl(done.orderNumber);
+    const url = trackingUrl(done.orderNumber, done.phone);
     return (
       <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
         <div style={{ maxWidth: 480, width: "100%", background: CARD, borderRadius: 20, border: `1px solid ${BORDER}`, padding: 28, textAlign: "center" }}>
@@ -319,7 +318,7 @@ export default function NewRequestPage() {
             <p style={{ color: TEXT3, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", margin: "0 0 6px" }}>ลิงก์ติดตามสถานะ</p>
             <p style={{ color: TEXT2, fontSize: 12, margin: "0 0 10px", wordBreak: "break-all" }}>{url}</p>
             <button
-              onClick={() => copyLink(done.orderNumber)}
+              onClick={() => copyLink(done.orderNumber, done.phone)}
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", border: `1px solid ${BORDER}`, borderRadius: 8, background: CARD, color: copied ? "#059669" : TEXT2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", width: "100%", justifyContent: "center" }}
             >
               {copied ? <><Check size={14} /> คัดลอกแล้ว</> : <><Copy size={14} /> คัดลอกลิงก์</>}
