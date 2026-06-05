@@ -133,7 +133,7 @@ export default function RidersDashboard() {
             <Map
               defaultCenter={mapCenter}
               defaultZoom={12}
-              mapId="khaiphone-rider-map"
+              mapId="22ccc57d606934a9bbe74a52"
               style={{ width: "100%", height: "100%" }}
               disableDefaultUI={false}
             >

@@ -167,7 +167,7 @@ export default function RiderDetailPage() {
                 <Map
                   defaultCenter={{ lat: currentLocation.lat, lng: currentLocation.lng }}
                   defaultZoom={12}
-                  mapId="rider-trail-map"
+                  mapId="22ccc57d606934a9a2ae7032"
                   style={{ width: "100%", height: "100%" }}
                   disableDefaultUI
                 >
