@@ -1562,11 +1562,13 @@ export default function JobWizardPage() {
     setBusy(true); setStartError("");
     const result = await riderStartJob(id);
     if (!result.success) { setStartError((result as { success:false; error?:string }).error ?? "ไม่สามารถออกเดินทางได้"); setBusy(false); return; }
+    setTrackingMode("enroute"); // keep local ping state in sync
     reload(); setBusy(false);
   }
   async function handleArrive() {
     setBusy(true);
     await riderArriveJob(id);
+    setTrackingMode("on_site"); // keep local ping state in sync
     reload();
   }
   async function handleNoShow() {

@@ -235,6 +235,11 @@ export async function riderStartJob(id: string) {
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
 
+  // Sync tracking_mode so planner sees "กำลังเดินทาง" immediately
+  await supabase.from("rider_locations")
+    .update({ tracking_mode: "enroute", current_job_id: id, updated_at: now })
+    .eq("rider_id", user.id);
+
   after(async () => {
     await broadcastRequestUpdate(id);
     await sendPushToOwners({
@@ -259,6 +264,12 @@ export async function riderArriveJob(id: string) {
   const { error } = await supabase
     .from("requests").update({ status: "inspecting", status_log: newLog, updated_at: now }).eq("id", id);
   if (error) return { success: false as const, error: error.message };
+
+  // Sync tracking_mode so planner sees "กับลูกค้า" immediately
+  await supabase.from("rider_locations")
+    .update({ tracking_mode: "on_site", current_job_id: id, updated_at: now })
+    .eq("rider_id", user.id);
+
   after(async () => {
     await broadcastRequestUpdate(id);
     await sendPushToOwners({
