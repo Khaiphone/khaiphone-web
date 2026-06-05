@@ -164,17 +164,28 @@ export async function fetchActiveRiders() {
   await requireAuth();
   const supabase = createServerClient();
 
-  const { data } = await supabase
+  const { data: locs } = await supabase
     .from("rider_locations")
-    .select(`
-      rider_id, lat, lng, accuracy_m, tracking_mode, battery_pct,
-      app_state, last_heartbeat, is_online, current_job_id, shift_id,
-      admin_users!rider_locations_rider_id_fkey(name, phone),
-      rider_shifts!rider_locations_shift_id_fkey(clocked_in_at, jobs_completed)
-    `)
+    .select("rider_id, lat, lng, accuracy_m, tracking_mode, battery_pct, app_state, last_heartbeat, is_online, current_job_id, shift_id")
     .eq("is_online", true);
 
-  return data ?? [];
+  if (!locs || locs.length === 0) return [];
+
+  const riderIds = locs.map(l => l.rider_id);
+  const shiftIds = locs.map(l => l.shift_id).filter(Boolean) as string[];
+
+  const [{ data: users }, { data: shifts }] = await Promise.all([
+    supabase.from("admin_users").select("user_id, name, phone").in("user_id", riderIds),
+    shiftIds.length > 0
+      ? supabase.from("rider_shifts").select("id, clocked_in_at, jobs_completed").in("id", shiftIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  return locs.map(loc => ({
+    ...loc,
+    admin_users: users?.find(u => u.user_id === loc.rider_id) ?? null,
+    rider_shifts: shifts?.find(s => s.id === loc.shift_id) ?? null,
+  }));
 }
 
 // ─── Fetch rider location history for trail map ───────────────────────────────
@@ -218,42 +229,42 @@ export async function fetchRiderSuggestionsForRequest(requestId: string): Promis
   // Fetch all online riders with their current positions
   const { data: locs } = await supabase
     .from("rider_locations")
-    .select(`
-      rider_id, lat, lng, tracking_mode, battery_pct,
-      admin_users!rider_locations_rider_id_fkey(name),
-      rider_shifts!rider_locations_shift_id_fkey(jobs_completed)
-    `)
+    .select("rider_id, lat, lng, tracking_mode, battery_pct, shift_id")
     .eq("is_online", true);
 
   if (!locs || locs.length === 0) {
     return { riders: [], appt_location: req?.appt_location ?? null };
   }
 
-  // Calculate haversine distance from each rider to appointment
-  // If we have geocoded coords use those; otherwise fall back to office as reference
+  const riderIds = locs.map(l => l.rider_id);
+  const shiftIds = locs.map(l => l.shift_id).filter(Boolean) as string[];
+
+  const [{ data: users }, { data: shifts }] = await Promise.all([
+    supabase.from("admin_users").select("user_id, name").in("user_id", riderIds),
+    shiftIds.length > 0
+      ? supabase.from("rider_shifts").select("id, jobs_completed").in("id", shiftIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
   const targetLat = req?.appt_lat ?? null;
   const targetLng = req?.appt_lng ?? null;
 
   const { haversineKm, etaMinutes } = await import("@/lib/geo-utils");
 
   const suggestions = locs
-    .map((r: Record<string, unknown>) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const adminUsers = r.admin_users as any;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const riderShifts = r.rider_shifts as any;
+    .map(r => {
       const distKm =
         targetLat != null && targetLng != null
-          ? haversineKm(r.lat as number, r.lng as number, targetLat, targetLng)
+          ? haversineKm(r.lat, r.lng, targetLat, targetLng)
           : 0;
       return {
-        rider_id:       r.rider_id as string,
-        name:           adminUsers?.name ?? "ไรเดอร์",
-        tracking_mode:  r.tracking_mode as string,
-        battery_pct:    r.battery_pct as number | null,
+        rider_id:       r.rider_id,
+        name:           users?.find(u => u.user_id === r.rider_id)?.name ?? "ไรเดอร์",
+        tracking_mode:  r.tracking_mode,
+        battery_pct:    r.battery_pct,
         distanceKm:     Math.round(distKm * 10) / 10,
         etaMinutes:     etaMinutes(distKm),
-        jobs_completed: riderShifts?.jobs_completed ?? 0,
+        jobs_completed: shifts?.find(s => s.id === r.shift_id)?.jobs_completed ?? 0,
       };
     })
     .sort((a, b) => a.distanceKm - b.distanceKm);
