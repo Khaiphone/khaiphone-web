@@ -408,7 +408,7 @@ export async function assignRider(id: string, riderId: string | null, riderName:
   // Fetch address, current rider, and status for this request
   const { data: req } = await supabase
     .from("requests")
-    .select("order_number, device_model, appt_location, status, rider_id")
+    .select("order_number, device_model, appt_location, status, rider_id, rider_name")
     .eq("id", id)
     .single();
 
@@ -429,9 +429,11 @@ export async function assignRider(id: string, riderId: string | null, riderName:
   if (error) return { success: false as const, error: error.message };
 
   // Sync rider_locations.current_job_id so the map shows correct status
-  const prevRiderId = req?.rider_id as string | null;
+  const prevRiderId   = req?.rider_id   as string | null;
+  const prevRiderName = req?.rider_name as string | null;
+  const isReassign    = !!prevRiderId && prevRiderId !== riderId;
+
   if (prevRiderId && prevRiderId !== riderId) {
-    // Clear previous rider's job
     await supabase.from("rider_locations")
       .update({ current_job_id: null, updated_at: now })
       .eq("rider_id", prevRiderId);
@@ -442,7 +444,28 @@ export async function assignRider(id: string, riderId: string | null, riderName:
       .eq("rider_id", riderId);
   }
 
+  // Activity log
+  logActivity({
+    userId: caller.id,
+    requestId: id,
+    orderNumber: req?.order_number,
+    action: isReassign ? "rider_reassigned" : "rider_assigned",
+    detail: isReassign
+      ? `เปลี่ยนจาก ${prevRiderName ?? "ไรเดอร์"} → ${riderName ?? "ไม่ระบุ"}`
+      : `มอบหมายให้ ${riderName ?? "ไม่ระบุ"}`,
+  });
+
   after(() => broadcastRequestUpdate(id));
+
+  // Notify old rider their job was taken
+  if (isReassign && prevRiderId) {
+    after(() => sendPushToUser(prevRiderId, {
+      title: "งานถูกยกเลิก",
+      body:  `${req?.order_number ?? ""} · ${req?.device_model ?? ""} ถูกมอบหมายให้ไรเดอร์คนอื่นแล้ว`,
+      url:   `/rider`,
+      tag:   `rider-unassign-${id}`,
+    }).catch(console.error));
+  }
 
   if (riderId) {
     const distText = distanceKm ? ` · ${distanceKm} กม.` : "";

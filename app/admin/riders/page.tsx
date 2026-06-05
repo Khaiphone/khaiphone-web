@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps";
+import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
 import { Battery, AlertTriangle, ChevronDown, X, Zap, RefreshCw, MapPin, Clock, User, CalendarDays, UserCheck, Wrench, CheckCircle2, XCircle, BarChart2, ArrowRight, Settings, ClipboardList, Navigation, Search } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -225,6 +225,34 @@ function JobCard({
       <p style={{ margin: "4px 0 0", fontSize: 10, color: TEXT3 }}>↖ ลากไปวางที่ไรเดอร์บนแผนที่</p>
     </div>
   );
+}
+
+// ─── Dashed lines: rider → assigned job ──────────────────────────────────────
+function DashedLines({ riders, jobs }: { riders: ActiveRider[]; jobs: Job[] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!map) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const g = (window as any).google;
+    if (!g) return;
+    const lines: unknown[] = [];
+    for (const job of jobs) {
+      if (!job.rider_id || !job.appt_lat || !job.appt_lng) continue;
+      const rider = riders.find(r => r.rider_id === job.rider_id);
+      if (!rider) continue;
+      const line = new g.maps.Polyline({
+        path: [{ lat: rider.lat, lng: rider.lng }, { lat: job.appt_lat, lng: job.appt_lng }],
+        strokeOpacity: 0,
+        strokeWeight: 2,
+        icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 0.7, strokeColor: PURPLE, scale: 3 }, offset: "0", repeat: "14px" }],
+        map,
+      });
+      lines.push(line);
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return () => lines.forEach((l: any) => l.setMap(null));
+  }, [map, riders, jobs]);
+  return null;
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -542,6 +570,9 @@ export default function PlannerDashboard() {
                 );
               })}
 
+              {/* Dashed lines: rider → assigned job */}
+              <DashedLines riders={riders} jobs={jobs} />
+
               {/* Job markers */}
               {jobs.filter(j => j.appt_lat && j.appt_lng).map(job => {
                 const status = getSLAStatus(job);
@@ -699,16 +730,57 @@ export default function PlannerDashboard() {
                     <div style={{ padding: "10px 14px 6px", borderTop: `2px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}` }}>
                       <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: PURPLE, textTransform: "uppercase", letterSpacing: 0.5 }}>🏍 Assign แล้ว ({assignedJobs.length})</p>
                     </div>
-                    {assignedJobs.map(job => (
-                      <div key={job.id} style={{ padding: "10px 14px", borderBottom: `1px solid ${BORDER}` }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>#{job.order_number}</span>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: PURPLE, background: `${PURPLE}12`, padding: "2px 8px", borderRadius: 99 }}>🏍 {job.rider_name}</span>
+                    {assignedJobs.map(job => {
+                      const ridersForReassign = riders
+                        .filter(r => r.tracking_mode === "idle" && !r.current_job_id && r.rider_id !== job.rider_id)
+                        .map(r => ({
+                          rider_id: r.rider_id,
+                          name: r.admin_users?.name ?? "ไรเดอร์",
+                          distKm: job.appt_lat && job.appt_lng
+                            ? haversineKm(r.lat, r.lng, job.appt_lat!, job.appt_lng!)
+                            : 0,
+                        }))
+                        .sort((a, b) => a.distKm - b.distKm);
+                      const isReassignOpen = assignDropdownJob === job.id;
+                      const isAssigning = assigning === job.id;
+                      return (
+                        <div key={job.id} style={{ padding: "10px 14px", borderBottom: `1px solid ${BORDER}` }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>#{job.order_number}</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: PURPLE, background: `${PURPLE}12`, padding: "2px 8px", borderRadius: 99 }}>🏍 {job.rider_name}</span>
+                              <div style={{ position: "relative" }}>
+                                <button
+                                  disabled={isAssigning}
+                                  onClick={() => setAssignDropdownJob(isReassignOpen ? null : job.id)}
+                                  style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "2px 7px", fontSize: 11, color: TEXT2, cursor: isAssigning ? "wait" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 3 }}
+                                >
+                                  {isAssigning ? "..." : <>เปลี่ยน <ChevronDown size={10} /></>}
+                                </button>
+                                {isReassignOpen && (
+                                  <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,.12)", zIndex: 200, minWidth: 180 }}>
+                                    {ridersForReassign.length === 0 ? (
+                                      <div style={{ padding: "10px 14px", fontSize: 12, color: TEXT2 }}>ไม่มีไรเดอร์ว่างคนอื่น</div>
+                                    ) : ridersForReassign.map(r => (
+                                      <button
+                                        key={r.rider_id}
+                                        onClick={() => handleAssign(job.id, r.rider_id, r.name)}
+                                        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 14px", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, color: TEXT, textAlign: "left" }}
+                                      >
+                                        <span style={{ fontWeight: 600 }}>{r.name}</span>
+                                        <span style={{ color: TEXT2, fontSize: 11 }}>{r.distKm.toFixed(1)} กม.</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <p style={{ margin: 0, fontSize: 12, color: TEXT2 }}>{job.device_model ?? "—"} · {job.customer_name ?? "—"}</p>
+                          {job.appt_time && <p style={{ margin: "2px 0 0", fontSize: 11, color: TEXT3 }}>🕐 {job.appt_date} {job.appt_time} น.</p>}
                         </div>
-                        <p style={{ margin: 0, fontSize: 12, color: TEXT2 }}>{job.device_model ?? "—"} · {job.customer_name ?? "—"}</p>
-                        {job.appt_time && <p style={{ margin: "2px 0 0", fontSize: 11, color: TEXT3 }}>🕐 {job.appt_date} {job.appt_time} น.</p>}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </>
