@@ -138,7 +138,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   if (!ready) return <div suppressHydrationWarning style={{ minHeight: "100vh", background: "#0F0F11" }} />;
   if (isLogin) return <AdminRoleProvider>{children}</AdminRoleProvider>;
 
-  const hideBottomNav = /^\/admin\/(requests|prices)\/[^/]+$/.test(pathname);
+  const hideBottomNav = /^\/admin\/(requests|prices)\/[^/]+$/.test(pathname) || pathname.startsWith("/admin/riders");
   const sidebarBg     = dark ? "#1C1C1E" : "#FFFFFF";
   const sidebarBorder = dark ? "#2C2C2E" : "#E5E5E5";
   const sidebarText   = dark ? "#F2F2F7" : "#111111";
