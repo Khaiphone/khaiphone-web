@@ -263,7 +263,7 @@ export default function PlannerDashboard() {
   }, []);
 
   const loadShifts = useCallback(async () => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
     const data = await fetchAllRidersShifts(today);
     setAllShifts(data as AllShift[]);
   }, []);

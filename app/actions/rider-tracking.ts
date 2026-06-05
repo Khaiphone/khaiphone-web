@@ -223,11 +223,14 @@ export async function fetchAllRidersShifts(date: string) {
   await requireAuth();
   const supabase = createServerClient();
 
+  const start = new Date(date + "T00:00:00+07:00").toISOString();
+  const end   = new Date(date + "T23:59:59+07:00").toISOString();
+
   const { data: shifts } = await supabase
     .from("rider_shifts")
     .select("id, rider_id, clocked_in_at, clocked_out_at, jobs_completed, total_distance_km, ended_reason")
-    .gte("clocked_in_at", date)
-    .lte("clocked_in_at", date + "T23:59:59")
+    .gte("clocked_in_at", start)
+    .lte("clocked_in_at", end)
     .order("clocked_in_at", { ascending: false });
 
   if (!shifts || shifts.length === 0) return [];
@@ -424,13 +427,15 @@ export async function fetchRiderShiftStats(riderId: string, dateFrom: string, da
 export async function fetchTodayRequestStats() {
   await requireAuth();
   const supabase = createServerClient();
-  const today = new Date().toISOString().split("T")[0];
+  const thDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
+  const start  = new Date(thDate + "T00:00:00+07:00").toISOString();
+  const end    = new Date(thDate + "T23:59:59+07:00").toISOString();
 
   const { data } = await supabase
     .from("requests")
     .select("status, rider_id")
-    .gte("created_at", today + "T00:00:00")
-    .lte("created_at", today + "T23:59:59");
+    .gte("created_at", start)
+    .lte("created_at", end);
 
   if (!data) return { totalCount: 0, newCount: 0, assignedCount: 0, completedCount: 0, cancelledCount: 0 };
   return {
