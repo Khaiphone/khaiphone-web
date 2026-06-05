@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps";
-import { Battery, AlertTriangle, ChevronDown, X, Zap, RefreshCw, MapPin, Clock, User, CalendarDays, UserCheck, Wrench, CheckCircle2, XCircle, BarChart2, ArrowRight, Settings } from "lucide-react";
+import { Battery, AlertTriangle, ChevronDown, X, Zap, RefreshCw, MapPin, Clock, User, CalendarDays, UserCheck, Wrench, CheckCircle2, XCircle, BarChart2, ArrowRight, Settings, ClipboardList, Navigation, Search } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { fetchActiveRiders, fetchAllRidersShifts, fetchUnassignedJobs, fetchTodayRequestStats } from "@/app/actions/rider-tracking";
 import { assignRider, backfillRequestCoords, autoAssignJobs } from "@/app/actions/admin-requests";
@@ -118,10 +119,12 @@ function Avatar({ name, size = 36 }: { name: string; size?: number }) {
   );
 }
 
-function StatCard({ icon, label, value, color, bold }: { icon: string; label: string; value: number | string; color: string; bold?: boolean }) {
+function StatCard({ icon: Icon, label, value, color, bg, bold }: { icon: LucideIcon; label: string; value: number | string; color: string; bg: string; bold?: boolean }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, background: CARD, borderRadius: 12, padding: "10px 16px", border: `1px solid ${BORDER}`, flex: 1, minWidth: 100 }}>
-      <span style={{ fontSize: 22 }}>{icon}</span>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", borderRadius: 12, padding: "10px 14px", border: `1px solid ${BORDER}`, flex: 1, minWidth: 100 }}>
+      <div style={{ width: 36, height: 36, borderRadius: 10, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <Icon size={18} color={color} strokeWidth={2} />
+      </div>
       <div>
         <p style={{ margin: 0, fontSize: 11, color: TEXT2, fontWeight: 500 }}>{label}</p>
         <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: bold ? color : TEXT, lineHeight: 1.1 }}>{value}</p>
@@ -378,16 +381,16 @@ export default function PlannerDashboard() {
 
       {/* ── Stat bar ── */}
       <div style={{ padding: "10px 16px", display: "flex", gap: 8, flexShrink: 0, background: BG }}>
-        <StatCard icon="📋" label="งานใหม่" value={todayStats.newCount} color={BLUE} />
-        <StatCard icon="⏳" label="รอ Assign" value={unassignedJobs.length} color={YELLOW} bold={unassignedJobs.length > 0} />
-        <StatCard icon="🚗" label="กำลังเดินทาง" value={riders.filter(r => r.tracking_mode === "enroute").length} color={ORANGE} />
-        <StatCard icon="🔍" label="ตรวจเครื่อง" value={riders.filter(r => r.tracking_mode === "on_site").length} color={BLUE} />
-        <StatCard icon="✅" label="เสร็จวันนี้" value={todayStats.completedCount} color={GREEN} />
-        <StatCard icon="👤" label="ไรเดอร์ว่าง" value={idleRiders.length} color={GREEN} bold={idleRiders.length > 0} />
+        <StatCard icon={ClipboardList} label="งานใหม่"       value={todayStats.newCount}                                              color={BLUE}   bg="#EFF6FF" />
+        <StatCard icon={Clock}         label="รอ Assign"      value={unassignedJobs.length}                                           color={YELLOW} bg="#FFFBEB" bold={unassignedJobs.length > 0} />
+        <StatCard icon={Navigation}    label="กำลังเดินทาง"  value={riders.filter(r => r.tracking_mode === "enroute").length}        color={ORANGE} bg="#FFF7ED" />
+        <StatCard icon={Search}        label="ตรวจเครื่อง"   value={riders.filter(r => r.tracking_mode === "on_site").length}        color={BLUE}   bg="#EFF6FF" />
+        <StatCard icon={CheckCircle2}  label="เสร็จวันนี้"   value={todayStats.completedCount}                                       color={GREEN}  bg="#F0FDF4" />
+        <StatCard icon={UserCheck}     label="ไรเดอร์ว่าง"   value={idleRiders.length}                                               color={GREEN}  bg="#F0FDF4" bold={idleRiders.length > 0} />
         <button
           onClick={handleAutoAssign}
           disabled={autoAssigning || unassignedJobs.length === 0 || idleRiders.length === 0}
-          style={{ display: "flex", alignItems: "center", gap: 6, background: autoAssigning ? "#f9fafb" : GOLD, border: "none", borderRadius: 12, padding: "10px 16px", cursor: autoAssigning ? "wait" : "pointer", color: autoAssigning ? TEXT2 : DARK, fontWeight: 800, fontSize: 13, fontFamily: "inherit", flexShrink: 0, opacity: (unassignedJobs.length === 0 || idleRiders.length === 0) && !autoAssigning ? 0.5 : 1, whiteSpace: "nowrap" }}
+          style={{ display: "flex", alignItems: "center", gap: 6, background: autoAssigning ? "#f9fafb" : GOLD, border: autoAssigning ? `1px solid ${BORDER}` : "none", borderRadius: 12, padding: "10px 18px", cursor: autoAssigning ? "wait" : "pointer", color: autoAssigning ? TEXT2 : DARK, fontWeight: 800, fontSize: 13, fontFamily: "inherit", flexShrink: 0, opacity: (unassignedJobs.length === 0 || idleRiders.length === 0) && !autoAssigning ? 0.4 : 1, whiteSpace: "nowrap" }}
         >
           <Zap size={15} /> {autoAssigning ? "กำลัง Auto..." : "Auto Assign"}
         </button>
