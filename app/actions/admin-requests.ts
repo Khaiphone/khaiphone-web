@@ -206,6 +206,7 @@ export async function createRequest(data: {
     appt_date:        data.apptDate,
     appt_time:        data.apptTime,
     appt_location:    data.apptLocation,
+    ...(await geocodeLocation(data.apptLocation ?? "").then(c => c ? { appt_lat: c.lat, appt_lng: c.lng } : {})),
     appt_method:      data.apptMethod,
     payment_method:         data.paymentMethod,
     payment_bank:           data.paymentBank           || null,
@@ -262,6 +263,19 @@ export async function assignRequest(id: string, userId: string | null, name: str
 }
 
 const STORE_ADDRESS = "เดอะแพลนท์ วงแหวน-รังสิต อำเภอธัญบุรี ปทุมธานี 12110";
+
+async function geocodeLocation(location: string): Promise<{ lat: number; lng: number } | null> {
+  const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+  if (!key || !location.trim()) return null;
+  try {
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location)}&key=${key}&language=th&region=th`;
+    const res  = await fetch(url, { cache: "no-store" });
+    const data = await res.json();
+    const loc  = data?.results?.[0]?.geometry?.location;
+    if (loc?.lat && loc?.lng) return { lat: loc.lat, lng: loc.lng };
+  } catch { /* ignore */ }
+  return null;
+}
 
 async function fetchDistanceKm(destination: string): Promise<number | null> {
   const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
@@ -532,6 +546,7 @@ export async function updateAppointment(
 ) {
   await requireAuth();
   const supabase = createServerClient();
+  const coords = await geocodeLocation(appt.location);
   const { data: updated, error } = await supabase
     .from("requests")
     .update({
@@ -540,6 +555,7 @@ export async function updateAppointment(
       appt_location: appt.location,
       appt_method:   appt.method,
       updated_at:    new Date().toISOString(),
+      ...(coords ? { appt_lat: coords.lat, appt_lng: coords.lng } : {}),
     })
     .eq("id", id)
     .select("id");
