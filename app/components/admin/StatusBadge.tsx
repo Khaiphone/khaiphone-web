@@ -3,7 +3,8 @@ import { STATUS_LABELS, type RequestStatus } from "../../../lib/types/admin";
 const STATUS_COLORS: Record<RequestStatus, { color: string; bg: string; dot: string }> = {
   new:               { color: "#92400E", bg: "#FEF3C7", dot: "#F59E0B" },
   pending:           { color: "#1E40AF", bg: "#DBEAFE", dot: "#3B82F6" },
-  inspecting:        { color: "#9A3412", bg: "#FFEDD5", dot: "#F97316" },
+  contacted:         { color: "#9A3412", bg: "#FFEDD5", dot: "#F97316" },
+  inspecting:        { color: "#7C2D12", bg: "#FED7AA", dot: "#EA580C" },
   confirmed:         { color: "#5B21B6", bg: "#EDE9FE", dot: "#8B5CF6" },
   price_negotiation: { color: "#92400E", bg: "#FEF3C7", dot: "#F59E0B" },
   contracting:       { color: "#3730A3", bg: "#E0E7FF", dot: "#4F46E5" },

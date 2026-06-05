@@ -6,7 +6,7 @@ import type { RequestStatus } from "../../../lib/types/admin";
 const STATUSES: Array<{ value: RequestStatus; label: string; dot: string }> = [
   { value: "new",               label: "คำขอใหม่",                   dot: "#F59E0B" },
   { value: "pending",           label: "รอตรวจสอบ",                  dot: "#3B82F6" },
-  { value: "inspecting",        label: "เจ้าหน้าที่ติดต่อกลับแล้ว", dot: "#F97316" },
+  { value: "contacted",         label: "เจ้าหน้าที่ติดต่อกลับแล้ว", dot: "#F97316" },
   { value: "confirmed",         label: "ยืนยันนัดหมาย",              dot: "#8B5CF6" },
   { value: "price_negotiation", label: "รอลูกค้ายืนยันราคา",         dot: "#F59E0B" },
   { value: "contracting",       label: "กำลังทำสัญญาซื้อขาย",        dot: "#4F46E5" },

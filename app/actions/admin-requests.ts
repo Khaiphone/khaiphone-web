@@ -11,13 +11,20 @@ import type { Permission } from "@/lib/admin-permissions";
 import type { AdminRole } from "@/app/actions/admin-users";
 
 const STATUS_LABEL: Record<string, string> = {
-  new:       "คำขอใหม่",
-  pending:   "รอดำเนินการ",
-  contacted: "ติดต่อแล้ว",
-  confirmed: "ยืนยันนัดหมาย",
-  completed: "เสร็จสิ้น",
-  cancelled: "ยกเลิก",
-  no_show:   "ไม่มาตามนัด",
+  new:               "คำขอใหม่",
+  pending:           "รอดำเนินการ",
+  contacted:         "เจ้าหน้าที่ติดต่อกลับแล้ว",
+  confirmed:         "ยืนยันนัดหมาย",
+  pickup_scheduled:  "นัดรับเครื่อง",
+  en_route:          "ไรเดอร์กำลังเดินทาง",
+  inspecting:        "กำลังตรวจเครื่อง",
+  price_negotiation: "รอยืนยันราคา",
+  contracting:       "กำลังทำสัญญา",
+  awaiting_transfer: "รอโอนเงิน",
+  completed:         "เสร็จสิ้น",
+  cancelled:         "ยกเลิก",
+  no_show:           "ไม่มาตามนัด",
+  rejected:          "ไม่เข้าเงื่อนไข",
 };
 
 // ─── Activity log helper ──────────────────────────────────────────────────────

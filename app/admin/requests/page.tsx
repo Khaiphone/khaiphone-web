@@ -22,7 +22,7 @@ const STATUS_TABS: Array<{ value: RequestStatus | "all"; label: string }> = [
   { value: "all",               label: "ทั้งหมด"          },
   { value: "new",               label: "คำขอใหม่"         },
   { value: "pending",           label: "รอตรวจสอบ"        },
-  { value: "inspecting",        label: "ติดต่อกลับแล้ว"   },
+  { value: "contacted",         label: "ติดต่อกลับแล้ว"   },
   { value: "confirmed",         label: "ยืนยันนัดหมาย"    },
   { value: "price_negotiation", label: "รอยืนยันราคา"     },
   { value: "awaiting_transfer", label: "รอโอนเงิน"        },

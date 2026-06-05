@@ -18,6 +18,7 @@ const GOLD   = "var(--admin-gold)";
 const STATUS_LABELS: Record<string, string> = {
   new:               "คำขอใหม่",
   pending:           "รอตรวจสอบ",
+  contacted:         "เจ้าหน้าที่ติดต่อกลับแล้ว",
   inspecting:        "กำลังตรวจสอบ",
   confirmed:         "ยืนยันนัดหมาย",
   price_negotiation: "รอยืนยันราคา",
