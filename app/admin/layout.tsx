@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   LayoutDashboard, ClipboardList, CalendarDays, Bell, MoreHorizontal, Moon, Sun,
+  Map, Users, ArrowLeft,
 } from "lucide-react";
 import BottomTabNav from "../components/admin/BottomTabNav";
 import { supabase } from "@/lib/supabase";
@@ -159,66 +160,75 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
             padding: "24px 0",
           }}
         >
-          <div style={{ padding: "0 20px 24px", borderBottom: `1px solid ${sidebarBorder}` }}>
-            <p style={{ color: sidebarText, fontWeight: 700, fontSize: "15px", margin: 0 }}>Khaiphone.com</p>
-            <p style={{ color: sidebarText2, fontSize: "12px", margin: "2px 0 0" }}>
-              Admin · {role === "owner" ? "เจ้าของ" : "พนักงาน"}
-            </p>
-          </div>
-
-          <nav style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: "4px" }}>
-            {NAV_ITEMS.map(({ label, icon: Icon, href }) => {
-              const active = pathname === href || (href !== "/admin/dashboard" && pathname.startsWith(href));
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "10px",
-                    padding: "10px 12px", borderRadius: "10px",
-                    color: active ? activeColor : sidebarText2,
-                    background: active ? activeBg : "transparent",
-                    textDecoration: "none", fontSize: "14px",
-                    fontWeight: active ? 600 : 400,
-                  }}
-                >
-                  <Icon size={18} strokeWidth={active ? 2.5 : 2} />
-                  {label}
-                </Link>
-              );
-            })}
-
-            {/* Owner-only sidebar links */}
-            {role === "owner" && (
-              <>
-                <div style={{ height: 1, background: sidebarBorder, margin: "8px 4px" }} />
+          {pathname.startsWith("/admin/riders") ? (
+            /* ── Rider system sidebar ── */
+            <>
+              <div style={{ padding: "0 20px 24px", borderBottom: `1px solid ${sidebarBorder}` }}>
+                <p style={{ color: sidebarText, fontWeight: 700, fontSize: "15px", margin: 0 }}>ระบบไรเดอร์</p>
+                <p style={{ color: sidebarText2, fontSize: "12px", margin: "2px 0 0" }}>
+                  Admin · {role === "owner" ? "เจ้าของ" : "พนักงาน"}
+                </p>
+              </div>
+              <nav style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: "4px" }}>
                 {[
-                  { href: "/admin/price-settings", label: "ตั้งค่าราคา" },
-                  { href: "/admin/reports",        label: "รายงาน"       },
-                  { href: "/admin/staff",          label: "จัดการทีม"   },
-                  { href: "/admin/activity",       label: "กิจกรรม"      },
-                ].map(({ href, label }) => {
-                  const active = pathname.startsWith(href);
+                  { href: "/admin/riders",        label: "แผนที่สด",       icon: Map   },
+                  { href: "/admin/riders/manage", label: "จัดการไรเดอร์",  icon: Users },
+                ].map(({ href, label, icon: Icon }) => {
+                  const active = pathname === href || (href !== "/admin/riders" && pathname.startsWith(href));
                   return (
-                    <Link
-                      key={href}
-                      href={href}
-                      style={{
-                        display: "flex", alignItems: "center", gap: "10px",
-                        padding: "10px 12px", borderRadius: "10px",
-                        color: active ? activeColor : sidebarText2,
-                        background: active ? activeBg : "transparent",
-                        textDecoration: "none", fontSize: "14px",
-                        fontWeight: active ? 600 : 400,
-                      }}
-                    >
+                    <Link key={href} href={href} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "10px", color: active ? activeColor : sidebarText2, background: active ? activeBg : "transparent", textDecoration: "none", fontSize: "14px", fontWeight: active ? 600 : 400 }}>
+                      <Icon size={18} strokeWidth={active ? 2.5 : 2} />
                       {label}
                     </Link>
                   );
                 })}
-              </>
-            )}
-          </nav>
+                <div style={{ height: 1, background: sidebarBorder, margin: "8px 4px" }} />
+                <Link href="/admin/dashboard" style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "10px", color: sidebarText2, textDecoration: "none", fontSize: "14px" }}>
+                  <ArrowLeft size={18} strokeWidth={2} />
+                  กลับหน้าหลัก
+                </Link>
+              </nav>
+            </>
+          ) : (
+            /* ── Normal admin sidebar ── */
+            <>
+              <div style={{ padding: "0 20px 24px", borderBottom: `1px solid ${sidebarBorder}` }}>
+                <p style={{ color: sidebarText, fontWeight: 700, fontSize: "15px", margin: 0 }}>Khaiphone.com</p>
+                <p style={{ color: sidebarText2, fontSize: "12px", margin: "2px 0 0" }}>
+                  Admin · {role === "owner" ? "เจ้าของ" : "พนักงาน"}
+                </p>
+              </div>
+              <nav style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                {NAV_ITEMS.map(({ label, icon: Icon, href }) => {
+                  const active = pathname === href || (href !== "/admin/dashboard" && pathname.startsWith(href));
+                  return (
+                    <Link key={href} href={href} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "10px", color: active ? activeColor : sidebarText2, background: active ? activeBg : "transparent", textDecoration: "none", fontSize: "14px", fontWeight: active ? 600 : 400 }}>
+                      <Icon size={18} strokeWidth={active ? 2.5 : 2} />
+                      {label}
+                    </Link>
+                  );
+                })}
+                {role === "owner" && (
+                  <>
+                    <div style={{ height: 1, background: sidebarBorder, margin: "8px 4px" }} />
+                    {[
+                      { href: "/admin/price-settings", label: "ตั้งค่าราคา" },
+                      { href: "/admin/reports",        label: "รายงาน"       },
+                      { href: "/admin/staff",          label: "จัดการทีม"   },
+                      { href: "/admin/activity",       label: "กิจกรรม"      },
+                    ].map(({ href, label }) => {
+                      const active = pathname.startsWith(href);
+                      return (
+                        <Link key={href} href={href} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "10px", color: active ? activeColor : sidebarText2, background: active ? activeBg : "transparent", textDecoration: "none", fontSize: "14px", fontWeight: active ? 600 : 400 }}>
+                          {label}
+                        </Link>
+                      );
+                    })}
+                  </>
+                )}
+              </nav>
+            </>
+          )}
 
           <div style={{ padding: "16px 12px", borderTop: `1px solid ${sidebarBorder}`, display: "flex", flexDirection: "column", gap: 8 }}>
             <button

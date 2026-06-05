@@ -92,6 +92,7 @@ export default function RidersDashboard() {
   const [sidebarTab, setSidebarTab] = useState<"riders" | "shifts">("riders");
   const [allShifts, setAllShifts] = useState<AllShift[]>([]);
   const [shiftsLoading, setShiftsLoading] = useState(false);
+  const [shiftFilter, setShiftFilter] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const data = await fetchActiveRiders();
@@ -316,8 +317,28 @@ export default function RidersDashboard() {
             </>
           ) : (
             /* Shifts tab */
-            <div style={{ flex: 1 }}>
-              <div style={{ padding: "12px 16px 8px" }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+              {/* Rider filter pills */}
+              {allShifts.length > 0 && (() => {
+                const names = [...new Set(allShifts.map(s => s.rider_name))];
+                if (names.length < 2) return null;
+                return (
+                  <div style={{ padding: "10px 12px 0", display: "flex", gap: 6, flexWrap: "wrap", flexShrink: 0 }}>
+                    <button
+                      onClick={() => setShiftFilter(null)}
+                      style={{ padding: "4px 10px", borderRadius: 99, border: `1px solid ${shiftFilter === null ? BLUE : BORDER}`, background: shiftFilter === null ? `${BLUE}12` : "transparent", color: shiftFilter === null ? BLUE : TEXT2, fontSize: 12, fontWeight: shiftFilter === null ? 700 : 400, cursor: "pointer", fontFamily: "inherit" }}
+                    >ทั้งหมด</button>
+                    {names.map(name => (
+                      <button
+                        key={name}
+                        onClick={() => setShiftFilter(name === shiftFilter ? null : name)}
+                        style={{ padding: "4px 10px", borderRadius: 99, border: `1px solid ${shiftFilter === name ? BLUE : BORDER}`, background: shiftFilter === name ? `${BLUE}12` : "transparent", color: shiftFilter === name ? BLUE : TEXT2, fontSize: 12, fontWeight: shiftFilter === name ? 700 : 400, cursor: "pointer", fontFamily: "inherit" }}
+                      >{name}</button>
+                    ))}
+                  </div>
+                );
+              })()}
+              <div style={{ padding: "8px 16px 4px" }}>
                 <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.5 }}>
                   Shift ทั้งหมดวันนี้
                 </p>
@@ -329,8 +350,8 @@ export default function RidersDashboard() {
                   <Clock size={32} color={BORDER} style={{ marginBottom: 8 }} />
                   <p style={{ margin: 0, fontSize: 14, color: TEXT2 }}>ยังไม่มี Shift วันนี้</p>
                 </div>
-              ) : allShifts.map((s, i) => (
-                <div key={s.id} style={{ padding: "12px 16px", borderBottom: i < allShifts.length - 1 ? `1px solid ${BORDER}` : "none" }}>
+              ) : allShifts.filter(s => shiftFilter === null || s.rider_name === shiftFilter).map((s, i, arr) => (
+                <div key={s.id} style={{ padding: "12px 16px", borderBottom: i < arr.length - 1 ? `1px solid ${BORDER}` : "none" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{s.rider_name}</span>
                     <span style={{ fontSize: 13, fontWeight: 700, color: GREEN }}>{s.jobs_completed} งาน</span>
