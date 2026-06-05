@@ -1,177 +1,307 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps";
-import { Navigation, Battery, Wifi, AlertTriangle, ChevronRight, Users, CheckCircle2, Clock, Settings, Smartphone } from "lucide-react";
+import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps";
+import { Battery, AlertTriangle, Settings, ChevronDown, X, Zap, RefreshCw, MapPin, Clock, CheckCircle, User } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { fetchActiveRiders, fetchAllRidersShifts, fetchUnassignedJobs } from "@/app/actions/rider-tracking";
-import { assignRider, backfillRequestCoords } from "@/app/actions/admin-requests";
-import { haversineKm, etaMinutes, fmtDistance, fmtEta, OFFICE_LAT, OFFICE_LNG } from "@/lib/geo-utils";
+import { fetchActiveRiders, fetchAllRidersShifts, fetchUnassignedJobs, fetchTodayRequestStats } from "@/app/actions/rider-tracking";
+import { assignRider, backfillRequestCoords, autoAssignJobs } from "@/app/actions/admin-requests";
+import { haversineKm, OFFICE_LAT, OFFICE_LNG } from "@/lib/geo-utils";
 
-const DARK = "#1a1a2e";
-const GOLD = "#c9a84c";
-const CARD = "#ffffff";
+// ─── Design tokens ────────────────────────────────────────────────────────────
+const GOLD   = "#c9a84c";
+const DARK   = "#1a1a2e";
+const BG     = "#f4f5f7";
+const CARD   = "#ffffff";
 const BORDER = "#e5e7eb";
-const TEXT = "#1a1a1a";
-const TEXT2 = "#6b7280";
-const GREEN = "#16a34a";
-const RED = "#dc2626";
-const BLUE = "#2563eb";
+const TEXT   = "#111827";
+const TEXT2  = "#6b7280";
+const TEXT3  = "#9ca3af";
+const GREEN  = "#16a34a";
+const RED    = "#dc2626";
 const ORANGE = "#ea580c";
+const BLUE   = "#2563eb";
+const PURPLE = "#7c3aed";
+const YELLOW = "#d97706";
 
 const MODE_COLOR: Record<string, string> = {
-  idle:    BLUE,
-  enroute: ORANGE,
-  on_site: GREEN,
-  return:  "#7c3aed",
+  idle: GREEN, enroute: ORANGE, on_site: BLUE, return: PURPLE,
 };
-
 const MODE_LABEL: Record<string, string> = {
-  idle:    "ว่าง",
-  enroute: "เดินทาง",
-  on_site: "กับลูกค้า",
-  return:  "กลับออฟฟิศ",
+  idle: "ว่าง", enroute: "เดินทาง", on_site: "กับลูกค้า", return: "กลับออฟฟิศ",
 };
 
+// ─── Types ────────────────────────────────────────────────────────────────────
 type ActiveRider = {
-  rider_id: string;
-  lat: number;
-  lng: number;
-  accuracy_m: number | null;
-  tracking_mode: string;
-  battery_pct: number | null;
-  app_state: string;
-  last_heartbeat: string;
-  is_online: boolean;
-  current_job_id: string | null;
-  shift_id: string | null;
+  rider_id: string; lat: number; lng: number;
+  tracking_mode: string; battery_pct: number | null;
+  last_heartbeat: string; is_online: boolean;
+  current_job_id: string | null; shift_id: string | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  admin_users: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  rider_shifts: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  current_job: any;
+  admin_users: any; rider_shifts: any; current_job: any;
 };
 
-type UnassignedJob = {
-  id: string;
-  order_number: string;
-  device_model: string | null;
-  customer_name: string | null;
-  appt_location: string | null;
-  appt_date: string | null;
-  appt_time: string | null;
-  appt_lat: number | null;
-  appt_lng: number | null;
-  rider_id: string | null;
-  rider_name: string | null;
+type Job = {
+  id: string; order_number: string; device_model: string | null;
+  customer_name: string | null; appt_location: string | null;
+  appt_date: string | null; appt_time: string | null;
+  appt_lat: number | null; appt_lng: number | null;
+  rider_id: string | null; rider_name: string | null;
 };
 
 type AllShift = {
-  id: string;
-  rider_id: string;
-  rider_name: string;
-  clocked_in_at: string;
-  clocked_out_at: string | null;
-  jobs_completed: number;
-  total_distance_km: number | null;
-  ended_reason: string | null;
+  id: string; rider_id: string; rider_name: string;
+  clocked_in_at: string; clocked_out_at: string | null;
+  jobs_completed: number; total_distance_km: number | null; ended_reason: string | null;
 };
 
-function shiftDuration(clockedIn: string, clockedOut?: string | null): string {
-  const ms = (clockedOut ? new Date(clockedOut) : new Date()).getTime() - new Date(clockedIn).getTime();
-  const h = Math.floor(ms / 3_600_000);
-  const m = Math.floor((ms % 3_600_000) / 60_000);
-  return `${h}h ${m}m`;
+type SLAStatus = "overdue" | "warning" | "ok" | "none";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function minutesToSLA(apptDate: string | null, apptTime: string | null): number | null {
+  if (!apptDate || !apptTime) return null;
+  const apptMs = new Date(`${apptDate}T${apptTime}:00`).getTime();
+  const deadlineMs = apptMs - 60 * 60 * 1000; // 1 hour before
+  return Math.floor((deadlineMs - Date.now()) / 60000);
+}
+
+function getSLAStatus(job: Job): SLAStatus {
+  if (job.rider_id) return "none"; // already assigned
+  const mins = minutesToSLA(job.appt_date, job.appt_time);
+  if (mins === null) return "none";
+  if (mins < 0) return "overdue";
+  if (mins <= 15) return "warning";
+  return "ok";
+}
+
+function slaColor(status: SLAStatus): string {
+  if (status === "overdue") return RED;
+  if (status === "warning") return YELLOW;
+  return GREEN;
+}
+
+function slaLabel(mins: number | null): string {
+  if (mins === null) return "";
+  if (mins < 0) return `เกิน SLA ${Math.abs(mins)} นาที`;
+  if (mins < 60) return `${mins} นาที`;
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return `${h} ชม.${m > 0 ? ` ${m} นาที` : ""}`;
 }
 
 function lastSeen(iso: string): string {
   const sec = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (sec < 30) return "เพิ่งอัพเดต";
-  if (sec < 120) return `${sec} วิที่แล้ว`;
-  const m = Math.floor(sec / 60);
-  return `${m} นาทีที่แล้ว`;
+  if (sec < 60) return "เพิ่งอัพเดต";
+  return `${Math.floor(sec / 60)} นาทีที่แล้ว`;
 }
 
-function thTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+function thDate(): string {
+  return new Date().toLocaleDateString("th-TH", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 }
 
-function minutesUntilAppt(date: string | null, time: string | null): number | null {
-  if (!date || !time) return null;
-  return Math.floor((new Date(`${date}T${time}:00`).getTime() - Date.now()) / 60000);
+function shiftDuration(clockedIn: string, clockedOut?: string | null): string {
+  const ms = (clockedOut ? new Date(clockedOut) : new Date()).getTime() - new Date(clockedIn).getTime();
+  const h = Math.floor(ms / 3_600_000), m = Math.floor((ms % 3_600_000) / 60_000);
+  return `${h}h ${m}m`;
 }
 
-function urgencyColor(mins: number | null): string {
-  if (mins === null) return TEXT2;
-  if (mins < 0) return TEXT2;
-  if (mins < 60) return RED;
-  if (mins < 180) return ORANGE;
-  return GREEN;
+// ─── Sub-components ───────────────────────────────────────────────────────────
+function Avatar({ name, size = 36 }: { name: string; size?: number }) {
+  const initials = name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase() || "?";
+  const hue = (name.charCodeAt(0) * 47 + (name.charCodeAt(1) ?? 0) * 23) % 360;
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: "50%", flexShrink: 0,
+      background: `hsl(${hue},55%,50%)`, display: "flex", alignItems: "center",
+      justifyContent: "center", color: "#fff", fontSize: size * 0.38, fontWeight: 700,
+    }}>{initials}</div>
+  );
 }
 
-function urgencyLabel(mins: number | null): string {
-  if (mins === null) return "";
-  if (mins < 0) return "เลยเวลา";
-  if (mins < 60) return `${mins} นาที`;
-  return `${Math.floor(mins / 60)} ชม.${mins % 60 > 0 ? ` ${mins % 60} นาที` : ""}`;
+function StatCard({ icon, label, value, color, bold }: { icon: string; label: string; value: number | string; color: string; bold?: boolean }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, background: CARD, borderRadius: 12, padding: "10px 16px", border: `1px solid ${BORDER}`, flex: 1, minWidth: 100 }}>
+      <span style={{ fontSize: 22 }}>{icon}</span>
+      <div>
+        <p style={{ margin: 0, fontSize: 11, color: TEXT2, fontWeight: 500 }}>{label}</p>
+        <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: bold ? color : TEXT, lineHeight: 1.1 }}>{value}</p>
+      </div>
+    </div>
+  );
 }
 
-export default function RidersDashboard() {
+// ─── JobCard sub-component ────────────────────────────────────────────────────
+function JobCard({
+  job, riders, assigning, assignDropdownJob, setAssignDropdownJob,
+  onAssign, onNavigate, dragJobId, setDragJobId, accentColor,
+}: {
+  job: Job;
+  riders: ActiveRider[];
+  assigning: string | null;
+  assignDropdownJob: string | null;
+  setAssignDropdownJob: (id: string | null) => void;
+  onAssign: (jobId: string, riderId: string, riderName: string) => void;
+  onNavigate: (id: string) => void;
+  dragJobId: string | null;
+  setDragJobId: (id: string | null) => void;
+  accentColor: string;
+}) {
+  const mins = minutesToSLA(job.appt_date, job.appt_time);
+  const isAssigning = assigning === job.id;
+  const isDragging = dragJobId === job.id;
+  const isOpen = assignDropdownJob === job.id;
+
+  const ridersForAssign = riders
+    .filter(r => r.tracking_mode === "idle" && !r.current_job_id)
+    .map(r => ({
+      rider_id: r.rider_id,
+      name: r.admin_users?.name ?? "ไรเดอร์",
+      distKm: job.appt_lat && job.appt_lng
+        ? haversineKm(r.lat, r.lng, job.appt_lat, job.appt_lng)
+        : 0,
+    }))
+    .sort((a, b) => a.distKm - b.distKm);
+
+  return (
+    <div
+      draggable
+      onDragStart={e => { e.dataTransfer.setData("jobId", job.id); setDragJobId(job.id); }}
+      onDragEnd={() => setDragJobId(null)}
+      style={{
+        padding: "10px 14px", borderBottom: `1px solid ${BORDER}`,
+        background: isDragging ? `${accentColor}08` : "#fff",
+        cursor: isAssigning ? "wait" : "grab",
+        opacity: isAssigning ? 0.6 : 1,
+        position: "relative",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "start", justifyContent: "space-between", marginBottom: 4 }}>
+        <div>
+          <span style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>#{job.order_number}</span>
+          {mins !== null && (
+            <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: accentColor, background: `${accentColor}12`, padding: "1px 6px", borderRadius: 99 }}>
+              {slaLabel(mins)}
+            </span>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 4 }}>
+          <button
+            onClick={() => onNavigate(job.id)}
+            style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "3px 8px", fontSize: 11, color: TEXT2, cursor: "pointer", fontFamily: "inherit" }}
+          >รายละเอียด</button>
+          <div style={{ position: "relative" }}>
+            <button
+              disabled={isAssigning}
+              onClick={() => setAssignDropdownJob(isOpen ? null : job.id)}
+              style={{ background: BLUE, border: "none", borderRadius: 6, padding: "3px 10px", fontSize: 11, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}
+            >
+              Assign <ChevronDown size={11} />
+            </button>
+            {isOpen && (
+              <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,.12)", zIndex: 200, minWidth: 180 }}>
+                {ridersForAssign.length === 0 ? (
+                  <div style={{ padding: "10px 14px", fontSize: 12, color: TEXT2 }}>ไม่มีไรเดอร์ว่าง</div>
+                ) : ridersForAssign.map(r => (
+                  <button
+                    key={r.rider_id}
+                    onClick={() => onAssign(job.id, r.rider_id, r.name)}
+                    style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 14px", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, color: TEXT, textAlign: "left" }}
+                  >
+                    <span style={{ fontWeight: 600 }}>{r.name}</span>
+                    <span style={{ color: TEXT2, fontSize: 11 }}>{r.distKm.toFixed(1)} กม.</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      <p style={{ margin: "0 0 2px", fontSize: 12, color: TEXT }}>{job.device_model ?? "—"} · {job.customer_name ?? "—"}</p>
+      {job.appt_location && <p style={{ margin: "0 0 2px", fontSize: 11, color: TEXT2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📍 {job.appt_location}</p>}
+      {job.appt_time && <p style={{ margin: 0, fontSize: 11, color: TEXT2 }}>🕐 {job.appt_date} {job.appt_time} น.</p>}
+      <p style={{ margin: "4px 0 0", fontSize: 10, color: TEXT3 }}>↖ ลากไปวางที่ไรเดอร์บนแผนที่</p>
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+export default function PlannerDashboard() {
   const router = useRouter();
+
+  // Data state
   const [riders, setRiders] = useState<ActiveRider[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedRider, setSelectedRider] = useState<string | null>(null);
-  const [mapCenter] = useState({ lat: OFFICE_LAT, lng: OFFICE_LNG });
-  const [sidebarTab, setSidebarTab] = useState<"riders" | "jobs" | "shifts">("riders");
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [allShifts, setAllShifts] = useState<AllShift[]>([]);
-  const [shiftsLoading, setShiftsLoading] = useState(false);
-  const [shiftFilter, setShiftFilter] = useState<string | null>(null);
-  const [unassignedJobs, setUnassignedJobs] = useState<UnassignedJob[]>([]);
-  const [jobsLoading, setJobsLoading] = useState(false);
+  const [todayStats, setTodayStats] = useState({ newCount: 0, completedCount: 0, cancelledCount: 0 });
+  const [loading, setLoading] = useState(true);
+
+  // UI state
+  const [selectedRiderId, setSelectedRiderId] = useState<string | null>(null);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [dragJobId, setDragJobId] = useState<string | null>(null);
   const [dropTargetRider, setDropTargetRider] = useState<string | null>(null);
   const [assigning, setAssigning] = useState<string | null>(null);
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [autoAssigning, setAutoAssigning] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [assignDropdownJob, setAssignDropdownJob] = useState<string | null>(null);
+  const [rightTab, setRightTab] = useState<"queue" | "shifts">("queue");
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const load = useCallback(async () => {
+  // Data fetchers
+  const loadRiders = useCallback(async () => {
     const data = await fetchActiveRiders();
     setRiders(data as ActiveRider[]);
     setLoading(false);
   }, []);
 
+  const loadJobs = useCallback(async () => {
+    const data = await fetchUnassignedJobs();
+    setJobs(data as Job[]);
+  }, []);
+
   const loadShifts = useCallback(async () => {
-    setShiftsLoading(true);
     const today = new Date().toISOString().split("T")[0];
     const data = await fetchAllRidersShifts(today);
     setAllShifts(data as AllShift[]);
-    setShiftsLoading(false);
   }, []);
 
-  const loadJobs = useCallback(async () => {
-    setJobsLoading(true);
-    const data = await fetchUnassignedJobs();
-    setUnassignedJobs(data as UnassignedJob[]);
-    setJobsLoading(false);
+  const loadTodayStats = useCallback(async () => {
+    const data = await fetchTodayRequestStats();
+    setTodayStats(data);
   }, []);
 
   useEffect(() => {
-    load();
-    loadJobs();
+    loadRiders(); loadJobs(); loadShifts(); loadTodayStats();
     const ch = supabase
-      .channel("admin-rider-locations")
-      .on("postgres_changes", { event: "*", schema: "public", table: "rider_locations" }, () => load())
+      .channel("planner-rider-locations")
+      .on("postgres_changes", { event: "*", schema: "public", table: "rider_locations" }, () => loadRiders())
+      .on("postgres_changes", { event: "*", schema: "public", table: "requests" }, () => { loadJobs(); loadTodayStats(); })
       .subscribe();
-    const interval = setInterval(load, 30_000);
+    const interval = setInterval(() => { loadRiders(); loadJobs(); }, 30_000);
     return () => { supabase.removeChannel(ch); clearInterval(interval); };
-  }, [load, loadJobs]);
+  }, [loadRiders, loadJobs, loadShifts, loadTodayStats]);
 
+  // Close dropdown on outside click
   useEffect(() => {
-    if (sidebarTab === "shifts") loadShifts();
-    if (sidebarTab === "jobs") loadJobs();
-  }, [sidebarTab, loadShifts, loadJobs]);
+    function handler(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setAssignDropdownJob(null);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Assignment handlers
+  async function handleAssign(jobId: string, riderId: string, riderName: string) {
+    setAssigning(jobId);
+    setAssignDropdownJob(null);
+    setSelectedJobId(null);
+    await assignRider(jobId, riderId, riderName);
+    setAssigning(null);
+    loadJobs();
+    loadRiders();
+  }
 
   async function handleAssignDrop(jobId: string, riderId: string, riderName: string) {
     setAssigning(jobId);
@@ -180,29 +310,52 @@ export default function RidersDashboard() {
     await assignRider(jobId, riderId, riderName);
     setAssigning(null);
     loadJobs();
+    loadRiders();
   }
 
-  const officeToRider = (r: ActiveRider) => haversineKm(OFFICE_LAT, OFFICE_LNG, r.lat, r.lng);
+  async function handleAutoAssign() {
+    setAutoAssigning(true);
+    const { assigned, skipped } = await autoAssignJobs();
+    await Promise.all([loadJobs(), loadRiders()]);
+    setAutoAssigning(false);
+    if (assigned === 0 && skipped === 0) alert("ไม่มีงานที่ต้องจัดหรือไม่มีไรเดอร์ว่าง");
+    else alert(`Auto Assign สำเร็จ ${assigned} งาน${skipped > 0 ? ` · ข้าม ${skipped} งาน (ไม่มีไรเดอร์ว่าง)` : ""}`);
+  }
 
-  const onlineCount    = riders.length;
-  const returningCount = riders.filter(r => r.tracking_mode === "return").length;
-  const busyCount      = riders.filter(r => r.tracking_mode !== "idle").length;
+  // Computed values
+  const unassignedJobs = jobs.filter(j => !j.rider_id);
+  const assignedJobs   = jobs.filter(j => j.rider_id);
+  const idleRiders     = riders.filter(r => r.tracking_mode === "idle");
+  const busyRiders     = riders.filter(r => r.tracking_mode !== "idle");
+  const overdueJobs    = unassignedJobs.filter(j => getSLAStatus(j) === "overdue");
+  const warningJobs    = unassignedJobs.filter(j => getSLAStatus(j) === "warning");
+  const okJobs         = unassignedJobs.filter(j => getSLAStatus(j) === "ok" || getSLAStatus(j) === "none");
+  const offlineRiders  = riders.filter(r => {
+    const sec = (Date.now() - new Date(r.last_heartbeat).getTime()) / 1000;
+    return sec > 300; // 5 min no heartbeat = effectively offline
+  });
+  const todayShiftJobs = allShifts.reduce((sum, s) => sum + (s.jobs_completed ?? 0), 0);
 
-  const selected = riders.find(r => r.rider_id === selectedRider);
+  // Alerts
+  const alerts: { color: string; msg: string }[] = [];
+  if (overdueJobs.length > 0) alerts.push({ color: RED, msg: `⚠ งานเกิน SLA ${overdueJobs.length} งาน` });
+  if (warningJobs.length > 0) alerts.push({ color: YELLOW, msg: `⚠ ใกล้เกิน SLA (15 นาที) ${warningJobs.length} งาน` });
+  if (offlineRiders.length > 0) alerts.push({ color: ORANGE, msg: `⚠ ไรเดอร์ขาดสัญญาณ ${offlineRiders.length} คน` });
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f5f7", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: BG, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", overflow: "hidden" }}>
 
-      {/* Header */}
-      <div style={{ background: DARK, padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div>
-          <h1 style={{ margin: 0, color: GOLD, fontSize: 18, fontWeight: 800 }}>Rider Dashboard</h1>
-          <p style={{ margin: 0, color: "rgba(255,255,255,.5)", fontSize: 12 }}>Live tracking — อัพเดตทุก 30 วินาที</p>
+      {/* ── Header ── */}
+      <div style={{ background: DARK, padding: "0 20px", height: 52, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 32, height: 32, background: GOLD, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: DARK, fontSize: 14 }}>K</div>
+          <div>
+            <p style={{ margin: 0, color: "#fff", fontWeight: 700, fontSize: 14, lineHeight: 1.2 }}>ศูนย์ควบคุมงานรับซื้อ</p>
+            <p style={{ margin: 0, color: "rgba(255,255,255,.45)", fontSize: 10 }}>Planner Dashboard</p>
+          </div>
         </div>
-        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-          <Stat label="ออนไลน์" value={onlineCount} color={GREEN} icon={<Wifi size={14} />} />
-          <Stat label="กลับออฟฟิศ" value={returningCount} color="#7c3aed" icon={<Navigation size={14} />} />
-          <Stat label="กำลังทำงาน" value={busyCount} color={ORANGE} icon={<Clock size={14} />} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ color: "rgba(255,255,255,.5)", fontSize: 12 }}>{thDate()}</span>
           <button
             onClick={async () => {
               setSyncing(true);
@@ -210,53 +363,166 @@ export default function RidersDashboard() {
               await loadJobs();
               setSyncing(false);
               if (total === 0) alert("ทุกงานมีพิกัดครบแล้ว");
-              else if (updated === 0) alert(`พบ ${total} งานที่ขาดพิกัด แต่ geocoding ยังล้มเหลวทุกรายการ\nตรวจสอบว่า Geocoding API enable แล้ว`);
               else alert(`ซิงค์พิกัดสำเร็จ ${updated}/${total} งาน`);
             }}
             disabled={syncing}
-            style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.2)", color: syncing ? "rgba(255,255,255,.4)" : "#fff", borderRadius: 8, padding: "6px 12px", cursor: syncing ? "default" : "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit" }}
+            style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.2)", color: "rgba(255,255,255,.7)", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 11, fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}
           >
-            <Navigation size={14} /> {syncing ? "กำลังซิงค์..." : "ซิงค์พิกัด"}
+            <RefreshCw size={11} /> {syncing ? "ซิงค์..." : "ซิงค์พิกัด"}
           </button>
-          <button onClick={() => router.push("/admin/riders/manage")} style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit" }}>
-            <Settings size={14} /> จัดการ
+          <button onClick={() => router.push("/admin/riders/manage")} style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.2)", color: "rgba(255,255,255,.7)", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 11, fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}>
+            <Settings size={11} /> จัดการ
           </button>
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", height: "calc(100vh - 68px)" }}>
+      {/* ── Stat bar ── */}
+      <div style={{ padding: "10px 16px", display: "flex", gap: 8, flexShrink: 0, background: BG }}>
+        <StatCard icon="📋" label="งานใหม่" value={todayStats.newCount} color={BLUE} />
+        <StatCard icon="⏳" label="รอ Assign" value={unassignedJobs.length} color={YELLOW} bold={unassignedJobs.length > 0} />
+        <StatCard icon="🚗" label="กำลังเดินทาง" value={riders.filter(r => r.tracking_mode === "enroute").length} color={ORANGE} />
+        <StatCard icon="🔍" label="ตรวจเครื่อง" value={riders.filter(r => r.tracking_mode === "on_site").length} color={BLUE} />
+        <StatCard icon="✅" label="เสร็จวันนี้" value={todayStats.completedCount} color={GREEN} />
+        <StatCard icon="👤" label="ไรเดอร์ว่าง" value={idleRiders.length} color={GREEN} bold={idleRiders.length > 0} />
+        <button
+          onClick={handleAutoAssign}
+          disabled={autoAssigning || unassignedJobs.length === 0 || idleRiders.length === 0}
+          style={{ display: "flex", alignItems: "center", gap: 6, background: autoAssigning ? "#f9fafb" : GOLD, border: "none", borderRadius: 12, padding: "10px 16px", cursor: autoAssigning ? "wait" : "pointer", color: autoAssigning ? TEXT2 : DARK, fontWeight: 800, fontSize: 13, fontFamily: "inherit", flexShrink: 0, opacity: (unassignedJobs.length === 0 || idleRiders.length === 0) && !autoAssigning ? 0.5 : 1, whiteSpace: "nowrap" }}
+        >
+          <Zap size={15} /> {autoAssigning ? "กำลัง Auto..." : "Auto Assign"}
+        </button>
+      </div>
 
-        {/* Map */}
-        <div style={{ position: "relative" }}>
+      {/* ── Alert bar ── */}
+      {alerts.length > 0 && (
+        <div style={{ padding: "0 16px 8px", display: "flex", gap: 8, flexShrink: 0 }}>
+          {alerts.map((a, i) => (
+            <div key={i} style={{ background: `${a.color}12`, border: `1px solid ${a.color}40`, borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: a.color }}>
+              {a.msg}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Main 3-column area ── */}
+      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+
+        {/* ── LEFT: Rider list (272px) ── */}
+        <div style={{ width: 272, background: CARD, borderRight: `1px solid ${BORDER}`, display: "flex", flexDirection: "column", overflow: "hidden", flexShrink: 0 }}>
+          <div style={{ padding: "12px 14px 8px", borderBottom: `1px solid ${BORDER}`, flexShrink: 0 }}>
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.5 }}>
+              ไรเดอร์ ({riders.length})
+            </p>
+          </div>
+
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {loading ? (
+              <div style={{ padding: 32, textAlign: "center", color: TEXT2, fontSize: 13 }}>กำลังโหลด...</div>
+            ) : riders.length === 0 ? (
+              <div style={{ padding: 32, textAlign: "center", color: TEXT2, fontSize: 13 }}>
+                <User size={28} color={BORDER} style={{ marginBottom: 8, display: "block", margin: "0 auto 8px" }} />
+                ยังไม่มีไรเดอร์ออนไลน์
+              </div>
+            ) : riders.map(r => {
+              const name = r.admin_users?.name ?? "ไรเดอร์";
+              const hasJob = r.current_job_id != null && r.tracking_mode === "idle";
+              const color = hasJob ? PURPLE : (MODE_COLOR[r.tracking_mode] ?? BLUE);
+              const label = hasJob ? "รอรับงาน" : (MODE_LABEL[r.tracking_mode] ?? r.tracking_mode);
+              const isSelected = r.rider_id === selectedRiderId;
+              const shift = r.rider_shifts;
+              const battLow = r.battery_pct != null && r.battery_pct < 20;
+
+              return (
+                <div
+                  key={r.rider_id}
+                  onDragOver={e => { e.preventDefault(); setDropTargetRider(r.rider_id); }}
+                  onDragLeave={() => setDropTargetRider(null)}
+                  onDrop={e => { e.preventDefault(); const jobId = e.dataTransfer.getData("jobId"); if (jobId) handleAssignDrop(jobId, r.rider_id, name); }}
+                  onClick={() => setSelectedRiderId(r.rider_id === selectedRiderId ? null : r.rider_id)}
+                  style={{
+                    padding: "10px 14px", borderBottom: `1px solid ${BORDER}`, cursor: "pointer",
+                    background: dropTargetRider === r.rider_id ? `${BLUE}08` : isSelected ? `${color}08` : "transparent",
+                    borderLeft: isSelected ? `3px solid ${color}` : "3px solid transparent",
+                    outline: dropTargetRider === r.rider_id ? `2px dashed ${BLUE}` : "none",
+                    outlineOffset: -2, transition: "all 0.1s",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    <Avatar name={name} size={34} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</span>
+                        <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 99, background: `${color}15`, color, fontWeight: 700, flexShrink: 0, marginLeft: 4 }}>{label}</span>
+                      </div>
+                      <div style={{ display: "flex", gap: 8, fontSize: 11, color: TEXT2, marginTop: 2 }}>
+                        {shift?.jobs_completed > 0 && <span>✅ {shift.jobs_completed} งาน</span>}
+                        {r.battery_pct != null && <span style={{ color: battLow ? RED : TEXT2 }}><Battery size={9} style={{ verticalAlign: "middle" }} /> {r.battery_pct}%</span>}
+                        <span style={{ color: TEXT3 }}>{lastSeen(r.last_heartbeat)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {r.current_job && (
+                    <div style={{ fontSize: 11, color: BLUE, fontWeight: 600, marginTop: 2, paddingLeft: 42 }}>
+                      📱 #{r.current_job.order_number} · {r.current_job.device_model ?? "—"}
+                    </div>
+                  )}
+                  {battLow && (
+                    <div style={{ fontSize: 11, color: RED, fontWeight: 600, marginTop: 2, paddingLeft: 42, display: "flex", alignItems: "center", gap: 3 }}>
+                      <AlertTriangle size={10} /> แบตใกล้หมด
+                    </div>
+                  )}
+                  {isSelected && (
+                    <button
+                      onClick={e => { e.stopPropagation(); router.push(`/admin/riders/${r.rider_id}`); }}
+                      style={{ marginTop: 8, width: "100%", padding: "6px 0", borderRadius: 8, border: `1px solid ${BORDER}`, background: "#f9fafb", color: TEXT, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+                    >ดูรายละเอียด →</button>
+                  )}
+                  {dropTargetRider === r.rider_id && dragJobId && (
+                    <div style={{ marginTop: 6, fontSize: 11, color: BLUE, fontWeight: 700, textAlign: "center" }}>⬇ วางที่นี่เพื่อ Assign</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── CENTER: Map ── */}
+        <div style={{ flex: 1, position: "relative" }}>
           <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY ?? ""}>
             <Map
-              defaultCenter={mapCenter}
-              defaultZoom={12}
+              defaultCenter={{ lat: OFFICE_LAT, lng: OFFICE_LNG }}
+              defaultZoom={11}
               mapId="22ccc57d606934a9bbe74a52"
               style={{ width: "100%", height: "100%" }}
-              disableDefaultUI={false}
             >
+              {/* Office marker */}
               <AdvancedMarker position={{ lat: OFFICE_LAT, lng: OFFICE_LNG }}>
-                <div style={{ background: DARK, color: GOLD, fontSize: 11, fontWeight: 700, padding: "4px 8px", borderRadius: 6, border: `1px solid ${GOLD}`, whiteSpace: "nowrap" }}>
-                  🏠 ออฟฟิศ
-                </div>
+                <div style={{ background: DARK, color: GOLD, fontSize: 11, fontWeight: 700, padding: "4px 8px", borderRadius: 6, border: `1px solid ${GOLD}` }}>🏠 ออฟฟิศ</div>
               </AdvancedMarker>
 
+              {/* Rider markers */}
               {riders.map(r => {
-                const color = MODE_COLOR[r.tracking_mode] ?? BLUE;
-                const isSelected = r.rider_id === selectedRider;
                 const name = r.admin_users?.name ?? "ไรเดอร์";
+                const hasJob = r.current_job_id != null && r.tracking_mode === "idle";
+                const color = hasJob ? PURPLE : (MODE_COLOR[r.tracking_mode] ?? BLUE);
+                const isSelected = r.rider_id === selectedRiderId;
                 return (
-                  <AdvancedMarker
-                    key={r.rider_id}
-                    position={{ lat: r.lat, lng: r.lng }}
-                    onClick={() => setSelectedRider(r.rider_id === selectedRider ? null : r.rider_id)}
-                  >
+                  <AdvancedMarker key={r.rider_id} position={{ lat: r.lat, lng: r.lng }} onClick={() => setSelectedRiderId(r.rider_id === selectedRiderId ? null : r.rider_id)}>
                     <div style={{ position: "relative" }}>
-                      <Pin background={color} borderColor={isSelected ? "#fff" : color} glyphColor="#fff" />
+                      <div style={{
+                        width: 36, height: 36, borderRadius: "50%", background: color,
+                        border: `3px solid ${isSelected ? "#fff" : color}`,
+                        boxShadow: isSelected ? `0 0 0 3px ${color}` : "0 2px 6px rgba(0,0,0,.3)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        cursor: "pointer", overflow: "hidden",
+                      }}>
+                        <span style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>
+                          {name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
                       {isSelected && (
-                        <div style={{ position: "absolute", top: -36, left: "50%", transform: "translateX(-50%)", background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "3px 8px", fontSize: 12, fontWeight: 600, color: TEXT, whiteSpace: "nowrap", boxShadow: "0 2px 8px rgba(0,0,0,.15)" }}>
-                          {name} · {MODE_LABEL[r.tracking_mode] ?? r.tracking_mode}
+                        <div style={{ position: "absolute", bottom: 42, left: "50%", transform: "translateX(-50%)", background: DARK, color: "#fff", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap", boxShadow: "0 2px 8px rgba(0,0,0,.3)" }}>
+                          {name} · {hasJob ? "รอรับงาน" : (MODE_LABEL[r.tracking_mode] ?? r.tracking_mode)}
                         </div>
                       )}
                     </div>
@@ -264,33 +530,62 @@ export default function RidersDashboard() {
                 );
               })}
 
-              {/* Job appointment markers — all confirmed jobs (assigned + unassigned) */}
-              {unassignedJobs.filter(j => j.appt_lat && j.appt_lng).map(job => {
-                const mins = minutesUntilAppt(job.appt_date, job.appt_time);
-                const uColor = job.rider_id ? "#7c3aed" : urgencyColor(mins);
+              {/* Job markers */}
+              {jobs.filter(j => j.appt_lat && j.appt_lng).map(job => {
+                const status = getSLAStatus(job);
+                const color = job.rider_id ? PURPLE : (status === "overdue" ? RED : status === "warning" ? YELLOW : ORANGE);
                 const isSelected = selectedJobId === job.id;
+                const mins = minutesToSLA(job.appt_date, job.appt_time);
+                const idleRidersForAssign = riders
+                  .filter(r => r.tracking_mode === "idle" && !r.current_job_id)
+                  .map(r => ({
+                    ...r,
+                    distKm: job.appt_lat && job.appt_lng
+                      ? haversineKm(r.lat, r.lng, job.appt_lat!, job.appt_lng!)
+                      : 0,
+                  }))
+                  .sort((a, b) => a.distKm - b.distKm);
                 return (
-                  <AdvancedMarker
-                    key={job.id}
-                    position={{ lat: job.appt_lat!, lng: job.appt_lng! }}
-                    onClick={() => setSelectedJobId(isSelected ? null : job.id)}
-                  >
+                  <AdvancedMarker key={job.id} position={{ lat: job.appt_lat!, lng: job.appt_lng! }} onClick={() => setSelectedJobId(isSelected ? null : job.id)}>
                     <div style={{ position: "relative" }}>
-                      <div style={{
-                        background: uColor, color: "#fff", fontSize: 10, fontWeight: 700,
-                        padding: "3px 7px", borderRadius: 6, whiteSpace: "nowrap",
-                        border: `1.5px solid rgba(255,255,255,0.7)`,
-                        boxShadow: "0 2px 6px rgba(0,0,0,.25)",
-                        cursor: "pointer",
-                      }}>
+                      <div style={{ background: color, color: "#fff", fontSize: 10, fontWeight: 700, padding: "3px 7px", borderRadius: 6, border: "1.5px solid rgba(255,255,255,.7)", boxShadow: "0 2px 6px rgba(0,0,0,.25)", cursor: "pointer", whiteSpace: "nowrap" }}>
                         {job.rider_id ? "🏍" : "📍"} {job.order_number}
                       </div>
                       {isSelected && (
-                        <div style={{ position: "absolute", bottom: 32, left: "50%", transform: "translateX(-50%)", background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 10px", fontSize: 12, color: TEXT, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,.15)", minWidth: 160 }}>
-                          <p style={{ margin: "0 0 2px", fontWeight: 700 }}>#{job.order_number}</p>
-                          <p style={{ margin: "0 0 2px", color: TEXT2 }}>{job.device_model} · {job.customer_name}</p>
-                          {job.rider_id && <p style={{ margin: "0 0 2px", color: "#7c3aed", fontWeight: 600 }}>🏍 {job.rider_name ?? "ไรเดอร์"}</p>}
-                          {job.appt_time && <p style={{ margin: 0, color: uColor, fontWeight: 600 }}>🕐 {job.appt_time} น.{!job.rider_id && mins !== null ? ` · ${urgencyLabel(mins)}` : ""}</p>}
+                        <div style={{ position: "absolute", bottom: 32, left: "50%", transform: "translateX(-50%)", background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "14px 16px", boxShadow: "0 8px 24px rgba(0,0,0,.18)", minWidth: 220, zIndex: 100 }}>
+                          <div style={{ display: "flex", alignItems: "start", justifyContent: "space-between", marginBottom: 8 }}>
+                            <div>
+                              <p style={{ margin: 0, fontSize: 11, color: TEXT2 }}>#{job.order_number}</p>
+                              <p style={{ margin: "2px 0 0", fontSize: 14, fontWeight: 700, color: TEXT }}>{job.device_model ?? "—"}</p>
+                            </div>
+                            <button onClick={e => { e.stopPropagation(); setSelectedJobId(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT2, padding: 2 }}><X size={14} /></button>
+                          </div>
+                          {job.customer_name && <div style={{ display: "flex", gap: 6, fontSize: 12, color: TEXT2, marginBottom: 4 }}><User size={12} style={{ marginTop: 1, flexShrink: 0 }} />{job.customer_name}</div>}
+                          {job.appt_location && <div style={{ display: "flex", gap: 6, fontSize: 12, color: TEXT2, marginBottom: 4 }}><MapPin size={12} style={{ marginTop: 1, flexShrink: 0 }} /><span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 170 }}>{job.appt_location}</span></div>}
+                          {job.appt_time && <div style={{ display: "flex", gap: 6, fontSize: 12, color: status !== "none" ? slaColor(status) : TEXT2, fontWeight: status !== "none" ? 600 : 400, marginBottom: 10 }}><Clock size={12} style={{ marginTop: 1, flexShrink: 0 }} />{job.appt_date} {job.appt_time} น.{mins !== null && !job.rider_id ? ` · ${slaLabel(mins)}` : ""}</div>}
+                          {job.rider_id ? (
+                            <div style={{ background: `${PURPLE}10`, border: `1px solid ${PURPLE}30`, borderRadius: 8, padding: "6px 10px", fontSize: 12, color: PURPLE, fontWeight: 600 }}>🏍 {job.rider_name ?? "ไรเดอร์"}</div>
+                          ) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                              {idleRidersForAssign.length === 0 ? (
+                                <p style={{ margin: 0, fontSize: 12, color: TEXT2 }}>ไม่มีไรเดอร์ว่าง</p>
+                              ) : idleRidersForAssign.slice(0, 3).map(r => {
+                                const rName = r.admin_users?.name ?? "ไรเดอร์";
+                                return (
+                                  <button
+                                    key={r.rider_id}
+                                    disabled={assigning === job.id}
+                                    onClick={e => { e.stopPropagation(); handleAssign(job.id, r.rider_id, rName); }}
+                                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: BLUE, border: "none", borderRadius: 8, padding: "8px 12px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                                  >
+                                    <span>Assign → {rName}</span>
+                                    <span style={{ opacity: 0.8, fontSize: 11 }}>{r.distKm.toFixed(1)} กม.</span>
+                                  </button>
+                                );
+                              })}
+                              <button onClick={e => { e.stopPropagation(); router.push(`/admin/requests/${job.id}`); }} style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "6px 12px", color: TEXT2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>รายละเอียด →</button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -299,318 +594,158 @@ export default function RidersDashboard() {
               })}
             </Map>
           </APIProvider>
+
+          {/* Map legend */}
+          <div style={{ position: "absolute", bottom: 12, left: 12, background: "rgba(255,255,255,.9)", backdropFilter: "blur(8px)", borderRadius: 8, padding: "6px 12px", display: "flex", gap: 12, fontSize: 11, border: `1px solid ${BORDER}` }}>
+            {[["ว่าง", GREEN], ["เดินทาง", ORANGE], ["กับลูกค้า", BLUE], ["กลับออฟฟิศ", PURPLE]].map(([label, color]) => (
+              <span key={label} style={{ display: "flex", alignItems: "center", gap: 4, color: TEXT2 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, display: "inline-block" }} />{label}
+              </span>
+            ))}
+            <span style={{ color: BORDER }}>|</span>
+            {[["📍 รอ Assign", ORANGE], ["🏍 Assign แล้ว", PURPLE]].map(([label, color]) => (
+              <span key={label as string} style={{ color: color as string, fontWeight: 600, fontSize: 11 }}>{label}</span>
+            ))}
+          </div>
         </div>
 
-        {/* Sidebar */}
-        <div style={{ background: CARD, borderLeft: `1px solid ${BORDER}`, overflowY: "auto", display: "flex", flexDirection: "column" }}>
-
-          {/* Tab header */}
+        {/* ── RIGHT: Job queue (320px) ── */}
+        <div style={{ width: 320, background: CARD, borderLeft: `1px solid ${BORDER}`, display: "flex", flexDirection: "column", overflow: "hidden", flexShrink: 0 }} ref={dropdownRef}>
+          {/* Tabs */}
           <div style={{ display: "flex", borderBottom: `1px solid ${BORDER}`, flexShrink: 0 }}>
-            {(["riders", "jobs", "shifts"] as const).map(tab => {
-              const label = tab === "riders" ? "ไรเดอร์" : tab === "jobs" ? `งาน${unassignedJobs.length > 0 ? ` (${unassignedJobs.length})` : ""}` : "Shift";
-              const active = sidebarTab === tab;
+            {(["queue", "shifts"] as const).map(tab => {
+              const label = tab === "queue" ? `คิวงาน${unassignedJobs.length > 0 ? ` (${unassignedJobs.length})` : ""}` : "Shift วันนี้";
+              const active = rightTab === tab;
               return (
-                <button key={tab} onClick={() => setSidebarTab(tab)} style={{ flex: 1, padding: "11px 0", border: "none", background: active ? `${BLUE}08` : "transparent", color: active ? BLUE : TEXT2, fontSize: 12, fontWeight: active ? 700 : 400, cursor: "pointer", fontFamily: "inherit", borderBottom: active ? `2px solid ${BLUE}` : "none" }}>
+                <button key={tab} onClick={() => { setRightTab(tab); if (tab === "shifts") loadShifts(); }} style={{ flex: 1, padding: "10px 0", border: "none", background: active ? `${GOLD}10` : "transparent", color: active ? GOLD : TEXT2, fontSize: 12, fontWeight: active ? 700 : 400, cursor: "pointer", fontFamily: "inherit", borderBottom: active ? `2px solid ${GOLD}` : "none" }}>
                   {label}
                 </button>
               );
             })}
           </div>
 
-          {sidebarTab === "jobs" ? (
-            /* Jobs / Planner tab */
-            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
-              {/* Unassigned jobs */}
-              <div style={{ padding: "10px 16px 6px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.5 }}>งานรอ Assign</p>
-                <button onClick={loadJobs} style={{ background: "none", border: "none", color: TEXT2, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>รีเฟรช</button>
-              </div>
-              {jobsLoading ? (
-                <div style={{ padding: 24, textAlign: "center", color: TEXT2, fontSize: 13 }}>กำลังโหลด...</div>
-              ) : unassignedJobs.filter(j => !j.rider_id).length === 0 ? (
-                <div style={{ padding: 24, textAlign: "center" }}>
-                  <CheckCircle2 size={28} color={GREEN} style={{ marginBottom: 6 }} />
-                  <p style={{ margin: 0, fontSize: 13, color: TEXT2 }}>ไม่มีงานรอ Assign</p>
-                </div>
-              ) : unassignedJobs.filter(j => !j.rider_id).map(job => {
-                const mins = minutesUntilAppt(job.appt_date, job.appt_time);
-                const uColor = urgencyColor(mins);
-                const uLabel = urgencyLabel(mins);
-                const isAssigning = assigning === job.id;
-                return (
-                  <div
-                    key={job.id}
-                    draggable
-                    onDragStart={e => { e.dataTransfer.setData("jobId", job.id); e.dataTransfer.setData("jobLabel", `${job.order_number}`); setDragJobId(job.id); }}
-                    onDragEnd={() => setDragJobId(null)}
-                    style={{
-                      margin: "0 10px 8px",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      border: `1.5px solid ${dragJobId === job.id ? uColor : BORDER}`,
-                      background: isAssigning ? "#f9fafb" : "#fff",
-                      cursor: isAssigning ? "wait" : "grab",
-                      opacity: isAssigning ? 0.5 : 1,
-                      transition: "border-color 0.1s",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>#{job.order_number}</span>
-                      {uLabel && (
-                        <span style={{ fontSize: 10, fontWeight: 700, color: uColor, background: `${uColor}15`, padding: "2px 6px", borderRadius: 6 }}>
-                          {mins !== null && mins < 0 ? "⚠ " : mins !== null && mins < 60 ? "🔴 " : mins !== null && mins < 180 ? "🟡 " : "🟢 "}{uLabel}
-                        </span>
-                      )}
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {rightTab === "queue" ? (
+              <>
+                {/* Overdue SLA */}
+                {overdueJobs.length > 0 && (
+                  <div>
+                    <div style={{ padding: "10px 14px 6px", background: `${RED}08`, borderBottom: `1px solid ${RED}20` }}>
+                      <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: RED, textTransform: "uppercase", letterSpacing: 0.5 }}>🔥 เกิน SLA ({overdueJobs.length})</p>
                     </div>
-                    <p style={{ margin: "0 0 2px", fontSize: 13, color: TEXT }}>{job.device_model ?? "—"} · {job.customer_name ?? "—"}</p>
-                    {job.appt_time && <p style={{ margin: "0 0 2px", fontSize: 11, color: TEXT2 }}>🕐 นัด {job.appt_time} น.</p>}
-                    {job.appt_location && <p style={{ margin: 0, fontSize: 11, color: TEXT2 }}>📍 {job.appt_location}</p>}
-                    <p style={{ margin: "6px 0 0", fontSize: 10, color: TEXT2 }}>↖ ลากไปวางที่ไรเดอร์ด้านล่าง</p>
-                  </div>
-                );
-              })}
-
-              {/* Assigned jobs */}
-              {unassignedJobs.filter(j => j.rider_id).length > 0 && (
-                <>
-                  <div style={{ padding: "10px 16px 6px", flexShrink: 0, borderTop: `1px solid ${BORDER}`, marginTop: 4 }}>
-                    <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#7c3aed", textTransform: "uppercase", letterSpacing: 0.5 }}>🏍 Assign แล้ว</p>
-                  </div>
-                  {unassignedJobs.filter(j => j.rider_id).map(job => (
-                    <div key={job.id} style={{ margin: "0 10px 8px", padding: "10px 12px", borderRadius: 10, border: `1.5px solid #7c3aed40`, background: "#f5f3ff", flexShrink: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>#{job.order_number}</span>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed", background: "#7c3aed15", padding: "2px 6px", borderRadius: 6 }}>🏍 {job.rider_name ?? "ไรเดอร์"}</span>
-                      </div>
-                      <p style={{ margin: "0 0 2px", fontSize: 13, color: TEXT }}>{job.device_model ?? "—"} · {job.customer_name ?? "—"}</p>
-                      {job.appt_time && <p style={{ margin: 0, fontSize: 11, color: TEXT2 }}>🕐 นัด {job.appt_time} น.</p>}
-                    </div>
-                  ))}
-                </>
-              )}
-
-              {/* Online riders as drop targets */}
-              <div style={{ borderTop: `2px dashed ${BORDER}`, margin: "4px 0 0", padding: "10px 16px 6px", flexShrink: 0 }}>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  {dragJobId ? "⬇ วางที่ไรเดอร์" : "ไรเดอร์ออนไลน์"}
-                </p>
-              </div>
-              {riders.length === 0 ? (
-                <div style={{ padding: "12px 16px", textAlign: "center" }}>
-                  <p style={{ margin: 0, fontSize: 13, color: TEXT2 }}>ยังไม่มีไรเดอร์ออนไลน์</p>
-                </div>
-              ) : riders.map(r => {
-                const riderName = r.admin_users?.name ?? "ไรเดอร์";
-                const hasJob = r.current_job_id != null && r.tracking_mode === "idle";
-                const color = hasJob ? "#7c3aed" : (MODE_COLOR[r.tracking_mode] ?? BLUE);
-                const modeLabel = hasJob ? "รอรับงาน" : (MODE_LABEL[r.tracking_mode] ?? r.tracking_mode);
-                const isTarget = dropTargetRider === r.rider_id;
-                return (
-                  <div
-                    key={r.rider_id}
-                    onDragOver={e => { e.preventDefault(); setDropTargetRider(r.rider_id); }}
-                    onDragLeave={() => setDropTargetRider(null)}
-                    onDrop={e => { e.preventDefault(); const jobId = e.dataTransfer.getData("jobId"); if (jobId) handleAssignDrop(jobId, r.rider_id, riderName); }}
-                    style={{
-                      margin: "0 10px 8px",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      border: `${isTarget ? "2px" : "1.5px"} ${isTarget ? "solid" : "dashed"} ${isTarget ? BLUE : BORDER}`,
-                      background: isTarget ? `${BLUE}08` : "#f9fafb",
-                      transition: "all 0.1s",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
-                      <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{riderName}</span>
-                      <span style={{ fontSize: 11, padding: "1px 6px", borderRadius: 4, background: `${color}15`, color }}>{modeLabel}</span>
-                    </div>
-                    {isTarget && <p style={{ margin: "4px 0 0", fontSize: 11, color: BLUE, fontWeight: 600 }}>วางที่นี่เพื่อ Assign →</p>}
-                  </div>
-                );
-              })}
-            </div>
-          ) : sidebarTab === "riders" ? (
-            <>
-              {/* Selected rider detail */}
-              {selected && (
-                <div style={{ background: `${MODE_COLOR[selected.tracking_mode] ?? BLUE}10`, borderBottom: `2px solid ${MODE_COLOR[selected.tracking_mode] ?? BLUE}`, padding: "14px 16px", flexShrink: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                    <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: TEXT }}>{selected.admin_users?.name ?? "ไรเดอร์"}</p>
-                    <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 10, background: MODE_COLOR[selected.tracking_mode] ?? BLUE, color: "#fff" }}>
-                      {MODE_LABEL[selected.tracking_mode] ?? selected.tracking_mode}
-                    </span>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 12, color: TEXT2 }}>
-                    <span>📡 {lastSeen(selected.last_heartbeat)}</span>
-                    {selected.battery_pct != null && <span>🔋 {selected.battery_pct}%</span>}
-                    <span>📏 {fmtDistance(officeToRider(selected))} จากออฟฟิศ</span>
-                    <span>🕐 {fmtEta(etaMinutes(officeToRider(selected)))}</span>
-                  </div>
-                  {/* Current job */}
-                  {selected.current_job && (
-                    <div style={{ marginTop: 8, padding: "6px 10px", background: "rgba(255,255,255,.6)", borderRadius: 8, display: "flex", alignItems: "flex-start", gap: 8 }}>
-                      <Smartphone size={13} color={BLUE} style={{ marginTop: 2, flexShrink: 0 }} />
-                      <div>
-                        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: BLUE }}>#{selected.current_job.order_number}</p>
-                        <p style={{ margin: 0, fontSize: 12, color: TEXT }}>{selected.current_job.device_model ?? "—"} · {selected.current_job.customer_name ?? "—"}</p>
-                        {selected.current_job.appt_location && <p style={{ margin: "2px 0 0", fontSize: 11, color: TEXT2 }}>{selected.current_job.appt_location}</p>}
-                      </div>
-                    </div>
-                  )}
-                  <button
-                    onClick={() => router.push(`/admin/riders/${selected.rider_id}`)}
-                    style={{ marginTop: 10, width: "100%", padding: "8px 0", borderRadius: 8, border: `1px solid ${BORDER}`, background: "#fff", color: TEXT, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-                    ดูรายละเอียด →
-                  </button>
-                </div>
-              )}
-
-              {/* Rider list */}
-              <div style={{ flex: 1 }}>
-                <div style={{ padding: "12px 16px 8px", display: "flex", alignItems: "center", gap: 6 }}>
-                  <Users size={14} color={TEXT2} />
-                  <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                    ออนไลน์ {onlineCount} คน
-                  </p>
-                </div>
-
-                {loading ? (
-                  <div style={{ padding: 32, textAlign: "center", color: TEXT2, fontSize: 14 }}>กำลังโหลด...</div>
-                ) : riders.length === 0 ? (
-                  <div style={{ padding: 32, textAlign: "center" }}>
-                    <WifiOff size={32} color={BORDER} style={{ marginBottom: 8 }} />
-                    <p style={{ margin: 0, fontSize: 14, color: TEXT2 }}>ยังไม่มีไรเดอร์ออนไลน์</p>
-                  </div>
-                ) : riders.map(r => {
-                  const color = MODE_COLOR[r.tracking_mode] ?? BLUE;
-                  const name = r.admin_users?.name ?? "ไรเดอร์";
-                  const shift = r.rider_shifts;
-                  const distKm = officeToRider(r);
-                  const isReturn = r.tracking_mode === "return";
-                  const isSelected = r.rider_id === selectedRider;
-
-                  return (
-                    <div
-                      key={r.rider_id}
-                      onClick={() => setSelectedRider(r.rider_id === selectedRider ? null : r.rider_id)}
-                      style={{ padding: "12px 16px", borderBottom: `1px solid ${BORDER}`, cursor: "pointer", background: isSelected ? `${color}08` : "transparent", borderLeft: isSelected ? `3px solid ${color}` : "3px solid transparent", transition: "background 0.1s" }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: color }} />
-                          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT }}>{name}</span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <span style={{ fontSize: 11, padding: "2px 6px", borderRadius: 4, background: `${color}15`, color }}>{MODE_LABEL[r.tracking_mode] ?? r.tracking_mode}</span>
-                          <ChevronRight size={14} color={TEXT2} />
-                        </div>
-                      </div>
-
-                      <div style={{ display: "flex", gap: 12, fontSize: 11, color: TEXT2 }}>
-                        {shift?.clocked_in_at && <span><Clock size={10} style={{ verticalAlign: "middle", marginRight: 2 }} />{shiftDuration(shift.clocked_in_at)}</span>}
-                        {shift?.jobs_completed > 0 && <span><CheckCircle2 size={10} style={{ verticalAlign: "middle", marginRight: 2 }} />{shift.jobs_completed} งาน</span>}
-                        {r.battery_pct != null && (
-                          <span style={{ color: r.battery_pct < 20 ? RED : TEXT2 }}>
-                            <Battery size={10} style={{ verticalAlign: "middle", marginRight: 2 }} />{r.battery_pct}%
-                          </span>
-                        )}
-                      </div>
-
-                      {r.current_job && (
-                        <div style={{ marginTop: 4, fontSize: 11, color: BLUE, fontWeight: 600 }}>
-                          <Smartphone size={10} style={{ verticalAlign: "middle", marginRight: 3 }} />
-                          #{r.current_job.order_number} · {r.current_job.device_model ?? "—"}
-                        </div>
-                      )}
-
-                      {isReturn && (
-                        <div style={{ marginTop: 4, fontSize: 11, color: "#7c3aed", fontWeight: 600 }}>
-                          🏠 กลับออฟฟิศ · {fmtDistance(distKm)} · {fmtEta(etaMinutes(distKm))}
-                        </div>
-                      )}
-
-                      {r.battery_pct != null && r.battery_pct < 20 && (
-                        <div style={{ marginTop: 4, fontSize: 11, color: RED, fontWeight: 600 }}>
-                          <AlertTriangle size={10} style={{ verticalAlign: "middle", marginRight: 2 }} />แบตใกล้หมด
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          ) : (
-            /* Shifts tab */
-            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-              {/* Rider filter pills */}
-              {allShifts.length > 0 && (() => {
-                const names = [...new Set(allShifts.map(s => s.rider_name))];
-                if (names.length < 2) return null;
-                return (
-                  <div style={{ padding: "10px 12px 0", display: "flex", gap: 6, flexWrap: "wrap", flexShrink: 0 }}>
-                    <button
-                      onClick={() => setShiftFilter(null)}
-                      style={{ padding: "4px 10px", borderRadius: 99, border: `1px solid ${shiftFilter === null ? BLUE : BORDER}`, background: shiftFilter === null ? `${BLUE}12` : "transparent", color: shiftFilter === null ? BLUE : TEXT2, fontSize: 12, fontWeight: shiftFilter === null ? 700 : 400, cursor: "pointer", fontFamily: "inherit" }}
-                    >ทั้งหมด</button>
-                    {names.map(name => (
-                      <button
-                        key={name}
-                        onClick={() => setShiftFilter(name === shiftFilter ? null : name)}
-                        style={{ padding: "4px 10px", borderRadius: 99, border: `1px solid ${shiftFilter === name ? BLUE : BORDER}`, background: shiftFilter === name ? `${BLUE}12` : "transparent", color: shiftFilter === name ? BLUE : TEXT2, fontSize: 12, fontWeight: shiftFilter === name ? 700 : 400, cursor: "pointer", fontFamily: "inherit" }}
-                      >{name}</button>
+                    {overdueJobs.map(job => (
+                      <JobCard
+                        key={job.id} job={job} riders={riders} assigning={assigning}
+                        assignDropdownJob={assignDropdownJob} setAssignDropdownJob={setAssignDropdownJob}
+                        onAssign={handleAssign} onNavigate={id => router.push(`/admin/requests/${id}`)}
+                        dragJobId={dragJobId} setDragJobId={setDragJobId} accentColor={RED}
+                      />
                     ))}
                   </div>
-                );
-              })()}
-              <div style={{ padding: "8px 16px 4px" }}>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  Shift ทั้งหมดวันนี้
-                </p>
+                )}
+                {/* Warning SLA */}
+                {warningJobs.length > 0 && (
+                  <div>
+                    <div style={{ padding: "10px 14px 6px", background: `${YELLOW}08`, borderBottom: `1px solid ${YELLOW}20` }}>
+                      <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: YELLOW, textTransform: "uppercase", letterSpacing: 0.5 }}>⚠ ใกล้เกิน SLA ({warningJobs.length})</p>
+                    </div>
+                    {warningJobs.map(job => (
+                      <JobCard
+                        key={job.id} job={job} riders={riders} assigning={assigning}
+                        assignDropdownJob={assignDropdownJob} setAssignDropdownJob={setAssignDropdownJob}
+                        onAssign={handleAssign} onNavigate={id => router.push(`/admin/requests/${id}`)}
+                        dragJobId={dragJobId} setDragJobId={setDragJobId} accentColor={YELLOW}
+                      />
+                    ))}
+                  </div>
+                )}
+                {/* Normal */}
+                {okJobs.length > 0 && (
+                  <div>
+                    <div style={{ padding: "10px 14px 6px", borderBottom: `1px solid ${BORDER}` }}>
+                      <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.5 }}>✅ ปกติ ({okJobs.length})</p>
+                    </div>
+                    {okJobs.map(job => (
+                      <JobCard
+                        key={job.id} job={job} riders={riders} assigning={assigning}
+                        assignDropdownJob={assignDropdownJob} setAssignDropdownJob={setAssignDropdownJob}
+                        onAssign={handleAssign} onNavigate={id => router.push(`/admin/requests/${id}`)}
+                        dragJobId={dragJobId} setDragJobId={setDragJobId} accentColor={GREEN}
+                      />
+                    ))}
+                  </div>
+                )}
+                {unassignedJobs.length === 0 && (
+                  <div style={{ padding: 32, textAlign: "center", color: TEXT2 }}>
+                    <CheckCircle size={28} color={GREEN} style={{ marginBottom: 6, display: "block", margin: "0 auto 8px" }} />
+                    <p style={{ margin: 0, fontSize: 13 }}>ไม่มีงานรอ Assign</p>
+                  </div>
+                )}
+                {/* Assigned jobs section */}
+                {assignedJobs.length > 0 && (
+                  <div>
+                    <div style={{ padding: "10px 14px 6px", borderTop: `2px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}` }}>
+                      <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: PURPLE, textTransform: "uppercase", letterSpacing: 0.5 }}>🏍 Assign แล้ว ({assignedJobs.length})</p>
+                    </div>
+                    {assignedJobs.map(job => (
+                      <div key={job.id} style={{ padding: "10px 14px", borderBottom: `1px solid ${BORDER}` }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>#{job.order_number}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: PURPLE, background: `${PURPLE}12`, padding: "2px 8px", borderRadius: 99 }}>🏍 {job.rider_name}</span>
+                        </div>
+                        <p style={{ margin: 0, fontSize: 12, color: TEXT2 }}>{job.device_model ?? "—"} · {job.customer_name ?? "—"}</p>
+                        {job.appt_time && <p style={{ margin: "2px 0 0", fontSize: 11, color: TEXT3 }}>🕐 {job.appt_date} {job.appt_time} น.</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Shifts tab */
+              <div>
+                {allShifts.length === 0 ? (
+                  <div style={{ padding: 32, textAlign: "center", color: TEXT2, fontSize: 13 }}>ยังไม่มี Shift วันนี้</div>
+                ) : allShifts.map((s, i, arr) => (
+                  <div key={s.id} style={{ padding: "12px 14px", borderBottom: i < arr.length - 1 ? `1px solid ${BORDER}` : "none" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <Avatar name={s.rider_name} size={28} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between" }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{s.rider_name}</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: GREEN }}>{s.jobs_completed} งาน</span>
+                        </div>
+                        <p style={{ margin: 0, fontSize: 11, color: TEXT2 }}>
+                          {new Date(s.clocked_in_at).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })} – {s.clocked_out_at ? new Date(s.clocked_out_at).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }) : <span style={{ color: GREEN }}>กำลังทำงาน</span>}
+                          {" · "}{shiftDuration(s.clocked_in_at, s.clocked_out_at)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              {shiftsLoading ? (
-                <div style={{ padding: 32, textAlign: "center", color: TEXT2, fontSize: 14 }}>กำลังโหลด...</div>
-              ) : allShifts.length === 0 ? (
-                <div style={{ padding: 32, textAlign: "center" }}>
-                  <Clock size={32} color={BORDER} style={{ marginBottom: 8 }} />
-                  <p style={{ margin: 0, fontSize: 14, color: TEXT2 }}>ยังไม่มี Shift วันนี้</p>
-                </div>
-              ) : allShifts.filter(s => shiftFilter === null || s.rider_name === shiftFilter).map((s, i, arr) => (
-                <div key={s.id} style={{ padding: "12px 16px", borderBottom: i < arr.length - 1 ? `1px solid ${BORDER}` : "none" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{s.rider_name}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: GREEN }}>{s.jobs_completed} งาน</span>
-                  </div>
-                  <div style={{ fontSize: 12, color: TEXT2 }}>
-                    {thTime(s.clocked_in_at)} – {s.clocked_out_at ? thTime(s.clocked_out_at) : <span style={{ color: GREEN, fontWeight: 600 }}>กำลังทำงาน</span>}
-                    {" · "}{shiftDuration(s.clocked_in_at, s.clocked_out_at)}
-                    {s.total_distance_km != null && s.total_distance_km > 0 && ` · ${s.total_distance_km.toFixed(0)} กม.`}
-                  </div>
-                  {s.ended_reason === "admin_closed" && <p style={{ margin: "2px 0 0", fontSize: 11, color: TEXT2 }}>ปิดโดย Admin</p>}
-                  {s.ended_reason === "auto_timeout" && <p style={{ margin: "2px 0 0", fontSize: 11, color: ORANGE }}>⚠ ปิดอัตโนมัติ</p>}
-                </div>
-              ))}
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
 
-function Stat({ label, value, color, icon }: { label: string; value: number; color: string; icon: React.ReactNode }) {
-  return (
-    <div style={{ textAlign: "center" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 4, justifyContent: "center", color, fontSize: 11, fontWeight: 600, marginBottom: 2 }}>
-        {icon}{label}
+      {/* ── Summary bar ── */}
+      <div style={{ background: DARK, padding: "8px 20px", display: "flex", alignItems: "center", gap: 24, flexShrink: 0 }}>
+        <span style={{ color: "rgba(255,255,255,.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, flexShrink: 0 }}>สรุปวันนี้</span>
+        {[
+          { label: "Assign แล้ว", value: assignedJobs.length, color: PURPLE },
+          { label: "ไรเดอร์ออนไลน์", value: riders.length, color: GREEN },
+          { label: "กำลังทำงาน", value: busyRiders.length, color: ORANGE },
+          { label: "งานเสร็จ", value: todayStats.completedCount, color: GREEN },
+          { label: "งานรอ Assign", value: unassignedJobs.length, color: YELLOW },
+          { label: "ยกเลิก", value: todayStats.cancelledCount, color: RED },
+          { label: "Shift จบงาน", value: todayShiftJobs, color: BLUE },
+        ].map(({ label, value, color }) => (
+          <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 16, fontWeight: 800, color }}>{value}</span>
+            <span style={{ fontSize: 11, color: "rgba(255,255,255,.4)" }}>{label}</span>
+          </div>
+        ))}
       </div>
-      <p style={{ margin: 0, color, fontSize: 20, fontWeight: 800 }}>{value}</p>
     </div>
   );
-}
-
-function WifiOff({ size, color, style }: { size: number; color: string; style?: React.CSSProperties }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={style}><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>;
 }

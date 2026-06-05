@@ -419,3 +419,23 @@ export async function fetchRiderShiftStats(riderId: string, dateFrom: string, da
 
   return data ?? [];
 }
+
+// ─── Today's request stats for planner dashboard ─────────────────────────────
+export async function fetchTodayRequestStats() {
+  await requireAuth();
+  const supabase = createServerClient();
+  const today = new Date().toISOString().split("T")[0];
+
+  const { data } = await supabase
+    .from("requests")
+    .select("status, rider_id")
+    .gte("created_at", today + "T00:00:00")
+    .lte("created_at", today + "T23:59:59");
+
+  if (!data) return { newCount: 0, completedCount: 0, cancelledCount: 0 };
+  return {
+    newCount: data.filter(r => ["new", "pending", "contacted"].includes(r.status)).length,
+    completedCount: data.filter(r => r.status === "completed").length,
+    cancelledCount: data.filter(r => ["cancelled", "no_show"].includes(r.status)).length,
+  };
+}

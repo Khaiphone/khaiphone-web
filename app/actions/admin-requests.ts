@@ -465,6 +465,89 @@ export async function assignRider(id: string, riderId: string | null, riderName:
   return { success: true as const, distanceKm };
 }
 
+// ─── Auto-assign all unassigned confirmed jobs to idle riders ─────────────────
+export async function autoAssignJobs(): Promise<{ assigned: number; skipped: number }> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const now = new Date().toISOString();
+
+  const { data: jobs } = await supabase
+    .from("requests")
+    .select("id, order_number, device_model, appt_date, appt_time, appt_lat, appt_lng")
+    .eq("status", "confirmed")
+    .is("rider_id", null)
+    .not("appt_date", "is", null)
+    .order("appt_date", { ascending: true })
+    .order("appt_time", { ascending: true });
+
+  if (!jobs || jobs.length === 0) return { assigned: 0, skipped: 0 };
+
+  const { data: locs } = await supabase
+    .from("rider_locations")
+    .select("rider_id, lat, lng, shift_id")
+    .eq("is_online", true)
+    .eq("tracking_mode", "idle");
+
+  if (!locs || locs.length === 0) return { assigned: 0, skipped: jobs.length };
+
+  const riderIds = locs.map(l => l.rider_id);
+  const shiftIds = locs.map(l => l.shift_id).filter(Boolean) as string[];
+  const [{ data: users }, { data: shifts }] = await Promise.all([
+    supabase.from("admin_users").select("user_id, name").in("user_id", riderIds),
+    shiftIds.length > 0
+      ? supabase.from("rider_shifts").select("id, jobs_completed").in("id", shiftIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const { haversineKm } = await import("@/lib/geo-utils");
+
+  let assigned = 0, skipped = 0;
+  const usedRiderIds = new Set<string>();
+
+  for (const job of jobs) {
+    const available = locs.filter(r => !usedRiderIds.has(r.rider_id));
+    if (!available.length) { skipped++; continue; }
+
+    // Score: distance × (1 + jobs_today × 0.2) — lower is better (balances workload)
+    const best = available
+      .map(r => {
+        const distKm = job.appt_lat && job.appt_lng
+          ? haversineKm(r.lat, r.lng, job.appt_lat, job.appt_lng) : 999;
+        const jobsToday = shifts?.find(s => s.id === r.shift_id)?.jobs_completed ?? 0;
+        return { ...r, score: distKm * (1 + jobsToday * 0.2) };
+      })
+      .sort((a, b) => a.score - b.score)[0];
+
+    const riderName = users?.find(u => u.user_id === best.rider_id)?.name ?? "ไรเดอร์";
+
+    // Atomic update — WHERE rider_id IS NULL prevents race conditions
+    const { data: updated } = await supabase
+      .from("requests")
+      .update({ rider_id: best.rider_id, rider_name: riderName, updated_at: now })
+      .eq("id", job.id)
+      .is("rider_id", null)
+      .select("id");
+
+    if (updated?.length) {
+      usedRiderIds.add(best.rider_id);
+      await supabase.from("rider_locations")
+        .update({ current_job_id: job.id, updated_at: now })
+        .eq("rider_id", best.rider_id);
+      after(() => sendPushToUser(best.rider_id, {
+        title: "งานใหม่มาแล้ว! (Auto Assign)",
+        body: `${job.order_number} · ${job.device_model ?? ""}`,
+        url: `/rider`,
+        tag: `rider-assign-${job.id}`,
+      }).catch(console.error));
+      assigned++;
+    } else {
+      skipped++;
+    }
+  }
+
+  return { assigned, skipped };
+}
+
 // ─── Fetch single request ─────────────────────────────────────────────────────
 export async function fetchRequest(id: string): Promise<AdminRequest | null> {
   await requireAuth();
