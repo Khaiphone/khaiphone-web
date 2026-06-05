@@ -1068,7 +1068,8 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                   <option value="parcel">ส่งพัสดุ</option>
                 </select>
                 <label style={{ color: TEXT2, fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>สถานที่</label>
-                <input value={apptDraft.location} onChange={e => setApptDraft(p => ({ ...p, location: e.target.value }))} placeholder="ระบุสถานที่" style={{ ...inputSt, marginBottom: 0 }} />
+                <input value={apptDraft.location} onChange={e => setApptDraft(p => ({ ...p, location: e.target.value }))} placeholder="ระบุสถานที่ หรือวาง Google Maps link" style={{ ...inputSt, marginBottom: "12px" }} />
+                <EditBar onSave={saveAppt} onCancel={() => setEditAppt(false)} isSaving={saving === "appt"} />
               </>
             )}
           </div>
