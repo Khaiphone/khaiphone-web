@@ -91,7 +91,7 @@ export async function riderPingLocation(payload: {
   const supabase = createServerClient();
   const now = new Date().toISOString();
 
-  const { error } = await supabase.from("rider_locations").upsert({
+  const locData: Record<string, unknown> = {
     rider_id:       user.id,
     lat:            payload.lat,
     lng:            payload.lng,
@@ -103,10 +103,14 @@ export async function riderPingLocation(payload: {
     tracking_mode:  payload.mode,
     app_state:      payload.appState,
     shift_id:       payload.shiftId,
-    current_job_id: payload.currentJobId ?? null,
     last_heartbeat: now,
     updated_at:     now,
-  }, { onConflict: "rider_id" });
+  };
+  // Only write current_job_id when explicitly known — never overwrite with null
+  // from a stale auto-resume snapshot; completion actions clear it explicitly.
+  if (payload.currentJobId != null) locData.current_job_id = payload.currentJobId;
+
+  const { error } = await supabase.from("rider_locations").upsert(locData, { onConflict: "rider_id" });
 
   if (error) return { success: false, error: error.message };
 
@@ -337,7 +341,7 @@ export async function fetchRiderTrail(riderId: string, since: string) {
   return data ?? [];
 }
 
-// ─── Fetch all confirmed requests for planner (unassigned + assigned) ────────
+// ─── Fetch all active requests for planner (confirmed + in-progress) ─────────
 export async function fetchUnassignedJobs() {
   await requireAuth();
   const supabase = createServerClient();
@@ -345,7 +349,7 @@ export async function fetchUnassignedJobs() {
   const { data } = await supabase
     .from("requests")
     .select("id, order_number, device_model, customer_name, appt_location, appt_date, appt_time, appt_lat, appt_lng, rider_id, rider_name")
-    .eq("status", "confirmed")
+    .in("status", ["confirmed", "pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting", "awaiting_transfer"])
     .order("appt_date", { ascending: true })
     .order("appt_time", { ascending: true });
 

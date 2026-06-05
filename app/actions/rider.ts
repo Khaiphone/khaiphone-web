@@ -181,6 +181,11 @@ export async function riderAcceptJob(id: string) {
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
 
+  // Keep rider_locations.current_job_id in sync so the planner map reflects the accepted job
+  await supabase.from("rider_locations")
+    .update({ current_job_id: id, updated_at: now })
+    .eq("rider_id", user.id);
+
   after(async () => {
     await broadcastRequestUpdate(id);
     await sendPushToOwners({
