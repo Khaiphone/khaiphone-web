@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Copy, Check, ExternalLink } from "lucide-react";
 import { createRequest } from "@/app/actions/admin-requests";
@@ -85,6 +85,12 @@ export default function NewRequestPage() {
   const [error,        setError]        = useState<string | null>(null);
   const [done,         setDone]         = useState<{ orderNumber: string; id: string } | null>(null);
   const [copied,       setCopied]       = useState(false);
+  const [pinCoords,    setPinCoords]    = useState<{ lat: number; lng: number } | null>(null);
+
+  const mapsLoadedRef   = useRef(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const locationAcRef   = useRef<any>(null);
+  const locationInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     Promise.all([fetchActiveProducts(), fetchPricingConfig()]).then(([prods, cfg]) => {
@@ -92,6 +98,45 @@ export default function NewRequestPage() {
       setPricingCfg(cfg);
     });
   }, []);
+
+  // Init Places Autocomplete on location input when rider/parcel method is selected
+  useEffect(() => {
+    if (form.apptMethod === "branch") { setPinCoords(null); return; }
+
+    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!key) return;
+
+    function initAc() {
+      const input = locationInputRef.current;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const g = (window as any).google;
+      if (!input || !g?.maps?.places) return;
+      if (locationAcRef.current) return; // already initialised
+      const ac = new g.maps.places.Autocomplete(input, {
+        fields: ["geometry", "formatted_address", "name"],
+        componentRestrictions: { country: "th" },
+      });
+      locationAcRef.current = ac;
+      ac.addListener("place_changed", () => {
+        const place = ac.getPlace();
+        const loc = place.geometry?.location;
+        if (!loc) return;
+        const addr: string = place.formatted_address ?? place.name ?? input.value;
+        setForm(p => ({ ...p, apptLocation: addr }));
+        setPinCoords({ lat: loc.lat(), lng: loc.lng() });
+      });
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((window as any).google?.maps?.places) { initAc(); return; }
+    if (mapsLoadedRef.current) return;
+    mapsLoadedRef.current = true;
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&language=th&region=TH`;
+    script.async = true;
+    script.onload = initAc;
+    document.head.appendChild(script);
+  }, [form.apptMethod]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Unique models grouped by category
   const categories = useMemo(() => {
@@ -215,6 +260,8 @@ export default function NewRequestPage() {
       apptDate:              form.apptDate,
       apptTime:              form.apptTime,
       apptLocation:          form.apptLocation.trim(),
+      apptLat:               pinCoords?.lat,
+      apptLng:               pinCoords?.lng,
       apptMethod:            form.apptMethod,
       paymentMethod:         form.paymentMethod,
       paymentBank:           form.paymentBank.trim() || undefined,
@@ -512,7 +559,16 @@ export default function NewRequestPage() {
           </div>
           <div>
             <label style={labelSt}>{form.apptMethod === "branch" ? "สาขา" : form.apptMethod === "rider" ? "ที่อยู่รับเครื่อง" : "ที่อยู่สำหรับส่ง"}</label>
-            <input value={form.apptLocation} onChange={f("apptLocation")} placeholder={form.apptMethod === "branch" ? "เช่น สาขาสยาม" : "กรอกที่อยู่"} style={inputSt} />
+            <input
+              ref={form.apptMethod !== "branch" ? locationInputRef : undefined}
+              value={form.apptLocation}
+              onChange={e => { setForm(p => ({ ...p, apptLocation: e.target.value })); setPinCoords(null); }}
+              placeholder={form.apptMethod === "branch" ? "เช่น สาขาสยาม" : "ชื่อสถานที่ หรือวางลิ้ง Google Maps"}
+              style={inputSt}
+            />
+            {form.apptMethod !== "branch" && (
+              <p style={{ fontSize: 11, color: TEXT3, margin: "4px 0 0" }}>พิมพ์เพื่อค้นหา หรือวางลิ้ง Google Maps / Plus Code</p>
+            )}
           </div>
         </Section>
 

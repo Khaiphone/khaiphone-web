@@ -804,6 +804,11 @@ function SellModelPageContent() {
   const mapDivRef        = useRef<HTMLDivElement | null>(null);
   const mapsLoadedRef    = useRef(false);
   const mapInitRef       = useRef(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const markerRef        = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mapInstanceRef   = useRef<any>(null);
+  const modalSearchRef   = useRef<HTMLInputElement>(null);
   const bankSectionRef   = useRef<HTMLDivElement>(null);
   const termsSectionRef  = useRef<HTMLDivElement>(null);
 
@@ -949,6 +954,7 @@ function SellModelPageContent() {
   const [notes, setNotes] = useState("");
   const [riderAddress, setRiderAddress] = useState("");
   const [pinAddress, setPinAddress] = useState("");
+  const [pinCoords, setPinCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationModal, setLocationModal] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [acceptTerms, setAcceptTerms] = useState(false);
@@ -1059,7 +1065,7 @@ function SellModelPageContent() {
 
   // Init interactive map + draggable marker when location modal opens
   useEffect(() => {
-    if (!locationModal) { mapInitRef.current = false; return; }
+    if (!locationModal) { mapInitRef.current = false; markerRef.current = null; mapInstanceRef.current = null; return; }
     if (mapInitRef.current) return;
     const t = setTimeout(() => {
       const container = mapDivRef.current;
@@ -1068,18 +1074,22 @@ function SellModelPageContent() {
       if (!container || !g?.maps) return;
       mapInitRef.current = true;
       const { lat, lng } = locationModal;
+      setPinCoords({ lat, lng });
       const map = new g.maps.Map(container, {
         center: { lat, lng }, zoom: 16,
         mapTypeControl: false, streetViewControl: false,
         fullscreenControl: false, gestureHandling: "greedy",
       });
+      mapInstanceRef.current = map;
       const marker = new g.maps.Marker({
         position: { lat, lng }, map, draggable: true,
         title: "ลากเพื่อปรับตำแหน่ง",
       });
+      markerRef.current = marker;
       marker.addListener("dragend", () => {
         const pos = marker.getPosition();
         if (!pos) return;
+        setPinCoords({ lat: pos.lat(), lng: pos.lng() });
         new g.maps.Geocoder().geocode({ location: pos }, (results: Array<{formatted_address: string}>, status: string) => {
           const addr = status === "OK" && results?.[0]
             ? results[0].formatted_address
@@ -1087,6 +1097,29 @@ function SellModelPageContent() {
           setPinAddress(addr);
         });
       });
+
+      // Places Autocomplete on modal search input
+      const searchEl = modalSearchRef.current;
+      if (searchEl && g.maps.places) {
+        const ac = new g.maps.places.Autocomplete(searchEl, {
+          fields: ["geometry", "formatted_address", "name"],
+          componentRestrictions: { country: "th" },
+        });
+        ac.addListener("place_changed", () => {
+          const place = ac.getPlace();
+          const loc = place.geometry?.location;
+          if (!loc) return;
+          const newLat = loc.lat();
+          const newLng = loc.lng();
+          const addr: string = place.formatted_address ?? place.name ?? searchEl.value;
+          map.setCenter({ lat: newLat, lng: newLng });
+          map.setZoom(17);
+          marker.setPosition({ lat: newLat, lng: newLng });
+          setPinCoords({ lat: newLat, lng: newLng });
+          setPinAddress(addr);
+          searchEl.value = "";
+        });
+      }
     }, 80);
     return () => clearTimeout(t);
   }, [locationModal]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1185,6 +1218,7 @@ function SellModelPageContent() {
         date:   appointDate,
         time:   appointTime,
         location,
+        ...(pinCoords ? { lat: pinCoords.lat, lng: pinCoords.lng } : {}),
       },
       payment: {
         method:        payMethod,
@@ -2028,9 +2062,19 @@ function SellModelPageContent() {
                     <div className="bg-white w-full md:max-w-md rounded-t-2xl md:rounded-2xl overflow-hidden shadow-2xl">
                       <div className="p-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
                         <p className="font-bold text-sm text-black">ยืนยันตำแหน่ง</p>
-                        <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>ลากหมุดเพื่อปรับตำแหน่งให้แม่นยำ</p>
+                        <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>ลากหมุดหรือค้นหาเพื่อปรับตำแหน่ง</p>
                       </div>
-                      <div ref={mapDivRef} className="w-full" style={{ height: 260 }} />
+                      {/* Search input inside modal */}
+                      <div className="px-4 py-3" style={{ borderBottom: "1px solid #F3F4F6" }}>
+                        <input
+                          ref={modalSearchRef}
+                          type="text"
+                          placeholder="ค้นหาสถานที่..."
+                          className="w-full text-sm rounded-xl px-3 py-2.5 outline-none"
+                          style={{ border: "1.5px solid #E5E7EB", background: "#F9FAFB", color: "#111", fontFamily: "inherit" }}
+                        />
+                      </div>
+                      <div ref={mapDivRef} className="w-full" style={{ height: 220 }} />
                       <div className="p-4">
                         <p className="text-xs font-semibold mb-1" style={{ color: "#6B7280" }}>ตำแหน่งที่เลือก</p>
                         <p className="text-sm text-black leading-relaxed mb-4">
@@ -2039,7 +2083,7 @@ function SellModelPageContent() {
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            onClick={() => setLocationModal(null)}
+                            onClick={() => { setPinCoords(null); setLocationModal(null); }}
                             className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
                             style={{ border: "1.5px solid #E5E7EB", color: "#6B7280" }}
                           >

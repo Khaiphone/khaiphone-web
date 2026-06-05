@@ -168,6 +168,8 @@ export async function createRequest(data: {
   apptDate: string;
   apptTime: string;
   apptLocation: string;
+  apptLat?: number;
+  apptLng?: number;
   apptMethod: SellMethod;
   paymentMethod: PayMethod;
   paymentBank?: string;
@@ -206,7 +208,9 @@ export async function createRequest(data: {
     appt_date:        data.apptDate,
     appt_time:        data.apptTime,
     appt_location:    data.apptLocation,
-    ...(await geocodeLocation(data.apptLocation ?? "").then(c => c ? { appt_lat: c.lat, appt_lng: c.lng } : {})),
+    ...(data.apptLat != null && data.apptLng != null
+      ? { appt_lat: data.apptLat, appt_lng: data.apptLng }
+      : await geocodeLocation(data.apptLocation ?? "").then(c => c ? { appt_lat: c.lat, appt_lng: c.lng } : {})),
     appt_method:      data.apptMethod,
     payment_method:         data.paymentMethod,
     payment_bank:           data.paymentBank           || null,
