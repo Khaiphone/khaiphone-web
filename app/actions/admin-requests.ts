@@ -308,8 +308,28 @@ async function geocodeLocation(location: string): Promise<{ lat: number; lng: nu
     if (!coords) {
       // Shortened link (maps.app.goo.gl, goo.gl/maps) — follow redirect then parse
       try {
-        const res = await fetch(trimmed, { cache: "no-store", redirect: "follow" });
+        const res = await fetch(trimmed, {
+          cache: "no-store",
+          redirect: "follow",
+          headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
+        });
         coords = extractCoordsFromMapsUrl(res.url);
+
+        // Fallback: scan first 12 KB of HTML for embedded coordinates
+        if (!coords && res.body) {
+          const reader = res.body.getReader();
+          let body = "";
+          try {
+            while (body.length < 12000) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              body += new TextDecoder().decode(value);
+            }
+          } finally { reader.cancel().catch(() => {}); }
+          const m = body.match(/\/@(-?\d+\.\d+),(-?\d+\.\d+)/)
+                 ?? body.match(/"lat":(-?\d+\.\d+),"lng":(-?\d+\.\d+)/);
+          if (m) coords = { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+        }
       } catch { /* ignore */ }
     }
     if (!coords) return null;
