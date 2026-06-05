@@ -264,11 +264,41 @@ export async function assignRequest(id: string, userId: string | null, name: str
 
 const STORE_ADDRESS = "เดอะแพลนท์ วงแหวน-รังสิต อำเภอธัญบุรี ปทุมธานี 12110";
 
+function extractCoordsFromMapsUrl(url: string): { lat: number; lng: number } | null {
+  // /@lat,lng,zoom  (most common in google.com/maps URLs)
+  const atMatch = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (atMatch) return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
+  // ?q=lat,lng or &q=lat,lng
+  const qMatch = url.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (qMatch) return { lat: parseFloat(qMatch[1]), lng: parseFloat(qMatch[2]) };
+  // ll=lat,lng
+  const llMatch = url.match(/ll=(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (llMatch) return { lat: parseFloat(llMatch[1]), lng: parseFloat(llMatch[2]) };
+  return null;
+}
+
 async function geocodeLocation(location: string): Promise<{ lat: number; lng: number } | null> {
+  const trimmed = location.trim();
+  if (!trimmed) return null;
+
+  // If it looks like a URL — try to pull coords directly (no API cost, exact accuracy)
+  if (trimmed.startsWith("http")) {
+    const direct = extractCoordsFromMapsUrl(trimmed);
+    if (direct) return direct;
+    // Shortened link (maps.app.goo.gl, goo.gl/maps) — follow redirect then parse
+    try {
+      const res = await fetch(trimmed, { cache: "no-store", redirect: "follow" });
+      const fromRedirect = extractCoordsFromMapsUrl(res.url);
+      if (fromRedirect) return fromRedirect;
+    } catch { /* ignore */ }
+    return null;
+  }
+
+  // Plain text / Plus Code / place name — use Geocoding API
   const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
-  if (!key || !location.trim()) return null;
+  if (!key) return null;
   try {
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location)}&key=${key}&language=th&region=th`;
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(trimmed)}&key=${key}&language=th&region=th`;
     const res  = await fetch(url, { cache: "no-store" });
     const data = await res.json();
     const loc  = data?.results?.[0]?.geometry?.location;
