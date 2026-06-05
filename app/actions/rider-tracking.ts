@@ -320,6 +320,22 @@ export async function fetchRiderTrail(riderId: string, since: string) {
   return data ?? [];
 }
 
+// ─── Fetch unassigned confirmed requests (planner) ───────────────────────────
+export async function fetchUnassignedJobs() {
+  await requireAuth();
+  const supabase = createServerClient();
+
+  const { data } = await supabase
+    .from("requests")
+    .select("id, order_number, device_model, customer_name, appt_location, appt_date, appt_time, appt_lat, appt_lng")
+    .eq("status", "confirmed")
+    .is("rider_id", null)
+    .order("appt_date", { ascending: true })
+    .order("appt_time", { ascending: true });
+
+  return data ?? [];
+}
+
 // ─── Smart rider suggestions for a request ────────────────────────────────────
 export async function fetchRiderSuggestionsForRequest(requestId: string): Promise<{
   riders: Array<{

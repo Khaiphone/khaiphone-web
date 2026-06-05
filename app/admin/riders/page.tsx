@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps";
 import { Navigation, Battery, Wifi, AlertTriangle, ChevronRight, Users, CheckCircle2, Clock, Settings, Smartphone } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { fetchActiveRiders, fetchAllRidersShifts } from "@/app/actions/rider-tracking";
+import { fetchActiveRiders, fetchAllRidersShifts, fetchUnassignedJobs } from "@/app/actions/rider-tracking";
+import { assignRider } from "@/app/actions/admin-requests";
 import { haversineKm, etaMinutes, fmtDistance, fmtEta, OFFICE_LAT, OFFICE_LNG } from "@/lib/geo-utils";
 
 const DARK = "#1a1a2e";
@@ -53,6 +54,18 @@ type ActiveRider = {
   current_job: any;
 };
 
+type UnassignedJob = {
+  id: string;
+  order_number: string;
+  device_model: string | null;
+  customer_name: string | null;
+  appt_location: string | null;
+  appt_date: string | null;
+  appt_time: string | null;
+  appt_lat: number | null;
+  appt_lng: number | null;
+};
+
 type AllShift = {
   id: string;
   rider_id: string;
@@ -83,16 +96,41 @@ function thTime(iso: string) {
   return new Date(iso).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
 }
 
+function minutesUntilAppt(date: string | null, time: string | null): number | null {
+  if (!date || !time) return null;
+  return Math.floor((new Date(`${date}T${time}:00`).getTime() - Date.now()) / 60000);
+}
+
+function urgencyColor(mins: number | null): string {
+  if (mins === null) return TEXT2;
+  if (mins < 0) return TEXT2;
+  if (mins < 60) return RED;
+  if (mins < 180) return ORANGE;
+  return GREEN;
+}
+
+function urgencyLabel(mins: number | null): string {
+  if (mins === null) return "";
+  if (mins < 0) return "เลยเวลา";
+  if (mins < 60) return `${mins} นาที`;
+  return `${Math.floor(mins / 60)} ชม.${mins % 60 > 0 ? ` ${mins % 60} นาที` : ""}`;
+}
+
 export default function RidersDashboard() {
   const router = useRouter();
   const [riders, setRiders] = useState<ActiveRider[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRider, setSelectedRider] = useState<string | null>(null);
   const [mapCenter] = useState({ lat: OFFICE_LAT, lng: OFFICE_LNG });
-  const [sidebarTab, setSidebarTab] = useState<"riders" | "shifts">("riders");
+  const [sidebarTab, setSidebarTab] = useState<"riders" | "jobs" | "shifts">("riders");
   const [allShifts, setAllShifts] = useState<AllShift[]>([]);
   const [shiftsLoading, setShiftsLoading] = useState(false);
   const [shiftFilter, setShiftFilter] = useState<string | null>(null);
+  const [unassignedJobs, setUnassignedJobs] = useState<UnassignedJob[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(false);
+  const [dragJobId, setDragJobId] = useState<string | null>(null);
+  const [dropTargetRider, setDropTargetRider] = useState<string | null>(null);
+  const [assigning, setAssigning] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const data = await fetchActiveRiders();
@@ -108,6 +146,13 @@ export default function RidersDashboard() {
     setShiftsLoading(false);
   }, []);
 
+  const loadJobs = useCallback(async () => {
+    setJobsLoading(true);
+    const data = await fetchUnassignedJobs();
+    setUnassignedJobs(data as UnassignedJob[]);
+    setJobsLoading(false);
+  }, []);
+
   useEffect(() => {
     load();
     const ch = supabase
@@ -120,7 +165,17 @@ export default function RidersDashboard() {
 
   useEffect(() => {
     if (sidebarTab === "shifts") loadShifts();
-  }, [sidebarTab, loadShifts]);
+    if (sidebarTab === "jobs") loadJobs();
+  }, [sidebarTab, loadShifts, loadJobs]);
+
+  async function handleAssignDrop(jobId: string, riderId: string, riderName: string) {
+    setAssigning(jobId);
+    setDropTargetRider(null);
+    setDragJobId(null);
+    await assignRider(jobId, riderId, riderName);
+    setAssigning(null);
+    loadJobs();
+  }
 
   const officeToRider = (r: ActiveRider) => haversineKm(OFFICE_LAT, OFFICE_LNG, r.lat, r.lng);
 
@@ -197,15 +252,112 @@ export default function RidersDashboard() {
 
           {/* Tab header */}
           <div style={{ display: "flex", borderBottom: `1px solid ${BORDER}`, flexShrink: 0 }}>
-            <button onClick={() => setSidebarTab("riders")} style={{ flex: 1, padding: "11px 0", border: "none", background: sidebarTab === "riders" ? `${BLUE}08` : "transparent", color: sidebarTab === "riders" ? BLUE : TEXT2, fontSize: 13, fontWeight: sidebarTab === "riders" ? 700 : 400, cursor: "pointer", fontFamily: "inherit", borderBottom: sidebarTab === "riders" ? `2px solid ${BLUE}` : "none" }}>
-              ไรเดอร์
-            </button>
-            <button onClick={() => setSidebarTab("shifts")} style={{ flex: 1, padding: "11px 0", border: "none", background: sidebarTab === "shifts" ? `${BLUE}08` : "transparent", color: sidebarTab === "shifts" ? BLUE : TEXT2, fontSize: 13, fontWeight: sidebarTab === "shifts" ? 700 : 400, cursor: "pointer", fontFamily: "inherit", borderBottom: sidebarTab === "shifts" ? `2px solid ${BLUE}` : "none" }}>
-              Shift วันนี้
-            </button>
+            {(["riders", "jobs", "shifts"] as const).map(tab => {
+              const label = tab === "riders" ? "ไรเดอร์" : tab === "jobs" ? `งาน${unassignedJobs.length > 0 ? ` (${unassignedJobs.length})` : ""}` : "Shift";
+              const active = sidebarTab === tab;
+              return (
+                <button key={tab} onClick={() => setSidebarTab(tab)} style={{ flex: 1, padding: "11px 0", border: "none", background: active ? `${BLUE}08` : "transparent", color: active ? BLUE : TEXT2, fontSize: 12, fontWeight: active ? 700 : 400, cursor: "pointer", fontFamily: "inherit", borderBottom: active ? `2px solid ${BLUE}` : "none" }}>
+                  {label}
+                </button>
+              );
+            })}
           </div>
 
-          {sidebarTab === "riders" ? (
+          {sidebarTab === "jobs" ? (
+            /* Jobs / Planner tab */
+            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+              {/* Unassigned jobs */}
+              <div style={{ padding: "10px 16px 6px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.5 }}>งานรอ Assign</p>
+                <button onClick={loadJobs} style={{ background: "none", border: "none", color: TEXT2, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>รีเฟรช</button>
+              </div>
+              {jobsLoading ? (
+                <div style={{ padding: 24, textAlign: "center", color: TEXT2, fontSize: 13 }}>กำลังโหลด...</div>
+              ) : unassignedJobs.length === 0 ? (
+                <div style={{ padding: 24, textAlign: "center" }}>
+                  <CheckCircle2 size={28} color={GREEN} style={{ marginBottom: 6 }} />
+                  <p style={{ margin: 0, fontSize: 13, color: TEXT2 }}>ไม่มีงานรอ Assign</p>
+                </div>
+              ) : unassignedJobs.map(job => {
+                const mins = minutesUntilAppt(job.appt_date, job.appt_time);
+                const uColor = urgencyColor(mins);
+                const uLabel = urgencyLabel(mins);
+                const isAssigning = assigning === job.id;
+                return (
+                  <div
+                    key={job.id}
+                    draggable
+                    onDragStart={e => { e.dataTransfer.setData("jobId", job.id); e.dataTransfer.setData("jobLabel", `${job.order_number}`); setDragJobId(job.id); }}
+                    onDragEnd={() => setDragJobId(null)}
+                    style={{
+                      margin: "0 10px 8px",
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: `1.5px solid ${dragJobId === job.id ? uColor : BORDER}`,
+                      background: isAssigning ? "#f9fafb" : "#fff",
+                      cursor: isAssigning ? "wait" : "grab",
+                      opacity: isAssigning ? 0.5 : 1,
+                      transition: "border-color 0.1s",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>#{job.order_number}</span>
+                      {uLabel && (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: uColor, background: `${uColor}15`, padding: "2px 6px", borderRadius: 6 }}>
+                          {mins !== null && mins < 0 ? "⚠ " : mins !== null && mins < 60 ? "🔴 " : mins !== null && mins < 180 ? "🟡 " : "🟢 "}{uLabel}
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ margin: "0 0 2px", fontSize: 13, color: TEXT }}>{job.device_model ?? "—"} · {job.customer_name ?? "—"}</p>
+                    {job.appt_time && <p style={{ margin: "0 0 2px", fontSize: 11, color: TEXT2 }}>🕐 นัด {job.appt_time} น.</p>}
+                    {job.appt_location && <p style={{ margin: 0, fontSize: 11, color: TEXT2 }}>📍 {job.appt_location}</p>}
+                    <p style={{ margin: "6px 0 0", fontSize: 10, color: TEXT2 }}>↖ ลากไปวางที่ไรเดอร์ด้านล่าง</p>
+                  </div>
+                );
+              })}
+
+              {/* Online riders as drop targets */}
+              <div style={{ borderTop: `2px dashed ${BORDER}`, margin: "4px 0 0", padding: "10px 16px 6px", flexShrink: 0 }}>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  {dragJobId ? "⬇ วางที่ไรเดอร์" : "ไรเดอร์ออนไลน์"}
+                </p>
+              </div>
+              {riders.length === 0 ? (
+                <div style={{ padding: "12px 16px", textAlign: "center" }}>
+                  <p style={{ margin: 0, fontSize: 13, color: TEXT2 }}>ยังไม่มีไรเดอร์ออนไลน์</p>
+                </div>
+              ) : riders.map(r => {
+                const riderName = r.admin_users?.name ?? "ไรเดอร์";
+                const color = MODE_COLOR[r.tracking_mode] ?? BLUE;
+                const isTarget = dropTargetRider === r.rider_id;
+                return (
+                  <div
+                    key={r.rider_id}
+                    onDragOver={e => { e.preventDefault(); setDropTargetRider(r.rider_id); }}
+                    onDragLeave={() => setDropTargetRider(null)}
+                    onDrop={e => { e.preventDefault(); const jobId = e.dataTransfer.getData("jobId"); if (jobId) handleAssignDrop(jobId, r.rider_id, riderName); }}
+                    style={{
+                      margin: "0 10px 8px",
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: `${isTarget ? "2px" : "1.5px"} ${isTarget ? "solid" : "dashed"} ${isTarget ? BLUE : BORDER}`,
+                      background: isTarget ? `${BLUE}08` : "#f9fafb",
+                      transition: "all 0.1s",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{riderName}</span>
+                      <span style={{ fontSize: 11, padding: "1px 6px", borderRadius: 4, background: `${color}15`, color }}>{MODE_LABEL[r.tracking_mode] ?? r.tracking_mode}</span>
+                    </div>
+                    {isTarget && <p style={{ margin: "4px 0 0", fontSize: 11, color: BLUE, fontWeight: 600 }}>วางที่นี่เพื่อ Assign →</p>}
+                  </div>
+                );
+              })}
+            </div>
+          ) : sidebarTab === "riders" ? (
             <>
               {/* Selected rider detail */}
               {selected && (
