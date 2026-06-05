@@ -349,34 +349,26 @@ export default function PlannerDashboard() {
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: BG, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", overflow: "hidden" }}>
 
       {/* ── Header ── */}
-      <div style={{ background: DARK, padding: "0 20px", height: 52, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 32, height: 32, background: GOLD, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: DARK, fontSize: 14 }}>K</div>
-          <div>
-            <p style={{ margin: 0, color: "#fff", fontWeight: 700, fontSize: 14, lineHeight: 1.2 }}>ศูนย์ควบคุมงานรับซื้อ</p>
-            <p style={{ margin: 0, color: "rgba(255,255,255,.45)", fontSize: 10 }}>Planner Dashboard</p>
-          </div>
+      <div style={{ background: "#fff", borderBottom: `1px solid ${BORDER}`, padding: "0 20px", height: 52, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+        <div>
+          <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: TEXT, lineHeight: 1.2 }}>Planner Dashboard</p>
+          <p style={{ margin: 0, fontSize: 11, color: TEXT2 }}>{thDate()}</p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ color: "rgba(255,255,255,.5)", fontSize: 12 }}>{thDate()}</span>
-          <button
-            onClick={async () => {
-              setSyncing(true);
-              const { total, updated } = await backfillRequestCoords();
-              await loadJobs();
-              setSyncing(false);
-              if (total === 0) alert("ทุกงานมีพิกัดครบแล้ว");
-              else alert(`ซิงค์พิกัดสำเร็จ ${updated}/${total} งาน`);
-            }}
-            disabled={syncing}
-            style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.2)", color: "rgba(255,255,255,.7)", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 11, fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}
-          >
-            <RefreshCw size={11} /> {syncing ? "ซิงค์..." : "ซิงค์พิกัด"}
-          </button>
-          <button onClick={() => router.push("/admin/riders/manage")} style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.2)", color: "rgba(255,255,255,.7)", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 11, fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}>
-            <Settings size={11} /> จัดการ
-          </button>
-        </div>
+        <button
+          onClick={async () => {
+            setSyncing(true);
+            const { total, updated } = await backfillRequestCoords();
+            await loadJobs();
+            setSyncing(false);
+            if (total === 0) alert("ทุกงานมีพิกัดครบแล้ว");
+            else alert(`ซิงค์พิกัดสำเร็จ ${updated}/${total} งาน`);
+          }}
+          disabled={syncing}
+          style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", border: `1px solid ${BORDER}`, color: TEXT2, borderRadius: 8, padding: "6px 12px", cursor: syncing ? "wait" : "pointer", fontSize: 12, fontFamily: "inherit", fontWeight: 500 }}
+        >
+          <RefreshCw size={13} style={{ animation: syncing ? "spin 1s linear infinite" : undefined }} />
+          {syncing ? "กำลังซิงค์..." : "ซิงค์พิกัด"}
+        </button>
       </div>
 
       {/* ── Stat bar ── */}
