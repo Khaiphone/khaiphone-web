@@ -1074,7 +1074,14 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                     ⚠️ ลิ้งสั้นนี้อ่านพิกัดไม่ได้ — ให้เปิดลิ้งในเบราว์เซอร์แล้วคัดลอก URL จาก address bar มาวางแทน หรือคัดลอกตัวเลขพิกัด เช่น <strong>13.778, 100.492</strong>
                   </p>
                 )}
-                <EditBar onSave={saveAppt} onCancel={() => setEditAppt(false)} isSaving={saving === "appt"} />
+                <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                  <button onClick={saveAppt} disabled={saving === "appt"} style={{ flex: 1, background: GOLD, border: "none", borderRadius: "10px", color: "#fff", fontWeight: 700, fontSize: "14px", padding: "12px 0", cursor: "pointer", opacity: saving === "appt" ? 0.6 : 1, fontFamily: "inherit" }}>
+                    {saving === "appt" ? "กำลังบันทึก..." : "บันทึก"}
+                  </button>
+                  <button onClick={() => setEditAppt(false)} style={{ flex: 1, background: "none", border: `1px solid ${BORDER}`, borderRadius: "10px", color: TEXT2, fontWeight: 500, fontSize: "14px", padding: "12px 0", cursor: "pointer", fontFamily: "inherit" }}>
+                    ยกเลิก
+                  </button>
+                </div>
               </>
             )}
           </div>
