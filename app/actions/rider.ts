@@ -393,7 +393,9 @@ export async function riderSaveInspection(id: string, inspection: {
   const { color, ...inspectionRest } = inspection;
 
   const { data: req } = await supabase
-    .from("requests").select("order_number, device_model").eq("id", id).single();
+    .from("requests").select("order_number, device_model, estimated_price").eq("id", id).single();
+
+  const estimatedPrice = req?.estimated_price ?? 0;
 
   const { error } = await supabase
     .from("requests")
@@ -404,8 +406,8 @@ export async function riderSaveInspection(id: string, inspection: {
         arrivedAt: now,
         result: "matched",
         issues: [],
-        originalPrice: 0,
-        actualPrice: 0,
+        originalPrice: estimatedPrice,
+        actualPrice: estimatedPrice,
         priceReason: "",
         negotiationResponse: null,
         negotiationRespondedAt: null,
