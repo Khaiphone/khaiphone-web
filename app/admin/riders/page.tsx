@@ -440,11 +440,11 @@ export default function PlannerDashboard() {
 
       {/* ── Stat bar ── */}
       <div style={{ padding: "10px 16px", display: "flex", gap: 8, flexShrink: 0, background: BG }}>
-        <StatCard icon={ClipboardList} label="งานใหม่"       value={todayStats.newCount}                                              color={BLUE}   bg="#EFF6FF" href="/admin/requests?tab=new" />
-        <StatCard icon={Clock}         label="รอ Assign"      value={unassignedJobs.length}                                           color={YELLOW} bg="#FFFBEB" bold={unassignedJobs.length > 0} href="/admin/requests?tab=confirmed" />
-        <StatCard icon={Navigation}    label="กำลังเดินทาง"  value={riders.filter(r => r.tracking_mode === "enroute").length}        color={ORANGE} bg="#FFF7ED" href="/admin/requests?tab=en_route" />
-        <StatCard icon={Search}        label="ตรวจเครื่อง"   value={riders.filter(r => r.tracking_mode === "on_site").length}        color={BLUE}   bg="#EFF6FF" href="/admin/requests?tab=inspecting" />
-        <StatCard icon={CheckCircle2}  label="เสร็จวันนี้"   value={todayStats.completedCount}                                       color={GREEN}  bg="#F0FDF4" href="/admin/requests?tab=completed" />
+        <StatCard icon={ClipboardList} label="งานใหม่"       value={todayStats.newCount}                                              color={BLUE}   bg="#EFF6FF" href="/admin/riders/jobs" />
+        <StatCard icon={Clock}         label="รอ Assign"      value={unassignedJobs.length}                                           color={YELLOW} bg="#FFFBEB" bold={unassignedJobs.length > 0} href="/admin/riders/jobs" />
+        <StatCard icon={Navigation}    label="กำลังเดินทาง"  value={riders.filter(r => r.tracking_mode === "enroute").length}        color={ORANGE} bg="#FFF7ED" href="/admin/riders/jobs" />
+        <StatCard icon={Search}        label="ตรวจเครื่อง"   value={riders.filter(r => r.tracking_mode === "on_site").length}        color={BLUE}   bg="#EFF6FF" href="/admin/riders/jobs" />
+        <StatCard icon={CheckCircle2}  label="เสร็จวันนี้"   value={todayStats.completedCount}                                       color={GREEN}  bg="#F0FDF4" href="/admin/riders/jobs" />
         <StatCard icon={UserCheck}     label="ไรเดอร์ว่าง"   value={idleRiders.length}                                               color={GREEN}  bg="#F0FDF4" bold={idleRiders.length > 0} href="/admin/riders/manage" />
         <button
           onClick={handleAutoAssign}
@@ -949,7 +949,7 @@ export default function PlannerDashboard() {
           ))}
         </div>
         <button
-          onClick={() => router.push("/admin/riders/manage")}
+          onClick={() => router.push("/admin/riders/jobs")}
           style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 16, padding: "8px 14px", borderRadius: 8, border: `1px solid ${BORDER}`, background: "#fff", color: TEXT, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", flexShrink: 0 }}
         >
           <BarChart2 size={14} color={BLUE} />
