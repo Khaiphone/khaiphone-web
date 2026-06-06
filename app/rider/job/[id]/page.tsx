@@ -1549,7 +1549,7 @@ export default function JobWizardPage() {
   }, [reload]);
 
   useEffect(() => {
-    const bc = supabase.channel("wizard-broadcast").on("broadcast", { event: "updated" }, p => { if (p.payload?.id === id) reload(); }).subscribe();
+    const bc = supabase.channel("request-updates").on("broadcast", { event: "updated" }, p => { if (p.payload?.id === id) reload(); }).subscribe();
     const pg = supabase.channel(`wizard-pg-${id}`).on("postgres_changes", { event:"UPDATE", schema:"public", table:"requests" },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (p: any) => { if (p.new?.id === id) reload(); }).subscribe();

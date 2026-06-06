@@ -1019,7 +1019,7 @@ export async function riderSubmitReturn(id: string) {
     .select("status, order_number, device_model, return_submitted_at")
     .eq("id", id).single();
 
-  if (req?.status !== "completed") return { success: false as const, error: "งานยังไม่เสร็จสิ้น" };
+  if (!["completed", "awaiting_transfer"].includes(req?.status ?? "")) return { success: false as const, error: "งานยังไม่เสร็จสิ้น" };
   if (req?.return_submitted_at)    return { success: false as const, error: "แจ้งส่งคืนไปแล้ว รอ admin ยืนยัน" };
 
   const { error } = await supabase

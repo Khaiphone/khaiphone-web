@@ -1209,7 +1209,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         </Card>
 
         {/* I. Inspection */}
-        {(["confirmed", "pickup_scheduled", "price_negotiation", "contracting", "rejected"] as RequestStatus[]).includes(request.status) && (
+        {(["confirmed", "pickup_scheduled", "inspecting", "en_route", "price_negotiation", "contracting", "awaiting_transfer", "completed", "rejected"] as RequestStatus[]).includes(request.status) && (
           <Card ref={inspectionRef}>
             <div style={{ padding: "16px" }}>
               {/* Header row with arrival button */}
@@ -1405,12 +1405,15 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                         const idx = line.indexOf(": ");
                         if (idx > 0) map[line.slice(0, idx).trim()] = line.slice(idx + 2).trim();
                       }
-                      const icloud = (map["iCloud Lock"] ?? map["iCloud Status"] ?? "").toLowerCase();
-                      const mdm    = (map["MDM Lock"] ?? "").toLowerCase();
+                      // "iCloud Lock: On" = activation locked (BAD)
+                      // "iCloud Status: On" = user is signed into iCloud (NORMAL — do not flag)
+                      const icloudLock   = (map["iCloud Lock"]   ?? "").toLowerCase();
+                      const icloudStatus = (map["iCloud Status"] ?? "").toLowerCase();
+                      const mdm          = (map["MDM Lock"]       ?? "").toLowerCase();
                       const issues: string[] = [];
-                      if (icloud.includes("on"))   issues.push("iCloud Lock เปิดอยู่");
-                      if (icloud.includes("lost")) issues.push("Find My / Lost");
-                      if (mdm === "on")            issues.push("MDM Lock เปิดอยู่");
+                      if (icloudLock === "on")                        issues.push("iCloud Lock เปิดอยู่");
+                      if (icloudLock.includes("lost") || icloudStatus.includes("lost")) issues.push("Find My / Lost");
+                      if (mdm === "on")                               issues.push("MDM Lock เปิดอยู่");
                       const passed = issues.length === 0;
                       return (
                         <div style={{ marginBottom: 16 }}>
