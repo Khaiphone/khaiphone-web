@@ -68,7 +68,7 @@ function ProgressBar({ value, max, color, label, sub }: {
 // ── Rate pill ─────────────────────────────────────────────────────────────────
 
 function RatePill({ label, value, target, good }: { label: string; value: number | null; target?: number | null; good?: boolean }) {
-  const pctNum = value != null ? Math.round(value * 100) : null;
+  const pctNum = value != null ? Math.min(100, Math.round(value * 100)) : null;
   const isGood = good !== undefined ? good : (target != null && value != null ? value >= target : true);
   const color  = pctNum == null ? "#9ca3af" : isGood ? "#16a34a" : "#dc2626";
   return (
