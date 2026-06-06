@@ -1221,6 +1221,8 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
     const idDigits = idNumber.replace(/\D/g, "");
     if (!buyerName.trim())                               { setError("กรุณากรอกชื่อ-นามสกุลผู้ขาย"); return; }
     if (idDigits.length !== 13)                          { setError("กรุณากรอกเลขบัตรประชาชนให้ครบ 13 หลัก"); return; }
+    if (!idPhotoDataUrl)                                 { setError("กรุณาถ่ายรูปบัตรประชาชนก่อนสร้างสัญญา"); return; }
+    if (!custProdPhotoDataUrl)                           { setError("กรุณาถ่ายรูปลูกค้าพร้อมสินค้าก่อนสร้างสัญญา"); return; }
     if (!imei.trim())                                    { setError("กรุณากรอก IMEI"); return; }
     if (!serial.trim())                                  { setError("กรุณากรอก Serial Number"); return; }
     if (payMethod === "cash" && !paymentPhotoStorageUrl) { setError("กรุณาถ่ายรูปหลักฐานมอบเงินก่อนสร้างสัญญา"); return; }
@@ -1587,7 +1589,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
                   </div>
                 )}
 
-                <input ref={slipFileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleRiderSlipUpload} />
+                <input ref={slipFileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleRiderSlipUpload} />
               </div>
             </>
           )}
