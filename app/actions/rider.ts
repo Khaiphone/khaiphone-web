@@ -90,7 +90,7 @@ export async function fetchRiderHomeData(riderId: string) {
     supabase.from("requests").select("*").eq("rider_id", riderId)
       .in("status", ["confirmed"]).order("appt_date", { ascending: true }),
     supabase.from("requests").select("*").eq("rider_id", riderId)
-      .in("status", ["pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting", "awaiting_transfer"])
+      .or("status.in.(pickup_scheduled,en_route,inspecting,price_negotiation,contracting,awaiting_transfer),and(status.eq.completed,returned_to_office_at.is.null)")
       .order("appt_date", { ascending: true }),
     supabase.from("requests")
       .select("status, actual_price, estimated_price")
@@ -129,7 +129,7 @@ export async function fetchRiderJobs(riderId: string): Promise<AdminRequest[]> {
     .from("requests")
     .select("*")
     .eq("rider_id", riderId)
-    .in("status", ["pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting", "awaiting_transfer"])
+    .or("status.in.(pickup_scheduled,en_route,inspecting,price_negotiation,contracting,awaiting_transfer),and(status.eq.completed,returned_to_office_at.is.null)")
     .order("appt_date", { ascending: true });
   if (error) { console.error("fetchRiderJobs:", error); return []; }
   return (data ?? []).map(mapRow);
