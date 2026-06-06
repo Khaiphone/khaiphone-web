@@ -65,11 +65,21 @@ function Avatar({ name, size = 36 }: { name: string; size?: number }) {
   );
 }
 
+function getMonthRange(year: number, month: number) {
+  const from = `${year}-${String(month).padStart(2, "0")}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const to = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  return { from, to };
+}
+
 export default function RiderJobsPage() {
   const router = useRouter();
   const today  = new Date().toISOString().slice(0, 10);
+  const now    = new Date();
 
+  const [mode,        setMode]       = useState<"day" | "month">("day");
   const [date,        setDate]       = useState(today);
+  const [monthYear,   setMonthYear]  = useState({ year: now.getFullYear(), month: now.getMonth() + 1 });
   const [jobs,        setJobs]       = useState<AdminRequest[]>([]);
   const [loading,     setLoading]    = useState(true);
   const [filter,      setFilter]     = useState<FilterKey>("all");
@@ -79,8 +89,23 @@ export default function RiderJobsPage() {
 
   useEffect(() => {
     setLoading(true);
-    fetchRiderJobs(date).then(d => { setJobs(d); setLoading(false); });
-  }, [date]);
+    if (mode === "day") {
+      fetchRiderJobs(date).then(d => { setJobs(d); setLoading(false); });
+    } else {
+      const range = getMonthRange(monthYear.year, monthYear.month);
+      fetchRiderJobs(undefined, range).then(d => { setJobs(d); setLoading(false); });
+    }
+  }, [mode, date, monthYear]);
+
+  function shiftMonth(delta: number) {
+    setMonthYear(prev => {
+      let m = prev.month + delta;
+      let y = prev.year;
+      if (m > 12) { m = 1; y++; }
+      if (m < 1)  { m = 12; y--; }
+      return { year: y, month: m };
+    });
+  }
 
   const stats = useMemo(() => {
     const completed  = jobs.filter(j => jobCategory(j) === "completed");
@@ -90,7 +115,7 @@ export default function RiderJobsPage() {
     const unassigned = jobs.filter(j => jobCategory(j) === "unassigned");
     // Device custody tracking
     const withRider      = inProgress;
-    const pendingSubmit  = completed.filter(j => !j.returnSubmittedAt);
+    const pendingSubmit  = completed.filter(j => !j.returnedToOfficeAt);
     const pendingConfirm = completed.filter(j => j.returnSubmittedAt && !j.returnedToOfficeAt);
     const returned       = completed.filter(j => !!j.returnedToOfficeAt);
     return { total: jobs.length, completed, cancelled, inProgress, waiting, unassigned, withRider, pendingSubmit, pendingConfirm, returned };
@@ -143,16 +168,36 @@ export default function RiderJobsPage() {
             <div style={{ flex: 1 }}>
               <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: TEXT }}>รายงานงานไรเดอร์</h1>
             </div>
-            {/* Date nav */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <button onClick={() => setDate(d => shiftDate(d, -1))} style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "5px 8px", cursor: "pointer", display: "flex", color: TEXT2 }}><ChevronLeft size={15} /></button>
-              <span style={{ fontSize: 13, fontWeight: 600, color: TEXT, whiteSpace: "nowrap" }}>
-                {date === today ? <><span style={{ color: GOLD }}>วันนี้</span></> : new Date(date + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short" })}
-              </span>
-              <button onClick={() => setDate(d => shiftDate(d, 1))} disabled={date >= today} style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "5px 8px", cursor: date >= today ? "default" : "pointer", display: "flex", color: date >= today ? BORDER : TEXT2, opacity: date >= today ? 0.4 : 1 }}><ChevronRight size={15} /></button>
+            {/* Mode toggle */}
+            <div style={{ display: "flex", borderRadius: 8, border: `1px solid ${BORDER}`, overflow: "hidden", flexShrink: 0 }}>
+              <button onClick={() => setMode("day")} style={{ padding: "5px 10px", fontSize: 12, fontWeight: 600, background: mode === "day" ? GOLD + "20" : "none", color: mode === "day" ? GOLD : TEXT2, border: "none", cursor: "pointer", fontFamily: "inherit" }}>รายวัน</button>
+              <button onClick={() => setMode("month")} style={{ padding: "5px 10px", fontSize: 12, fontWeight: 600, background: mode === "month" ? GOLD + "20" : "none", color: mode === "month" ? GOLD : TEXT2, border: "none", cursor: "pointer", fontFamily: "inherit" }}>รายเดือน</button>
             </div>
+            {/* Date / Month nav */}
+            {mode === "day" ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <button onClick={() => setDate(d => shiftDate(d, -1))} style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "5px 8px", cursor: "pointer", display: "flex", color: TEXT2 }}><ChevronLeft size={15} /></button>
+                <span style={{ fontSize: 13, fontWeight: 600, color: TEXT, whiteSpace: "nowrap" }}>
+                  {date === today ? <span style={{ color: GOLD }}>วันนี้</span> : new Date(date + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short" })}
+                </span>
+                <button onClick={() => setDate(d => shiftDate(d, 1))} disabled={date >= today} style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "5px 8px", cursor: date >= today ? "default" : "pointer", display: "flex", color: date >= today ? BORDER : TEXT2, opacity: date >= today ? 0.4 : 1 }}><ChevronRight size={15} /></button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <button onClick={() => shiftMonth(-1)} style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "5px 8px", cursor: "pointer", display: "flex", color: TEXT2 }}><ChevronLeft size={15} /></button>
+                <span style={{ fontSize: 13, fontWeight: 600, color: TEXT, whiteSpace: "nowrap" }}>
+                  {new Date(monthYear.year, monthYear.month - 1, 1).toLocaleDateString("th-TH", { month: "short", year: "numeric" })}
+                </span>
+                <button onClick={() => shiftMonth(1)} disabled={monthYear.year === now.getFullYear() && monthYear.month >= now.getMonth() + 1} style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "5px 8px", cursor: "pointer", display: "flex", color: TEXT2, opacity: (monthYear.year === now.getFullYear() && monthYear.month >= now.getMonth() + 1) ? 0.4 : 1 }}><ChevronRight size={15} /></button>
+              </div>
+            )}
           </div>
-          <p style={{ margin: "0 0 10px", fontSize: 12, color: TEXT3 }}>{thDate(date + "T00:00:00")}</p>
+          <p style={{ margin: "0 0 10px", fontSize: 12, color: TEXT3 }}>
+            {mode === "day"
+              ? thDate(date + "T00:00:00")
+              : (() => { const r = getMonthRange(monthYear.year, monthYear.month); return `${new Date(r.from + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" })} — ${new Date(r.to + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" })}`; })()
+            }
+          </p>
         </div>
       </div>
 

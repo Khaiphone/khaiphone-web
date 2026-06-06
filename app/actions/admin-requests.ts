@@ -174,20 +174,23 @@ export async function fetchRequests(assignedToUserId?: string): Promise<AdminReq
 }
 
 // ─── Fetch rider-relevant jobs for a given date (default: today) ─────────────
-export async function fetchRiderJobs(date?: string): Promise<AdminRequest[]> {
+export async function fetchRiderJobs(date?: string, dateRange?: { from: string; to: string }): Promise<AdminRequest[]> {
   await requireAuth();
   const supabase = createServerClient();
-  const targetDate = date ?? new Date().toISOString().slice(0, 10);
 
-  // Jobs with today's appointment, or in-progress jobs regardless of date
   const IN_PROGRESS = ["pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting", "awaiting_transfer"];
-  const { data } = await supabase
-    .from("requests")
-    .select("*")
-    .or(`appt_date.eq.${targetDate},status.in.(${IN_PROGRESS.join(",")})`)
-    .not("status", "in", '("new","pending","contacted")')
-    .order("appt_time", { ascending: true, nullsFirst: false });
 
+  let query = supabase.from("requests").select("*").not("status", "in", '("new","pending","contacted")');
+
+  if (dateRange) {
+    // Monthly mode: all jobs with appt_date in range, plus any still in-progress
+    query = query.or(`and(appt_date.gte.${dateRange.from},appt_date.lte.${dateRange.to}),status.in.(${IN_PROGRESS.join(",")})`);
+  } else {
+    const targetDate = date ?? new Date().toISOString().slice(0, 10);
+    query = query.or(`appt_date.eq.${targetDate},status.in.(${IN_PROGRESS.join(",")})`);
+  }
+
+  const { data } = await query.order("appt_date", { ascending: true }).order("appt_time", { ascending: true, nullsFirst: false });
   return (data ?? []).map(mapRow);
 }
 
