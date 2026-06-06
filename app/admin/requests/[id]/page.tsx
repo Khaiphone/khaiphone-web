@@ -156,6 +156,9 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const [showReclaim,        setShowReclaim]        = useState(false);
   const [reclaimReason,      setReclaimReason]      = useState("");
   const [approvingInspection,setApprovingInspection]= useState(false);
+  const [guidanceMin,        setGuidanceMin]        = useState("");
+  const [guidanceMax,        setGuidanceMax]        = useState("");
+  const [guidanceNote,       setGuidanceNote]       = useState("");
 
   // Smart rider suggestions
   type RiderSuggestion = { rider_id: string; name: string; tracking_mode: string; battery_pct: number | null; distanceKm: number; etaMinutes: number; jobs_completed: number };
@@ -1537,29 +1540,77 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
 
                     {/* Admin approval gate */}
                     {request.status === "inspecting" && (() => {
-                      const approved = !!(request.inspection as { adminApprovedAt?: string }).adminApprovedAt;
-                      return approved ? (
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 10, background: "#F0FDF4", border: "1px solid #86efac" }}>
-                          <span style={{ fontSize: 15 }}>✅</span>
-                          <div>
-                            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#166534" }}>อนุมัติผลตรวจแล้ว</p>
-                            <p style={{ margin: "2px 0 0", fontSize: 11, color: "#4ade80" }}>ไรเดอร์สามารถเสนอราคาได้แล้ว</p>
+                      const insp = request.inspection as { adminApprovedAt?: string; adminPriceGuidance?: { priceMin?: number | null; priceMax?: number | null; note?: string | null } };
+                      const approved = !!insp.adminApprovedAt;
+                      if (approved) {
+                        const g = insp.adminPriceGuidance;
+                        return (
+                          <div style={{ borderRadius: 10, background: "#F0FDF4", border: "1px solid #86efac", padding: "12px 14px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: g ? 10 : 0 }}>
+                              <span style={{ fontSize: 15 }}>✅</span>
+                              <div>
+                                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#166534" }}>อนุมัติผลตรวจแล้ว — ไรเดอร์เสนอราคาได้แล้ว</p>
+                              </div>
+                            </div>
+                            {g && (g.priceMin || g.priceMax || g.note) && (
+                              <div style={{ borderTop: "1px solid #86efac", paddingTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                                {(g.priceMin || g.priceMax) && (
+                                  <p style={{ margin: 0, fontSize: 12, color: "#166534" }}>
+                                    📊 ช่วงราคาที่แนะนำ: <strong>{g.priceMin ? `฿${g.priceMin.toLocaleString("th-TH")}` : "—"} – {g.priceMax ? `฿${g.priceMax.toLocaleString("th-TH")}` : "—"}</strong>
+                                  </p>
+                                )}
+                                {g.note && <p style={{ margin: 0, fontSize: 12, color: "#166534" }}>📝 {g.note}</p>}
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      ) : (
-                        <div style={{ borderRadius: 10, border: "1.5px solid #FCD34D", background: "#FFFBEB", padding: "12px 14px" }}>
-                          <p style={{ margin: "0 0 10px", fontSize: 13, fontWeight: 600, color: "#92400E" }}>
-                            ⏳ รอแอดมินอนุมัติผลตรวจ — ไรเดอร์จะยังเสนอราคาไม่ได้
+                        );
+                      }
+                      return (
+                        <div style={{ borderRadius: 10, border: "1.5px solid #FCD34D", background: "#FFFBEB", padding: "14px" }}>
+                          <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 600, color: "#92400E" }}>
+                            ⏳ รอแอดมินอนุมัติ — ไรเดอร์จะยังเสนอราคาไม่ได้
                           </p>
+                          {/* Price guidance fields */}
+                          <p style={{ margin: "0 0 6px", fontSize: 11, fontWeight: 700, color: "#92400E", textTransform: "uppercase", letterSpacing: "0.05em" }}>ช่วงราคาที่แนะนำให้ไรเดอร์เสนอ (ไม่บังคับ)</p>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                            <div>
+                              <label style={{ display: "block", fontSize: 11, color: "#92400E", marginBottom: 3 }}>ต่ำสุด (฿)</label>
+                              <input
+                                type="number" placeholder="เช่น 35000" value={guidanceMin}
+                                onChange={e => setGuidanceMin(e.target.value)}
+                                style={{ width: "100%", padding: "7px 10px", borderRadius: 7, border: "1px solid #FCD34D", background: "#fff", fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: "block", fontSize: 11, color: "#92400E", marginBottom: 3 }}>สูงสุด (฿)</label>
+                              <input
+                                type="number" placeholder="เช่น 38000" value={guidanceMax}
+                                onChange={e => setGuidanceMax(e.target.value)}
+                                style={{ width: "100%", padding: "7px 10px", borderRadius: 7, border: "1px solid #FCD34D", background: "#fff", fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                              />
+                            </div>
+                          </div>
+                          <div style={{ marginBottom: 12 }}>
+                            <label style={{ display: "block", fontSize: 11, color: "#92400E", marginBottom: 3 }}>หมายเหตุถึงไรเดอร์ (ไม่บังคับ)</label>
+                            <input
+                              placeholder="เช่น แบตต่ำ ควรลดราคา, สภาพดีมาก ต่อราคาได้เต็มที่" value={guidanceNote}
+                              onChange={e => setGuidanceNote(e.target.value)}
+                              style={{ width: "100%", padding: "7px 10px", borderRadius: 7, border: "1px solid #FCD34D", background: "#fff", fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                            />
+                          </div>
                           <button
                             disabled={approvingInspection}
                             onClick={async () => {
                               setApprovingInspection(true);
-                              const res = await adminApproveInspection(id);
+                              const res = await adminApproveInspection(id, {
+                                priceMin:  guidanceMin  ? parseInt(guidanceMin)  : undefined,
+                                priceMax:  guidanceMax  ? parseInt(guidanceMax)  : undefined,
+                                note:      guidanceNote || undefined,
+                              });
                               setApprovingInspection(false);
                               if (!res.success) alert(res.error ?? "เกิดข้อผิดพลาด");
                             }}
-                            style={{ width: "100%", padding: "10px 0", borderRadius: 8, border: "none", background: approvingInspection ? "#D1D5DB" : "#16a34a", color: "#fff", fontSize: 14, fontWeight: 700, cursor: approvingInspection ? "wait" : "pointer", fontFamily: "inherit" }}
+                            style={{ width: "100%", padding: "11px 0", borderRadius: 8, border: "none", background: approvingInspection ? "#D1D5DB" : "#16a34a", color: "#fff", fontSize: 14, fontWeight: 700, cursor: approvingInspection ? "wait" : "pointer", fontFamily: "inherit" }}
                           >
                             {approvingInspection ? "กำลังอนุมัติ..." : "✓ อนุมัติผลตรวจ — ให้ไรเดอร์เสนอราคาได้"}
                           </button>

@@ -164,7 +164,10 @@ export async function respondToNegotiation(
 }
 
 // ─── Admin: อนุมัติผลตรวจ → ไรเดอร์ถึงเสนอราคาได้ ─────────────────────────────
-export async function adminApproveInspection(id: string): Promise<{ success: boolean; error?: string }> {
+export async function adminApproveInspection(
+  id: string,
+  guidance?: { priceMin?: number; priceMax?: number; note?: string },
+): Promise<{ success: boolean; error?: string }> {
   await requireAuth();
   const supabase = createServerClient();
 
@@ -177,10 +180,18 @@ export async function adminApproveInspection(id: string): Promise<{ success: boo
   if (!req || req.status !== "inspecting") return { success: false, error: "ไม่อยู่ในสถานะตรวจสภาพ" };
   if (!(req.inspection as { inspectedAt?: string } | null)?.inspectedAt) return { success: false, error: "ยังไม่มีผลตรวจจากไรเดอร์" };
 
+  const adminPriceGuidance = (guidance?.priceMin || guidance?.priceMax || guidance?.note)
+    ? { priceMin: guidance.priceMin ?? null, priceMax: guidance.priceMax ?? null, note: guidance.note?.trim() || null }
+    : null;
+
   const { error } = await supabase
     .from("requests")
     .update({
-      inspection: { ...(req.inspection as object), adminApprovedAt: new Date().toISOString() },
+      inspection: {
+        ...(req.inspection as object),
+        adminApprovedAt: new Date().toISOString(),
+        ...(adminPriceGuidance ? { adminPriceGuidance } : {}),
+      },
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);

@@ -554,8 +554,36 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   }
 
   if (showPrice) {
+    const guidance = (job.inspection as { adminPriceGuidance?: { priceMin?: number | null; priceMax?: number | null; note?: string | null } } | undefined)?.adminPriceGuidance;
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+        {/* Admin price guidance card */}
+        {guidance && (guidance.priceMin || guidance.priceMax || guidance.note) && (
+          <div style={{ background: "rgba(10,132,255,0.07)", border: "1px solid rgba(10,132,255,0.3)", borderRadius: 14, padding: "12px 14px" }}>
+            <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#0A84FF" }}>📊 คำแนะนำจาก Admin</p>
+            {(guidance.priceMin || guidance.priceMax) && (
+              <div style={{ display: "flex", gap: 8, marginBottom: guidance.note ? 6 : 0 }}>
+                {guidance.priceMin && (
+                  <div style={{ flex: 1, background: c.CARD, borderRadius: 8, padding: "8px 10px", textAlign: "center" }}>
+                    <p style={{ margin: "0 0 2px", fontSize: 10, color: c.TEXT2 }}>ต่ำสุด</p>
+                    <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#0A84FF" }}>฿{guidance.priceMin.toLocaleString("th-TH")}</p>
+                  </div>
+                )}
+                {guidance.priceMax && (
+                  <div style={{ flex: 1, background: c.CARD, borderRadius: 8, padding: "8px 10px", textAlign: "center" }}>
+                    <p style={{ margin: "0 0 2px", fontSize: 10, color: c.TEXT2 }}>สูงสุด</p>
+                    <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#0A84FF" }}>฿{guidance.priceMax.toLocaleString("th-TH")}</p>
+                  </div>
+                )}
+              </div>
+            )}
+            {guidance.note && (
+              <p style={{ margin: 0, fontSize: 12, color: "#0A84FF", fontStyle: "italic" }}>📝 {guidance.note}</p>
+            )}
+          </div>
+        )}
+
         <div style={{ background: c.CARD, borderRadius: 14, padding: 16, border: `1px solid ${c.BORDER}` }}>
           <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: c.TEXT }}>ยืนยันราคา</p>
           <div style={{ background: c.CARD2, borderRadius: 10, padding: "14px", textAlign: "center", marginBottom: 14 }}>
