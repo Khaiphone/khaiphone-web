@@ -420,7 +420,10 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   }
 
   // Price confirm sub-step (shown after inspection saved)
-  const [showPrice, setShowPrice] = useState(!!job.inspection);
+  // Use inspectedAt (set by riderSaveInspection) — NOT just !!job.inspection which is also
+  // set by riderAutoSaveSickw and would prematurely jump to the saved-screen.
+  const inspectionFullySaved = !!(job.inspection as { inspectedAt?: string } | undefined)?.inspectedAt;
+  const [showPrice, setShowPrice] = useState(inspectionFullySaved);
   const [priceMode, setPriceMode] = useState<"" | "confirm" | "adjust">("");
   const [adjustPrice, setAdjustPrice] = useState(String(job.device.estimatedPrice));
   const [adjustReason, setAdjustReason] = useState("");
@@ -495,7 +498,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   }
 
   const price = job.device.estimatedPrice;
-  const inspectionSaved = !!job.inspection && job.status === "inspecting";
+  const inspectionSaved = inspectionFullySaved && job.status === "inspecting";
 
   // Intermediate state: inspection saved, admin reviewing, price not yet proposed
   if (inspectionSaved && !showPrice) {
