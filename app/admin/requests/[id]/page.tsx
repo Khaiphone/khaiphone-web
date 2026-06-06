@@ -139,6 +139,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const [showColorError, setShowColorError] = useState(false);
   const [currentColorDraft, setCurrentColorDraft] = useState("");
   const inspectionRef = useRef<HTMLDivElement>(null);
+  const prevInspectedAtRef = useRef<string | null>(null);
 
   // Staff assignment
   const [staffList,    setStaffList]    = useState<AdminUserRow[]>([]);
@@ -206,6 +207,8 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         setDevDraft({ model: data.device.model, storage: data.device.storage, color: data.device.color ?? "", condition: data.device.condition, estimatedPrice: String(data.device.estimatedPrice) });
         setAssignDraft(data.assignedTo ?? "");
         setRiderDraft(data.riderId ?? "");
+        // Seed ref so Realtime knows what was already inspected when page loaded
+        prevInspectedAtRef.current = (data.inspection as { inspectedAt?: string } | null)?.inspectedAt ?? null;
       }
       setLoading(false);
     });
@@ -239,6 +242,12 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         setRequest(data);
         setEstPrice(String(data.device.estimatedPrice));
         setActualPrice(String(data.device.actualPrice ?? ""));
+        // Auto-scroll to inspection section when rider submits inspection for the first time
+        const newInspectedAt = (data.inspection as { inspectedAt?: string } | null)?.inspectedAt ?? null;
+        if (!prevInspectedAtRef.current && newInspectedAt) {
+          setTimeout(() => inspectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 400);
+        }
+        prevInspectedAtRef.current = newInspectedAt;
       });
     }
 

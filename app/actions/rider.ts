@@ -391,6 +391,10 @@ export async function riderSaveInspection(id: string, inspection: {
   const supabase = createServerClient();
   const now = new Date().toISOString();
   const { color, ...inspectionRest } = inspection;
+
+  const { data: req } = await supabase
+    .from("requests").select("order_number, device_model").eq("id", id).single();
+
   const { error } = await supabase
     .from("requests")
     .update({
@@ -412,7 +416,16 @@ export async function riderSaveInspection(id: string, inspection: {
     })
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
-  after(() => broadcastRequestUpdate(id));
+
+  after(async () => {
+    await broadcastRequestUpdate(id);
+    await sendPushToOwners({
+      title: "📋 ผลตรวจสภาพเครื่อง — รออนุมัติ",
+      body: `#${req?.order_number ?? "?"} · ${req?.device_model ?? "เครื่อง"} — กดเพื่อตรวจสอบและอนุมัติ`,
+      url: `/admin/requests/${id}`,
+      tag: `inspection-${id}`,
+    });
+  });
   return { success: true as const };
 }
 
