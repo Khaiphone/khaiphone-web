@@ -467,16 +467,29 @@ export async function fetchTodayRequestStats() {
 
   const { data } = await supabase
     .from("requests")
-    .select("status, rider_id")
+    .select("status, rider_id, appt_date, appt_time")
     .gte("created_at", start)
     .lte("created_at", end);
 
-  if (!data) return { totalCount: 0, newCount: 0, assignedCount: 0, completedCount: 0, cancelledCount: 0 };
+  if (!data) return { totalCount: 0, newCount: 0, assignedCount: 0, completedCount: 0, cancelledCount: 0, slaBreachedCount: 0, slaTrackableCount: 0 };
+
+  const SLA_BUFFER_MS = 60 * 60 * 1000;
+  const now = Date.now();
+  const notCancelled = (r: { status: string }) => !["cancelled", "no_show"].includes(r.status);
+  const slaTrackable = data.filter(r => r.appt_date && r.appt_time && notCancelled(r));
+  const slaBreached  = slaTrackable.filter(r => {
+    if (r.rider_id) return false; // assigned = ok (best approximation without assignment timestamp)
+    const deadline = new Date(`${r.appt_date}T${r.appt_time}:00`).getTime() - SLA_BUFFER_MS;
+    return now > deadline;
+  });
+
   return {
-    totalCount:    data.length,
-    newCount:      data.filter(r => ["new", "pending", "contacted"].includes(r.status)).length,
-    assignedCount: data.filter(r => r.rider_id).length,
-    completedCount: data.filter(r => r.status === "completed").length,
-    cancelledCount: data.filter(r => ["cancelled", "no_show"].includes(r.status)).length,
+    totalCount:       data.length,
+    newCount:         data.filter(r => ["new", "pending", "contacted"].includes(r.status)).length,
+    assignedCount:    data.filter(r => r.rider_id).length,
+    completedCount:   data.filter(r => r.status === "completed").length,
+    cancelledCount:   data.filter(r => ["cancelled", "no_show"].includes(r.status)).length,
+    slaTrackableCount: slaTrackable.length,
+    slaBreachedCount:  slaBreached.length,
   };
 }

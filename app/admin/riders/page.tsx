@@ -302,7 +302,7 @@ export default function PlannerDashboard() {
   const [riders, setRiders] = useState<ActiveRider[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [allShifts, setAllShifts] = useState<AllShift[]>([]);
-  const [todayStats, setTodayStats] = useState({ totalCount: 0, newCount: 0, assignedCount: 0, completedCount: 0, cancelledCount: 0 });
+  const [todayStats, setTodayStats] = useState({ totalCount: 0, newCount: 0, assignedCount: 0, completedCount: 0, cancelledCount: 0, slaBreachedCount: 0, slaTrackableCount: 0 });
   const [loading, setLoading] = useState(true);
 
   // UI state
@@ -406,7 +406,12 @@ export default function PlannerDashboard() {
     const sec = (Date.now() - new Date(r.last_heartbeat).getTime()) / 1000;
     return sec > 300; // 5 min no heartbeat = effectively offline
   });
-  const todayShiftJobs = allShifts.reduce((sum, s) => sum + (s.jobs_completed ?? 0), 0);
+  const totalActiveJobs   = riders.reduce((sum, r) => sum + (r.active_jobs?.length ?? 0), 0);
+  const utilizationRate   = riders.length > 0 ? Math.round(busyRiders.length / riders.length * 100) : 0;
+  const avgJobsPerRider   = riders.length > 0 ? (totalActiveJobs / riders.length).toFixed(1) : "0.0";
+  const slaComplianceRate = todayStats.slaTrackableCount > 0
+    ? Math.round((1 - todayStats.slaBreachedCount / todayStats.slaTrackableCount) * 100)
+    : 100;
 
   // Alerts
   const alerts: { color: string; msg: string }[] = [];
@@ -945,34 +950,74 @@ export default function PlannerDashboard() {
       </div>
 
       {/* ── Summary bar ── */}
-      <div style={{ background: "#fff", borderTop: `1px solid ${BORDER}`, padding: "10px 20px", display: "flex", alignItems: "center", gap: 0, flexShrink: 0 }}>
-        <p style={{ margin: "0 20px 0 0", fontSize: 12, fontWeight: 700, color: TEXT, whiteSpace: "nowrap" }}>สรุปภาพรวมวันนี้</p>
-        <div style={{ display: "flex", alignItems: "center", flex: 1, gap: 4 }}>
+      <div style={{ background: "#fff", borderTop: `1px solid ${BORDER}`, padding: "8px 20px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+
+        {/* Section label */}
+        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: TEXT2, whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: 0.5 }}>สรุปวันนี้</p>
+
+        {/* งานวันนี้ */}
+        <div style={{ display: "flex", alignItems: "center", gap: 0, flex: 1 }}>
           {([
-            { label: "รับงานทั้งหมด",     value: todayStats.totalCount,      icon: CalendarDays,  iconColor: BLUE,   bg: "#EFF6FF" },
-            { label: "Assign แล้ว",        value: todayStats.assignedCount,   icon: UserCheck,     iconColor: ORANGE, bg: "#FFF7ED" },
-            { label: "กำลังดำเนินการ",    value: busyRiders.length,           icon: Wrench,        iconColor: BLUE,   bg: "#EFF6FF" },
-            { label: "เสร็จสิ้น",         value: todayStats.completedCount,   icon: CheckCircle2,  iconColor: GREEN,  bg: "#F0FDF4" },
-            { label: "ยกเลิก",            value: todayStats.cancelledCount,   icon: XCircle,       iconColor: RED,    bg: "#FEF2F2" },
-            { label: "ค้าง",              value: unassignedJobs.length,       icon: Clock,         iconColor: "#9CA3AF", bg: "#F9FAFB" },
-          ] as const).map(({ label, value, icon: Icon, iconColor, bg }, i, arr) => (
-            <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, padding: "4px 16px", borderRight: i < arr.length - 1 ? `1px solid ${BORDER}` : "none" }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Icon size={18} color={iconColor} strokeWidth={2} />
+            { label: "Assign แล้ว",  value: todayStats.assignedCount,  icon: UserCheck,    iconColor: ORANGE, bg: "#FFF7ED" },
+            { label: "เสร็จสิ้น",   value: todayStats.completedCount, icon: CheckCircle2, iconColor: GREEN,  bg: "#F0FDF4" },
+            { label: "ค้างรอ",      value: unassignedJobs.length,     icon: Clock,        iconColor: unassignedJobs.length > 0 ? YELLOW : TEXT3, bg: unassignedJobs.length > 0 ? "#FFFBEB" : "#F9FAFB" },
+            { label: "ยกเลิก",      value: todayStats.cancelledCount, icon: XCircle,      iconColor: RED,    bg: "#FEF2F2" },
+          ] as const).map(({ label, value, icon: Icon, iconColor, bg }, i) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, padding: "4px 14px", borderRight: `1px solid ${BORDER}` }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Icon size={16} color={iconColor} strokeWidth={2} />
               </div>
               <div>
-                <p style={{ margin: 0, fontSize: 11, color: TEXT2, whiteSpace: "nowrap" }}>{label}</p>
-                <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: TEXT, lineHeight: 1.1 }}>{value} <span style={{ fontSize: 11, fontWeight: 400, color: TEXT2 }}>งาน</span></p>
+                <p style={{ margin: 0, fontSize: 10, color: TEXT2, whiteSpace: "nowrap" }}>{label}</p>
+                <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: TEXT, lineHeight: 1.1 }}>{value} <span style={{ fontSize: 10, fontWeight: 400, color: TEXT2 }}>งาน</span></p>
               </div>
             </div>
           ))}
         </div>
+
+        {/* Divider + section label */}
+        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: TEXT2, whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: 0.5 }}>ประสิทธิภาพ</p>
+
+        {/* Efficiency metrics */}
+        <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+          {/* Rider Utilization */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 14px", borderRight: `1px solid ${BORDER}` }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: utilizationRate >= 80 ? "#F0FDF4" : utilizationRate >= 50 ? "#FFF7ED" : "#F9FAFB", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Wrench size={16} color={utilizationRate >= 80 ? GREEN : utilizationRate >= 50 ? ORANGE : TEXT3} strokeWidth={2} />
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: 10, color: TEXT2, whiteSpace: "nowrap" }}>Utilization</p>
+              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: utilizationRate >= 80 ? GREEN : utilizationRate >= 50 ? ORANGE : TEXT, lineHeight: 1.1 }}>{utilizationRate}<span style={{ fontSize: 12, fontWeight: 600 }}>%</span></p>
+            </div>
+          </div>
+          {/* Avg jobs per rider */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 14px", borderRight: `1px solid ${BORDER}` }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <CalendarDays size={16} color={BLUE} strokeWidth={2} />
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: 10, color: TEXT2, whiteSpace: "nowrap" }}>เฉลี่ย/คน</p>
+              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: TEXT, lineHeight: 1.1 }}>{avgJobsPerRider} <span style={{ fontSize: 10, fontWeight: 400, color: TEXT2 }}>งาน</span></p>
+            </div>
+          </div>
+          {/* SLA compliance */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 14px", borderRight: `1px solid ${BORDER}` }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: slaComplianceRate >= 90 ? "#F0FDF4" : slaComplianceRate >= 70 ? "#FFFBEB" : "#FEF2F2", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <CheckCircle2 size={16} color={slaComplianceRate >= 90 ? GREEN : slaComplianceRate >= 70 ? YELLOW : RED} strokeWidth={2} />
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: 10, color: TEXT2, whiteSpace: "nowrap" }}>SLA</p>
+              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: slaComplianceRate >= 90 ? GREEN : slaComplianceRate >= 70 ? YELLOW : RED, lineHeight: 1.1 }}>{slaComplianceRate}<span style={{ fontSize: 12, fontWeight: 600 }}>%</span></p>
+            </div>
+          </div>
+        </div>
+
         <button
           onClick={() => router.push("/admin/riders/jobs")}
-          style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 16, padding: "8px 14px", borderRadius: 8, border: `1px solid ${BORDER}`, background: "#fff", color: TEXT, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", flexShrink: 0 }}
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: `1px solid ${BORDER}`, background: "#fff", color: TEXT, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", flexShrink: 0 }}
         >
           <BarChart2 size={14} color={BLUE} />
-          ดูรายงานฉบับเต็ม
+          ดูรายงาน
           <ArrowRight size={13} color={ORANGE} />
         </button>
       </div>
