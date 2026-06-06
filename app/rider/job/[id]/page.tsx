@@ -473,8 +473,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
         conditionLabel: conditionLabel || undefined,
       });
       if (!result.success) { setError((result as { success: false; error?: string }).error ?? "เกิดข้อผิดพลาด"); return; }
-      setShowPrice(true);
-      reload();
+      reload(); // admin sees inspection via realtime; rider stays on intermediate state
     } catch (e) { setError(e instanceof Error ? e.message : "เกิดข้อผิดพลาด"); }
     finally { setSaving(false); }
   }
@@ -496,6 +495,48 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   }
 
   const price = job.device.estimatedPrice;
+  const inspectionSaved = !!job.inspection && job.status === "inspecting";
+
+  // Intermediate state: inspection saved, admin reviewing, price not yet proposed
+  if (inspectionSaved && !showPrice) {
+    const insp = job.inspection!;
+    const passed = (insp.criteria ?? []).filter(c => c.pass).length;
+    const total  = (insp.criteria ?? []).length;
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ background: "rgba(74,222,128,0.08)", border: `1px solid rgba(74,222,128,0.3)`, borderRadius: 14, padding: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(74,222,128,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <CheckCircle2 size={20} color="#34C759" />
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: c.TEXT }}>บันทึกผลตรวจแล้ว</p>
+              <p style={{ margin: "2px 0 0", fontSize: 12, color: c.TEXT2 }}>Admin กำลังตรวจสอบข้อมูล...</p>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            {[
+              ["สภาพตามเกณฑ์", `${passed}/${total} รายการ`],
+              ["รูปภาพ", `${(insp.photos ?? []).length} รูป`],
+              insp.imei   ? ["IMEI",   insp.imei]   : null,
+              insp.serial ? ["Serial", insp.serial]  : null,
+              insp.batteryHealth ? ["Battery", `${insp.batteryHealth}%`] : null,
+            ].filter((x): x is [string, string] => !!x).map(([label, value]) => (
+              <div key={label as string} style={{ background: c.CARD, borderRadius: 8, padding: "8px 10px" }}>
+                <p style={{ margin: "0 0 2px", fontSize: 10, color: c.TEXT2 }}>{label}</p>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: c.TEXT }}>{value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <BigBtn label="เสนอราคา →" onClick={() => setShowPrice(true)} />
+        <button onClick={() => {}} style={{ background: "none", border: "none", color: c.TEXT2, fontSize: 13, cursor: "pointer", padding: "2px 0", fontFamily: "inherit", textDecoration: "underline" }}>
+          ← แก้ไขผลการตรวจ
+        </button>
+      </div>
+    );
+  }
 
   if (showPrice) {
     return (
@@ -833,7 +874,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
           return false;
         })() : false;
         return (
-          <BigBtn label={uploading ? "กำลังอัปโหลดรูป..." : saving ? "กำลังบันทึก..." : "บันทึกและยืนยันราคา →"}
+          <BigBtn label={uploading ? "กำลังอัปโหลดรูป..." : saving ? "กำลังบันทึก..." : "บันทึกผลตรวจ →"}
             loading={saving} disabled={uploading || blocked} onClick={handleSave} />
         );
       })()}
