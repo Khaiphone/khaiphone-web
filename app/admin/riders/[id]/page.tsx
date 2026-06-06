@@ -7,8 +7,8 @@ import { ArrowLeft, Battery, MapPin, Clock, CheckCircle2, AlertTriangle, Setting
 import { supabase } from "@/lib/supabase";
 import { fetchRiderShiftStats, fetchRiderTrail, fetchActiveRiders, adminCloseRiderShift } from "@/app/actions/rider-tracking";
 import { fmtDistance, fmtEta, etaMinutes, distanceToOfficeKm, OFFICE_LAT, OFFICE_LNG } from "@/lib/geo-utils";
-import { fetchRiderKpiForAdmin, updateRiderTargets } from "@/app/actions/rider-stats";
-import type { MonthlyStats, RiderTargets } from "@/app/actions/rider-stats";
+import { fetchRiderKpiForAdmin, updateRiderTargets, updateRiderRankOverride } from "@/app/actions/rider-stats";
+import type { MonthlyStats, RiderTargets, RiderTier } from "@/app/actions/rider-stats";
 
 const DARK = "#1a1a2e";
 const GOLD = "#c9a84c";
@@ -70,6 +70,8 @@ export default function RiderDetailPage() {
   const [tBonusJobs,   setTBonusJobs]   = useState("");
   const [tBonusAmount, setTBonusAmount] = useState("");
   const [savingTarget, setSavingTarget] = useState(false);
+  const [rankOverride, setRankOverride] = useState<RiderTier | "" >("");
+  const [savingRank,   setSavingRank]   = useState(false);
 
   const dateRange = useCallback(() => {
     const now = new Date();
@@ -110,6 +112,7 @@ export default function RiderDetailPage() {
     fetchRiderKpiForAdmin(id, curMonth).then(({ stats, targets }) => {
       setKpiStats(stats);
       setKpiTargets(targets);
+      setRankOverride((stats.rankConfig && stats.monthlyTier) ? "" : "");
       setTJobsTarget(targets.monthly_jobs_target  != null ? String(targets.monthly_jobs_target)     : "");
       setTDistTarget(targets.monthly_distance_target != null ? String(targets.monthly_distance_target) : "");
       setTAcceptRate(targets.min_acceptance_rate  != null ? String(Math.round(targets.min_acceptance_rate * 100)) : "");
@@ -252,9 +255,46 @@ export default function RiderDetailPage() {
         {kpiStats && (
           <div style={{ background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
             <div style={{ padding: "12px 16px", borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: TEXT2, textTransform: "uppercase" }}>KPI เดือนนี้</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: TEXT2, textTransform: "uppercase" }}>KPI เดือนนี้</p>
+                {(() => {
+                  const t = kpiStats.monthlyTier;
+                  const em = { bronze:"🥉", silver:"🥈", gold:"🥇", diamond:"💎" }[t];
+                  const cl = { bronze:"#cd7f32", silver:"#9ca3af", gold:"#c9a84c", diamond:"#60a5fa" }[t];
+                  return <span style={{ fontSize: 13, fontWeight: 700, color: cl }}>{em} {kpiStats.rankConfig?.label_th ?? t}</span>;
+                })()}
+              </div>
               <button onClick={() => setEditTarget(p => !p)} style={{ fontSize: 12, fontWeight: 600, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
                 {editTarget ? "ปิด" : "ตั้งเป้า"}
+              </button>
+            </div>
+
+            {/* Rank override */}
+            <div style={{ padding: "10px 16px", borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", gap: 10 }}>
+              <p style={{ margin: 0, fontSize: 11, color: TEXT2, fontWeight: 600, whiteSpace: "nowrap" }}>ปรับ rank manual:</p>
+              <select
+                value={rankOverride}
+                onChange={e => setRankOverride(e.target.value as RiderTier | "")}
+                style={{ flex: 1, padding: "5px 8px", borderRadius: 8, border: `1px solid ${BORDER}`, fontSize: 13, fontFamily: "inherit", color: TEXT, outline: "none" }}
+              >
+                <option value="">อัตโนมัติ (จากผลงาน)</option>
+                <option value="bronze">🥉 บรอนซ์</option>
+                <option value="silver">🥈 ซิลเวอร์</option>
+                <option value="gold">🥇 โกลด์</option>
+                <option value="diamond">💎 ไดมอนด์</option>
+              </select>
+              <button
+                disabled={savingRank}
+                onClick={async () => {
+                  setSavingRank(true);
+                  await updateRiderRankOverride(id, rankOverride || null);
+                  setSavingRank(false);
+                  const { stats } = await fetchRiderKpiForAdmin(id, curMonth);
+                  setKpiStats(stats);
+                }}
+                style={{ padding: "5px 12px", borderRadius: 8, border: "none", background: DARK, color: GOLD, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", opacity: savingRank ? 0.6 : 1, whiteSpace: "nowrap" }}
+              >
+                {savingRank ? "..." : "บันทึก"}
               </button>
             </div>
 

@@ -141,12 +141,24 @@ export default function StatsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const tier       = lifetime?.tier ?? computeTier(0);
-  const tierCfg    = TIER_CONFIG[tier];
-  const streak     = lifetime?.currentStreak ?? 0;
-  const badges     = lifetime?.badges ?? [];
+  // ── Monthly rank (resets each month, affects pay) ──
+  const monthlyTier    = stats?.monthlyTier ?? "bronze";
+  const monthlyRankCfg = stats?.rankConfig;
+  const MONTHLY_TIER_CFG: Record<string, { emoji: string; color: string }> = {
+    bronze:  { emoji: "🥉", color: "#cd7f32" },
+    silver:  { emoji: "🥈", color: "#9ca3af" },
+    gold:    { emoji: "🥇", color: "#c9a84c" },
+    diamond: { emoji: "💎", color: "#60a5fa" },
+  };
+  const mCfg = MONTHLY_TIER_CFG[monthlyTier];
+
+  // ── Lifetime badge (never resets) ──
+  const lifetimeTier = lifetime?.tier ?? computeTier(0);
+  const tierCfg      = TIER_CONFIG[lifetimeTier];
+  const streak       = lifetime?.currentStreak ?? 0;
+  const badges       = lifetime?.badges ?? [];
   const earnedBadges = badges.filter(b => b.earned);
-  const myPosition = leaderboard.findIndex(e => e.riderId === userId);
+  const myPosition   = leaderboard.findIndex(e => e.riderId === userId);
 
   // ── Bonus status ──
   const bonusTarget = targets?.monthly_bonus_jobs;
@@ -154,9 +166,9 @@ export default function StatsPage() {
   const bonusLeft   = bonusTarget != null && stats != null ? Math.max(0, bonusTarget - stats.jobsCompleted) : null;
   const bonusDone   = bonusLeft === 0;
 
-  // ── Next tier ──
-  const nextTierAt    = tierCfg.nextAt;
+  // ── Next monthly rank ──
   const lifeCompleted = lifetime?.lifetimeCompleted ?? 0;
+  const nextTierAt    = tierCfg.nextAt;
   const tierPct       = nextTierAt != null ? (lifeCompleted / nextTierAt) * 100 : 100;
 
   const isCurrentMonth = month === curMonthStr;
@@ -166,18 +178,17 @@ export default function StatsPage() {
   return (
     <div style={{ padding: "16px 16px 32px", display: "flex", flexDirection: "column", gap: 14 }}>
 
-      {/* ── Tier header ── */}
+      {/* ── Monthly rank header ── */}
       <div style={{
         background: `linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)`,
         borderRadius: 18, padding: "20px 20px 18px", color: "#fff",
       }}>
+        <p style={{ margin: "0 0 12px", fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,.4)", textTransform: "uppercase", letterSpacing: 1 }}>แรงค์เดือนนี้ · จะส่งต่อเดือนหน้า</p>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
-          <div style={{ fontSize: 44, lineHeight: 1 }}>{tierCfg.emoji}</div>
+          <div style={{ fontSize: 44, lineHeight: 1 }}>{mCfg.emoji}</div>
           <div style={{ flex: 1 }}>
-            <p style={{ margin: "0 0 2px", fontSize: 11, color: "rgba(255,255,255,.5)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.7 }}>ระดับ</p>
-            <p style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 800, color: tierCfg.color }}>{tierCfg.label}</p>
-            <p style={{ margin: 0, fontSize: 13, color: "rgba(255,255,255,.6)" }}>สะสม {fmt(lifeCompleted)} งาน · {fmt(Math.round(lifetime?.lifetimeDistanceKm ?? 0))} กม.</p>
-          <p style={{ margin: "2px 0 0", fontSize: 11, color: "rgba(255,255,255,.35)" }}>{riderName}{riderEmail ? ` · ${riderEmail}` : ""}</p>
+            <p style={{ margin: "0 0 4px", fontSize: 24, fontWeight: 800, color: mCfg.color }}>{monthlyRankCfg?.label_th ?? monthlyTier}</p>
+            <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,.5)" }}>{riderName}{riderEmail ? ` · ${riderEmail}` : ""}</p>
           </div>
           {streak > 0 && (
             <div style={{ textAlign: "center" }}>
@@ -186,6 +197,35 @@ export default function StatsPage() {
               <p style={{ margin: 0, fontSize: 9, color: "rgba(255,255,255,.4)" }}>วันติด</p>
             </div>
           )}
+        </div>
+
+        {/* Monthly rank benefits */}
+        {monthlyRankCfg && (monthlyRankCfg.commission_rate > 0 || monthlyRankCfg.fuel_rate_per_km > 0 || monthlyRankCfg.bonus_multiplier !== 1) && (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+            {monthlyRankCfg.commission_rate > 0 && (
+              <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 8, background: "rgba(255,255,255,.1)", color: mCfg.color, fontWeight: 600 }}>
+                Commission {Math.round(monthlyRankCfg.commission_rate * 100)}%
+              </span>
+            )}
+            {monthlyRankCfg.fuel_rate_per_km > 0 && (
+              <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 8, background: "rgba(255,255,255,.1)", color: mCfg.color, fontWeight: 600 }}>
+                น้ำมัน ฿{monthlyRankCfg.fuel_rate_per_km}/กม.
+              </span>
+            )}
+            {monthlyRankCfg.bonus_multiplier !== 1 && (
+              <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 8, background: "rgba(255,255,255,.1)", color: mCfg.color, fontWeight: 600 }}>
+                โบนัส ×{monthlyRankCfg.bonus_multiplier}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Lifetime achievement mini-badge */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 10, background: "rgba(255,255,255,.06)", marginBottom: 12 }}>
+          <span style={{ fontSize: 16 }}>{tierCfg.emoji}</span>
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: 0, fontSize: 11, color: "rgba(255,255,255,.5)" }}>Achievement: {tierCfg.label} · สะสม {fmt(lifeCompleted)} งาน · {fmt(Math.round(lifetime?.lifetimeDistanceKm ?? 0))} กม.</p>
+          </div>
         </div>
 
         {nextTierAt != null && (
@@ -290,8 +330,8 @@ export default function StatsPage() {
               <p style={{ margin: 0, fontSize: 10, color: TEXT2 }}>งาน</p>
             </div>
             <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "14px 12px" }}>
-              <p style={{ margin: "0 0 4px", fontSize: 11, color: TEXT2, fontWeight: 600 }}>รายได้</p>
-              <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: GOLD }}>฿{fmt(stats.earningsThb)}</p>
+              <p style={{ margin: "0 0 4px", fontSize: 11, color: TEXT2, fontWeight: 600 }}>มูลค่าสินค้า</p>
+              <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: GOLD }}>฿{fmt(stats.goodsValueThb)}</p>
               <p style={{ margin: 0, fontSize: 10, color: TEXT2 }}>บาท</p>
             </div>
             <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "14px 12px" }}>

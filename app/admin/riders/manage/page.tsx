@@ -2,8 +2,11 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, UserPlus, Trash2, X, CheckCircle2, ChevronRight } from "lucide-react";
+import { ArrowLeft, UserPlus, Trash2, X, CheckCircle2, ChevronRight, Settings2 } from "lucide-react";
 import { fetchAllRidersList, adminInviteRider, adminRemoveRider } from "@/app/actions/rider-tracking";
+import { fetchRankConfigs } from "@/app/actions/rider-stats";
+import type { RankConfig, RiderTier } from "@/app/actions/rider-stats";
+import { computeMonthlyTier } from "@/lib/rider-kpi";
 
 const DARK = "#1a1a2e";
 const GOLD = "#c9a84c";
@@ -14,17 +17,23 @@ const GREEN = "#16a34a";
 const RED = "#dc2626";
 const BLUE = "#2563eb";
 
+const TIER_EMOJI: Record<string, string> = { bronze: "🥉", silver: "🥈", gold: "🥇", diamond: "💎" };
+const TIER_COLOR: Record<string, string> = { bronze: "#cd7f32", silver: "#9ca3af", gold: "#c9a84c", diamond: "#60a5fa" };
+
 type Rider = {
   user_id: string;
   name: string;
   email: string | null;
   role: string;
+  monthly_jobs?: number;
+  rank_tier_override?: string | null;
 };
 
 export default function ManageRidersPage() {
   const router = useRouter();
-  const [riders, setRiders] = useState<Rider[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [riders, setRiders]       = useState<Rider[]>([]);
+  const [rankConfigs, setRankConfigs] = useState<RankConfig[]>([]);
+  const [loading, setLoading]     = useState(true);
   const [showInvite, setShowInvite] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
@@ -34,8 +43,9 @@ export default function ManageRidersPage() {
   const [removing, setRemoving] = useState(false);
 
   const load = useCallback(async () => {
-    const data = await fetchAllRidersList();
+    const [data, configs] = await Promise.all([fetchAllRidersList(), fetchRankConfigs()]);
     setRiders(data as Rider[]);
+    setRankConfigs(configs);
     setLoading(false);
   }, []);
 
@@ -81,6 +91,12 @@ export default function ManageRidersPage() {
           <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,.5)" }}>{riders.length} คนในระบบ</p>
         </div>
         <button
+          onClick={() => router.push("/admin/riders/ranks")}
+          style={{ background: "rgba(255,255,255,.1)", border: "none", color: "rgba(255,255,255,.7)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit" }}
+        >
+          <Settings2 size={13} /> ตั้งค่าระดับ
+        </button>
+        <button
           onClick={() => { setShowInvite(true); setInviteResult(null); }}
           style={{ background: GOLD, border: "none", color: DARK, borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit" }}
         >
@@ -115,6 +131,15 @@ export default function ManageRidersPage() {
                 <span style={{ fontSize: 11, padding: "2px 7px", borderRadius: 10, background: r.role === "owner" ? `${GOLD}20` : `${BLUE}15`, color: r.role === "owner" ? "#92700c" : BLUE, fontWeight: 600 }}>
                   {ROLE_LABEL[r.role] ?? r.role}
                 </span>
+                {(() => {
+                  const tier = computeMonthlyTier(r.monthly_jobs ?? 0, rankConfigs, r.rank_tier_override as RiderTier | null);
+                  const isOverride = !!r.rank_tier_override;
+                  return (
+                    <span style={{ fontSize: 11, padding: "2px 7px", borderRadius: 10, background: `${TIER_COLOR[tier]}18`, color: TIER_COLOR[tier], fontWeight: 700 }}>
+                      {TIER_EMOJI[tier]} {isOverride ? "★" : ""}
+                    </span>
+                  );
+                })()}
               </div>
               <p style={{ margin: "2px 0 0", fontSize: 12, color: TEXT2 }}>
                 {r.email ?? "—"}

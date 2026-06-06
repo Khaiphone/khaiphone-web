@@ -2,6 +2,29 @@
 
 export type RiderTier = "bronze" | "silver" | "gold" | "diamond";
 
+export type RankConfig = {
+  tier:                 RiderTier;
+  label_th:             string;
+  min_jobs_month:       number;
+  commission_rate:      number;
+  fuel_rate_per_km:     number;
+  bonus_multiplier:     number;
+  job_target_reduction: number;
+};
+
+export function computeMonthlyTier(
+  monthlyCompleted: number,
+  configs: RankConfig[],
+  override?: RiderTier | null
+): RiderTier {
+  if (override) return override;
+  const sorted = [...configs].sort((a, b) => b.min_jobs_month - a.min_jobs_month);
+  for (const c of sorted) {
+    if (monthlyCompleted >= c.min_jobs_month) return c.tier;
+  }
+  return "bronze";
+}
+
 export type BadgeId =
   | "first_job" | "jobs_10" | "jobs_50" | "jobs_100"
   | "km_500" | "km_1000" | "km_5000"

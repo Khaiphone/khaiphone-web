@@ -2,19 +2,21 @@
 
 import { requireAuth } from "@/lib/require-auth";
 import { createServerClient } from "@/lib/supabase-server";
-import { computeTier, computeStreak, computeBadges } from "@/lib/rider-kpi";
-import type { RiderTier, Badge } from "@/lib/rider-kpi";
-export type { RiderTier, BadgeId, Badge } from "@/lib/rider-kpi";
+import { computeTier, computeStreak, computeBadges, computeMonthlyTier } from "@/lib/rider-kpi";
+import type { RiderTier, Badge, RankConfig } from "@/lib/rider-kpi";
+export type { RiderTier, BadgeId, Badge, RankConfig } from "@/lib/rider-kpi";
 
 export type MonthlyStats = {
   jobsCompleted:  number;
   jobsAttempted:  number;
   jobsDeclined:   number;
   distanceKm:     number;
-  earningsThb:    number;
+  goodsValueThb:  number;
   acceptanceRate: number | null;
   completionRate: number | null;
   avgDistPerJob:  number | null;
+  monthlyTier:    RiderTier;
+  rankConfig:     RankConfig;
 };
 
 export type RiderTargets = {
@@ -50,7 +52,7 @@ export async function fetchMyMonthlyStats(month: string): Promise<{ stats: Month
   const supabase = createServerClient();
   const { start, end } = monthBounds(month);
 
-  const [{ data: shifts }, { data: requests }, { data: userRow }] = await Promise.all([
+  const [{ data: shifts }, { data: requests }, { data: userRow }, { data: rankRows }] = await Promise.all([
     supabase
       .from("rider_shifts")
       .select("jobs_completed, jobs_attempted, jobs_declined, total_distance_km")
@@ -66,26 +68,32 @@ export async function fetchMyMonthlyStats(month: string): Promise<{ stats: Month
       .lte("appt_date", month + "-31"),
     supabase
       .from("admin_users")
-      .select("monthly_jobs_target, monthly_distance_target, min_acceptance_rate, monthly_bonus_jobs, monthly_bonus_amount")
+      .select("monthly_jobs_target, monthly_distance_target, min_acceptance_rate, monthly_bonus_jobs, monthly_bonus_amount, rank_tier_override")
       .eq("user_id", user.id)
       .single(),
+    supabase.from("rank_configs").select("*"),
   ]);
 
   const jobsCompleted  = (shifts ?? []).reduce((s, sh) => s + (sh.jobs_completed ?? 0), 0);
   const jobsAttempted  = (shifts ?? []).reduce((s, sh) => s + (sh.jobs_attempted ?? 0), 0);
   const jobsDeclined   = (shifts ?? []).reduce((s, sh) => s + (sh.jobs_declined  ?? 0), 0);
   const distanceKm     = (shifts ?? []).reduce((s, sh) => s + (sh.total_distance_km ?? 0), 0);
-  const earningsThb    = (requests ?? []).reduce((s, r) => s + (r.actual_price ?? 0), 0);
+  const goodsValueThb  = (requests ?? []).reduce((s, r) => s + (r.actual_price ?? 0), 0);
   const totalOffered   = jobsAttempted + jobsDeclined;
   const reqDistTotal   = (requests ?? []).reduce((s, r) => s + (r.distance_km ?? 0), 0);
 
+  const configs: RankConfig[] = (rankRows ?? []).map(r => ({
+    tier: r.tier as RiderTier, label_th: r.label_th,
+    min_jobs_month: r.min_jobs_month, commission_rate: Number(r.commission_rate),
+    fuel_rate_per_km: Number(r.fuel_rate_per_km), bonus_multiplier: Number(r.bonus_multiplier),
+    job_target_reduction: r.job_target_reduction,
+  }));
+  const monthlyTier = computeMonthlyTier(jobsCompleted, configs, userRow?.rank_tier_override as RiderTier | null);
+  const rankConfig  = configs.find(c => c.tier === monthlyTier) ?? { tier: "bronze" as RiderTier, label_th: "บรอนซ์", min_jobs_month: 0, commission_rate: 0, fuel_rate_per_km: 0, bonus_multiplier: 1, job_target_reduction: 0 };
+
   return {
     stats: {
-      jobsCompleted,
-      jobsAttempted,
-      jobsDeclined,
-      distanceKm,
-      earningsThb,
+      jobsCompleted, jobsAttempted, jobsDeclined, distanceKm, goodsValueThb, monthlyTier, rankConfig,
       acceptanceRate: totalOffered > 0  ? jobsAttempted / totalOffered  : null,
       completionRate: jobsAttempted > 0 ? jobsCompleted / jobsAttempted : null,
       avgDistPerJob:  jobsCompleted > 0 ? reqDistTotal  / jobsCompleted  : null,
@@ -171,12 +179,53 @@ export async function fetchLeaderboard(month: string): Promise<LeaderboardEntry[
   return Array.from(map.values()).sort((a, b) => b.jobsCompleted - a.jobsCompleted);
 }
 
+export async function fetchRankConfigs(): Promise<RankConfig[]> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data } = await supabase.from("rank_configs").select("*").order("min_jobs_month");
+  return (data ?? []).map(r => ({
+    tier: r.tier as RiderTier, label_th: r.label_th,
+    min_jobs_month: r.min_jobs_month, commission_rate: Number(r.commission_rate),
+    fuel_rate_per_km: Number(r.fuel_rate_per_km), bonus_multiplier: Number(r.bonus_multiplier),
+    job_target_reduction: r.job_target_reduction,
+  }));
+}
+
+export async function updateRankConfig(
+  tier: RiderTier,
+  config: Partial<Omit<RankConfig, "tier">>
+): Promise<{ success: true } | { success: false; error: string }> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { error } = await supabase.from("rank_configs").update({
+    label_th:             config.label_th,
+    min_jobs_month:       config.min_jobs_month,
+    commission_rate:      config.commission_rate,
+    fuel_rate_per_km:     config.fuel_rate_per_km,
+    bonus_multiplier:     config.bonus_multiplier,
+    job_target_reduction: config.job_target_reduction,
+  }).eq("tier", tier);
+  if (error) return { success: false as const, error: error.message };
+  return { success: true as const };
+}
+
+export async function updateRiderRankOverride(
+  riderId: string,
+  tier: RiderTier | null
+): Promise<{ success: true } | { success: false; error: string }> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { error } = await supabase.from("admin_users").update({ rank_tier_override: tier }).eq("user_id", riderId);
+  if (error) return { success: false as const, error: error.message };
+  return { success: true as const };
+}
+
 export async function fetchRiderKpiForAdmin(riderId: string, month: string): Promise<{ stats: MonthlyStats; targets: RiderTargets }> {
   await requireAuth();
   const supabase = createServerClient();
   const { start, end } = monthBounds(month);
 
-  const [{ data: shifts }, { data: requests }, { data: userRow }] = await Promise.all([
+  const [{ data: shifts }, { data: requests }, { data: userRow }, { data: rankRows }] = await Promise.all([
     supabase
       .from("rider_shifts")
       .select("jobs_completed, jobs_attempted, jobs_declined, total_distance_km")
@@ -192,22 +241,32 @@ export async function fetchRiderKpiForAdmin(riderId: string, month: string): Pro
       .lte("appt_date", month + "-31"),
     supabase
       .from("admin_users")
-      .select("monthly_jobs_target, monthly_distance_target, min_acceptance_rate, monthly_bonus_jobs, monthly_bonus_amount")
+      .select("monthly_jobs_target, monthly_distance_target, min_acceptance_rate, monthly_bonus_jobs, monthly_bonus_amount, rank_tier_override")
       .eq("user_id", riderId)
       .single(),
+    supabase.from("rank_configs").select("*"),
   ]);
 
   const jobsCompleted  = (shifts ?? []).reduce((s, sh) => s + (sh.jobs_completed ?? 0), 0);
   const jobsAttempted  = (shifts ?? []).reduce((s, sh) => s + (sh.jobs_attempted ?? 0), 0);
   const jobsDeclined   = (shifts ?? []).reduce((s, sh) => s + (sh.jobs_declined  ?? 0), 0);
   const distanceKm     = (shifts ?? []).reduce((s, sh) => s + (sh.total_distance_km ?? 0), 0);
-  const earningsThb    = (requests ?? []).reduce((s, r) => s + (r.actual_price ?? 0), 0);
+  const goodsValueThb  = (requests ?? []).reduce((s, r) => s + (r.actual_price ?? 0), 0);
   const totalOffered   = jobsAttempted + jobsDeclined;
   const reqDistTotal   = (requests ?? []).reduce((s, r) => s + (r.distance_km ?? 0), 0);
 
+  const configs: RankConfig[] = (rankRows ?? []).map(r => ({
+    tier: r.tier as RiderTier, label_th: r.label_th,
+    min_jobs_month: r.min_jobs_month, commission_rate: Number(r.commission_rate),
+    fuel_rate_per_km: Number(r.fuel_rate_per_km), bonus_multiplier: Number(r.bonus_multiplier),
+    job_target_reduction: r.job_target_reduction,
+  }));
+  const monthlyTier = computeMonthlyTier(jobsCompleted, configs, userRow?.rank_tier_override as RiderTier | null);
+  const rankConfig  = configs.find(c => c.tier === monthlyTier) ?? { tier: "bronze" as RiderTier, label_th: "บรอนซ์", min_jobs_month: 0, commission_rate: 0, fuel_rate_per_km: 0, bonus_multiplier: 1, job_target_reduction: 0 };
+
   return {
     stats: {
-      jobsCompleted, jobsAttempted, jobsDeclined, distanceKm, earningsThb,
+      jobsCompleted, jobsAttempted, jobsDeclined, distanceKm, goodsValueThb, monthlyTier, rankConfig,
       acceptanceRate: totalOffered > 0  ? jobsAttempted / totalOffered  : null,
       completionRate: jobsAttempted > 0 ? jobsCompleted / jobsAttempted : null,
       avgDistPerJob:  jobsCompleted > 0 ? reqDistTotal  / jobsCompleted : null,
