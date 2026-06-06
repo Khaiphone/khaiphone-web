@@ -382,6 +382,9 @@ export default function RiderJobsPage() {
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: TEXT2 }}>{job.orderNumber}</span>
                         <StatusBadge status={job.status} size="xs" />
+                        {job.appointment.date && mode === "month" && (
+                          <span style={{ fontSize: 11, color: TEXT3 }}>📅 {new Date(job.appointment.date + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short" })}</span>
+                        )}
                         {job.appointment.time && (
                           <span style={{ fontSize: 11, color: TEXT3 }}>🕐 {job.appointment.time} น.</span>
                         )}
