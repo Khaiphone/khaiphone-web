@@ -474,7 +474,7 @@ export async function adminConfirmReturn(id: string) {
     supabase.from("admin_users").select("name").eq("user_id", caller.id).single(),
   ]);
 
-  if (!req?.return_submitted_at) return { success: false as const, error: "ไรเดอร์ยังไม่ได้แจ้งส่งคืน" };
+  if (req?.returned_to_office_at) return { success: false as const, error: "ยืนยันรับเครื่องไปแล้ว" };
 
   const confirmedByName = profile?.name ?? caller.email ?? caller.id;
   const inspection = req.inspection ?? {};

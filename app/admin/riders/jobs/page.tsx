@@ -384,8 +384,8 @@ export default function RiderJobsPage() {
                     </div>
                   )}
 
-                  {/* Confirm return button */}
-                  {cat === "completed" && job.returnSubmittedAt && !job.returnedToOfficeAt && (
+                  {/* Confirm return button — show whenever job is completed and not yet confirmed */}
+                  {cat === "completed" && !job.returnedToOfficeAt && (
                     <div style={{ marginTop: 10, marginLeft: 15 }}>
                       <button
                         disabled={confirmBusy === job.id}
