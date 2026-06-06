@@ -41,6 +41,7 @@ async function getBattery(): Promise<number | null> {
 async function sendPing(appState: "foreground" | "background") {
   if (!currentPos || !pingFn) return;
   const batteryPct = await getBattery();
+  if (!pingFn) return; // re-check: user may have gone offline during getBattery()
   await pingFn({
     lat:       currentPos.coords.latitude,
     lng:       currentPos.coords.longitude,
@@ -100,20 +101,33 @@ export async function startTracking(fn: PingFn): Promise<boolean> {
   await acquireWakeLock();
 
   document.addEventListener("visibilitychange", handleVisibility);
-  window.addEventListener("beforeunload", stopTracking);
+  window.addEventListener("pagehide", handlePageHide);
+  window.addEventListener("beforeunload", handlePageHide);
 
   return true;
 }
 
 function handleVisibility() {
-  if (!document.hidden) {
-    restartInterval(); // browser may have throttled/killed the interval in background
+  if (document.hidden) {
+    // Page went to background — stop the interval so Android Chrome doesn't keep pinging.
+    // The pagehide beacon below handles marking offline in the DB.
+    if (intervalId) { clearInterval(intervalId); intervalId = null; }
+  } else {
+    // Page came back to foreground — resume tracking.
+    restartInterval();
     navigator.geolocation.getCurrentPosition(
       (pos) => { currentPos = pos; sendPing("foreground"); },
-      () => { sendPing("foreground"); }, // send last known position even if fresh GPS fails
+      () => { sendPing("foreground"); },
       { enableHighAccuracy: true, timeout: 5_000 }
     );
   }
+}
+
+function handlePageHide() {
+  // pagehide is the only reliable unload event on iOS PWA.
+  // sendBeacon completes even as the page freezes/unloads.
+  navigator.sendBeacon("/api/rider/offline");
+  if (intervalId) { clearInterval(intervalId); intervalId = null; }
 }
 
 export function setTrackingMode(mode: TrackingMode) {
@@ -133,7 +147,8 @@ export function stopTracking() {
   if (intervalId)        { clearInterval(intervalId); intervalId = null; }
   releaseWakeLock();
   document.removeEventListener("visibilitychange", handleVisibility);
-  window.removeEventListener("beforeunload", stopTracking);
+  window.removeEventListener("pagehide", handlePageHide);
+  window.removeEventListener("beforeunload", handlePageHide);
   pingFn = null;
   currentPos = null;
   currentMode = "idle";

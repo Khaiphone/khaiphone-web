@@ -91,6 +91,15 @@ export async function riderPingLocation(payload: {
   const supabase = createServerClient();
   const now = new Date().toISOString();
 
+  // Guard: reject stale pings that arrive after the shift was closed (race condition)
+  const { data: openShift } = await supabase
+    .from("rider_shifts")
+    .select("id")
+    .eq("id", payload.shiftId)
+    .is("clocked_out_at", null)
+    .maybeSingle();
+  if (!openShift) return { success: false, error: "shift_closed" };
+
   const locData: Record<string, unknown> = {
     rider_id:       user.id,
     lat:            payload.lat,
