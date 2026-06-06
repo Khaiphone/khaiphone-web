@@ -97,6 +97,15 @@ export default function RiderJobsPage() {
     }
   }, [mode, date, monthYear]);
 
+  function refresh() {
+    if (mode === "day") {
+      fetchRiderJobs(date).then(d => setJobs(d));
+    } else {
+      const range = getMonthRange(monthYear.year, monthYear.month);
+      fetchRiderJobs(undefined, range).then(d => setJobs(d));
+    }
+  }
+
   function shiftMonth(delta: number) {
     setMonthYear(prev => {
       let m = prev.month + delta;
@@ -418,7 +427,7 @@ export default function RiderJobsPage() {
                           setReclaimBusy(job.id);
                           const res = await adminReclaimJob(job.id);
                           if (res.success) {
-                            fetchRiderJobs(date).then(d => setJobs(d));
+                            refresh();
                           } else {
                             alert(res.error);
                           }
@@ -442,7 +451,7 @@ export default function RiderJobsPage() {
                           setConfirmBusy(job.id);
                           const res = await adminConfirmReturn(job.id);
                           if (res.success) {
-                            fetchRiderJobs(date).then(d => setJobs(d));
+                            refresh();
                           } else {
                             alert(res.error);
                           }
