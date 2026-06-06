@@ -8,6 +8,7 @@ import { Sk } from "@/app/rider/skeleton";
 import { fetchMyMonthlyStats, fetchMyLifetimeStats, fetchLeaderboard } from "@/app/actions/rider-stats";
 import type { MonthlyStats, RiderTargets, LeaderboardEntry } from "@/app/actions/rider-stats";
 import { fetchRiderEarnings } from "@/app/actions/rider";
+import { cacheGet, cacheSet } from "@/app/rider/cache";
 import { computeTier } from "@/lib/rider-kpi";
 import type { Badge, RiderTier } from "@/lib/rider-kpi";
 
@@ -91,19 +92,30 @@ export default function StatsPage() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   })();
 
+  type MonthCache = { stats: MonthlyStats; targets: RiderTargets; leaderboard: LeaderboardEntry[]; earnings: Awaited<ReturnType<typeof fetchRiderEarnings>> };
+  type LifeCache  = { lifetimeCompleted: number; lifetimeDistanceKm: number; currentStreak: number; tier: RiderTier; badges: Badge[] };
+
   const [month, setMonth]             = useState(curMonthStr);
-  const [stats, setStats]             = useState<MonthlyStats | null>(null);
-  const [targets, setTargets]         = useState<RiderTargets | null>(null);
-  const [lifetime, setLifetime]       = useState<{
-    lifetimeCompleted: number; lifetimeDistanceKm: number; currentStreak: number;
-    tier: RiderTier; badges: Badge[];
-  } | null>(null);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [earnings, setEarnings]       = useState<Awaited<ReturnType<typeof fetchRiderEarnings>> | null>(null);
-  const [loading, setLoading]         = useState(true);
+  const monthKey                       = `stats:${userId}:${month}`;
+  const lifeKey                        = `life:${userId}`;
+  const cached                         = cacheGet<MonthCache>(monthKey);
+  const cachedLife                     = cacheGet<LifeCache>(lifeKey);
+  const [stats, setStats]             = useState<MonthlyStats | null>(cached?.stats ?? null);
+  const [targets, setTargets]         = useState<RiderTargets | null>(cached?.targets ?? null);
+  const [lifetime, setLifetime]       = useState<LifeCache | null>(cachedLife ?? null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(cached?.leaderboard ?? []);
+  const [earnings, setEarnings]       = useState<Awaited<ReturnType<typeof fetchRiderEarnings>> | null>(cached?.earnings ?? null);
+  const [loading, setLoading]         = useState(!cached || !cachedLife);
 
   const load = useCallback(async () => {
     if (!userId) return;
+    const key  = `stats:${userId}:${month}`;
+    const lKey = `life:${userId}`;
+    const hit  = cacheGet<MonthCache>(key);
+    const lHit = cacheGet<LifeCache>(lKey);
+    if (hit) { setStats(hit.stats); setTargets(hit.targets); setLeaderboard(hit.leaderboard); setEarnings(hit.earnings); }
+    if (lHit) { setLifetime(lHit); }
+    if (hit && lHit) { setLoading(false); return; }
     setLoading(true);
     try {
       const [monthly, life, board, earn] = await Promise.all([
@@ -112,6 +124,9 @@ export default function StatsPage() {
         fetchLeaderboard(month),
         fetchRiderEarnings(userId),
       ]);
+      const monthData: MonthCache = { stats: monthly.stats, targets: monthly.targets, leaderboard: board, earnings: earn };
+      cacheSet(key, monthData);
+      cacheSet(lKey, life);
       setStats(monthly.stats);
       setTargets(monthly.targets);
       setLifetime(life);
