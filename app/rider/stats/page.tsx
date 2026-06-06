@@ -5,11 +5,10 @@ import { ChevronLeft, ChevronRight, Trophy, Flame, Star } from "lucide-react";
 import { useRiderTheme } from "@/app/rider/theme";
 import { useRiderSession } from "@/app/rider/context";
 import { Sk } from "@/app/rider/skeleton";
-import {
-  fetchMyMonthlyStats, fetchMyLifetimeStats, fetchLeaderboard,
-  computeTier,
-} from "@/app/actions/rider-stats";
-import type { MonthlyStats, RiderTargets, LeaderboardEntry, Badge, RiderTier } from "@/app/actions/rider-stats";
+import { fetchMyMonthlyStats, fetchMyLifetimeStats, fetchLeaderboard } from "@/app/actions/rider-stats";
+import type { MonthlyStats, RiderTargets, LeaderboardEntry } from "@/app/actions/rider-stats";
+import { computeTier } from "@/lib/rider-kpi";
+import type { Badge, RiderTier } from "@/lib/rider-kpi";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
