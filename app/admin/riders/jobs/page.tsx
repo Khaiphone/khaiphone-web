@@ -139,7 +139,7 @@ export default function RiderJobsPage() {
     return [...map.values()].sort((a, b) => b.completed - a.completed || b.total - a.total);
   }, [jobs]);
 
-  const unassignedJobs = useMemo(() => jobs.filter(j => !j.riderId), [jobs]);
+  const unassignedJobs = useMemo(() => jobs.filter(j => !j.riderId && j.status === "confirmed"), [jobs]);
 
   const filtered = useMemo(() => {
     if (filter === "all") return jobs;
@@ -393,7 +393,7 @@ export default function RiderJobsPage() {
                         )}
                       </div>
                       <p style={{ margin: "0 0 3px", fontSize: 14, fontWeight: 700, color: TEXT }}>{job.device.model}{job.device.storage ? ` · ${job.device.storage}` : ""}</p>
-                      <p style={{ margin: 0, fontSize: 12, color: TEXT2 }}>{job.customer.name}{job.riderName ? <span style={{ color: TEXT3 }}> · ไรเดอร์: {job.riderName}</span> : <span style={{ color: RED, fontWeight: 600 }}> · ยังไม่จ่ายงาน</span>}</p>
+                      <p style={{ margin: 0, fontSize: 12, color: TEXT2 }}>{job.customer.name}{job.riderName ? <span style={{ color: TEXT3 }}> · ไรเดอร์: {job.riderName}</span> : job.status === "confirmed" ? <span style={{ color: RED, fontWeight: 600 }}> · ยังไม่จ่ายงาน</span> : null}</p>
                     </div>
 
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
