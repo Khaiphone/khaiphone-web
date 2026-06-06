@@ -190,7 +190,7 @@ export async function fetchRiderJobs(date?: string, dateRange?: { from: string; 
     query = query.or(`appt_date.eq.${targetDate},status.in.(${IN_PROGRESS.join(",")})`);
   }
 
-  const { data } = await query.order("appt_date", { ascending: true }).order("appt_time", { ascending: true, nullsFirst: false });
+  const { data } = await query.order("appt_date", { ascending: false }).order("appt_time", { ascending: false, nullsFirst: true });
   return (data ?? []).map(mapRow);
 }
 
