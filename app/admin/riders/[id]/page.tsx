@@ -150,6 +150,9 @@ export default function RiderDetailPage() {
   const [statsLeader,    setStatsLeader]    = useState<LeaderboardEntry[]>([]);
   const [statsEarnings,  setStatsEarnings]  = useState<EarningsData | null>(null);
 
+  // ── Recent shifts (overview — always 30 days, not tied to tab) ──
+  const [recentShifts, setRecentShifts] = useState<Shift[]>([]);
+
   // ── History tab state ──
   const [histLoading, setHistLoading] = useState(false);
   const [histLoaded,  setHistLoaded]  = useState(false);
@@ -171,11 +174,15 @@ export default function RiderDetailPage() {
 
   const loadOverview = useCallback(async () => {
     const { from, to } = dateRange();
-    const [shiftData, allRiders] = await Promise.all([
+    const past30 = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const [shiftData, allRiders, recentData] = await Promise.all([
       fetchRiderShiftStats(id, from, to),
       fetchActiveRiders(),
+      fetchRiderShiftStats(id, past30, todayStr),
     ]);
     setShifts(shiftData as Shift[]);
+    setRecentShifts(recentData as Shift[]);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const me = (allRiders as any[]).find(r => r.rider_id === id);
     if (me) {
@@ -474,15 +481,15 @@ export default function RiderDetailPage() {
 
           <div style={{ background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
             <div style={{ padding: "12px 16px", borderBottom: `1px solid ${BORDER}` }}>
-              <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: TEXT2, textTransform: "uppercase" }}>ประวัติ Shift</p>
+              <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: TEXT2, textTransform: "uppercase" }}>ประวัติ Shift (30 วันล่าสุด)</p>
             </div>
             {loading ? (
               <div style={{ padding: 24, textAlign: "center", color: TEXT2 }}>กำลังโหลด...</div>
-            ) : shifts.filter(s => s.clocked_out_at).length === 0 ? (
+            ) : recentShifts.filter(s => s.clocked_out_at).length === 0 ? (
               <div style={{ padding: 24, textAlign: "center", color: TEXT2, fontSize: 14 }}>ยังไม่มีประวัติ</div>
             ) : (
-              shifts.filter(s => s.clocked_out_at).map((s, i) => (
-                <div key={s.id} style={{ padding: "12px 16px", borderBottom: i < shifts.length - 1 ? `1px solid ${BORDER}` : "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              recentShifts.filter(s => s.clocked_out_at).map((s, i, arr) => (
+                <div key={s.id} style={{ padding: "12px 16px", borderBottom: i < arr.length - 1 ? `1px solid ${BORDER}` : "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div>
                     <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 600, color: TEXT }}>{thDate(s.clocked_in_at)}</p>
                     <p style={{ margin: 0, fontSize: 12, color: TEXT2 }}>{thTime(s.clocked_in_at)} – {s.clocked_out_at ? thTime(s.clocked_out_at) : "กำลังทำงาน"} · {shiftDuration(s.clocked_in_at, s.clocked_out_at)}</p>
