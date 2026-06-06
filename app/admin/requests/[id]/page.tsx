@@ -16,7 +16,7 @@ import {
 } from "@/app/actions/admin-requests";
 import { fetchAdminUsers, fetchMyRole, fetchMyProfile } from "@/app/actions/admin-users";
 import type { AdminUserRow } from "@/app/actions/admin-users";
-import { saveInspection, recordArrival, respondToNegotiation } from "@/app/actions/inspection";
+import { saveInspection, recordArrival, respondToNegotiation, adminApproveInspection } from "@/app/actions/inspection";
 import { fetchRiderSuggestionsForRequest } from "@/app/actions/rider-tracking";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
@@ -151,9 +151,10 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const [canAssign,    setCanAssign]    = useState(false);
 
   // Reclaim job
-  const [reclaimBusy,   setReclaimBusy]   = useState(false);
-  const [showReclaim,   setShowReclaim]   = useState(false);
-  const [reclaimReason, setReclaimReason] = useState("");
+  const [reclaimBusy,        setReclaimBusy]        = useState(false);
+  const [showReclaim,        setShowReclaim]        = useState(false);
+  const [reclaimReason,      setReclaimReason]      = useState("");
+  const [approvingInspection,setApprovingInspection]= useState(false);
 
   // Smart rider suggestions
   type RiderSuggestion = { rider_id: string; name: string; tracking_mode: string; battery_pct: number | null; distanceKm: number; etaMinutes: number; jobs_completed: number };
@@ -1507,7 +1508,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                     )}
 
                     {/* Price from rider */}
-                    <div style={{ background: "#F8F8FA", borderRadius: 8, padding: "10px 12px" }}>
+                    <div style={{ background: "#F8F8FA", borderRadius: 8, padding: "10px 12px", marginBottom: 16 }}>
                       <p style={{ margin: "0 0 6px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>ราคาที่ไรเดอร์ประเมิน</p>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         {request.inspection.actualPrice !== request.inspection.originalPrice ? (
@@ -1524,6 +1525,38 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                         <p style={{ margin: "5px 0 0", fontSize: 12, color: TEXT2, fontStyle: "italic" }}>"{request.inspection.priceReason}"</p>
                       )}
                     </div>
+
+                    {/* Admin approval gate */}
+                    {request.status === "inspecting" && (() => {
+                      const approved = !!(request.inspection as { adminApprovedAt?: string }).adminApprovedAt;
+                      return approved ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 10, background: "#F0FDF4", border: "1px solid #86efac" }}>
+                          <span style={{ fontSize: 15 }}>✅</span>
+                          <div>
+                            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#166534" }}>อนุมัติผลตรวจแล้ว</p>
+                            <p style={{ margin: "2px 0 0", fontSize: 11, color: "#4ade80" }}>ไรเดอร์สามารถเสนอราคาได้แล้ว</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ borderRadius: 10, border: "1.5px solid #FCD34D", background: "#FFFBEB", padding: "12px 14px" }}>
+                          <p style={{ margin: "0 0 10px", fontSize: 13, fontWeight: 600, color: "#92400E" }}>
+                            ⏳ รอแอดมินอนุมัติผลตรวจ — ไรเดอร์จะยังเสนอราคาไม่ได้
+                          </p>
+                          <button
+                            disabled={approvingInspection}
+                            onClick={async () => {
+                              setApprovingInspection(true);
+                              const res = await adminApproveInspection(id);
+                              setApprovingInspection(false);
+                              if (!res.success) alert(res.error ?? "เกิดข้อผิดพลาด");
+                            }}
+                            style={{ width: "100%", padding: "10px 0", borderRadius: 8, border: "none", background: approvingInspection ? "#D1D5DB" : "#16a34a", color: "#fff", fontSize: 14, fontWeight: 700, cursor: approvingInspection ? "wait" : "pointer", fontFamily: "inherit" }}
+                          >
+                            {approvingInspection ? "กำลังอนุมัติ..." : "✓ อนุมัติผลตรวจ — ให้ไรเดอร์เสนอราคาได้"}
+                          </button>
+                        </div>
+                      );
+                    })()}
 
                   </div>
                 ) : (

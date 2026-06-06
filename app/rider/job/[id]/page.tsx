@@ -505,6 +505,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
     const insp = job.inspection!;
     const passed = (insp.criteria ?? []).filter(c => c.pass).length;
     const total  = (insp.criteria ?? []).length;
+    const adminApproved = !!(insp as { adminApprovedAt?: string }).adminApprovedAt;
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ background: "rgba(74,222,128,0.08)", border: `1px solid rgba(74,222,128,0.3)`, borderRadius: 14, padding: 16 }}>
@@ -514,7 +515,9 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
             </div>
             <div>
               <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: c.TEXT }}>บันทึกผลตรวจแล้ว</p>
-              <p style={{ margin: "2px 0 0", fontSize: 12, color: c.TEXT2 }}>Admin กำลังตรวจสอบข้อมูล...</p>
+              <p style={{ margin: "2px 0 0", fontSize: 12, color: adminApproved ? "#34C759" : c.TEXT2 }}>
+                {adminApproved ? "✓ Admin อนุมัติแล้ว — เสนอราคาได้เลย" : "รอ Admin ตรวจสอบและอนุมัติ..."}
+              </p>
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -533,7 +536,14 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
           </div>
         </div>
 
-        <BigBtn label="เสนอราคา →" onClick={() => setShowPrice(true)} />
+        {adminApproved ? (
+          <BigBtn label="เสนอราคา →" onClick={() => setShowPrice(true)} />
+        ) : (
+          <div style={{ padding: "14px 16px", borderRadius: 14, background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.4)", textAlign: "center" }}>
+            <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 700, color: "#92400E" }}>⏳ รอ Admin อนุมัติ</p>
+            <p style={{ margin: 0, fontSize: 12, color: "#B45309" }}>หน้าจะอัปเดตอัตโนมัติเมื่ออนุมัติแล้ว</p>
+          </div>
+        )}
         <button onClick={() => {}} style={{ background: "none", border: "none", color: c.TEXT2, fontSize: 13, cursor: "pointer", padding: "2px 0", fontFamily: "inherit", textDecoration: "underline" }}>
           ← แก้ไขผลการตรวจ
         </button>

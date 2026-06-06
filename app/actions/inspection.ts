@@ -163,6 +163,33 @@ export async function respondToNegotiation(
   return _respondToNegotiation(id, accepted, respondedBy);
 }
 
+// ─── Admin: อนุมัติผลตรวจ → ไรเดอร์ถึงเสนอราคาได้ ─────────────────────────────
+export async function adminApproveInspection(id: string): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
+  const supabase = createServerClient();
+
+  const { data: req } = await supabase
+    .from("requests")
+    .select("inspection, status")
+    .eq("id", id)
+    .single();
+
+  if (!req || req.status !== "inspecting") return { success: false, error: "ไม่อยู่ในสถานะตรวจสภาพ" };
+  if (!(req.inspection as { inspectedAt?: string } | null)?.inspectedAt) return { success: false, error: "ยังไม่มีผลตรวจจากไรเดอร์" };
+
+  const { error } = await supabase
+    .from("requests")
+    .update({
+      inspection: { ...(req.inspection as object), adminApprovedAt: new Date().toISOString() },
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) return { success: false, error: error.message };
+  broadcastRequestUpdate(id);
+  return { success: true };
+}
+
 // ─── Public: ลูกค้ายืนยัน/ปฏิเสธราคา (verify phone) ─────────────────────────
 export async function customerRespondToNegotiation(
   orderNumber: string,
