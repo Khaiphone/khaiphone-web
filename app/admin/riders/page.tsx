@@ -862,6 +862,7 @@ export default function PlannerDashboard() {
                                     setReclaimBusy(job.id);
                                     const res = await adminReclaimJob(job.id);
                                     if (!res.success) alert(res.error);
+                                    else { loadJobs(); loadRiders(); }
                                     setReclaimBusy(null);
                                   }}
                                   style={{ background: "none", border: `1px solid ${RED}60`, borderRadius: 6, padding: "2px 7px", fontSize: 11, color: RED, cursor: reclaimBusy === job.id ? "wait" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 3 }}
