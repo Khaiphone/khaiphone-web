@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
-  Clock, CheckCircle2, ClipboardList, Loader2,
+  Clock, CheckCircle2, XCircle, ClipboardList, Loader2,
   AlertTriangle, Package, Truck, PackageCheck, RotateCcw,
 } from "lucide-react";
 import { fetchRiderJobs, adminConfirmReturn } from "@/app/actions/admin-requests";
@@ -223,52 +223,73 @@ export default function RiderJobsPage() {
             </div>
           )}
 
-          {/* ── Rider performance table ── */}
+          {/* ── Rider performance cards ── */}
           {riderRows.length > 0 && (
             <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, overflow: "hidden" }}>
               <button
                 onClick={() => setExpanded(e => !e)}
                 style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "14px 16px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", borderBottom: expanded ? `1px solid ${BORDER}` : "none" }}
               >
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: TEXT, flex: 1, textAlign: "left" }}>ประสิทธิภาพไรเดอร์ ({riderRows.length} คน)</p>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: TEXT, flex: 1, textAlign: "left" }}>ประสิทธิภาพไรเดอร์ <span style={{ fontWeight: 400, color: TEXT3 }}>({riderRows.length} คน)</span></p>
                 {expanded ? <ChevronUp size={16} color={TEXT2} /> : <ChevronDown size={16} color={TEXT2} />}
               </button>
 
-              {expanded && (
-                <>
-                  {/* Table header */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 44px 44px 44px 44px 60px", gap: 0, padding: "8px 16px", borderBottom: `1px solid ${BORDER}`, background: BG }}>
-                    {["ไรเดอร์", "รับ", "เสร็จ", "กำลัง", "ยกเลิก", "รอคืน"].map((h, i) => (
-                      <span key={h} style={{ fontSize: 10, fontWeight: 700, color: TEXT3, textAlign: i > 0 ? "center" : "left", textTransform: "uppercase", letterSpacing: 0.3 }}>{h}</span>
-                    ))}
-                  </div>
-
-                  {riderRows.map((r, i) => {
-                    const successPct = r.total > 0 ? Math.round((r.completed / r.total) * 100) : 0;
-                    return (
-                      <div key={r.riderId} style={{ display: "grid", gridTemplateColumns: "1fr 44px 44px 44px 44px 60px", gap: 0, padding: "12px 16px", borderBottom: i < riderRows.length - 1 ? `1px solid ${BORDER}` : "none", alignItems: "center" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <Avatar name={r.riderName} size={30} />
-                          <div>
-                            <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: TEXT }}>{r.riderName}</p>
-                            <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
-                              <div style={{ width: 48, height: 4, borderRadius: 2, background: BORDER, overflow: "hidden" }}>
-                                <div style={{ width: `${successPct}%`, height: "100%", background: successPct >= 80 ? GREEN : successPct >= 50 ? ORANGE : RED, borderRadius: 2 }} />
-                              </div>
-                              <span style={{ fontSize: 10, color: TEXT3 }}>{successPct}%</span>
-                            </div>
+              {expanded && riderRows.map((r, i) => {
+                const successPct  = r.total > 0 ? Math.round((r.completed / r.total) * 100) : 0;
+                const barColor    = successPct >= 80 ? GREEN : successPct >= 50 ? ORANGE : RED;
+                const active      = r.inProgress + r.waiting;
+                return (
+                  <div key={r.riderId} style={{ padding: "16px", borderBottom: i < riderRows.length - 1 ? `1px solid ${BORDER}` : "none" }}>
+                    {/* Top row: avatar + name + success rate */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                      <Avatar name={r.riderName} size={38} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: TEXT }}>{r.riderName}</p>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                          <div style={{ flex: 1, maxWidth: 100, height: 5, borderRadius: 99, background: BORDER, overflow: "hidden" }}>
+                            <div style={{ width: `${successPct}%`, height: "100%", background: barColor, borderRadius: 99, transition: "width 0.4s" }} />
                           </div>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: barColor }}>{successPct}% สำเร็จ</span>
                         </div>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: TEXT, textAlign: "center" }}>{r.total}</span>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: GREEN, textAlign: "center" }}>{r.completed}</span>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: BLUE, textAlign: "center" }}>{r.inProgress + r.waiting}</span>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: r.cancelled > 0 ? RED : TEXT3, textAlign: "center" }}>{r.cancelled}</span>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: r.pendingReturn > 0 ? ORANGE : TEXT3, textAlign: "center" }}>{r.pendingReturn}</span>
                       </div>
-                    );
-                  })}
-                </>
-              )}
+                      <div style={{ textAlign: "right" }}>
+                        <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: TEXT }}>{r.total}</p>
+                        <p style={{ margin: 0, fontSize: 10, color: TEXT3 }}>งานทั้งหมด</p>
+                      </div>
+                    </div>
+
+                    {/* Bottom row: stat chips */}
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, background: GREEN + "12", border: `1px solid ${GREEN}30`, borderRadius: 8, padding: "5px 10px" }}>
+                        <CheckCircle2 size={12} color={GREEN} />
+                        <span style={{ fontSize: 12, fontWeight: 700, color: GREEN }}>{r.completed}</span>
+                        <span style={{ fontSize: 11, color: TEXT2 }}>เสร็จสิ้น</span>
+                      </div>
+                      {active > 0 && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 5, background: BLUE + "12", border: `1px solid ${BLUE}30`, borderRadius: 8, padding: "5px 10px" }}>
+                          <Clock size={12} color={BLUE} />
+                          <span style={{ fontSize: 12, fontWeight: 700, color: BLUE }}>{active}</span>
+                          <span style={{ fontSize: 11, color: TEXT2 }}>กำลังดำเนินการ</span>
+                        </div>
+                      )}
+                      {r.cancelled > 0 && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 5, background: RED + "12", border: `1px solid ${RED}30`, borderRadius: 8, padding: "5px 10px" }}>
+                          <XCircle size={12} color={RED} />
+                          <span style={{ fontSize: 12, fontWeight: 700, color: RED }}>{r.cancelled}</span>
+                          <span style={{ fontSize: 11, color: TEXT2 }}>ยกเลิก</span>
+                        </div>
+                      )}
+                      {r.pendingReturn > 0 && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 5, background: ORANGE + "12", border: `1px solid ${ORANGE}30`, borderRadius: 8, padding: "5px 10px" }}>
+                          <RotateCcw size={12} color={ORANGE} />
+                          <span style={{ fontSize: 12, fontWeight: 700, color: ORANGE }}>{r.pendingReturn}</span>
+                          <span style={{ fontSize: 11, color: TEXT2 }}>รอส่งคืนเครื่อง</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 
