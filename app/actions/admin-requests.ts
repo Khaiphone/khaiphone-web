@@ -9,6 +9,8 @@ import type { AdminRequest, RequestStatus, SellMethod, PayMethod } from "@/lib/t
 import { SLIP_PLACEHOLDER, SLIP_BLOCK } from "@/lib/contract-builder";
 import type { Permission } from "@/lib/admin-permissions";
 import type { AdminRole } from "@/app/actions/admin-users";
+import { createStockItem } from "@/app/actions/stocks";
+import type { SourceChannel } from "@/lib/stock/types";
 
 const STATUS_LABEL: Record<string, string> = {
   new:               "คำขอใหม่",
@@ -121,6 +123,7 @@ function mapRow(row: any): AdminRequest {
     returnedToOfficeAt:      row.returned_to_office_at      ?? null,
     returnedConfirmedById:   row.returned_confirmed_by_id   ?? null,
     returnedConfirmedByName: row.returned_confirmed_by_name ?? null,
+    stockItemId:             row.stock_item_id              ?? null,
   };
 }
 
@@ -454,22 +457,37 @@ async function fetchDistanceKm(destination: string): Promise<number | null> {
 
 // ─── Assign rider to request ──────────────────────────────────────────────────
 // ─── Admin confirms receipt of device returned by rider ───────────────────────
+const SOURCE_CHANNEL_MAP: Record<string, SourceChannel> = {
+  website:  "เว็บไซต์",
+  line:     "LINE OA",
+  facebook: "Facebook",
+  phone:    "โทรศัพท์",
+};
+
 export async function adminConfirmReturn(id: string) {
   const caller = await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
 
   const [{ data: req }, { data: profile }] = await Promise.all([
-    supabase.from("requests")
-      .select("order_number, device_model, return_submitted_at, rider_name")
-      .eq("id", id).single(),
+    supabase.from("requests").select("*").eq("id", id).single(),
     supabase.from("admin_users").select("name").eq("user_id", caller.id).single(),
   ]);
 
   if (!req?.return_submitted_at) return { success: false as const, error: "ไรเดอร์ยังไม่ได้แจ้งส่งคืน" };
 
   const confirmedByName = profile?.name ?? caller.email ?? caller.id;
+  const inspection = req.inspection ?? {};
 
+  // Derive grade from inspection result
+  const gradeMap: Record<string, "A" | "A-" | "B+" | "B" | "B-" | "C"> = {
+    matched:  "A",
+    adjusted: "B+",
+    rejected: "B-",
+  };
+  const grade = gradeMap[inspection.result as string] ?? "B+";
+
+  // Update request with return confirmation
   const { error } = await supabase
     .from("requests")
     .update({
@@ -481,8 +499,63 @@ export async function adminConfirmReturn(id: string) {
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
 
+  // Auto-create stock item from request data
+  const stockResult = await createStockItem({
+    id:            "",                                              // generated inside createStockItem
+    model:         req.device_model,
+    storage:       req.device_storage ?? "",
+    color:         inspection.color ?? req.device_color ?? "",
+    imei:          inspection.imei  ?? "",
+    serial:        inspection.serial ?? "",
+    grade,
+    batteryHealth: inspection.battery_health   ?? inspection.batteryHealth   ?? 0,
+    cycleCount:    inspection.battery_cycles   ?? inspection.batteryCycles   ?? 0,
+    icloudStatus:  "",
+    carrierLock:   "",
+    accessories:   (inspection.accessories as string[] | undefined)?.join(", ") ?? "",
+    physicalChecks: [],
+    costPrice:     req.actual_price ?? req.estimated_price ?? 0,
+    shippingCost:  0,
+    otherCost:     0,
+    sellingPrice:  0,
+    status:        "รอตรวจ",
+    sourceChannel: SOURCE_CHANNEL_MAP[req.source as string] ?? "เว็บไซต์",
+    requestRef:    req.order_number,
+    sellerName:    req.customer_name,
+    sellerPhone:   req.customer_phone,
+    receivedAt:    now,
+    inspector:     confirmedByName,
+    photos:        (inspection.photos as string[] | undefined) ?? [],
+    inspectionSnapshot: {
+      imei:           inspection.imei          ?? null,
+      serial:         inspection.serial         ?? null,
+      model:          req.device_model,
+      storage:        req.device_storage        ?? null,
+      color:          inspection.color          ?? req.device_color ?? null,
+      source:         "rider-inspection",
+      result:         inspection.result,
+      batteryHealth:  inspection.battery_health ?? inspection.batteryHealth  ?? undefined,
+      batteryCycles:  inspection.battery_cycles ?? inspection.batteryCycles  ?? undefined,
+      warrantyExpiry: inspection.warranty_expiry ?? inspection.warrantyExpiry ?? null,
+      criteria:       inspection.criteria        ?? [],
+      functionalTests: inspection.functional_tests ?? inspection.functionalTests ?? [],
+      issues:         inspection.issues          ?? [],
+    },
+    soldAt: undefined, soldPrice: undefined, buyerName: undefined,
+    buyerPhone: undefined, soldBy: undefined, saleType: undefined,
+    partnerName: undefined, deliveryChannel: undefined, deliveryStatus: undefined,
+    trackingNumber: undefined, deliveryAddress: undefined,
+  });
+
+  // Save stock_item_id back to request for bidirectional link
+  if (stockResult.success) {
+    await supabase.from("requests")
+      .update({ stock_item_id: stockResult.id, updated_at: now })
+      .eq("id", id);
+  }
+
   after(() => broadcastRequestUpdate(id).catch(console.error));
-  return { success: true as const };
+  return { success: true as const, stockItemId: stockResult.success ? stockResult.id : null };
 }
 
 export async function assignRider(id: string, riderId: string | null, riderName: string | null) {

@@ -174,6 +174,7 @@ export interface AdminRequest {
   returnedToOfficeAt?:      string | null;
   returnedConfirmedById?:   string | null;
   returnedConfirmedByName?: string | null;
+  stockItemId?:             string | null;
 }
 
 export interface AdminNotification {
