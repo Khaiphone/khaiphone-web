@@ -7,6 +7,8 @@ import { ArrowLeft, Battery, MapPin, Clock, CheckCircle2, AlertTriangle, Setting
 import { supabase } from "@/lib/supabase";
 import { fetchRiderShiftStats, fetchRiderTrail, fetchActiveRiders, adminCloseRiderShift } from "@/app/actions/rider-tracking";
 import { fmtDistance, fmtEta, etaMinutes, distanceToOfficeKm, OFFICE_LAT, OFFICE_LNG } from "@/lib/geo-utils";
+import { fetchRiderKpiForAdmin, updateRiderTargets } from "@/app/actions/rider-stats";
+import type { MonthlyStats, RiderTargets } from "@/app/actions/rider-stats";
 
 const DARK = "#1a1a2e";
 const GOLD = "#c9a84c";
@@ -57,6 +59,18 @@ export default function RiderDetailPage() {
   const [closingShift, setClosingShift] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
 
+  // KPI
+  const curMonth = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}`; })();
+  const [kpiStats,   setKpiStats]   = useState<MonthlyStats | null>(null);
+  const [kpiTargets, setKpiTargets] = useState<RiderTargets | null>(null);
+  const [editTarget, setEditTarget] = useState(false);
+  const [tJobsTarget,  setTJobsTarget]  = useState("");
+  const [tDistTarget,  setTDistTarget]  = useState("");
+  const [tAcceptRate,  setTAcceptRate]  = useState("");
+  const [tBonusJobs,   setTBonusJobs]   = useState("");
+  const [tBonusAmount, setTBonusAmount] = useState("");
+  const [savingTarget, setSavingTarget] = useState(false);
+
   const dateRange = useCallback(() => {
     const now = new Date();
     const to = now.toISOString().split("T")[0];
@@ -93,11 +107,21 @@ export default function RiderDetailPage() {
 
   useEffect(() => {
     load();
+    fetchRiderKpiForAdmin(id, curMonth).then(({ stats, targets }) => {
+      setKpiStats(stats);
+      setKpiTargets(targets);
+      setTJobsTarget(targets.monthly_jobs_target  != null ? String(targets.monthly_jobs_target)     : "");
+      setTDistTarget(targets.monthly_distance_target != null ? String(targets.monthly_distance_target) : "");
+      setTAcceptRate(targets.min_acceptance_rate  != null ? String(Math.round(targets.min_acceptance_rate * 100)) : "");
+      setTBonusJobs(targets.monthly_bonus_jobs    != null ? String(targets.monthly_bonus_jobs)      : "");
+      setTBonusAmount(targets.monthly_bonus_amount != null ? String(targets.monthly_bonus_amount)   : "");
+    });
     const ch = supabase
       .channel(`rider-detail-${id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "rider_locations" }, () => load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, load]);
 
   async function handleCloseShift() {
@@ -221,6 +245,87 @@ export default function RiderDetailPage() {
                 </Map>
               </APIProvider>
             </div>
+          </div>
+        )}
+
+        {/* KPI + Targets */}
+        {kpiStats && (
+          <div style={{ background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ padding: "12px 16px", borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: TEXT2, textTransform: "uppercase" }}>KPI เดือนนี้</p>
+              <button onClick={() => setEditTarget(p => !p)} style={{ fontSize: 12, fontWeight: 600, color: ACCENT, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                {editTarget ? "ปิด" : "ตั้งเป้า"}
+              </button>
+            </div>
+
+            {/* Stats grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0 }}>
+              {[
+                { label: "งานสำเร็จ", value: String(kpiStats.jobsCompleted), target: kpiTargets?.monthly_jobs_target != null ? `/ ${kpiTargets.monthly_jobs_target}` : undefined, color: GREEN },
+                { label: "ระยะทาง",   value: `${Math.round(kpiStats.distanceKm)} กม.`, target: kpiTargets?.monthly_distance_target != null ? `/ ${kpiTargets.monthly_distance_target}` : undefined, color: ACCENT },
+                { label: "รับงาน",    value: kpiStats.acceptanceRate != null ? `${Math.round(kpiStats.acceptanceRate * 100)}%` : "—",
+                  target: kpiTargets?.min_acceptance_rate != null ? `เป้า ${Math.round(kpiTargets.min_acceptance_rate * 100)}%` : undefined,
+                  color: kpiStats.acceptanceRate != null && kpiTargets?.min_acceptance_rate != null ? (kpiStats.acceptanceRate >= kpiTargets.min_acceptance_rate ? GREEN : RED) : TEXT },
+                { label: "สำเร็จ",    value: kpiStats.completionRate != null ? `${Math.round(kpiStats.completionRate * 100)}%` : "—", color: TEXT },
+              ].map((k, i) => (
+                <div key={k.label} style={{ padding: "12px 14px", borderRight: i < 3 ? `1px solid ${BORDER}` : "none", textAlign: "center" }}>
+                  <p style={{ margin: "0 0 2px", fontSize: 10, color: TEXT2 }}>{k.label}</p>
+                  <p style={{ margin: 0, fontSize: 16, fontWeight: 800, color: k.color }}>{k.value}</p>
+                  {k.target && <p style={{ margin: 0, fontSize: 10, color: TEXT2 }}>{k.target}</p>}
+                </div>
+              ))}
+            </div>
+
+            {/* Target editor */}
+            {editTarget && (
+              <div style={{ borderTop: `1px solid ${BORDER}`, padding: "14px 16px" }}>
+                <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: TEXT2, textTransform: "uppercase" }}>ตั้งเป้าหมายรายเดือน</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  {[
+                    { label: "เป้างาน (งาน)", val: tJobsTarget, set: setTJobsTarget },
+                    { label: "เป้าระยะทาง (กม.)", val: tDistTarget, set: setTDistTarget },
+                    { label: "อัตรารับงานขั้นต่ำ (%)", val: tAcceptRate, set: setTAcceptRate },
+                    { label: "โบนัส เมื่อครบ (งาน)", val: tBonusJobs, set: setTBonusJobs },
+                    { label: "โบนัสจำนวน (บาท)", val: tBonusAmount, set: setTBonusAmount },
+                  ].map(f => (
+                    <div key={f.label}>
+                      <p style={{ margin: "0 0 4px", fontSize: 11, color: TEXT2 }}>{f.label}</p>
+                      <input
+                        type="number"
+                        value={f.val}
+                        onChange={e => f.set(e.target.value)}
+                        placeholder="—"
+                        style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: `1px solid ${BORDER}`, fontSize: 13, color: TEXT, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <button
+                  disabled={savingTarget}
+                  onClick={async () => {
+                    setSavingTarget(true);
+                    const res = await updateRiderTargets(id, {
+                      monthly_jobs_target:     tJobsTarget     ? Number(tJobsTarget)     : null,
+                      monthly_distance_target: tDistTarget     ? Number(tDistTarget)     : null,
+                      min_acceptance_rate:     tAcceptRate     ? Number(tAcceptRate) / 100 : null,
+                      monthly_bonus_jobs:      tBonusJobs      ? Number(tBonusJobs)      : null,
+                      monthly_bonus_amount:    tBonusAmount    ? Number(tBonusAmount)    : null,
+                    });
+                    if (res.success) {
+                      const { targets } = await fetchRiderKpiForAdmin(id, curMonth);
+                      setKpiTargets(targets);
+                      setEditTarget(false);
+                    } else {
+                      alert(res.error);
+                    }
+                    setSavingTarget(false);
+                  }}
+                  style={{ marginTop: 12, width: "100%", padding: "10px 0", borderRadius: 10, border: "none", background: DARK, color: "#c9a84c", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", opacity: savingTarget ? 0.6 : 1 }}
+                >
+                  {savingTarget ? "กำลังบันทึก..." : "บันทึกเป้าหมาย"}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
