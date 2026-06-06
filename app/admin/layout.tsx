@@ -185,7 +185,6 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
               <nav style={{ flex: 1, padding: "12px 10px", display: "flex", flexDirection: "column", gap: "2px", overflowY: "auto" }}>
                 {[
                   { href: "/admin/riders",        label: "หน้าควบคุมงาน", icon: Map            },
-                  { href: "/admin/riders/jobs",    label: "งานทั้งหมด",    icon: ClipboardList  },
                   { href: "/admin/riders/manage",  label: "จัดการไรเดอร์", icon: Users          },
                   { href: "/admin/riders/jobs",    label: "รายงาน / สถิติ",icon: BarChart2      },
                   { href: "/admin/settings",       label: "ตั้งค่า",        icon: Settings       },
