@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, Banknote, ArrowUpDown, Package, Wifi, WifiOff, CheckCircle2, Navigation, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { fetchRiderHomeData, riderAcceptJob } from "@/app/actions/rider";
+import { fetchRiderHomeData, riderAcceptJob, riderRejectJob } from "@/app/actions/rider";
 import { openShift, closeShift, riderPingLocation, fetchActiveShift } from "@/app/actions/rider-tracking";
 import { startTracking, stopTracking, setTrackingMode, isTracking } from "@/lib/rider-tracking";
 import { Sk } from "@/app/rider/skeleton";
@@ -28,7 +28,7 @@ type HomeData = { pending: AdminRequest[]; active: AdminRequest[]; stats: { comp
 
 export default function RiderHomePage() {
   const router = useRouter();
-  const { CARD, CARD2, BORDER, ACCENT, GREEN, TEXT, TEXT2 } = useRiderTheme();
+  const { CARD, CARD2, BORDER, ACCENT, GREEN, RED, TEXT, TEXT2 } = useRiderTheme();
   const { userId, isOnline, setIsOnline } = useRiderSession();
   const [toggling, setToggling]       = useState(false);
   const [shiftId, setShiftId]         = useState<string | null>(null);
@@ -36,6 +36,7 @@ export default function RiderHomePage() {
   const [activeJobs, setActiveJobs]   = useState<AdminRequest[]>([]);
   const [stats, setStats]             = useState({ completedJobs: 0, totalEarnings: 0 });
   const [accepting, setAccepting]     = useState<string | null>(null);
+  const [rejecting, setRejecting]     = useState<string | null>(null);
   const [loading, setLoading]         = useState(true);
 
   const loadData = useCallback(async (uid: string) => {
@@ -333,23 +334,45 @@ export default function RiderHomePage() {
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => acceptJob(job.id)}
-                    disabled={isAccepting}
-                    style={{
-                      width: "100%", padding: "14px 0", borderRadius: 12,
-                      background: isAccepting ? "rgba(74,222,128,0.4)" : ACCENT,
-                      border: "none", cursor: "pointer", fontFamily: "inherit",
-                      fontSize: 15, fontWeight: 700, color: "#000",
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                    }}
-                  >
-                    {isAccepting
-                      ? <div style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid rgba(0,0,0,0.3)", borderTopColor: "#000", animation: "spin 0.8s linear infinite" }} />
-                      : <CheckCircle2 size={18} />
-                    }
-                    {isAccepting ? "กำลังรับงาน..." : "รับงานนี้"}
-                  </button>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <button
+                      onClick={async () => {
+                        if (!confirm("ปฏิเสธงานนี้?")) return;
+                        setRejecting(job.id);
+                        await riderRejectJob(job.id);
+                        setRejecting(null);
+                        if (userId) loadData(userId);
+                      }}
+                      disabled={isAccepting || rejecting === job.id}
+                      style={{
+                        flex: "0 0 auto", padding: "14px 18px", borderRadius: 12,
+                        background: "transparent", border: `1.5px solid ${RED}`,
+                        cursor: "pointer", fontFamily: "inherit",
+                        fontSize: 14, fontWeight: 700, color: RED,
+                        opacity: (isAccepting || rejecting === job.id) ? 0.5 : 1,
+                      }}
+                    >
+                      {rejecting === job.id ? "..." : "ปฏิเสธ"}
+                    </button>
+                    <button
+                      onClick={() => acceptJob(job.id)}
+                      disabled={isAccepting || rejecting === job.id}
+                      style={{
+                        flex: 1, padding: "14px 0", borderRadius: 12,
+                        background: isAccepting ? "rgba(74,222,128,0.4)" : ACCENT,
+                        border: "none", cursor: "pointer", fontFamily: "inherit",
+                        fontSize: 15, fontWeight: 700, color: "#000",
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                        opacity: rejecting === job.id ? 0.5 : 1,
+                      }}
+                    >
+                      {isAccepting
+                        ? <div style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid rgba(0,0,0,0.3)", borderTopColor: "#000", animation: "spin 0.8s linear infinite" }} />
+                        : <CheckCircle2 size={18} />
+                      }
+                      {isAccepting ? "กำลังรับงาน..." : "รับงานนี้"}
+                    </button>
+                  </div>
                 </div>
               );
             })}
