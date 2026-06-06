@@ -423,7 +423,9 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   // Use inspectedAt (set by riderSaveInspection) — NOT just !!job.inspection which is also
   // set by riderAutoSaveSickw and would prematurely jump to the saved-screen.
   const inspectionFullySaved = !!(job.inspection as { inspectedAt?: string } | undefined)?.inspectedAt;
-  const [showPrice, setShowPrice] = useState(inspectionFullySaved);
+  const adminInitApproved    = !!(job.inspection as { adminApprovedAt?: string } | undefined)?.adminApprovedAt;
+  // showPrice = true only when admin has already approved (handles page refresh after approval)
+  const [showPrice, setShowPrice] = useState(inspectionFullySaved && adminInitApproved);
   const [priceMode, setPriceMode] = useState<"" | "confirm" | "adjust">("");
   const [adjustPrice, setAdjustPrice] = useState(String(job.device.estimatedPrice));
   const [adjustReason, setAdjustReason] = useState("");
