@@ -200,31 +200,40 @@ export async function fetchActiveRiders() {
 
   const riderIds = locs.map(l => l.rider_id);
   const shiftIds = locs.map(l => l.shift_id).filter(Boolean) as string[];
-  const jobIds   = locs.map(l => l.current_job_id).filter(Boolean) as string[];
 
-  const [{ data: users }, { data: shifts }, { data: jobs }, { data: activeJobs }] = await Promise.all([
+  // Fetch full job details for ALL active jobs (not just current_job_id) so we can
+  // fallback current_job when current_job_id is null (e.g. during inspecting/on-site).
+  const ACTIVE_STATUSES = ["confirmed", "pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting", "awaiting_transfer"];
+  const STATUS_PRIORITY: Record<string, number> = {
+    inspecting: 0, price_negotiation: 1, contracting: 2, awaiting_transfer: 3,
+    en_route: 4, pickup_scheduled: 5, confirmed: 6,
+  };
+
+  const [{ data: users }, { data: shifts }, { data: activeJobs }] = await Promise.all([
     supabase.from("admin_users").select("user_id, name").in("user_id", riderIds),
     shiftIds.length > 0
       ? supabase.from("rider_shifts").select("id, clocked_in_at, jobs_completed").in("id", shiftIds)
       : Promise.resolve({ data: [] }),
-    jobIds.length > 0
-      ? supabase.from("requests")
-          .select("id, order_number, device_model, customer_name, appt_location, appt_lat, appt_lng, appt_time, appt_date, distance_km, status")
-          .in("id", jobIds)
-      : Promise.resolve({ data: [] }),
     supabase.from("requests")
-      .select("id, order_number, status, appt_time, appt_date, rider_id")
+      .select("id, order_number, device_model, customer_name, appt_location, appt_lat, appt_lng, appt_time, appt_date, distance_km, status, rider_id")
       .in("rider_id", riderIds)
-      .in("status", ["confirmed", "pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting", "awaiting_transfer"]),
+      .in("status", ACTIVE_STATUSES),
   ]);
 
-  return locs.map(loc => ({
-    ...loc,
-    admin_users:  users?.find(u => u.user_id === loc.rider_id) ?? null,
-    rider_shifts: shifts?.find(s => s.id === loc.shift_id) ?? null,
-    current_job:  jobs?.find(j => j.id === loc.current_job_id) ?? null,
-    active_jobs:  (activeJobs ?? []).filter(j => j.rider_id === loc.rider_id),
-  }));
+  return locs.map(loc => {
+    const riderJobs = (activeJobs ?? []).filter(j => j.rider_id === loc.rider_id);
+    // Prefer current_job_id; fall back to most urgent active job
+    const currentJob = loc.current_job_id
+      ? (riderJobs.find(j => j.id === loc.current_job_id) ?? null)
+      : (riderJobs.slice().sort((a, b) => (STATUS_PRIORITY[a.status] ?? 99) - (STATUS_PRIORITY[b.status] ?? 99))[0] ?? null);
+    return {
+      ...loc,
+      admin_users:  users?.find(u => u.user_id === loc.rider_id) ?? null,
+      rider_shifts: shifts?.find(s => s.id === loc.shift_id) ?? null,
+      current_job:  currentJob,
+      active_jobs:  riderJobs,
+    };
+  });
 }
 
 // ─── Admin: force-close a rider's shift ──────────────────────────────────────

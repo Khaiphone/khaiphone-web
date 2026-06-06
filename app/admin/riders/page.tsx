@@ -127,6 +127,23 @@ function getRiderStatus(r: ActiveRider): { label: string; color: string } {
   }
   if (jobStatus === "pickup_scheduled") return { label: "รับงานแล้ว", color: PURPLE };
   if (r.current_job_id)                 return { label: "รอรับงาน",   color: PURPLE };
+  // Fallback: derive status from active_jobs when current_job_id is not set in rider_locations
+  const onSiteJob = (r.active_jobs ?? []).find(j =>
+    ["inspecting", "price_negotiation", "contracting", "awaiting_transfer"].includes(j.status)
+  );
+  if (onSiteJob) {
+    const map: Record<string, string> = {
+      inspecting:        "กำลังตรวจเครื่อง",
+      price_negotiation: "กำลังต่อราคา",
+      contracting:       "ทำสัญญา",
+      awaiting_transfer: "รอโอนเงิน",
+    };
+    return { label: map[onSiteJob.status] ?? "กับลูกค้า", color: BLUE };
+  }
+  const hasActive = (r.active_jobs ?? []).some(j =>
+    ["confirmed", "pickup_scheduled", "en_route"].includes(j.status)
+  );
+  if (hasActive) return { label: "มีงานอยู่", color: PURPLE };
   return { label: "ว่าง", color: GREEN };
 }
 
