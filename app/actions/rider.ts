@@ -86,16 +86,22 @@ export async function fetchRiderHomeData(riderId: string) {
   const supabase = createServerClient();
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
 
-  const [{ data: pendingData }, { data: activeData }, { data: statsData }] = await Promise.all([
+  const IN_PROGRESS = ["pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting", "awaiting_transfer"];
+
+  const [{ data: pendingData }, { data: inProgressData }, { data: completedActiveData }, { data: statsData }] = await Promise.all([
     supabase.from("requests").select("*").eq("rider_id", riderId)
       .in("status", ["confirmed"]).order("appt_date", { ascending: true }),
     supabase.from("requests").select("*").eq("rider_id", riderId)
-      .or("status.in.(pickup_scheduled,en_route,inspecting,price_negotiation,contracting,awaiting_transfer),and(status.eq.completed,returned_to_office_at.is.null)")
+      .in("status", IN_PROGRESS).order("appt_date", { ascending: true }),
+    supabase.from("requests").select("*").eq("rider_id", riderId)
+      .eq("status", "completed").is("returned_to_office_at", null)
       .order("appt_date", { ascending: true }),
     supabase.from("requests")
       .select("status, actual_price, estimated_price")
       .eq("rider_id", riderId).gte("created_at", startOfMonth),
   ]);
+
+  const activeData = [...(inProgressData ?? []), ...(completedActiveData ?? [])];
 
   const completed = (statsData ?? []).filter(j => j.status === "completed");
   return {
