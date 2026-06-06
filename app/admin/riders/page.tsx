@@ -412,10 +412,22 @@ export default function PlannerDashboard() {
   }
 
   // Computed values
+  const ON_SITE_STATUSES = ["inspecting", "price_negotiation", "contracting", "awaiting_transfer"];
   const unassignedJobs = jobs.filter(j => !j.rider_id);
   const assignedJobs   = jobs.filter(j => j.rider_id);
-  const idleRiders     = riders.filter(r => r.tracking_mode === "idle");
-  const busyRiders     = riders.filter(r => r.tracking_mode !== "idle");
+  // A rider is "busy" if tracking_mode != idle OR has an active on-site/en-route job
+  // (tracking_mode may lag behind actual job state)
+  const isRiderBusy = (r: ActiveRider) =>
+    r.tracking_mode !== "idle" ||
+    (r.active_jobs ?? []).some(j => [...ON_SITE_STATUSES, "en_route", "pickup_scheduled"].includes(j.status));
+  const isRiderOnSite = (r: ActiveRider) =>
+    r.tracking_mode === "on_site" ||
+    (r.active_jobs ?? []).some(j => ON_SITE_STATUSES.includes(j.status));
+  const isRiderEnRoute = (r: ActiveRider) =>
+    r.tracking_mode === "enroute" ||
+    (r.active_jobs ?? []).some(j => j.status === "en_route");
+  const idleRiders = riders.filter(r => !isRiderBusy(r));
+  const busyRiders = riders.filter(r => isRiderBusy(r));
   const overdueJobs    = unassignedJobs.filter(j => getSLAStatus(j) === "overdue");
   const warningJobs    = unassignedJobs.filter(j => getSLAStatus(j) === "warning");
   const okJobs         = unassignedJobs.filter(j => getSLAStatus(j) === "ok" || getSLAStatus(j) === "none");
@@ -466,8 +478,8 @@ export default function PlannerDashboard() {
       <div style={{ padding: "10px 16px", display: "flex", gap: 8, flexShrink: 0, background: BG }}>
         <StatCard icon={ClipboardList} label="งานใหม่"       value={todayStats.newCount}                                              color={BLUE}   bg="#EFF6FF" href="/admin/riders/jobs" />
         <StatCard icon={Clock}         label="รอ Assign"      value={unassignedJobs.length}                                           color={YELLOW} bg="#FFFBEB" bold={unassignedJobs.length > 0} href="/admin/riders/jobs" />
-        <StatCard icon={Navigation}    label="กำลังเดินทาง"  value={riders.filter(r => r.tracking_mode === "enroute").length}        color={ORANGE} bg="#FFF7ED" href="/admin/riders/jobs" />
-        <StatCard icon={Search}        label="ตรวจเครื่อง"   value={riders.filter(r => r.tracking_mode === "on_site").length}        color={BLUE}   bg="#EFF6FF" href="/admin/riders/jobs" />
+        <StatCard icon={Navigation}    label="กำลังเดินทาง"  value={riders.filter(isRiderEnRoute).length}   color={ORANGE} bg="#FFF7ED" href="/admin/riders/jobs" />
+        <StatCard icon={Search}        label="ตรวจเครื่อง"   value={riders.filter(isRiderOnSite).length}    color={BLUE}   bg="#EFF6FF" href="/admin/riders/jobs" />
         <StatCard icon={CheckCircle2}  label="เสร็จวันนี้"   value={todayStats.completedCount}                                       color={GREEN}  bg="#F0FDF4" href="/admin/riders/jobs" />
         <StatCard icon={UserCheck}     label="ไรเดอร์ว่าง"   value={idleRiders.length}                                               color={GREEN}  bg="#F0FDF4" bold={idleRiders.length > 0} href="/admin/riders/manage" />
         <button
