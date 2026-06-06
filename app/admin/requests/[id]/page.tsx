@@ -12,7 +12,7 @@ import {
   updateAppointment, updatePayment, updatePrice,
   markContractSigned, savePaymentSlip, updateDeviceColor,
   assignRequest, assignRider, deleteRequest, updateCustomer, updateDevice,
-  adminReclaimJob, getDocumentSignedUrl,
+  adminReclaimJob, getDocumentSignedUrl, adminConfirmReturn,
 } from "@/app/actions/admin-requests";
 import { fetchAdminUsers, fetchMyRole, fetchMyProfile } from "@/app/actions/admin-users";
 import type { AdminUserRow } from "@/app/actions/admin-users";
@@ -154,6 +154,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   // Reclaim job
   const [reclaimBusy,        setReclaimBusy]        = useState(false);
   const [showReclaim,        setShowReclaim]        = useState(false);
+  const [confirmReturnBusy,  setConfirmReturnBusy]  = useState(false);
   const [reclaimReason,      setReclaimReason]      = useState("");
   const [approvingInspection,setApprovingInspection]= useState(false);
   const [guidanceMin,        setGuidanceMin]        = useState("");
@@ -1821,6 +1822,49 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
         </Card>
+
+        {/* ── ยืนยันรับเครื่องคืน ── */}
+        {request.status === "completed" && !request.returnedToOfficeAt && (
+          <Card>
+            <div style={{ padding: "16px" }}>
+              <SectionLabel>การส่งคืนเครื่อง</SectionLabel>
+              {request.returnSubmittedAt ? (
+                <p style={{ margin: "0 0 10px", fontSize: 13, color: "#D97706", fontWeight: 600 }}>
+                  ⏳ ไรเดอร์แจ้งส่งคืนแล้ว — รอ office ยืนยันรับเครื่อง
+                </p>
+              ) : (
+                <p style={{ margin: "0 0 10px", fontSize: 13, color: TEXT3 }}>
+                  ยังไม่ได้แจ้งส่งคืน — admin สามารถยืนยันได้โดยตรง
+                </p>
+              )}
+              <button
+                disabled={confirmReturnBusy}
+                onClick={async () => {
+                  setConfirmReturnBusy(true);
+                  const res = await adminConfirmReturn(request.id);
+                  if (res.success) fetchRequest(id).then(data => { if (data) setRequest(data); });
+                  else alert(res.error);
+                  setConfirmReturnBusy(false);
+                }}
+                style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 18px", borderRadius: 10, border: "1px solid rgba(16,185,129,0.4)", background: "rgba(16,185,129,0.08)", color: "#059669", fontSize: 14, fontWeight: 700, cursor: confirmReturnBusy ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: confirmReturnBusy ? 0.6 : 1 }}
+              >
+                📦 {confirmReturnBusy ? "กำลังยืนยัน..." : "ยืนยันรับเครื่องคืน"}
+              </button>
+            </div>
+          </Card>
+        )}
+
+        {request.returnedToOfficeAt && (
+          <Card>
+            <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 20 }}>✅</span>
+              <div>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#059669" }}>ส่งคืนเครื่องเรียบร้อยแล้ว</p>
+                <p style={{ margin: "2px 0 0", fontSize: 12, color: TEXT3 }}>ยืนยันรับเมื่อ {fmtDateTime(request.returnedToOfficeAt!)} น.</p>
+              </div>
+            </div>
+          </Card>
+        )}
       </div>
 
       {/* Bottom Action Bar */}
