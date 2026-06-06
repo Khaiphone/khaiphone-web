@@ -633,10 +633,17 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
                   </div>
                   {/* Verdict card */}
                   {(() => {
+                    const parseSickwLine = (key: string) => {
+                      const line = sickwRaw.split("\n").find(l => new RegExp(`^${key}:`, "i").test(l.trim()));
+                      const idx = line?.indexOf(": ");
+                      return idx !== undefined && idx >= 0 ? line!.slice(idx + 2).trim().toLowerCase() : "";
+                    };
+                    const icloudLock   = parseSickwLine("iCloud Lock");
+                    const icloudAcct   = parseSickwLine("iCloud Status");
                     const issues: string[] = [];
-                    const icloud = sickwResult.icloudStatus?.toLowerCase() ?? "";
-                    if (icloud.includes("lock") && icloud.includes("on")) issues.push("iCloud Lock เปิดอยู่ — เครื่องล็อคกับบัญชี Apple เดิม");
-                    if (icloud.includes("lost")) issues.push("Find My iPhone / สถานะ Lost — เครื่องถูกรายงานสูญหาย");
+                    if (icloudLock === "on")                              issues.push("iCloud Lock เปิดอยู่ — เครื่องล็อคกับบัญชี Apple เดิม");
+                    if (icloudAcct === "on")                              issues.push("ยังไม่ Sign Out iCloud — ต้องปลดออกก่อนรับซื้อ");
+                    if (icloudLock.includes("lost") || icloudAcct.includes("lost")) issues.push("Find My iPhone / สถานะ Lost — เครื่องถูกรายงานสูญหาย");
                     const mdmLine = sickwRaw.split("\n").find(l => /^MDM Lock:/i.test(l));
                     if (mdmLine?.toLowerCase().includes(": on")) issues.push("MDM Lock เปิดอยู่ — เครื่องถูกล็อคโดยองค์กร");
                     const bl = sickwResult.blacklist?.toLowerCase() ?? "";
@@ -809,11 +816,18 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
 
       {(() => {
         const blocked = sickwResult ? (() => {
-          const icloud = sickwResult.icloudStatus?.toLowerCase() ?? "";
-          if (icloud.includes("lock") && icloud.includes("on")) return true;
-          if (icloud.includes("lost")) return true;
+          const getSickwLine = (key: string) => {
+            const line = sickwRaw.split("\n").find(l => new RegExp(`^${key}:`, "i").test(l.trim()));
+            const idx = line?.indexOf(": ");
+            return idx !== undefined && idx >= 0 ? line!.slice(idx + 2).trim().toLowerCase() : "";
+          };
+          const icloudLock = getSickwLine("iCloud Lock");
+          const icloudAcct = getSickwLine("iCloud Status");
+          if (icloudLock === "on")                                return true; // activation locked
+          if (icloudAcct === "on")                                return true; // still signed into iCloud
+          if (icloudLock.includes("lost") || icloudAcct.includes("lost")) return true; // lost mode
           const mdmLine = sickwRaw.split("\n").find(l => /^MDM Lock:/i.test(l));
-          if (mdmLine?.toLowerCase().includes(": on")) return true;
+          if (mdmLine?.toLowerCase().includes(": on"))            return true; // MDM locked
           const bl = sickwResult.blacklist?.toLowerCase() ?? "";
           if (bl && !["clean", "ok", "no", "clear", "not"].some(s => bl.includes(s))) return true;
           return false;

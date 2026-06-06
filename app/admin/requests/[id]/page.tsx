@@ -1411,9 +1411,10 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                       const icloudStatus = (map["iCloud Status"] ?? "").toLowerCase();
                       const mdm          = (map["MDM Lock"]       ?? "").toLowerCase();
                       const issues: string[] = [];
-                      if (icloudLock === "on")                        issues.push("iCloud Lock เปิดอยู่");
-                      if (icloudLock.includes("lost") || icloudStatus.includes("lost")) issues.push("Find My / Lost");
-                      if (mdm === "on")                               issues.push("MDM Lock เปิดอยู่");
+                      if (icloudLock === "on")                        issues.push("iCloud Lock เปิดอยู่ — เครื่องล็อคกับบัญชี Apple");
+                      if (icloudStatus === "on")                      issues.push("ยังไม่ Sign Out iCloud — ต้องปลดก่อนรับซื้อ");
+                      if (icloudLock.includes("lost") || icloudStatus.includes("lost")) issues.push("Find My / Lost Mode");
+                      if (mdm === "on")                               issues.push("MDM Lock เปิดอยู่ — เครื่องล็อคโดยองค์กร");
                       const passed = issues.length === 0;
                       return (
                         <div style={{ marginBottom: 16 }}>
