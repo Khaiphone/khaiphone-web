@@ -187,7 +187,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                   { href: "/admin/riders",        label: "หน้าควบคุมงาน", icon: Map            },
                   { href: "/admin/riders/manage",  label: "จัดการไรเดอร์", icon: Users          },
                   { href: "/admin/riders/jobs",    label: "รายงาน / สถิติ",icon: BarChart2      },
-                  { href: "/admin/settings",       label: "ตั้งค่า",        icon: Settings       },
+                  { href: "/admin/riders/settings", label: "ตั้งค่า",        icon: Settings       },
                 ].map(({ href, label, icon: Icon }) => {
                   const active = pathname === href || (href !== "/admin/riders" && pathname.startsWith(href));
                   return (
