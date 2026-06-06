@@ -12,7 +12,7 @@ import {
   updateAppointment, updatePayment, updatePrice,
   markContractSigned, savePaymentSlip, updateDeviceColor,
   assignRequest, assignRider, deleteRequest, updateCustomer, updateDevice,
-  getDocumentSignedUrl,
+  adminReclaimJob, getDocumentSignedUrl,
 } from "@/app/actions/admin-requests";
 import { fetchAdminUsers, fetchMyRole, fetchMyProfile } from "@/app/actions/admin-users";
 import type { AdminUserRow } from "@/app/actions/admin-users";
@@ -149,6 +149,11 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const [riderDraft,   setRiderDraft]   = useState<string>(""); // user_id or ""
   const [riderSaving,  setRiderSaving]  = useState(false);
   const [canAssign,    setCanAssign]    = useState(false);
+
+  // Reclaim job
+  const [reclaimBusy,   setReclaimBusy]   = useState(false);
+  const [showReclaim,   setShowReclaim]   = useState(false);
+  const [reclaimReason, setReclaimReason] = useState("");
 
   // Smart rider suggestions
   type RiderSuggestion = { rider_id: string; name: string; tracking_mode: string; battery_pct: number | null; distanceKm: number; etaMinutes: number; jobs_completed: number };
@@ -867,14 +872,24 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
             <div style={{ padding: "14px 16px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                 <SectionLabel>ไรเดอร์รับงาน</SectionLabel>
-                {request.riderId && (
-                  <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 6,
-                    background: staffList.find(s => s.user_id === request.riderId)?.is_online ? "rgba(48,209,88,0.12)" : "rgba(142,142,147,0.12)",
-                    color: staffList.find(s => s.user_id === request.riderId)?.is_online ? "#30D158" : "#8E8E93",
-                  }}>
-                    {staffList.find(s => s.user_id === request.riderId)?.is_online ? "● Online" : "● Offline"}
-                  </span>
-                )}
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  {request.riderId && (
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 6,
+                      background: staffList.find(s => s.user_id === request.riderId)?.is_online ? "rgba(48,209,88,0.12)" : "rgba(142,142,147,0.12)",
+                      color: staffList.find(s => s.user_id === request.riderId)?.is_online ? "#30D158" : "#8E8E93",
+                    }}>
+                      {staffList.find(s => s.user_id === request.riderId)?.is_online ? "● Online" : "● Offline"}
+                    </span>
+                  )}
+                  {request.riderId && ["confirmed", "pickup_scheduled", "en_route", "inspecting"].includes(request.status) && (
+                    <button
+                      onClick={() => setShowReclaim(true)}
+                      style={{ fontSize: 11, fontWeight: 600, padding: "2px 10px", borderRadius: 6, border: "1px solid #dc2626", background: "rgba(220,38,38,0.06)", color: "#dc2626", cursor: "pointer", fontFamily: "inherit" }}
+                    >
+                      ดึงงานคืน
+                    </button>
+                  )}
+                </div>
               </div>
               {(request.status === "new" || request.status === "pending") ? (
                 <p style={{ margin: 0, fontSize: 13, color: "#F59E0B" }}>
@@ -1742,6 +1757,50 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
 
       {showStatus && (
         <StatusBottomSheet currentStatus={request.status} onSave={handleStatusSave} onClose={() => setShowStatus(false)} />
+      )}
+
+      {/* Reclaim job confirmation modal */}
+      {showReclaim && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: "24px", maxWidth: 360, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+            <p style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 700, color: "#111" }}>ดึงงานคืนจากไรเดอร์?</p>
+            <p style={{ margin: "0 0 16px", fontSize: 13, color: "#555" }}>
+              งานจะถูกคืนสู่สถานะ <strong>ยืนยันแล้ว</strong> และไรเดอร์จะได้รับการแจ้งเตือน
+            </p>
+            <label style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 600, color: "#555" }}>เหตุผล (ไม่บังคับ)</label>
+            <input
+              value={reclaimReason}
+              onChange={e => setReclaimReason(e.target.value)}
+              placeholder="เช่น ลูกค้าเลื่อนนัด, ไรเดอร์ไม่รับสาย"
+              style={{ width: "100%", padding: "9px 12px", borderRadius: 10, border: "1px solid #ddd", fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box", marginBottom: 16 }}
+            />
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => { setShowReclaim(false); setReclaimReason(""); }}
+                style={{ flex: 1, padding: "11px", borderRadius: 10, border: "1px solid #ddd", background: "#f5f5f7", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: "#333" }}
+              >
+                ยกเลิก
+              </button>
+              <button
+                disabled={reclaimBusy}
+                onClick={async () => {
+                  setReclaimBusy(true);
+                  const res = await adminReclaimJob(request.id, reclaimReason);
+                  setReclaimBusy(false);
+                  if (res.success) {
+                    setShowReclaim(false);
+                    setReclaimReason("");
+                  } else {
+                    alert(res.error);
+                  }
+                }}
+                style={{ flex: 1, padding: "11px", borderRadius: 10, border: "none", background: "#dc2626", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", color: "#fff", opacity: reclaimBusy ? 0.6 : 1 }}
+              >
+                {reclaimBusy ? "..." : "ดึงงานคืน"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

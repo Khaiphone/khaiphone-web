@@ -7,7 +7,7 @@ import {
   Clock, CheckCircle2, XCircle, ClipboardList, Loader2,
   AlertTriangle, Package, Truck, PackageCheck, RotateCcw,
 } from "lucide-react";
-import { fetchRiderJobs, adminConfirmReturn } from "@/app/actions/admin-requests";
+import { fetchRiderJobs, adminConfirmReturn, adminReclaimJob } from "@/app/actions/admin-requests";
 import type { AdminRequest, RequestStatus } from "@/lib/types/admin";
 import StatusBadge from "@/app/components/admin/StatusBadge";
 
@@ -75,6 +75,7 @@ export default function RiderJobsPage() {
   const [filter,      setFilter]     = useState<FilterKey>("all");
   const [expanded,    setExpanded]   = useState(true);
   const [confirmBusy, setConfirmBusy] = useState<string | null>(null);
+  const [reclaimBusy, setReclaimBusy] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -357,6 +358,31 @@ export default function RiderJobsPage() {
                       )}
                     </div>
                   </div>
+
+                  {/* Reclaim button */}
+                  {job.riderId && ["confirmed", "pickup_scheduled", "en_route", "inspecting"].includes(job.status) && (
+                    <div style={{ marginTop: 10, marginLeft: 15 }}>
+                      <button
+                        disabled={reclaimBusy === job.id}
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (!confirm(`ดึงงาน ${job.orderNumber} คืนจาก ${job.riderName ?? "ไรเดอร์"}?`)) return;
+                          setReclaimBusy(job.id);
+                          const res = await adminReclaimJob(job.id);
+                          if (res.success) {
+                            fetchRiderJobs(date).then(d => setJobs(d));
+                          } else {
+                            alert(res.error);
+                          }
+                          setReclaimBusy(null);
+                        }}
+                        style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${RED}50`, background: RED + "15", color: RED, fontSize: 13, fontWeight: 700, cursor: reclaimBusy === job.id ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}
+                      >
+                        <RotateCcw size={14} />
+                        {reclaimBusy === job.id ? "กำลังดึงคืน..." : "ดึงงานคืน"}
+                      </button>
+                    </div>
+                  )}
 
                   {/* Confirm return button */}
                   {cat === "completed" && job.returnSubmittedAt && !job.returnedToOfficeAt && (

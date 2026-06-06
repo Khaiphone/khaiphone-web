@@ -1576,10 +1576,16 @@ export default function JobWizardPage() {
   const [helpBusy, setHelpBusy]       = useState(false);
   const [returningToOffice, setReturningToOffice] = useState(false);
   const [returnBusy, setReturnBusy]               = useState(false);
+  const [currentUserId, setCurrentUserId]         = useState<string | null>(null);
+  const [reclaimed, setReclaimed]                 = useState(false);
 
   const reload = useCallback(async () => {
     const j = await fetchRiderJob(id);
-    setJob(j);
+    setJob(prev => {
+      // Detect reclaim: previously had a riderId, now it's null/different
+      if (prev?.riderId && !j?.riderId) setReclaimed(true);
+      return j;
+    });
     setLoading(false);
     if (j?.status === "pickup_scheduled" && j.riderId) {
       const active = await fetchRiderJobs(j.riderId);
@@ -1595,6 +1601,7 @@ export default function JobWizardPage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session?.user?.id) return;
       const uid = session.user.id;
+      setCurrentUserId(uid);
       fetchMyProfile(uid).then(p => { if (p?.name) setRiderName(p.name); }).catch(()=>{});
       fetchAdminUsers().then(list => {
         const idx = list.findIndex(u => u.user_id === uid);
@@ -1893,6 +1900,23 @@ export default function JobWizardPage() {
 
         </div>
       </div>
+
+      {/* Reclaimed overlay */}
+      {reclaimed && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100, padding:"20px" }}>
+          <div style={{ background:CARD, borderRadius:20, padding:"32px 24px", maxWidth:340, width:"100%", textAlign:"center" }}>
+            <div style={{ fontSize:48, marginBottom:12 }}>🔄</div>
+            <p style={{ margin:"0 0 8px", fontSize:18, fontWeight:800, color:TEXT }}>งานถูกดึงคืน</p>
+            <p style={{ margin:"0 0 24px", fontSize:14, color:TEXT2 }}>Admin นำงานนี้กลับไปมอบหมายใหม่ ขอบคุณสำหรับการทำงาน</p>
+            <button
+              onClick={() => router.replace("/rider")}
+              style={{ width:"100%", padding:"14px 0", borderRadius:12, border:"none", background:ACCENT, color:"#000", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}
+            >
+              กลับหน้าหลัก
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Help modal */}
       {showHelp && (

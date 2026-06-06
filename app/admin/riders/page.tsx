@@ -3,11 +3,11 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
-import { Battery, AlertTriangle, ChevronDown, ChevronLeft, X, Zap, RefreshCw, MapPin, Clock, User, CalendarDays, UserCheck, Wrench, CheckCircle2, XCircle, BarChart2, ArrowRight, Settings, ClipboardList, Navigation, Search } from "lucide-react";
+import { Battery, AlertTriangle, ChevronDown, ChevronLeft, X, Zap, RefreshCw, MapPin, Clock, User, CalendarDays, UserCheck, Wrench, CheckCircle2, XCircle, BarChart2, ArrowRight, Settings, ClipboardList, Navigation, Search, RotateCcw } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { fetchActiveRiders, fetchAllRidersShifts, fetchUnassignedJobs, fetchTodayRequestStats } from "@/app/actions/rider-tracking";
-import { assignRider, backfillRequestCoords, autoAssignJobs } from "@/app/actions/admin-requests";
+import { assignRider, backfillRequestCoords, autoAssignJobs, adminReclaimJob } from "@/app/actions/admin-requests";
 import { haversineKm, etaMinutes, OFFICE_LAT, OFFICE_LNG } from "@/lib/geo-utils";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -52,6 +52,7 @@ type Job = {
   appt_date: string | null; appt_time: string | null;
   appt_lat: number | null; appt_lng: number | null;
   rider_id: string | null; rider_name: string | null;
+  status: string;
 };
 
 type AllShift = {
@@ -313,6 +314,7 @@ export default function PlannerDashboard() {
   const [autoAssigning, setAutoAssigning] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [assignDropdownJob, setAssignDropdownJob] = useState<string | null>(null);
+  const [reclaimBusy, setReclaimBusy] = useState<string | null>(null);
   const [rightTab, setRightTab] = useState<"queue" | "shifts">("queue");
   const [leftOpen, setLeftOpen] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -852,6 +854,22 @@ export default function PlannerDashboard() {
                             <span style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>#{job.order_number}</span>
                             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                               <span style={{ fontSize: 10, fontWeight: 700, color: PURPLE, background: `${PURPLE}12`, padding: "2px 8px", borderRadius: 99 }}>🏍 {job.rider_name}</span>
+                              {["confirmed", "pickup_scheduled", "en_route", "inspecting"].includes(job.status) && (
+                                <button
+                                  disabled={reclaimBusy === job.id}
+                                  onClick={async () => {
+                                    if (!confirm(`ดึงงาน #${job.order_number} คืนจาก ${job.rider_name ?? "ไรเดอร์"}?`)) return;
+                                    setReclaimBusy(job.id);
+                                    const res = await adminReclaimJob(job.id);
+                                    if (!res.success) alert(res.error);
+                                    setReclaimBusy(null);
+                                  }}
+                                  style={{ background: "none", border: `1px solid ${RED}60`, borderRadius: 6, padding: "2px 7px", fontSize: 11, color: RED, cursor: reclaimBusy === job.id ? "wait" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 3 }}
+                                >
+                                  <RotateCcw size={10} />
+                                  {reclaimBusy === job.id ? "..." : "ดึงคืน"}
+                                </button>
+                              )}
                               <div style={{ position: "relative" }}>
                                 <button
                                   disabled={isAssigning}

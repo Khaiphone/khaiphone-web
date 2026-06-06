@@ -355,7 +355,7 @@ export async function fetchUnassignedJobs() {
 
   const { data } = await supabase
     .from("requests")
-    .select("id, order_number, device_model, customer_name, appt_location, appt_date, appt_time, appt_lat, appt_lng, rider_id, rider_name")
+    .select("id, order_number, device_model, customer_name, appt_location, appt_date, appt_time, appt_lat, appt_lng, rider_id, rider_name, status")
     .in("status", ["confirmed", "pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting", "awaiting_transfer"])
     .order("appt_date", { ascending: true })
     .order("appt_time", { ascending: true });

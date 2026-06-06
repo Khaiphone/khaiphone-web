@@ -558,6 +558,50 @@ export async function adminConfirmReturn(id: string) {
   return { success: true as const, stockItemId: stockResult.success ? stockResult.id : null };
 }
 
+export async function adminReclaimJob(id: string, reason?: string) {
+  await requireAuth();
+  const supabase = createServerClient();
+  const now = new Date().toISOString();
+
+  const { data: req } = await supabase
+    .from("requests")
+    .select("status, rider_id, order_number, device_model, status_log")
+    .eq("id", id).single();
+
+  const RECLAIMABLE: string[] = ["confirmed", "pickup_scheduled", "en_route", "inspecting"];
+  if (!RECLAIMABLE.includes(req?.status ?? ""))
+    return { success: false as const, error: "ไม่สามารถดึงงานคืนในสถานะนี้ได้" };
+
+  const prevRiderId = req?.rider_id as string | null;
+  const note = reason?.trim() ? `Admin ดึงงานคืน — ${reason.trim()}` : "Admin ดึงงานคืน";
+  const newLog = [...(req?.status_log ?? []), { status: "confirmed", timestamp: now, note }];
+
+  const { error } = await supabase.from("requests")
+    .update({ rider_id: null, rider_name: null, assigned_at: null, status: "confirmed", status_log: newLog, updated_at: now })
+    .eq("id", id);
+  if (error) return { success: false as const, error: error.message };
+
+  if (prevRiderId) {
+    await supabase.from("rider_locations")
+      .update({ current_job_id: null, tracking_mode: "idle", updated_at: now })
+      .eq("rider_id", prevRiderId);
+  }
+
+  after(async () => {
+    await broadcastRequestUpdate(id).catch(console.error);
+    if (prevRiderId) {
+      await sendPushToUser(prevRiderId, {
+        title: "งานถูกดึงคืน",
+        body: `${req?.device_model ?? ""} · ${req?.order_number ?? ""} — Admin นำงานกลับ`,
+        url: "/rider",
+        tag: `reclaimed-${id}`,
+      }).catch(console.error);
+    }
+  });
+
+  return { success: true as const };
+}
+
 export async function assignRider(id: string, riderId: string | null, riderName: string | null) {
   const caller = await requireAuth();
   const supabase = createServerClient();
