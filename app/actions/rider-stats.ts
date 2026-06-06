@@ -300,3 +300,25 @@ export async function updateRiderTargets(
   if (error) return { success: false as const, error: error.message };
   return { success: true as const };
 }
+
+export async function fetchRiderLifetimeForAdmin(riderId: string): Promise<{
+  lifetimeCompleted: number; lifetimeDistanceKm: number; currentStreak: number;
+  tier: RiderTier; badges: Badge[];
+}> {
+  await requireAuth();
+  const supabase = createServerClient();
+
+  const { data: allShifts } = await supabase
+    .from("rider_shifts")
+    .select("clocked_in_at, jobs_completed, jobs_attempted, jobs_declined, total_distance_km")
+    .eq("rider_id", riderId)
+    .order("clocked_in_at", { ascending: false });
+
+  const lifetimeCompleted  = (allShifts ?? []).reduce((s, sh) => s + (sh.jobs_completed ?? 0), 0);
+  const lifetimeDistanceKm = (allShifts ?? []).reduce((s, sh) => s + (sh.total_distance_km ?? 0), 0);
+  const currentStreak      = computeStreak(allShifts ?? []);
+  const tier               = computeTier(lifetimeCompleted);
+  const badges = computeBadges({ lifetimeCompleted, lifetimeDistanceKm, currentStreak, monthAcceptanceRate: null, monthAttempted: 0 });
+
+  return { lifetimeCompleted, lifetimeDistanceKm, currentStreak, tier, badges };
+}
