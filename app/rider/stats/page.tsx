@@ -80,7 +80,7 @@ function RatePill({ label, value, target, good }: { label: string; value: number
 
 export default function StatsPage() {
   const { CARD, BORDER, ACCENT, GREEN, RED, TEXT, TEXT2 } = useRiderTheme();
-  const { userId } = useRiderSession();
+  const { userId, riderName, riderEmail } = useRiderSession();
 
   const curMonthStr = (() => {
     const now = new Date();
@@ -100,16 +100,21 @@ export default function StatsPage() {
   const load = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
-    const [monthly, life, board] = await Promise.all([
-      fetchMyMonthlyStats(month),
-      fetchMyLifetimeStats(),
-      fetchLeaderboard(month),
-    ]);
-    setStats(monthly.stats);
-    setTargets(monthly.targets);
-    setLifetime(life);
-    setLeaderboard(board);
-    setLoading(false);
+    try {
+      const [monthly, life, board] = await Promise.all([
+        fetchMyMonthlyStats(month),
+        fetchMyLifetimeStats(),
+        fetchLeaderboard(month),
+      ]);
+      setStats(monthly.stats);
+      setTargets(monthly.targets);
+      setLifetime(life);
+      setLeaderboard(board);
+    } catch (e) {
+      console.error("stats load failed:", e);
+    } finally {
+      setLoading(false);
+    }
   }, [userId, month]);
 
   useEffect(() => { load(); }, [load]);
@@ -150,6 +155,7 @@ export default function StatsPage() {
             <p style={{ margin: "0 0 2px", fontSize: 11, color: "rgba(255,255,255,.5)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.7 }}>ระดับ</p>
             <p style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 800, color: tierCfg.color }}>{tierCfg.label}</p>
             <p style={{ margin: 0, fontSize: 13, color: "rgba(255,255,255,.6)" }}>สะสม {fmt(lifeCompleted)} งาน · {fmt(Math.round(lifetime?.lifetimeDistanceKm ?? 0))} กม.</p>
+          <p style={{ margin: "2px 0 0", fontSize: 11, color: "rgba(255,255,255,.35)" }}>{riderName}{riderEmail ? ` · ${riderEmail}` : ""}</p>
           </div>
           {streak > 0 && (
             <div style={{ textAlign: "center" }}>

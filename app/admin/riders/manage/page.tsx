@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, UserPlus, Trash2, X, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, UserPlus, Trash2, X, CheckCircle2, ChevronRight } from "lucide-react";
 import { fetchAllRidersList, adminInviteRider, adminRemoveRider } from "@/app/actions/rider-tracking";
 
 const DARK = "#1a1a2e";
@@ -97,7 +97,13 @@ export default function ManageRidersPage() {
             ยังไม่มีสมาชิกในระบบ
           </div>
         ) : riders.map(r => (
-          <div key={r.user_id} style={{ background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14 }}>
+          <div
+            key={r.user_id}
+            onClick={() => router.push(`/admin/riders/${r.user_id}`)}
+            style={{ background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", transition: "box-shadow .15s" }}
+            onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,0.10)")}
+            onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}
+          >
             {/* Avatar */}
             <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#f3f4f6", border: `2px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 18 }}>
               👤
@@ -115,13 +121,15 @@ export default function ManageRidersPage() {
               </p>
             </div>
             {/* Remove button (don't allow removing owner) */}
-            {r.role !== "owner" && (
+            {r.role !== "owner" ? (
               <button
-                onClick={() => setRemoveTarget(r)}
-                style={{ background: "rgba(220,38,38,0.08)", border: `1px solid rgba(220,38,38,0.2)`, color: RED, borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600 }}
+                onClick={e => { e.stopPropagation(); setRemoveTarget(r); }}
+                style={{ background: "rgba(220,38,38,0.08)", border: `1px solid rgba(220,38,38,0.2)`, color: RED, borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600, flexShrink: 0 }}
               >
                 <Trash2 size={13} /> นำออก
               </button>
+            ) : (
+              <ChevronRight size={16} color={TEXT2} style={{ flexShrink: 0 }} />
             )}
           </div>
         ))}
