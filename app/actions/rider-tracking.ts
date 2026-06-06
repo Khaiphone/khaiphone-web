@@ -191,10 +191,22 @@ export async function fetchActiveRiders() {
   await requireAuth();
   const supabase = createServerClient();
 
+  const STALE_MINUTES = 5;
+  const staleThreshold = new Date(Date.now() - STALE_MINUTES * 60 * 1000).toISOString();
+
   const { data: locs } = await supabase
     .from("rider_locations")
     .select("rider_id, lat, lng, accuracy_m, tracking_mode, battery_pct, app_state, last_heartbeat, is_online, current_job_id, shift_id")
-    .eq("is_online", true);
+    .eq("is_online", true)
+    .gte("last_heartbeat", staleThreshold);
+
+  // Mark stale riders offline in the background (fire-and-forget)
+  supabase
+    .from("rider_locations")
+    .update({ is_online: false, tracking_mode: "idle", updated_at: new Date().toISOString() })
+    .eq("is_online", true)
+    .lt("last_heartbeat", staleThreshold)
+    .then(() => {});
 
   if (!locs || locs.length === 0) return [];
 
@@ -404,11 +416,13 @@ export async function fetchRiderSuggestionsForRequest(requestId: string): Promis
     .eq("id", requestId)
     .single();
 
-  // Fetch all online riders with their current positions
+  // Fetch all online riders with their current positions (exclude stale heartbeats)
+  const staleThresholdAssign = new Date(Date.now() - 5 * 60 * 1000).toISOString();
   const { data: locs } = await supabase
     .from("rider_locations")
     .select("rider_id, lat, lng, tracking_mode, battery_pct, shift_id")
-    .eq("is_online", true);
+    .eq("is_online", true)
+    .gte("last_heartbeat", staleThresholdAssign);
 
   if (!locs || locs.length === 0) {
     return { riders: [], appt_location: req?.appt_location ?? null };
