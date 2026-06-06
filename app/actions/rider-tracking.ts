@@ -106,9 +106,18 @@ export async function riderPingLocation(payload: {
     last_heartbeat: now,
     updated_at:     now,
   };
-  // Only write current_job_id when explicitly known — never overwrite with null
-  // from a stale auto-resume snapshot; completion actions clear it explicitly.
-  if (payload.currentJobId != null) locData.current_job_id = payload.currentJobId;
+  // Validate currentJobId ownership before writing — if admin reclaimed the job
+  // the closure in the rider app still holds the old ID; checking here prevents it
+  // from being written back on every heartbeat.
+  if (payload.currentJobId != null) {
+    const { data: jobCheck } = await supabase
+      .from("requests")
+      .select("id")
+      .eq("id", payload.currentJobId)
+      .eq("rider_id", user.id)
+      .maybeSingle();
+    locData.current_job_id = jobCheck ? payload.currentJobId : null;
+  }
 
   const { error } = await supabase.from("rider_locations").upsert(locData, { onConflict: "rider_id" });
 
