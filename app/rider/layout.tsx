@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Home, Clock, Wallet, UserCircle, Bell } from "lucide-react";
+import { Home, Clock, BarChart2, UserCircle, Bell } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { fetchMyProfile } from "@/app/actions/admin-users";
 import { fetchRiderOnlineStatus, fetchRiderNotifications, fetchRiderHomeData } from "@/app/actions/rider";
@@ -17,7 +17,7 @@ import { fetchRiderConsent } from "@/app/actions/rider-tracking";
 
 const NAV = [
   { href: "/rider",          label: "หน้าแรก",   icon: Home       },
-  { href: "/rider/earnings", label: "ผลงาน",     icon: Wallet     },
+  { href: "/rider/stats",    label: "ผลงาน",     icon: BarChart2  },
   { href: "/rider/history",  label: "งานของฉัน", icon: Clock      },
   { href: "/rider/account",  label: "โปรไฟล์",   icon: UserCircle },
 ] as const;
