@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { ChevronLeft, ChevronRight, Trophy, Flame, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight, Trophy, Flame, Star, Package } from "lucide-react";
 import { useRiderTheme } from "@/app/rider/theme";
 import { useRiderSession } from "@/app/rider/context";
 import { Sk } from "@/app/rider/skeleton";
 import { fetchMyMonthlyStats, fetchMyLifetimeStats, fetchLeaderboard } from "@/app/actions/rider-stats";
 import type { MonthlyStats, RiderTargets, LeaderboardEntry } from "@/app/actions/rider-stats";
+import { fetchRiderEarnings } from "@/app/actions/rider";
 import { computeTier } from "@/lib/rider-kpi";
 import type { Badge, RiderTier } from "@/lib/rider-kpi";
 
@@ -14,6 +15,9 @@ import type { Badge, RiderTier } from "@/lib/rider-kpi";
 
 function fmt(n: number) { return n.toLocaleString("th-TH"); }
 function pct(r: number | null) { return r != null ? `${Math.round(r * 100)}%` : "—"; }
+function fmtDate(d: string) {
+  return new Date(d).toLocaleDateString("th-TH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
 
 function monthLabel(month: string) {
   const [y, m] = month.split("-").map(Number);
@@ -95,21 +99,24 @@ export default function StatsPage() {
     tier: RiderTier; badges: Badge[];
   } | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [earnings, setEarnings]       = useState<Awaited<ReturnType<typeof fetchRiderEarnings>> | null>(null);
   const [loading, setLoading]         = useState(true);
 
   const load = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
     try {
-      const [monthly, life, board] = await Promise.all([
+      const [monthly, life, board, earn] = await Promise.all([
         fetchMyMonthlyStats(month),
         fetchMyLifetimeStats(),
         fetchLeaderboard(month),
+        fetchRiderEarnings(userId),
       ]);
       setStats(monthly.stats);
       setTargets(monthly.targets);
       setLifetime(life);
       setLeaderboard(board);
+      setEarnings(earn);
     } catch (e) {
       console.error("stats load failed:", e);
     } finally {
@@ -367,6 +374,54 @@ export default function StatsPage() {
           </div>
         </div>
       )}
+
+      {/* ── Recent jobs ── */}
+      <div>
+        <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 700, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.8 }}>งานล่าสุด</p>
+        {loading ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {[0,1,2].map(i => <Sk key={i} w="100%" h={60} r={14} />)}
+          </div>
+        ) : (earnings?.recent?.length ?? 0) === 0 ? (
+          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 32, textAlign: "center" }}>
+            <p style={{ margin: 0, color: TEXT2, fontSize: 14 }}>ยังไม่มีงานเดือนนี้</p>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {earnings!.recent.map((job, i) => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const j = job as any;
+              const isDone = j.status === "completed";
+              return (
+                <div key={i} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Package size={16} color={isDone ? ACCENT : TEXT2} />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {j.device_model} {j.device_storage}
+                      </p>
+                      <p style={{ margin: 0, fontSize: 11, color: TEXT2 }}>{fmtDate(j.created_at)}</p>
+                    </div>
+                  </div>
+                  <div style={{ flexShrink: 0, marginLeft: 12, textAlign: "right" }}>
+                    {isDone ? (
+                      <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: ACCENT }}>
+                        ฿{fmt(j.actual_price ?? j.estimated_price ?? 0)}
+                      </p>
+                    ) : (
+                      <span style={{ fontSize: 11, fontWeight: 600, color: TEXT2, background: "#f3f4f6", borderRadius: 6, padding: "3px 8px" }}>
+                        {j.status === "cancelled" ? "ยกเลิก" : j.status === "no_show" ? "ไม่มา" : "ปฏิเสธ"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
     </div>
   );
