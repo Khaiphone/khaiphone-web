@@ -12,7 +12,7 @@ import {
   riderSaveInspection, riderAutoSaveSickw, riderConfirmPrice, riderAdjustPrice,
   riderCustomerAccepted, riderCustomerRejected,
   riderCompleteCash, riderCompleteTransfer, riderRequestTransfer,
-  riderRequestHelp,
+  riderRequestHelp, riderSubmitReturn,
 } from "@/app/actions/rider";
 import { uploadContractFiles, saveContractUrls, markContractSigned, savePaymentSlip, getDocumentSignedUrl, patchReceiptWithSlip } from "@/app/actions/admin-requests";
 import { supabase } from "@/lib/supabase";
@@ -1520,6 +1520,7 @@ export default function JobWizardPage() {
   const [helpSent, setHelpSent]       = useState(false);
   const [helpBusy, setHelpBusy]       = useState(false);
   const [returningToOffice, setReturningToOffice] = useState(false);
+  const [returnBusy, setReturnBusy]               = useState(false);
 
   const reload = useCallback(async () => {
     const j = await fetchRiderJob(id);
@@ -1786,18 +1787,45 @@ export default function JobWizardPage() {
               <CheckCircle2 size={40} color={GREEN} style={{ marginBottom:8 }} />
               <p style={{ margin:"0 0 4px", fontSize:18, fontWeight:800, color:GREEN }}>งานเสร็จสิ้น!</p>
               <p style={{ margin:"0 0 16px", fontSize:14, color:TEXT2 }}>฿{price.toLocaleString("th-TH")} · {job.orderNumber}</p>
-              {!returningToOffice ? (
+
+              {/* Return device two-step flow */}
+              {job.returnedToOfficeAt ? (
+                <div style={{ background:"rgba(74,222,128,0.12)", border:`1px solid ${GREEN}`, borderRadius:10, padding:"10px 14px" }}>
+                  <p style={{ margin:0, fontSize:14, fontWeight:700, color:GREEN }}>✓ ส่งคืนเครื่องเรียบร้อยแล้ว</p>
+                  <p style={{ margin:"4px 0 0", fontSize:12, color:TEXT2 }}>Admin ยืนยันรับเครื่องแล้ว</p>
+                </div>
+              ) : job.returnSubmittedAt ? (
+                <div style={{ background:"rgba(234,179,8,0.1)", border:"1px solid rgba(234,179,8,0.3)", borderRadius:10, padding:"10px 14px" }}>
+                  <p style={{ margin:0, fontSize:14, fontWeight:700, color:"#EAB308" }}>⏳ รอ Admin ยืนยันรับเครื่อง</p>
+                  <p style={{ margin:"4px 0 0", fontSize:12, color:TEXT2 }}>แจ้งส่งคืนแล้ว — รอ office ยืนยัน</p>
+                </div>
+              ) : returningToOffice ? (
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  <div style={{ background:"rgba(124,58,237,0.1)", border:"1px solid rgba(124,58,237,0.3)", borderRadius:10, padding:"10px 14px" }}>
+                    <p style={{ margin:0, fontSize:14, fontWeight:700, color:"#7c3aed" }}>🏠 กำลังเดินทางกลับออฟฟิศ</p>
+                    <p style={{ margin:"4px 0 0", fontSize:12, color:TEXT2 }}>ระบบกำลังติดตามตำแหน่งของคุณ</p>
+                  </div>
+                  <button
+                    disabled={returnBusy}
+                    onClick={async () => {
+                      setReturnBusy(true);
+                      const res = await riderSubmitReturn(job.id);
+                      if (res.success) { setTrackingMode("idle"); await reload(); }
+                      else alert(res.error);
+                      setReturnBusy(false);
+                    }}
+                    style={{ width:"100%", padding:"12px 0", borderRadius:12, border:"none", background: returnBusy ? BORDER : GREEN, color:"#000", fontSize:15, fontWeight:700, cursor: returnBusy ? "not-allowed" : "pointer", fontFamily:"inherit" }}
+                  >
+                    {returnBusy ? "กำลังส่ง..." : "📦 ส่งคืนเครื่องออฟฟิศแล้ว"}
+                  </button>
+                </div>
+              ) : (
                 <button
                   onClick={() => { setTrackingMode("return"); setReturningToOffice(true); }}
                   style={{ width:"100%", padding:"12px 0", borderRadius:12, border:"none", background:"#1a1a2e", color:"#F0C040", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}
                 >
                   🏠 เริ่มเดินทางกลับออฟฟิศ
                 </button>
-              ) : (
-                <div style={{ background:"rgba(124,58,237,0.1)", border:"1px solid rgba(124,58,237,0.3)", borderRadius:10, padding:"10px 14px" }}>
-                  <p style={{ margin:0, fontSize:14, fontWeight:700, color:"#7c3aed" }}>🏠 กำลังเดินทางกลับออฟฟิศ</p>
-                  <p style={{ margin:"4px 0 0", fontSize:12, color:TEXT2 }}>ระบบกำลังติดตามตำแหน่งของคุณ</p>
-                </div>
               )}
             </div>
           ) : isCancelled ? (

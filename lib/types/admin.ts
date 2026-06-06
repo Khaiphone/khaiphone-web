@@ -170,6 +170,10 @@ export interface AdminRequest {
   riderId?: string | null;
   riderName?: string | null;
   distanceKm?: number | null;
+  returnSubmittedAt?:       string | null;
+  returnedToOfficeAt?:      string | null;
+  returnedConfirmedById?:   string | null;
+  returnedConfirmedByName?: string | null;
 }
 
 export interface AdminNotification {

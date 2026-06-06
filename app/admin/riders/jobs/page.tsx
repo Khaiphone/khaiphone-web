@@ -4,10 +4,10 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
-  Clock, Navigation, CheckCircle2, XCircle, ClipboardList, Loader2,
-  TrendingUp, Banknote, AlertTriangle,
+  Clock, CheckCircle2, ClipboardList, Loader2,
+  AlertTriangle, Package, Truck, PackageCheck, RotateCcw,
 } from "lucide-react";
-import { fetchRiderJobs } from "@/app/actions/admin-requests";
+import { fetchRiderJobs, adminConfirmReturn } from "@/app/actions/admin-requests";
 import type { AdminRequest, RequestStatus } from "@/lib/types/admin";
 import StatusBadge from "@/app/components/admin/StatusBadge";
 
@@ -52,7 +52,7 @@ function fmt(n: number) { return n.toLocaleString("th-TH"); }
 type RiderRow = {
   riderId: string; riderName: string;
   total: number; completed: number; inProgress: number; cancelled: number; waiting: number;
-  revenue: number; estimatedRevenue: number;
+  pendingReturn: number;
 };
 
 function Avatar({ name, size = 36 }: { name: string; size?: number }) {
@@ -69,11 +69,12 @@ export default function RiderJobsPage() {
   const router = useRouter();
   const today  = new Date().toISOString().slice(0, 10);
 
-  const [date,     setDate]     = useState(today);
-  const [jobs,     setJobs]     = useState<AdminRequest[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [filter,   setFilter]   = useState<FilterKey>("all");
-  const [expanded, setExpanded] = useState(true);
+  const [date,        setDate]       = useState(today);
+  const [jobs,        setJobs]       = useState<AdminRequest[]>([]);
+  const [loading,     setLoading]    = useState(true);
+  const [filter,      setFilter]     = useState<FilterKey>("all");
+  const [expanded,    setExpanded]   = useState(true);
+  const [confirmBusy, setConfirmBusy] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -86,10 +87,12 @@ export default function RiderJobsPage() {
     const inProgress = jobs.filter(j => jobCategory(j) === "in_progress");
     const waiting    = jobs.filter(j => jobCategory(j) === "waiting");
     const unassigned = jobs.filter(j => jobCategory(j) === "unassigned");
-    const revenue    = completed.reduce((s, j) => s + (j.device.actualPrice ?? j.device.estimatedPrice), 0);
-    const pipeline   = [...inProgress, ...waiting].reduce((s, j) => s + j.device.estimatedPrice, 0);
-    const successRate = jobs.length > 0 ? Math.round((completed.length / jobs.length) * 100) : 0;
-    return { total: jobs.length, completed, cancelled, inProgress, waiting, unassigned, revenue, pipeline, successRate };
+    // Device custody tracking
+    const withRider      = inProgress;
+    const pendingSubmit  = completed.filter(j => !j.returnSubmittedAt);
+    const pendingConfirm = completed.filter(j => j.returnSubmittedAt && !j.returnedToOfficeAt);
+    const returned       = completed.filter(j => !!j.returnedToOfficeAt);
+    return { total: jobs.length, completed, cancelled, inProgress, waiting, unassigned, withRider, pendingSubmit, pendingConfirm, returned };
   }, [jobs]);
 
   const riderRows = useMemo<RiderRow[]>(() => {
@@ -97,13 +100,12 @@ export default function RiderJobsPage() {
     for (const j of jobs) {
       if (!j.riderId) continue;
       if (!map.has(j.riderId)) {
-        map.set(j.riderId, { riderId: j.riderId, riderName: j.riderName ?? "ไรเดอร์", total: 0, completed: 0, inProgress: 0, cancelled: 0, waiting: 0, revenue: 0, estimatedRevenue: 0 });
+        map.set(j.riderId, { riderId: j.riderId, riderName: j.riderName ?? "ไรเดอร์", total: 0, completed: 0, inProgress: 0, cancelled: 0, waiting: 0, pendingReturn: 0 });
       }
       const row = map.get(j.riderId)!;
       row.total++;
-      row.estimatedRevenue += j.device.estimatedPrice;
       const cat = jobCategory(j);
-      if (cat === "completed")   { row.completed++;  row.revenue += j.device.actualPrice ?? j.device.estimatedPrice; }
+      if (cat === "completed")   { row.completed++; if (!j.returnedToOfficeAt) row.pendingReturn++; }
       if (cat === "in_progress") { row.inProgress++; }
       if (cat === "cancelled")   { row.cancelled++;  }
       if (cat === "waiting")     { row.waiting++;    }
@@ -160,31 +162,39 @@ export default function RiderJobsPage() {
       ) : (
         <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
 
-          {/* ── Revenue summary ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+          {/* ── Device custody tracking ── */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "14px 16px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                <Banknote size={14} color={GREEN} />
-                <span style={{ fontSize: 11, color: TEXT2, fontWeight: 600 }}>รายรับจริง</span>
+                <Truck size={14} color={BLUE} />
+                <span style={{ fontSize: 11, color: TEXT2, fontWeight: 600 }}>เครื่องกับไรเดอร์</span>
               </div>
-              <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: GREEN }}>฿{fmt(stats.revenue)}</p>
-              <p style={{ margin: "3px 0 0", fontSize: 11, color: TEXT3 }}>จาก {stats.completed.length} งานเสร็จ</p>
+              <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color: BLUE }}>{stats.withRider.length}</p>
+              <p style={{ margin: "3px 0 0", fontSize: 11, color: TEXT3 }}>เครื่องยังอยู่ระหว่างดำเนินการ</p>
             </div>
             <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "14px 16px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
                 <Clock size={14} color={ORANGE} />
-                <span style={{ fontSize: 11, color: TEXT2, fontWeight: 600 }}>งานในคิว</span>
+                <span style={{ fontSize: 11, color: TEXT2, fontWeight: 600 }}>รอแจ้งส่งคืน</span>
               </div>
-              <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: ORANGE }}>฿{fmt(stats.pipeline)}</p>
-              <p style={{ margin: "3px 0 0", fontSize: 11, color: TEXT3 }}>{stats.inProgress.length + stats.waiting.length} งานดำเนินการ</p>
+              <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color: stats.pendingSubmit.length > 0 ? ORANGE : TEXT3 }}>{stats.pendingSubmit.length}</p>
+              <p style={{ margin: "3px 0 0", fontSize: 11, color: TEXT3 }}>งานเสร็จ แต่ยังไม่แจ้งส่งคืน</p>
+            </div>
+            <div style={{ background: CARD, border: `1px solid ${stats.pendingConfirm.length > 0 ? ORANGE + "60" : BORDER}`, borderRadius: 14, padding: "14px 16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                <RotateCcw size={14} color={stats.pendingConfirm.length > 0 ? ORANGE : TEXT3} />
+                <span style={{ fontSize: 11, color: TEXT2, fontWeight: 600 }}>รอยืนยันรับเครื่อง</span>
+              </div>
+              <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color: stats.pendingConfirm.length > 0 ? ORANGE : TEXT3 }}>{stats.pendingConfirm.length}</p>
+              <p style={{ margin: "3px 0 0", fontSize: 11, color: TEXT3 }}>ไรเดอร์แจ้งส่งแล้ว รอ office ยืนยัน</p>
             </div>
             <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "14px 16px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                <TrendingUp size={14} color={PURPLE} />
-                <span style={{ fontSize: 11, color: TEXT2, fontWeight: 600 }}>อัตราสำเร็จ</span>
+                <PackageCheck size={14} color={GREEN} />
+                <span style={{ fontSize: 11, color: TEXT2, fontWeight: 600 }}>ส่งคืนแล้ว</span>
               </div>
-              <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: PURPLE }}>{stats.successRate}%</p>
-              <p style={{ margin: "3px 0 0", fontSize: 11, color: TEXT3 }}>{stats.total} งานทั้งหมด</p>
+              <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color: GREEN }}>{stats.returned.length}</p>
+              <p style={{ margin: "3px 0 0", fontSize: 11, color: TEXT3 }}>office รับเครื่องเรียบร้อย</p>
             </div>
           </div>
 
@@ -227,8 +237,8 @@ export default function RiderJobsPage() {
               {expanded && (
                 <>
                   {/* Table header */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 44px 44px 44px 44px 90px", gap: 0, padding: "8px 16px", borderBottom: `1px solid ${BORDER}`, background: BG }}>
-                    {["ไรเดอร์", "รับ", "เสร็จ", "กำลัง", "ยกเลิก", "รายรับ"].map((h, i) => (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 44px 44px 44px 44px 60px", gap: 0, padding: "8px 16px", borderBottom: `1px solid ${BORDER}`, background: BG }}>
+                    {["ไรเดอร์", "รับ", "เสร็จ", "กำลัง", "ยกเลิก", "รอคืน"].map((h, i) => (
                       <span key={h} style={{ fontSize: 10, fontWeight: 700, color: TEXT3, textAlign: i > 0 ? "center" : "left", textTransform: "uppercase", letterSpacing: 0.3 }}>{h}</span>
                     ))}
                   </div>
@@ -236,7 +246,7 @@ export default function RiderJobsPage() {
                   {riderRows.map((r, i) => {
                     const successPct = r.total > 0 ? Math.round((r.completed / r.total) * 100) : 0;
                     return (
-                      <div key={r.riderId} style={{ display: "grid", gridTemplateColumns: "1fr 44px 44px 44px 44px 90px", gap: 0, padding: "12px 16px", borderBottom: i < riderRows.length - 1 ? `1px solid ${BORDER}` : "none", alignItems: "center" }}>
+                      <div key={r.riderId} style={{ display: "grid", gridTemplateColumns: "1fr 44px 44px 44px 44px 60px", gap: 0, padding: "12px 16px", borderBottom: i < riderRows.length - 1 ? `1px solid ${BORDER}` : "none", alignItems: "center" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <Avatar name={r.riderName} size={30} />
                           <div>
@@ -253,7 +263,7 @@ export default function RiderJobsPage() {
                         <span style={{ fontSize: 14, fontWeight: 700, color: GREEN, textAlign: "center" }}>{r.completed}</span>
                         <span style={{ fontSize: 14, fontWeight: 700, color: BLUE, textAlign: "center" }}>{r.inProgress + r.waiting}</span>
                         <span style={{ fontSize: 14, fontWeight: 700, color: r.cancelled > 0 ? RED : TEXT3, textAlign: "center" }}>{r.cancelled}</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: GREEN, textAlign: "right" }}>฿{fmt(r.revenue)}</span>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: r.pendingReturn > 0 ? ORANGE : TEXT3, textAlign: "center" }}>{r.pendingReturn}</span>
                       </div>
                     );
                   })}
@@ -292,30 +302,64 @@ export default function RiderJobsPage() {
               return (
                 <div
                   key={job.id}
-                  onClick={() => router.push(`/admin/requests/${job.id}`)}
-                  style={{ padding: "12px 16px", borderBottom: i < filtered.length - 1 ? `1px solid ${BORDER}` : "none", cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}
+                  style={{ padding: "12px 16px", borderBottom: i < filtered.length - 1 ? `1px solid ${BORDER}` : "none" }}
                 >
-                  {/* Left accent */}
-                  <div style={{ width: 3, borderRadius: 2, background: catColor, alignSelf: "stretch", flexShrink: 0, minHeight: 40 }} />
+                  <div
+                    onClick={() => router.push(`/admin/requests/${job.id}`)}
+                    style={{ cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}
+                  >
+                    {/* Left accent */}
+                    <div style={{ width: 3, borderRadius: 2, background: catColor, alignSelf: "stretch", flexShrink: 0, minHeight: 40 }} />
 
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: TEXT2 }}>{job.orderNumber}</span>
-                      <StatusBadge status={job.status} size="xs" />
-                      {job.appointment.time && (
-                        <span style={{ fontSize: 11, color: TEXT3 }}>🕐 {job.appointment.time} น.</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: TEXT2 }}>{job.orderNumber}</span>
+                        <StatusBadge status={job.status} size="xs" />
+                        {job.appointment.time && (
+                          <span style={{ fontSize: 11, color: TEXT3 }}>🕐 {job.appointment.time} น.</span>
+                        )}
+                        {cat === "completed" && job.returnedToOfficeAt && (
+                          <span style={{ fontSize: 10, fontWeight: 700, color: GREEN, background: GREEN + "15", padding: "1px 6px", borderRadius: 999 }}>คืนแล้ว</span>
+                        )}
+                        {cat === "completed" && job.returnSubmittedAt && !job.returnedToOfficeAt && (
+                          <span style={{ fontSize: 10, fontWeight: 700, color: ORANGE, background: ORANGE + "15", padding: "1px 6px", borderRadius: 999 }}>รอยืนยัน</span>
+                        )}
+                      </div>
+                      <p style={{ margin: "0 0 3px", fontSize: 14, fontWeight: 700, color: TEXT }}>{job.device.model}{job.device.storage ? ` · ${job.device.storage}` : ""}</p>
+                      <p style={{ margin: 0, fontSize: 12, color: TEXT2 }}>{job.customer.name}{job.riderName ? <span style={{ color: TEXT3 }}> · ไรเดอร์: {job.riderName}</span> : <span style={{ color: RED, fontWeight: 600 }}> · ยังไม่จ่ายงาน</span>}</p>
+                    </div>
+
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <p style={{ margin: 0, fontSize: 14, fontWeight: 800, color: cat === "completed" ? GREEN : TEXT }}>฿{fmt(price)}</p>
+                      {job.device.actualPrice && job.device.actualPrice !== job.device.estimatedPrice && (
+                        <p style={{ margin: "2px 0 0", fontSize: 10, color: TEXT3, textDecoration: "line-through" }}>฿{fmt(job.device.estimatedPrice)}</p>
                       )}
                     </div>
-                    <p style={{ margin: "0 0 3px", fontSize: 14, fontWeight: 700, color: TEXT }}>{job.device.model}{job.device.storage ? ` · ${job.device.storage}` : ""}</p>
-                    <p style={{ margin: 0, fontSize: 12, color: TEXT2 }}>{job.customer.name}{job.riderName ? <span style={{ color: TEXT3 }}> · ไรเดอร์: {job.riderName}</span> : <span style={{ color: RED, fontWeight: 600 }}> · ยังไม่จ่ายงาน</span>}</p>
                   </div>
 
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <p style={{ margin: 0, fontSize: 14, fontWeight: 800, color: cat === "completed" ? GREEN : TEXT }}>฿{fmt(price)}</p>
-                    {job.device.actualPrice && job.device.actualPrice !== job.device.estimatedPrice && (
-                      <p style={{ margin: "2px 0 0", fontSize: 10, color: TEXT3, textDecoration: "line-through" }}>฿{fmt(job.device.estimatedPrice)}</p>
-                    )}
-                  </div>
+                  {/* Confirm return button */}
+                  {cat === "completed" && job.returnSubmittedAt && !job.returnedToOfficeAt && (
+                    <div style={{ marginTop: 10, marginLeft: 15 }}>
+                      <button
+                        disabled={confirmBusy === job.id}
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          setConfirmBusy(job.id);
+                          const res = await adminConfirmReturn(job.id);
+                          if (res.success) {
+                            fetchRiderJobs(date).then(d => setJobs(d));
+                          } else {
+                            alert(res.error);
+                          }
+                          setConfirmBusy(null);
+                        }}
+                        style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${GREEN}50`, background: GREEN + "15", color: GREEN, fontSize: 13, fontWeight: 700, cursor: confirmBusy === job.id ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}
+                      >
+                        <PackageCheck size={15} />
+                        {confirmBusy === job.id ? "กำลังยืนยัน..." : "ยืนยันรับเครื่องคืน"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}

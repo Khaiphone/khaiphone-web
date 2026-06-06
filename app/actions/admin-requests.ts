@@ -114,9 +114,13 @@ function mapRow(row: any): AdminRequest {
     receiptUrl:     row.receipt_url      ?? undefined,
     assignedTo:     row.assigned_to      ?? null,
     assignedToName: row.assigned_to_name ?? null,
-    riderId:        row.rider_id         ?? null,
-    riderName:      row.rider_name       ?? null,
-    distanceKm:     row.distance_km      ?? null,
+    riderId:            row.rider_id              ?? null,
+    riderName:          row.rider_name            ?? null,
+    distanceKm:         row.distance_km           ?? null,
+    returnSubmittedAt:       row.return_submitted_at        ?? null,
+    returnedToOfficeAt:      row.returned_to_office_at      ?? null,
+    returnedConfirmedById:   row.returned_confirmed_by_id   ?? null,
+    returnedConfirmedByName: row.returned_confirmed_by_name ?? null,
   };
 }
 
@@ -449,6 +453,38 @@ async function fetchDistanceKm(destination: string): Promise<number | null> {
 }
 
 // ─── Assign rider to request ──────────────────────────────────────────────────
+// ─── Admin confirms receipt of device returned by rider ───────────────────────
+export async function adminConfirmReturn(id: string) {
+  const caller = await requireAuth();
+  const supabase = createServerClient();
+  const now = new Date().toISOString();
+
+  const [{ data: req }, { data: profile }] = await Promise.all([
+    supabase.from("requests")
+      .select("order_number, device_model, return_submitted_at, rider_name")
+      .eq("id", id).single(),
+    supabase.from("admin_users").select("name").eq("user_id", caller.id).single(),
+  ]);
+
+  if (!req?.return_submitted_at) return { success: false as const, error: "ไรเดอร์ยังไม่ได้แจ้งส่งคืน" };
+
+  const confirmedByName = profile?.name ?? caller.email ?? caller.id;
+
+  const { error } = await supabase
+    .from("requests")
+    .update({
+      returned_to_office_at:      now,
+      returned_confirmed_by_id:   caller.id,
+      returned_confirmed_by_name: confirmedByName,
+      updated_at:                 now,
+    })
+    .eq("id", id);
+  if (error) return { success: false as const, error: error.message };
+
+  after(() => broadcastRequestUpdate(id).catch(console.error));
+  return { success: true as const };
+}
+
 export async function assignRider(id: string, riderId: string | null, riderName: string | null) {
   const caller = await requireAuth();
   const supabase = createServerClient();

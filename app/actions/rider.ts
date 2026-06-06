@@ -982,10 +982,12 @@ function mapRow(row: any) {
     statusLog:     row.status_log     ?? [],
     inspection:    row.inspection     ?? undefined,
     source:        row.source         ?? "website",
-    assignedTo:    row.assigned_to    ?? null,
-    assignedToName: row.assigned_to_name ?? null,
-    riderId:       row.rider_id       ?? null,
-    distanceKm:    row.distance_km    ?? null,
+    assignedTo:         row.assigned_to         ?? null,
+    assignedToName:     row.assigned_to_name    ?? null,
+    riderId:            row.rider_id             ?? null,
+    distanceKm:         row.distance_km          ?? null,
+    returnSubmittedAt:  row.return_submitted_at  ?? null,
+    returnedToOfficeAt: row.returned_to_office_at ?? null,
   };
 }
 
@@ -1003,5 +1005,38 @@ async function updateRiderStatus(id: string, status: string, note: string, userI
     .update({ status, status_log: newLog, updated_at: now })
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
+  return { success: true as const };
+}
+
+// ─── Rider submits device return to office ────────────────────────────────────
+export async function riderSubmitReturn(id: string) {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+  const now = new Date().toISOString();
+
+  const { data: req } = await supabase
+    .from("requests")
+    .select("status, order_number, device_model, return_submitted_at")
+    .eq("id", id).single();
+
+  if (req?.status !== "completed") return { success: false as const, error: "งานยังไม่เสร็จสิ้น" };
+  if (req?.return_submitted_at)    return { success: false as const, error: "แจ้งส่งคืนไปแล้ว รอ admin ยืนยัน" };
+
+  const { error } = await supabase
+    .from("requests")
+    .update({ return_submitted_at: now, updated_at: now })
+    .eq("id", id).eq("rider_id", user.id);
+  if (error) return { success: false as const, error: error.message };
+
+  after(async () => {
+    await broadcastRequestUpdate(id);
+    await sendPushToOwners({
+      title: `ไรเดอร์แจ้งส่งคืนเครื่อง — ${req?.order_number ?? ""}`,
+      body: `${req?.device_model ?? ""} · รอยืนยันรับเครื่องที่ออฟฟิศ`,
+      url: `/admin/requests/${id}`,
+      tag: `return-${id}`,
+    }).catch(console.error);
+  });
+
   return { success: true as const };
 }
