@@ -222,7 +222,10 @@ export async function riderAcceptJob(id: string) {
   const now = new Date().toISOString();
 
   const { data: req } = await supabase
-    .from("requests").select("status_log, order_number, device_model").eq("id", id).single();
+    .from("requests").select("status, rider_id, status_log, order_number, device_model").eq("id", id).single();
+
+  if (req?.status !== "confirmed") return { success: false as const, error: "งานนี้ไม่อยู่ในสถานะที่รับได้" };
+  if (req?.rider_id !== user.id)   return { success: false as const, error: "งานนี้ไม่ได้ถูกมอบหมายให้คุณ" };
 
   const newLog = [
     ...(req?.status_log ?? []),

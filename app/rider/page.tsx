@@ -166,6 +166,7 @@ export default function RiderHomePage() {
         setPendingJobs(prev => prev.filter(j => j.id !== jobId));
         setActiveJobs(prev => [{ ...job, status: "pickup_scheduled" }, ...prev]);
       }
+      if (userId) loadData(userId);
     }
     setAccepting(null);
   }
