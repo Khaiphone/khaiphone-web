@@ -200,22 +200,13 @@ export async function fetchActiveRiders() {
   await requireAuth();
   const supabase = createServerClient();
 
-  const STALE_MINUTES = 5;
-  const staleThreshold = new Date(Date.now() - STALE_MINUTES * 60 * 1000).toISOString();
-
+  // Use is_online as the sole online signal — it only changes on manual toggle or shift close.
+  // last_heartbeat may be stale when rider is using Maps/another app (iOS freezes PWA in background),
+  // but the rider is still on shift and available. We show "last seen X min ago" in the UI instead.
   const { data: locs } = await supabase
     .from("rider_locations")
     .select("rider_id, lat, lng, accuracy_m, tracking_mode, battery_pct, app_state, last_heartbeat, is_online, current_job_id, shift_id")
-    .eq("is_online", true)
-    .gte("last_heartbeat", staleThreshold);
-
-  // Mark stale riders offline in the background (fire-and-forget)
-  supabase
-    .from("rider_locations")
-    .update({ is_online: false, tracking_mode: "idle", updated_at: new Date().toISOString() })
-    .eq("is_online", true)
-    .lt("last_heartbeat", staleThreshold)
-    .then(() => {});
+    .eq("is_online", true);
 
   if (!locs || locs.length === 0) return [];
 

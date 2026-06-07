@@ -433,7 +433,7 @@ export default function PlannerDashboard() {
   const okJobs         = unassignedJobs.filter(j => getSLAStatus(j) === "ok" || getSLAStatus(j) === "none");
   const offlineRiders  = riders.filter(r => {
     const sec = (Date.now() - new Date(r.last_heartbeat).getTime()) / 1000;
-    return sec > 300; // 5 min no heartbeat = effectively offline
+    return sec > 900; // 15 min no heartbeat = likely unreachable (iOS background freeze etc.)
   });
   const totalActiveJobs   = riders.reduce((sum, r) => sum + (r.active_jobs?.length ?? 0), 0);
   const utilizationRate   = riders.length > 0 ? Math.round(busyRiders.length / riders.length * 100) : 0;
