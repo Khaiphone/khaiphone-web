@@ -446,7 +446,10 @@ export default function PlannerDashboard() {
   const alerts: { color: string; msg: string }[] = [];
   if (overdueJobs.length > 0) alerts.push({ color: RED, msg: `⚠ งานเกิน SLA ${overdueJobs.length} งาน` });
   if (warningJobs.length > 0) alerts.push({ color: YELLOW, msg: `⚠ ใกล้เกิน SLA (15 นาที) ${warningJobs.length} งาน` });
-  if (offlineRiders.length > 0) alerts.push({ color: ORANGE, msg: `⚠ ไรเดอร์ขาดสัญญาณ ${offlineRiders.length} คน` });
+  if (offlineRiders.length > 0) {
+    const names = offlineRiders.map(r => r.admin_users?.name ?? "ไรเดอร์").join(", ");
+    alerts.push({ color: ORANGE, msg: `⚠ ไรเดอร์ขาดสัญญาณ ${offlineRiders.length} คน: ${names}` });
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: BG, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", overflow: "hidden" }}>
