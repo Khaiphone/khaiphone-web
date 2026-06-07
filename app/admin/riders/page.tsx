@@ -56,7 +56,7 @@ type Job = {
 };
 
 type AllShift = {
-  id: string; rider_id: string; rider_name: string;
+  id: string; rider_id: string; rider_name: string; rider_avatar_url?: string | null;
   clocked_in_at: string; clocked_out_at: string | null;
   jobs_completed: number; jobs_attempted: number; total_distance_km: number | null; ended_reason: string | null;
 };
@@ -148,7 +148,13 @@ function getRiderStatus(r: ActiveRider): { label: string; color: string } {
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
-function Avatar({ name, size = 36 }: { name: string; size?: number }) {
+function Avatar({ name, avatarUrl, size = 36 }: { name: string; avatarUrl?: string | null; size?: number }) {
+  if (avatarUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={avatarUrl} alt={name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0, display: "block" }} />
+    );
+  }
   const initials = name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase() || "?";
   const hue = (name.charCodeAt(0) * 47 + (name.charCodeAt(1) ?? 0) * 23) % 360;
   return (
@@ -543,6 +549,7 @@ export default function PlannerDashboard() {
               </div>
             ) : riders.map(r => {
               const name       = r.admin_users?.name ?? "ไรเดอร์";
+              const avatarUrl  = (r.admin_users as { avatar_url?: string | null } | null)?.avatar_url ?? null;
               const isSelected = r.rider_id === selectedRiderId;
               const shift      = r.rider_shifts;
               const battLow    = r.battery_pct != null && r.battery_pct < 20;
@@ -566,7 +573,7 @@ export default function PlannerDashboard() {
                 >
                   {/* Row 1: Avatar + Name + Status badge */}
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <Avatar name={name} size={32} />
+                    <Avatar name={name} avatarUrl={avatarUrl} size={32} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4, marginBottom: 2 }}>
                         <span style={{ fontSize: 13, fontWeight: 700, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</span>
@@ -961,7 +968,7 @@ export default function PlannerDashboard() {
                 ) : allShifts.map((s, i, arr) => (
                   <div key={s.id} style={{ padding: "12px 14px", borderBottom: i < arr.length - 1 ? `1px solid ${BORDER}` : "none" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                      <Avatar name={s.rider_name} size={28} />
+                      <Avatar name={s.rider_name} avatarUrl={s.rider_avatar_url} size={28} />
                       <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", justifyContent: "space-between" }}>
                           <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{s.rider_name}</span>

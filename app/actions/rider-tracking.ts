@@ -223,7 +223,7 @@ export async function fetchActiveRiders() {
   };
 
   const [{ data: users }, { data: shifts }, { data: activeJobs }] = await Promise.all([
-    supabase.from("admin_users").select("user_id, name").in("user_id", riderIds),
+    supabase.from("admin_users").select("user_id, name, avatar_url").in("user_id", riderIds),
     shiftIds.length > 0
       ? supabase.from("rider_shifts").select("id, clocked_in_at, jobs_completed").in("id", shiftIds)
       : Promise.resolve({ data: [] }),
@@ -294,12 +294,13 @@ export async function fetchAllRidersShifts(date: string) {
   const riderIds = [...new Set(shifts.map(s => s.rider_id))];
   const { data: users } = await supabase
     .from("admin_users")
-    .select("user_id, name")
+    .select("user_id, name, avatar_url")
     .in("user_id", riderIds);
 
   return shifts.map(s => ({
     ...s,
-    rider_name: users?.find(u => u.user_id === s.rider_id)?.name ?? "ไรเดอร์",
+    rider_name:       users?.find(u => u.user_id === s.rider_id)?.name ?? "ไรเดอร์",
+    rider_avatar_url: users?.find(u => u.user_id === s.rider_id)?.avatar_url ?? null,
   }));
 }
 

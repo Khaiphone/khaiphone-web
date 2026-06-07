@@ -41,7 +41,8 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const isLogin  = pathname === "/admin/login" || pathname === "/admin/set-password";
   const [ready, setReady]             = useState(false);
   const [role, setRole]               = useState<AdminRole | null>(null);
-  const [profileName, setProfileName] = useState<string | null>(null);
+  const [profileName,   setProfileName]   = useState<string | null>(null);
+  const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
   const [collapsed, setCollapsed]     = useState(false);
   const { dark, toggle }              = useAdminTheme();
   const sidebarW = collapsed ? 64 : 220;
@@ -117,7 +118,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       if (r) localStorage.setItem("kp_admin_role", r);
       setRole(r);
 
-      fetchMyProfile(session.user.id).then(p => { if (p) setProfileName(p.name); });
+      fetchMyProfile(session.user.id).then(p => { if (p) { setProfileName(p.name); setProfileAvatar(p.avatar_url ?? null); } });
 
       if (r === "staff") {
         const profile = await fetchMyProfile(session.user.id);
@@ -228,6 +229,12 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
               >
                 {/* Avatar */}
                 {(() => {
+                  if (profileAvatar) {
+                    return (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={profileAvatar} alt={profileName ?? "profile"} style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover", flexShrink: 0, display: "block" }} />
+                    );
+                  }
                   const name = profileName ?? "?";
                   const initials = name.split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
                   const hue = (name.charCodeAt(0) * 47 + (name.charCodeAt(1) ?? 0) * 23) % 360;
