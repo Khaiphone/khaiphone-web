@@ -145,6 +145,7 @@ export default function RiderDetailPage() {
   const [vehicleLoaded, setVehicleLoaded] = useState(false);
   const [vehicleSaving, setVehicleSaving] = useState(false);
   const [vehicleSaved,  setVehicleSaved]  = useState(false);
+  const [vehicleError,  setVehicleError]  = useState<string | null>(null);
   const [closingShift, setClosingShift] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
 
@@ -879,14 +880,25 @@ export default function RiderDetailPage() {
                 </div>
               ))}
 
+              {vehicleError && (
+                <div style={{ background: "#FEF2F2", border: "1px solid #FCA5A5", borderRadius: 10, padding: "10px 14px" }}>
+                  <p style={{ margin: 0, fontSize: 13, color: "#DC2626", fontWeight: 500 }}>{vehicleError}</p>
+                </div>
+              )}
+
               <button
                 onClick={async () => {
                   if (!vehicle) return;
                   setVehicleSaving(true);
-                  await updateRiderVehicleInfo(id, vehicle);
+                  setVehicleError(null);
+                  const res = await updateRiderVehicleInfo(id, vehicle);
                   setVehicleSaving(false);
-                  setVehicleSaved(true);
-                  setTimeout(() => setVehicleSaved(false), 2500);
+                  if (res.success) {
+                    setVehicleSaved(true);
+                    setTimeout(() => setVehicleSaved(false), 2500);
+                  } else {
+                    setVehicleError("บันทึกไม่สำเร็จ: " + res.error);
+                  }
                 }}
                 disabled={vehicleSaving}
                 style={{

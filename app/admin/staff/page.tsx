@@ -43,6 +43,12 @@ export default function StaffPage() {
   const [resetMsg, setResetMsg]           = useState<Record<string, string>>({});
   const [directReset, setDirectReset]     = useState<{ id: string; tempPassword: string } | null>(null);
   const [expandedPerms, setExpandedPerms] = useState<Set<string>>(new Set());
+  const [opError, setOpError] = useState<string | null>(null);
+
+  function showError(msg: string) {
+    setOpError(msg);
+    setTimeout(() => setOpError(null), 5000);
+  }
 
   async function load() {
     const data = await fetchAdminUsers();
@@ -74,15 +80,17 @@ export default function StaffPage() {
 
   async function handleToggleActive(u: AdminUserRow) {
     setUpdating(u.id);
-    await updateAdminUser(u.id, { active: !u.active });
-    setUsers(prev => prev.map(x => x.id === u.id ? { ...x, active: !u.active } : x));
+    const res = await updateAdminUser(u.id, { active: !u.active });
+    if (res.success) setUsers(prev => prev.map(x => x.id === u.id ? { ...x, active: !u.active } : x));
+    else showError("เปลี่ยนสถานะไม่สำเร็จ: " + res.error);
     setUpdating(null);
   }
 
   async function handleRoleChange(u: AdminUserRow, role: AdminRole) {
     setUpdating(u.id);
-    await updateAdminUser(u.id, { role });
-    setUsers(prev => prev.map(x => x.id === u.id ? { ...x, role } : x));
+    const res = await updateAdminUser(u.id, { role });
+    if (res.success) setUsers(prev => prev.map(x => x.id === u.id ? { ...x, role } : x));
+    else showError("เปลี่ยนตำแหน่งไม่สำเร็จ: " + res.error);
     setUpdating(null);
   }
 
@@ -111,16 +119,18 @@ export default function StaffPage() {
 
   async function handleDelete(u: AdminUserRow) {
     setDeleting(u.id);
-    await deleteAdminUser(u.id, u.user_id);
-    setUsers(prev => prev.filter(x => x.id !== u.id));
+    const res = await deleteAdminUser(u.id, u.user_id);
+    if (res.success) setUsers(prev => prev.filter(x => x.id !== u.id));
+    else showError("ลบไม่สำเร็จ: " + res.error);
     setDeleting(null);
     setConfirmDelete(null);
   }
 
   async function handleToggleRider(u: AdminUserRow) {
     setUpdating(u.id);
-    await updateAdminUser(u.id, { is_rider: !u.is_rider });
-    setUsers(prev => prev.map(x => x.id === u.id ? { ...x, is_rider: !u.is_rider } : x));
+    const res = await updateAdminUser(u.id, { is_rider: !u.is_rider });
+    if (res.success) setUsers(prev => prev.map(x => x.id === u.id ? { ...x, is_rider: !u.is_rider } : x));
+    else showError("เปลี่ยนสิทธิ์ไรเดอร์ไม่สำเร็จ: " + res.error);
     setUpdating(null);
   }
 
@@ -144,6 +154,13 @@ export default function StaffPage() {
   return (
     <div style={{ minHeight: "100vh", background: BG }}>
       <div style={{ padding: "52px 16px 32px", maxWidth: 680, margin: "0 auto" }}>
+
+        {opError && (
+          <div style={{ background: "#FEF2F2", border: "1px solid #FCA5A5", borderRadius: 10, padding: "10px 14px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <p style={{ margin: 0, fontSize: 13, color: "#DC2626", fontWeight: 500 }}>{opError}</p>
+            <button onClick={() => setOpError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#DC2626", padding: 0, display: "flex" }}><X size={15} /></button>
+          </div>
+        )}
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>

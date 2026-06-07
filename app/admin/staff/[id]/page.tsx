@@ -73,6 +73,7 @@ export default function StaffDetailPage() {
   const [loading, setLoading]  = useState(true);
   const [saving, setSaving]    = useState(false);
   const [saved, setSaved]      = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const [name,      setName]      = useState("");
   const [phone,     setPhone]     = useState("");
@@ -95,7 +96,8 @@ export default function StaffDetailPage() {
 
   async function handleSave() {
     setSaving(true);
-    await updateStaffProfile(id, {
+    setSaveError(null);
+    const res = await updateStaffProfile(id, {
       name:       name.trim()      || undefined,
       phone:      phone.trim()     || undefined,
       position:   position.trim()  || undefined,
@@ -103,8 +105,12 @@ export default function StaffDetailPage() {
       note:       note.trim()      || undefined,
     });
     setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    if (res.success) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } else {
+      setSaveError("บันทึกไม่สำเร็จ: " + res.error);
+    }
   }
 
   if (loading) {
@@ -143,6 +149,12 @@ export default function StaffDetailPage() {
           {profile.active ? "ใช้งานอยู่" : "ระงับแล้ว"}
         </span>
       </div>
+
+      {saveError && (
+        <div style={{ background: "#FEF2F2", border: "1px solid #FCA5A5", borderRadius: 10, padding: "10px 14px", marginBottom: 12 }}>
+          <p style={{ margin: 0, fontSize: 13, color: "#DC2626", fontWeight: 500 }}>{saveError}</p>
+        </div>
+      )}
 
       {/* Form */}
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "24px 20px" }}>
