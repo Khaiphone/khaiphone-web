@@ -330,6 +330,7 @@ export default function PlannerDashboard() {
 
   // UI state
   const [selectedRiderId, setSelectedRiderId] = useState<string | null>(null);
+  const [hoveredRiderId,  setHoveredRiderId]  = useState<string | null>(null);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [dragJobId, setDragJobId] = useState<string | null>(null);
   const [dropTargetRider, setDropTargetRider] = useState<string | null>(null);
@@ -689,20 +690,63 @@ export default function PlannerDashboard() {
 
               {/* Rider markers */}
               {riders.map(r => {
-                const name      = r.admin_users?.name ?? "ไรเดอร์";
-                const avatarUrl = (r.admin_users as { avatar_url?: string | null } | null)?.avatar_url ?? null;
-                const hasJob    = r.current_job_id != null && r.tracking_mode === "idle";
-                const color     = hasJob ? PURPLE : (MODE_COLOR[r.tracking_mode] ?? BLUE);
+                const name       = r.admin_users?.name ?? "ไรเดอร์";
+                const avatarUrl  = (r.admin_users as { avatar_url?: string | null } | null)?.avatar_url ?? null;
+                const hasJob     = r.current_job_id != null && r.tracking_mode === "idle";
+                const color      = hasJob ? PURPLE : (MODE_COLOR[r.tracking_mode] ?? BLUE);
                 const isSelected = r.rider_id === selectedRiderId;
+                const isHovered  = r.rider_id === hoveredRiderId;
+                const statusLabel = hasJob ? "รอรับงาน" : (MODE_LABEL[r.tracking_mode] ?? r.tracking_mode);
                 return (
                   <AdvancedMarker key={r.rider_id} position={{ lat: r.lat, lng: r.lng }} onClick={() => setSelectedRiderId(r.rider_id === selectedRiderId ? null : r.rider_id)}>
-                    <div style={{ position: "relative" }}>
+                    <div
+                      style={{ position: "relative" }}
+                      onMouseEnter={() => setHoveredRiderId(r.rider_id)}
+                      onMouseLeave={() => setHoveredRiderId(null)}
+                    >
+                      {/* Hover card — shown above marker on hover */}
+                      {isHovered && (
+                        <div style={{
+                          position: "absolute", bottom: 46, left: "50%", transform: "translateX(-50%)",
+                          background: "#fff", borderRadius: 12, padding: "10px 14px",
+                          boxShadow: "0 4px 20px rgba(0,0,0,.22)", zIndex: 20,
+                          display: "flex", alignItems: "center", gap: 10, whiteSpace: "nowrap",
+                          pointerEvents: "none",
+                        }}>
+                          {/* Big avatar */}
+                          <div style={{ width: 52, height: 52, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: `2px solid ${color}`, background: color, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            {avatarUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={avatarUrl} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                            ) : (
+                              <span style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>{name.charAt(0).toUpperCase()}</span>
+                            )}
+                          </div>
+                          <div>
+                            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: DARK }}>{name}</p>
+                            <p style={{ margin: "2px 0 0", fontSize: 11, color, fontWeight: 600 }}>{statusLabel}</p>
+                            {r.battery_pct != null && (
+                              <p style={{ margin: "1px 0 0", fontSize: 10, color: r.battery_pct < 20 ? "#ef4444" : "#6b7280" }}>
+                                🔋 {r.battery_pct}%
+                              </p>
+                            )}
+                          </div>
+                          {/* Caret */}
+                          <div style={{ position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)", width: 12, height: 6, overflow: "hidden" }}>
+                            <div style={{ width: 12, height: 12, background: "#fff", transform: "rotate(45deg) translate(-3px,-3px)", boxShadow: "1px 1px 4px rgba(0,0,0,.1)" }} />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Marker circle */}
                       <div style={{
                         width: 36, height: 36, borderRadius: "50%", background: color,
                         border: `3px solid ${isSelected ? "#fff" : color}`,
                         boxShadow: isSelected ? `0 0 0 3px ${color}` : "0 2px 6px rgba(0,0,0,.3)",
                         display: "flex", alignItems: "center", justifyContent: "center",
                         cursor: "pointer", overflow: "hidden",
+                        transform: isHovered ? "scale(1.15)" : "scale(1)",
+                        transition: "transform 0.15s",
                       }}>
                         {avatarUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -713,9 +757,11 @@ export default function PlannerDashboard() {
                           </span>
                         )}
                       </div>
-                      {isSelected && (
+
+                      {/* Selected label */}
+                      {isSelected && !isHovered && (
                         <div style={{ position: "absolute", bottom: 42, left: "50%", transform: "translateX(-50%)", background: DARK, color: "#fff", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap", boxShadow: "0 2px 8px rgba(0,0,0,.3)" }}>
-                          {name} · {hasJob ? "รอรับงาน" : (MODE_LABEL[r.tracking_mode] ?? r.tracking_mode)}
+                          {name} · {statusLabel}
                         </div>
                       )}
                     </div>
