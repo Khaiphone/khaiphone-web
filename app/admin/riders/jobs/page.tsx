@@ -60,52 +60,86 @@ type RiderRow = {
 };
 
 // ── SLA helpers ────────────────────────────────────────────────────────────────
-type SLAResult =
+
+// Planner SLA: appointment time → rider arrival (inspecting)
+type PunctualitySLA =
   | { status: "no_appt" }
   | { status: "cancelled" }
-  | { status: "pending";   apptMs: number }
-  | { status: "overdue";   apptMs: number }
-  | { status: "met";       apptMs: number; completedMs: number; deltaMin: number }
-  | { status: "warning";   apptMs: number; completedMs: number; deltaMin: number }
-  | { status: "exceeded";  apptMs: number; completedMs: number; deltaMin: number };
+  | { status: "pending";  apptMs: number }
+  | { status: "overdue";  apptMs: number }
+  | { status: "ontime";   apptMs: number; arrivedMs: number; deltaMin: number }
+  | { status: "slight";   apptMs: number; arrivedMs: number; deltaMin: number }
+  | { status: "late";     apptMs: number; arrivedMs: number; deltaMin: number };
 
-function computeSLA(job: AdminRequest): SLAResult {
+// Rider SLA: arrival (inspecting) → completed
+type EfficiencySLA =
+  | { status: "no_arrival" }
+  | { status: "pending";  arrivedMs: number }
+  | { status: "fast";     arrivedMs: number; completedMs: number; deltaMin: number }
+  | { status: "slight";   arrivedMs: number; completedMs: number; deltaMin: number }
+  | { status: "slow";     arrivedMs: number; completedMs: number; deltaMin: number };
+
+type SLARow = { job: AdminRequest; punct: PunctualitySLA; eff: EfficiencySLA };
+
+function computePunctualitySLA(job: AdminRequest): PunctualitySLA {
   const { date, time } = job.appointment;
   if (!date || !time) return { status: "no_appt" };
   if (CANCELLED_STATUSES.includes(job.status)) return { status: "cancelled" };
 
   const apptMs = new Date(`${date}T${time}:00+07:00`).getTime();
-  const completedEntry = [...(job.statusLog ?? [])].reverse().find(s => s.status === "completed");
+  const arrivedEntry = (job.statusLog ?? []).find(s => s.status === "inspecting");
 
-  if (!completedEntry) {
-    return Date.now() > apptMs + 30 * 60_000
+  if (!arrivedEntry) {
+    return Date.now() > apptMs + 20 * 60_000
       ? { status: "overdue", apptMs }
       : { status: "pending", apptMs };
   }
 
-  const completedMs = new Date(completedEntry.timestamp).getTime();
-  const deltaMin    = Math.round((completedMs - apptMs) / 60_000);
-  return deltaMin <= 30
-    ? { status: "met",      apptMs, completedMs, deltaMin }
-    : deltaMin <= 120
-    ? { status: "warning",  apptMs, completedMs, deltaMin }
-    : { status: "exceeded", apptMs, completedMs, deltaMin };
+  const arrivedMs = new Date(arrivedEntry.timestamp).getTime();
+  const deltaMin  = Math.round((arrivedMs - apptMs) / 60_000);
+  return deltaMin <= 5
+    ? { status: "ontime", apptMs, arrivedMs, deltaMin }
+    : deltaMin <= 20
+    ? { status: "slight", apptMs, arrivedMs, deltaMin }
+    : { status: "late",   apptMs, arrivedMs, deltaMin };
 }
 
-function slaLabel(r: SLAResult) {
-  if (r.status === "met")      return { label: "ตรงเวลา",       color: GREEN,  bg: GREEN  + "15" };
-  if (r.status === "warning")  return { label: "ล่าช้าเล็กน้อย", color: ORANGE, bg: ORANGE + "15" };
-  if (r.status === "exceeded") return { label: "เกิน SLA",       color: RED,    bg: RED    + "15" };
-  if (r.status === "overdue")  return { label: "ค้างเกิน",       color: RED,    bg: RED    + "12" };
-  if (r.status === "pending")  return { label: "กำลังดำเนินการ", color: BLUE,   bg: BLUE   + "12" };
+function computeEfficiencySLA(job: AdminRequest): EfficiencySLA {
+  const arrivedEntry  = (job.statusLog ?? []).find(s => s.status === "inspecting");
+  if (!arrivedEntry) return { status: "no_arrival" };
+
+  const arrivedMs    = new Date(arrivedEntry.timestamp).getTime();
+  const completedEntry = [...(job.statusLog ?? [])].reverse().find(s => s.status === "completed");
+  if (!completedEntry) return { status: "pending", arrivedMs };
+
+  const completedMs = new Date(completedEntry.timestamp).getTime();
+  const deltaMin    = Math.round((completedMs - arrivedMs) / 60_000);
+  return deltaMin <= 30
+    ? { status: "fast",   arrivedMs, completedMs, deltaMin }
+    : deltaMin <= 60
+    ? { status: "slight", arrivedMs, completedMs, deltaMin }
+    : { status: "slow",   arrivedMs, completedMs, deltaMin };
+}
+
+function punctLabel(r: PunctualitySLA) {
+  if (r.status === "ontime")  return { label: "ถึงตรงเวลา",    color: GREEN,  bg: GREEN  + "18" };
+  if (r.status === "slight")  return { label: "สายเล็กน้อย",   color: ORANGE, bg: ORANGE + "18" };
+  if (r.status === "late")    return { label: "สายมาก",         color: RED,    bg: RED    + "18" };
+  if (r.status === "overdue") return { label: "ยังไม่ถึง",      color: RED,    bg: RED    + "12" };
+  if (r.status === "pending") return { label: "รอไรเดอร์",      color: BLUE,   bg: BLUE   + "12" };
   return { label: "—", color: TEXT3, bg: BORDER };
 }
 
-function deltaTxt(r: SLAResult) {
-  if (r.status === "met")      return r.deltaMin <= 0 ? `ก่อน ${Math.abs(r.deltaMin)} นาที` : `ช้า ${r.deltaMin} นาที`;
-  if (r.status === "warning")  return `ช้า ${r.deltaMin} นาที`;
-  if (r.status === "exceeded") return `ช้า ${r.deltaMin} นาที`;
-  return null;
+function effLabel(r: EfficiencySLA) {
+  if (r.status === "fast")   return { label: "เสร็จเร็ว",      color: GREEN,  bg: GREEN  + "18" };
+  if (r.status === "slight") return { label: "ล่าช้าเล็กน้อย", color: ORANGE, bg: ORANGE + "18" };
+  if (r.status === "slow")   return { label: "ช้าเกินไป",       color: RED,    bg: RED    + "18" };
+  if (r.status === "pending") return { label: "กำลังดำเนินการ", color: BLUE,  bg: BLUE   + "12" };
+  return { label: "—", color: TEXT3, bg: BORDER };
+}
+
+function minTxt(min: number, late = false) {
+  return late ? `ช้า ${min} นาที` : `${min} นาที`;
 }
 
 function Avatar({ name, size = 36 }: { name: string; size?: number }) {
@@ -209,26 +243,37 @@ export default function RiderJobsPage() {
   }, [jobs, filter]);
 
   // ── SLA data ──────────────────────────────────────────────────────────────
-  const slaRows = useMemo(() =>
+  const slaRows = useMemo((): SLARow[] =>
     jobs
       .filter(j => j.appointment.date && j.appointment.time)
-      .map(j => ({ job: j, sla: computeSLA(j) }))
-      .filter(r => r.sla.status !== "no_appt" && r.sla.status !== "cancelled")
+      .map(j => ({ job: j, punct: computePunctualitySLA(j), eff: computeEfficiencySLA(j) }))
+      .filter(r => r.punct.status !== "no_appt" && r.punct.status !== "cancelled")
       .sort((a, b) => {
-        const aMs = ("apptMs" in a.sla ? a.sla.apptMs : 0);
-        const bMs = ("apptMs" in b.sla ? b.sla.apptMs : 0);
+        const aMs = ("apptMs" in a.punct ? a.punct.apptMs : 0);
+        const bMs = ("apptMs" in b.punct ? b.punct.apptMs : 0);
         return aMs - bMs;
       }),
     [jobs]
   );
 
-  const slaMet      = slaRows.filter(r => r.sla.status === "met").length;
-  const slaWarning  = slaRows.filter(r => r.sla.status === "warning").length;
-  const slaExceeded = slaRows.filter(r => r.sla.status === "exceeded").length;
-  const slaOverdue  = slaRows.filter(r => r.sla.status === "overdue").length;
-  const slaPending  = slaRows.filter(r => r.sla.status === "pending").length;
-  const slaTotal    = slaRows.length;
-  const slaRate     = slaTotal > 0 ? Math.round(((slaMet + slaWarning) / Math.max(1, slaTotal - slaPending)) * 100) : null;
+  // Planner SLA summary
+  const pOntime  = slaRows.filter(r => r.punct.status === "ontime").length;
+  const pSlight  = slaRows.filter(r => r.punct.status === "slight").length;
+  const pLate    = slaRows.filter(r => r.punct.status === "late" || r.punct.status === "overdue").length;
+  const pPending = slaRows.filter(r => r.punct.status === "pending").length;
+  const pTotal   = slaRows.length;
+  const pRate    = pTotal > 0 ? Math.round((pOntime / Math.max(1, pTotal - pPending)) * 100) : null;
+
+  // Rider SLA summary (only rows that have arrival data)
+  const effRows  = slaRows.filter(r => r.eff.status !== "no_arrival");
+  const eFast    = effRows.filter(r => r.eff.status === "fast").length;
+  const eSlight  = effRows.filter(r => r.eff.status === "slight").length;
+  const eSlow    = effRows.filter(r => r.eff.status === "slow").length;
+  const ePending = effRows.filter(r => r.eff.status === "pending").length;
+  const eTotal   = effRows.length;
+  const eRate    = eTotal > 0 ? Math.round((eFast / Math.max(1, eTotal - ePending)) * 100) : null;
+
+  const slaRate  = pRate;
 
   const FILTER_TABS: Array<{ key: FilterKey; label: string; count: number; color: string }> = [
     { key: "all",         label: "ทั้งหมด",        count: stats.total,              color: TEXT    },
@@ -319,40 +364,70 @@ export default function RiderJobsPage() {
         /* ════════════════════════════════════════════════════════════════════ */
         <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
 
-          {/* Summary bar */}
+          {/* ── Planner SLA card ── */}
           <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "16px 18px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <Target size={16} color={PURPLE} />
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: TEXT }}>SLA Overview</p>
-              {slaRate !== null && (
-                <span style={{ marginLeft: "auto", fontSize: 24, fontWeight: 800, color: slaRate >= 80 ? GREEN : slaRate >= 60 ? ORANGE : RED }}>
-                  {slaRate}%
-                </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <Clock size={15} color={BLUE} />
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: TEXT }}>Planner SLA · ตรงเวลานัดหมาย</p>
+              {pRate !== null && (
+                <span style={{ marginLeft: "auto", fontSize: 22, fontWeight: 800, color: pRate >= 80 ? GREEN : pRate >= 60 ? ORANGE : RED }}>{pRate}%</span>
               )}
             </div>
-
-            {/* Progress bar */}
-            {slaTotal > 0 && (
-              <div style={{ height: 8, borderRadius: 99, background: BORDER, overflow: "hidden", display: "flex", marginBottom: 12 }}>
-                <div style={{ width: `${(slaMet / slaTotal) * 100}%`, background: GREEN, transition: "width 0.4s" }} />
-                <div style={{ width: `${(slaWarning / slaTotal) * 100}%`, background: ORANGE, transition: "width 0.4s" }} />
-                <div style={{ width: `${((slaExceeded + slaOverdue) / slaTotal) * 100}%`, background: RED, transition: "width 0.4s" }} />
+            {pTotal > 0 && (
+              <div style={{ height: 7, borderRadius: 99, background: BORDER, overflow: "hidden", display: "flex", marginBottom: 10 }}>
+                <div style={{ width: `${(pOntime / pTotal) * 100}%`, background: GREEN }} />
+                <div style={{ width: `${(pSlight / pTotal) * 100}%`, background: ORANGE }} />
+                <div style={{ width: `${(pLate / pTotal) * 100}%`, background: RED }} />
               </div>
             )}
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
               {[
-                { label: "ตรงเวลา",       count: slaMet,               color: GREEN  },
-                { label: "ล่าช้าเล็กน้อย", count: slaWarning,           color: ORANGE },
-                { label: "เกิน SLA",       count: slaExceeded + slaOverdue, color: RED },
-                { label: "กำลังดำเนิน",   count: slaPending,            color: BLUE   },
+                { label: "ถึงตรงเวลา",  count: pOntime,  color: GREEN  },
+                { label: "สายเล็กน้อย", count: pSlight,  color: ORANGE },
+                { label: "สายมาก",       count: pLate,    color: RED    },
+                { label: "รอ",           count: pPending, color: BLUE   },
               ].map(({ label, count, color }) => (
                 <div key={label} style={{ textAlign: "center" }}>
-                  <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color }}>{count}</p>
+                  <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color }}>{count}</p>
                   <p style={{ margin: 0, fontSize: 10, color: TEXT3 }}>{label}</p>
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* ── Rider SLA card ── */}
+          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "16px 18px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <Target size={15} color={PURPLE} />
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: TEXT }}>Rider SLA · เวลาทำงาน (เป้า ≤ 30 นาที)</p>
+              {eRate !== null && (
+                <span style={{ marginLeft: "auto", fontSize: 22, fontWeight: 800, color: eRate >= 80 ? GREEN : eRate >= 60 ? ORANGE : RED }}>{eRate}%</span>
+              )}
+            </div>
+            {eTotal > 0 && (
+              <div style={{ height: 7, borderRadius: 99, background: BORDER, overflow: "hidden", display: "flex", marginBottom: 10 }}>
+                <div style={{ width: `${(eFast / eTotal) * 100}%`, background: GREEN }} />
+                <div style={{ width: `${(eSlight / eTotal) * 100}%`, background: ORANGE }} />
+                <div style={{ width: `${(eSlow / eTotal) * 100}%`, background: RED }} />
+              </div>
+            )}
+            {eTotal === 0 ? (
+              <p style={{ margin: 0, fontSize: 12, color: TEXT3 }}>ยังไม่มีข้อมูลเวลามาถึง (ต้องมีสถานะ "กำลังตรวจเครื่อง")</p>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+                {[
+                  { label: "≤ 30 นาที",    count: eFast,    color: GREEN  },
+                  { label: "30–60 นาที",   count: eSlight,  color: ORANGE },
+                  { label: "> 60 นาที",    count: eSlow,    color: RED    },
+                  { label: "กำลังทำ",      count: ePending, color: BLUE   },
+                ].map(({ label, count, color }) => (
+                  <div key={label} style={{ textAlign: "center" }}>
+                    <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color }}>{count}</p>
+                    <p style={{ margin: 0, fontSize: 10, color: TEXT3 }}>{label}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Per-job SLA list */}
@@ -369,13 +444,14 @@ export default function RiderJobsPage() {
                   รายการ <span style={{ fontWeight: 400, color: TEXT2 }}>({slaRows.length} งาน)</span>
                 </p>
               </div>
-              {slaRows.map(({ job, sla }, i) => {
-                const { label, color, bg } = slaLabel(sla);
-                const delta = deltaTxt(sla);
+              {slaRows.map(({ job, punct, eff }, i) => {
+                const pl = punctLabel(punct);
+                const el = effLabel(eff);
                 const apptTimeStr = job.appointment.time ? `${job.appointment.time} น.` : "";
-                const completedTimeStr = (sla.status === "met" || sla.status === "warning" || sla.status === "exceeded")
-                  ? fmtTime(new Date(sla.completedMs).toISOString())
-                  : null;
+                const arrivedTimeStr = ("arrivedMs" in punct) ? fmtTime(new Date(punct.arrivedMs).toISOString()) : null;
+                const completedTimeStr = ("completedMs" in eff) ? fmtTime(new Date(eff.completedMs).toISOString()) : null;
+                const borderColor = pl.color === GREEN && (eff.status === "fast" || eff.status === "no_arrival" || eff.status === "pending") ? GREEN
+                  : pl.color === RED || el.color === RED ? RED : ORANGE;
                 return (
                   <div
                     key={job.id}
@@ -385,15 +461,13 @@ export default function RiderJobsPage() {
                       borderBottom: i < slaRows.length - 1 ? `1px solid ${BORDER}` : "none",
                       cursor: "pointer",
                       display: "flex", alignItems: "flex-start", gap: 12,
-                      borderLeft: `3px solid ${color}`,
+                      borderLeft: `3px solid ${borderColor}`,
                     }}
                   >
-                    {/* Left: color bar already from borderLeft */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      {/* Row 1: order + badge */}
+                      {/* Row 1: order + month date */}
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: TEXT2 }}>{job.orderNumber}</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: bg, color }}>{label}</span>
                         {mode === "month" && job.appointment.date && (
                           <span style={{ fontSize: 11, color: TEXT3 }}>
                             {new Date(job.appointment.date + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short" })}
@@ -401,24 +475,39 @@ export default function RiderJobsPage() {
                         )}
                       </div>
                       {/* Row 2: device + customer */}
-                      <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 700, color: TEXT }}>
+                      <p style={{ margin: "0 0 6px", fontSize: 14, fontWeight: 700, color: TEXT }}>
                         {job.device.model}{job.device.storage ? ` · ${job.device.storage}` : ""}
                       </p>
-                      <p style={{ margin: 0, fontSize: 12, color: TEXT2 }}>
+                      <p style={{ margin: "0 0 8px", fontSize: 12, color: TEXT2 }}>
                         {job.customer.name}
                         {job.riderName && <span style={{ color: TEXT3 }}> · {job.riderName}</span>}
                       </p>
-                      {/* Row 3: time info */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6, flexWrap: "wrap" }}>
-                        <span style={{ fontSize: 11, color: TEXT3 }}>🕐 นัด {apptTimeStr}</span>
-                        {completedTimeStr && (
-                          <span style={{ fontSize: 11, color: TEXT3 }}>✅ เสร็จ {completedTimeStr}</span>
+                      {/* Row 3: Planner SLA */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 10, color: TEXT3, minWidth: 60 }}>📍 Planner</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: pl.bg, color: pl.color }}>{pl.label}</span>
+                        <span style={{ fontSize: 11, color: TEXT3 }}>นัด {apptTimeStr}</span>
+                        {arrivedTimeStr && <span style={{ fontSize: 11, color: TEXT3 }}>→ ถึง {arrivedTimeStr}</span>}
+                        {"deltaMin" in punct && (
+                          <span style={{ fontSize: 11, fontWeight: 600, color: pl.color }}>
+                            {punct.deltaMin <= 0 ? `ก่อน ${Math.abs(punct.deltaMin)} นาที` : minTxt(punct.deltaMin, true)}
+                          </span>
                         )}
-                        {delta && (
-                          <span style={{ fontSize: 11, fontWeight: 700, color }}>({delta})</span>
-                        )}
-                        {sla.status === "overdue" && (
-                          <span style={{ fontSize: 11, fontWeight: 700, color: RED }}>⚠ เกินนัดและยังไม่เสร็จ</span>
+                      </div>
+                      {/* Row 4: Rider SLA */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 10, color: TEXT3, minWidth: 60 }}>⚡ Rider</span>
+                        {eff.status === "no_arrival" ? (
+                          <span style={{ fontSize: 11, color: TEXT3 }}>ยังไม่มีข้อมูลเวลามาถึง</span>
+                        ) : (
+                          <>
+                            <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: el.bg, color: el.color }}>{el.label}</span>
+                            {arrivedTimeStr && <span style={{ fontSize: 11, color: TEXT3 }}>ถึง {arrivedTimeStr}</span>}
+                            {completedTimeStr && <span style={{ fontSize: 11, color: TEXT3 }}>→ เสร็จ {completedTimeStr}</span>}
+                            {"deltaMin" in eff && (
+                              <span style={{ fontSize: 11, fontWeight: 600, color: el.color }}>{eff.deltaMin} นาที</span>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
