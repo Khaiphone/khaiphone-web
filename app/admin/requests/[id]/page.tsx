@@ -136,8 +136,6 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
 
   // Inspection
   const [inspSaving, setInspSaving] = useState(false);
-  const [showColorError, setShowColorError] = useState(false);
-  const [currentColorDraft, setCurrentColorDraft] = useState("");
   const inspectionRef = useRef<HTMLDivElement>(null);
   const prevInspectedAtRef = useRef<string | null>(null);
 
@@ -1006,6 +1004,322 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </Card>
 
+        {/* I. Inspection */}
+        {(["confirmed", "pickup_scheduled", "inspecting", "en_route", "price_negotiation", "contracting", "awaiting_transfer", "completed", "rejected"] as RequestStatus[]).includes(request.status) && (
+          <Card ref={inspectionRef}>
+            <div style={{ padding: "16px" }}>
+              <div style={{ marginBottom: 12 }}>
+                <SectionLabel>ผลการตรวจสภาพ</SectionLabel>
+              </div>
+
+              {/* Negotiation response panel */}
+              {request.status === "price_negotiation" && !request.inspection?.negotiationResponse && (
+                <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
+                  <p style={{ color: "#92400E", fontSize: 13, fontWeight: 700, margin: "0 0 4px" }}>
+                    ⏳ รอลูกค้ายืนยัน — ราคาใหม่รวม ฿{((request.inspection?.actualPrice ?? 0) + (request.inspection?.extraInspections ?? []).reduce((s, e) => s + e.actualPrice, 0)).toLocaleString("th-TH")}
+                  </p>
+                  {request.inspection?.priceReason && (
+                    <p style={{ color: "#92400E", fontSize: 12, margin: "0 0 10px" }}>{request.inspection.priceReason}</p>
+                  )}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      onClick={() => handleNegotiationResponse(true)}
+                      disabled={saving === "negotiation"}
+                      style={{ flex: 1, background: "#065F46", border: "none", borderRadius: 10, padding: "10px", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit", opacity: saving === "negotiation" ? 0.6 : 1 }}
+                    >
+                      ✅ ยืนยันแทนลูกค้า
+                    </button>
+                    <button
+                      onClick={() => handleNegotiationResponse(false)}
+                      disabled={saving === "negotiation"}
+                      style={{ flex: 1, background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: "10px", color: "#DC2626", fontSize: 13, fontWeight: 600, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit", opacity: saving === "negotiation" ? 0.6 : 1 }}
+                    >
+                      ❌ ลูกค้าปฏิเสธ
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {request.inspection?.negotiationResponse && (
+                <div style={{ background: request.inspection.negotiationResponse === "accepted" ? "#D1FAE5" : "#FEE2E2", border: `1px solid ${request.inspection.negotiationResponse === "accepted" ? "#6EE7B7" : "#FECACA"}`, borderRadius: 12, padding: "10px 14px", marginBottom: 16 }}>
+                  <p style={{ color: request.inspection.negotiationResponse === "accepted" ? "#065F46" : "#991B1B", fontSize: 13, fontWeight: 600, margin: 0 }}>
+                    {request.inspection.negotiationResponse === "accepted" ? "✅ ยืนยันราคาใหม่แล้ว" : "❌ ปฏิเสธราคาใหม่"}
+                    {" "}(โดย{request.inspection.negotiationRespondedBy === "staff" ? "เจ้าหน้าที่" : "ลูกค้า"})
+                  </p>
+                </div>
+              )}
+
+              {request.riderId ? (
+                request.inspection?.inspectedAt ? (
+                  <div style={{ marginTop: 4 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#F0F9FF", border: "1px solid #BAE6FD", borderRadius: 8, padding: "7px 10px", marginBottom: 14 }}>
+                      <span style={{ fontSize: 13 }}>📋</span>
+                      <p style={{ margin: 0, fontSize: 12, color: "#0369A1", fontWeight: 600 }}>
+                        ผลตรวจสภาพจากเจ้าหน้าที่หน้างาน
+                        {request.riderName ? ` · ${request.riderName}` : ""}
+                        {request.inspection.inspectedAt ? ` · ${fmtDateTime(request.inspection.inspectedAt)} น.` : ""}
+                      </p>
+                    </div>
+                    {(request.inspection.criteria ?? []).length > 0 && (
+                      <div style={{ marginBottom: 16 }}>
+                        <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>สภาพที่ตรวจพบ</p>
+                        <div style={{ border: `1px solid ${BORDER}`, borderRadius: 8, overflow: "hidden" }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 28px", background: "#F8F8FA", borderBottom: `1px solid ${BORDER}`, padding: "5px 10px", gap: 4 }}>
+                            {["รายการ", "ที่แจ้ง", "จริง", ""].map(h => (
+                              <span key={h} style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: TEXT3 }}>{h}</span>
+                            ))}
+                          </div>
+                          {request.inspection.criteria.map((c, i) => (
+                            <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 28px", padding: "7px 10px", gap: 4, borderBottom: i < (request.inspection?.criteria.length ?? 0) - 1 ? `1px solid ${BORDER}` : "none", background: c.pass ? "#fff" : "#FFF8F8" }}>
+                              <span style={{ fontSize: 11, color: TEXT2, fontWeight: 500 }}>{c.label}</span>
+                              <span style={{ fontSize: 11, color: TEXT3 }}>{c.stated}</span>
+                              <span style={{ fontSize: 11, color: TEXT, fontWeight: c.pass ? 400 : 600 }}>{c.actual}</span>
+                              <span style={{ fontSize: 13, color: c.pass ? "#22c55e" : "#ef4444", fontWeight: 700 }}>{c.pass ? "✓" : "✗"}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {(request.inspection.imei || request.inspection.serial || request.inspection.batteryHealth || request.inspection.batteryCycles || request.inspection.warrantyExpiry || request.device.color) && (
+                      <div style={{ marginBottom: 16, background: "#F8F8FA", borderRadius: 8, padding: "10px 12px" }}>
+                        <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>รายละเอียดเครื่อง</p>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", rowGap: 5, columnGap: 12 }}>
+                          {([
+                            request.device.color           ? { label: "สี",         value: request.device.color,                                mono: false } : null,
+                            request.inspection.imei         ? { label: "IMEI",       value: request.inspection.imei,                             mono: true  } : null,
+                            request.inspection.serial       ? { label: "Serial",     value: request.inspection.serial,                           mono: true  } : null,
+                            request.inspection.batteryHealth ? { label: "แบตเตอรี่", value: `${request.inspection.batteryHealth}%`,              mono: false } : null,
+                            request.inspection.batteryCycles ? { label: "รอบชาร์จ",  value: `${request.inspection.batteryCycles} รอบ`,           mono: false } : null,
+                            request.inspection.warrantyExpiry ? { label: "ประกัน",   value: fmtDate(request.inspection.warrantyExpiry),          mono: false } : null,
+                          ] as Array<{ label: string; value: string; mono: boolean } | null>).filter(Boolean).map(row => (
+                            <div key={row!.label}>
+                              <span style={{ fontSize: 10, color: TEXT3, display: "block" }}>{row!.label}</span>
+                              <span style={{ fontSize: 12, color: TEXT, fontWeight: 600, fontFamily: row!.mono ? "monospace" : "inherit", letterSpacing: row!.mono ? "0.03em" : undefined }}>{row!.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {((request.inspection as { conditionGrade?: string; conditionLabel?: string }).conditionGrade ||
+                      (request.inspection as { conditionGrade?: string; conditionLabel?: string }).conditionLabel) && (() => {
+                      const grade = (request.inspection as { conditionGrade?: string }).conditionGrade;
+                      const label = (request.inspection as { conditionLabel?: string }).conditionLabel;
+                      const gradeColor: Record<string, string> = { A: "#22c55e", "A-": "#84cc16", "B+": "#eab308", B: "#f97316", "B-": "#fb923c", C: "#ef4444" };
+                      const color = grade ? (gradeColor[grade] ?? "#888") : "#888";
+                      return (
+                        <div style={{ marginBottom: 16, borderRadius: 10, border: `1.5px solid ${color}40`, background: `${color}0d`, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                          {grade && (
+                            <div style={{ minWidth: 44, height: 44, borderRadius: 10, background: `${color}22`, border: `2px solid ${color}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <span style={{ fontSize: 16, fontWeight: 800, color, fontFamily: "monospace" }}>{grade}</span>
+                            </div>
+                          )}
+                          <div>
+                            <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>ผลการประเมินจากไรเดอร์</p>
+                            {label && <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: TEXT }}>{label}</p>}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    {request.inspection.sickw_report && (() => {
+                      const raw = request.inspection!.sickw_report!;
+                      const map: Record<string, string> = {};
+                      for (const line of raw.split("\n")) {
+                        const idx = line.indexOf(": ");
+                        if (idx > 0) map[line.slice(0, idx).trim()] = line.slice(idx + 2).trim();
+                      }
+                      const icloudLock   = (map["iCloud Lock"]   ?? "").toLowerCase();
+                      const icloudStatus = (map["iCloud Status"] ?? "").toLowerCase();
+                      const mdm          = (map["MDM Lock"]       ?? "").toLowerCase();
+                      const issues: string[] = [];
+                      if (icloudLock === "on")                        issues.push("iCloud Lock เปิดอยู่ — เครื่องล็อคกับบัญชี Apple");
+                      if (icloudStatus === "on")                      issues.push("ยังไม่ Sign Out iCloud — ต้องปลดก่อนรับซื้อ");
+                      if (icloudLock.includes("lost") || icloudStatus.includes("lost")) issues.push("Find My / Lost Mode");
+                      if (mdm === "on")                               issues.push("MDM Lock เปิดอยู่ — เครื่องล็อคโดยองค์กร");
+                      const passed = issues.length === 0;
+                      return (
+                        <div style={{ marginBottom: 16 }}>
+                          <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>ผลตรวจสอบ Apple</p>
+                          <div style={{ borderRadius: 10, border: `1px solid ${passed ? "#86efac" : "#fca5a5"}`, background: passed ? "#F0FDF4" : "#FFF5F5", padding: "10px 12px", marginBottom: 6 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: passed ? 0 : 6 }}>
+                              <span style={{ fontSize: 15 }}>{passed ? "✅" : "🚫"}</span>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: passed ? "#166534" : "#991b1b" }}>
+                                {passed ? "ผ่านการตรวจสอบ" : `ไม่ผ่าน — ${issues.join(", ")}`}
+                              </span>
+                            </div>
+                            {[
+                              ["รุ่น",        map["Device Configuration"] || map["Model Name"]],
+                              ["iCloud",      map["iCloud Lock"] ?? map["iCloud Status"]],
+                              ["MDM Lock",    map["MDM Lock"]],
+                              ["Carrier Lock",map["Unlock Status"] ?? map["Sim-Lock"]],
+                              ["ประกัน",      map["Limited Warranty"]],
+                              ["หมดประกัน",   map["Coverage End Date"] ?? map["Coverage End"]],
+                            ].filter(([, v]) => v).map(([label, value]) => (
+                              <div key={label as string} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginTop: 4 }}>
+                                <span style={{ color: "#6B7280" }}>{label}</span>
+                                <span style={{ fontWeight: 500 }}>{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <details style={{ fontSize: 12 }}>
+                            <summary style={{ cursor: "pointer", color: "#0369A1", userSelect: "none" }}>ดูรายงานเต็ม</summary>
+                            <pre style={{ margin: "6px 0 0", padding: "10px 12px", borderRadius: 8, background: "#F8F8FA", fontSize: 11, lineHeight: 1.6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{raw}</pre>
+                          </details>
+                        </div>
+                      );
+                    })()}
+                    {(request.inspection.functionalTests ?? []).length > 0 && (
+                      <div style={{ marginBottom: 16 }}>
+                        <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>ทดสอบฟังก์ชัน</p>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                          {request.inspection.functionalTests!.map((t, i) => (
+                            <div key={i} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 6, fontSize: 11, fontWeight: 500, background: t.pass ? "#F0FDF4" : "#FFF5F5", border: `1px solid ${t.pass ? "#86efac" : "#fca5a5"}`, color: t.pass ? "#166534" : "#991b1b" }}>
+                              <span style={{ fontSize: 10, lineHeight: 1 }}>{t.pass ? "✓" : "✗"}</span>
+                              {t.label}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div style={{ marginBottom: 16 }}>
+                      <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>ปัญหาที่พบ</p>
+                      {(request.inspection.issues ?? []).length === 0
+                        ? <p style={{ margin: 0, fontSize: 12, color: TEXT3 }}>ไม่พบปัญหา</p>
+                        : <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                            {request.inspection.issues.map((iss, i) => (
+                              <span key={i} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, background: "#FFF5F5", border: "1px solid #fca5a5", color: "#991b1b" }}>{iss}</span>
+                            ))}
+                          </div>
+                      }
+                    </div>
+                    {(request.inspection.photos ?? []).length > 0 && (
+                      <div style={{ marginBottom: 16 }}>
+                        <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>รูปภาพจากไรเดอร์ ({request.inspection.photos.length})</p>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 4 }}>
+                          {request.inspection.photos.map((url, i) => (
+                            <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={url} alt={`รูป ${i + 1}`} style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: 6, display: "block", border: `1px solid ${BORDER}` }} />
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div style={{ background: "#F8F8FA", borderRadius: 8, padding: "10px 12px", marginBottom: 16 }}>
+                      <p style={{ margin: "0 0 6px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>ราคาที่ไรเดอร์ประเมิน</p>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {request.inspection.actualPrice !== request.inspection.originalPrice ? (
+                          <>
+                            <span style={{ fontSize: 12, color: TEXT3, textDecoration: "line-through" }}>฿{request.inspection.originalPrice.toLocaleString("th-TH")}</span>
+                            <span style={{ fontSize: 11, color: TEXT3 }}>→</span>
+                            <span style={{ fontSize: 16, fontWeight: 700, color: request.inspection.actualPrice < request.inspection.originalPrice ? "#991b1b" : "#166534" }}>฿{request.inspection.actualPrice.toLocaleString("th-TH")}</span>
+                          </>
+                        ) : (
+                          <span style={{ fontSize: 16, fontWeight: 700, color: TEXT }}>฿{request.inspection.actualPrice.toLocaleString("th-TH")}</span>
+                        )}
+                      </div>
+                      {request.inspection.priceReason && (
+                        <p style={{ margin: "5px 0 0", fontSize: 12, color: TEXT2, fontStyle: "italic" }}>"{request.inspection.priceReason}"</p>
+                      )}
+                    </div>
+                    {request.status === "inspecting" && (() => {
+                      const insp = request.inspection as { adminApprovedAt?: string; adminPriceGuidance?: { priceMin?: number | null; priceMax?: number | null; note?: string | null } };
+                      const approved = !!insp.adminApprovedAt;
+                      if (approved) {
+                        const g = insp.adminPriceGuidance;
+                        return (
+                          <div style={{ borderRadius: 10, background: "#F0FDF4", border: "1px solid #86efac", padding: "12px 14px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: g ? 10 : 0 }}>
+                              <span style={{ fontSize: 15 }}>✅</span>
+                              <div>
+                                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#166534" }}>อนุมัติผลตรวจแล้ว — ไรเดอร์เสนอราคาได้แล้ว</p>
+                              </div>
+                            </div>
+                            {g && (g.priceMin || g.priceMax || g.note) && (
+                              <div style={{ borderTop: "1px solid #86efac", paddingTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                                {(g.priceMin || g.priceMax) && (
+                                  <p style={{ margin: 0, fontSize: 12, color: "#166534" }}>
+                                    📊 ช่วงราคาที่แนะนำ: <strong>{g.priceMin ? `฿${g.priceMin.toLocaleString("th-TH")}` : "—"} – {g.priceMax ? `฿${g.priceMax.toLocaleString("th-TH")}` : "—"}</strong>
+                                  </p>
+                                )}
+                                {g.note && <p style={{ margin: 0, fontSize: 12, color: "#166534" }}>📝 {g.note}</p>}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+                      return (
+                        <div style={{ borderRadius: 10, border: "1.5px solid #FCD34D", background: "#FFFBEB", padding: "14px" }}>
+                          <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 600, color: "#92400E" }}>
+                            ⏳ รอแอดมินอนุมัติ — ไรเดอร์จะยังเสนอราคาไม่ได้
+                          </p>
+                          <p style={{ margin: "0 0 6px", fontSize: 11, fontWeight: 700, color: "#92400E", textTransform: "uppercase", letterSpacing: "0.05em" }}>ช่วงราคาที่แนะนำให้ไรเดอร์เสนอ (ไม่บังคับ)</p>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                            <div>
+                              <label style={{ display: "block", fontSize: 11, color: "#92400E", marginBottom: 3 }}>ต่ำสุด (฿)</label>
+                              <input
+                                type="number" placeholder="เช่น 35000" value={guidanceMin}
+                                onChange={e => setGuidanceMin(e.target.value)}
+                                style={{ width: "100%", padding: "7px 10px", borderRadius: 7, border: "1px solid #FCD34D", background: "#fff", fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: "block", fontSize: 11, color: "#92400E", marginBottom: 3 }}>สูงสุด (฿)</label>
+                              <input
+                                type="number" placeholder="เช่น 38000" value={guidanceMax}
+                                onChange={e => setGuidanceMax(e.target.value)}
+                                style={{ width: "100%", padding: "7px 10px", borderRadius: 7, border: "1px solid #FCD34D", background: "#fff", fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                              />
+                            </div>
+                          </div>
+                          <div style={{ marginBottom: 12 }}>
+                            <label style={{ display: "block", fontSize: 11, color: "#92400E", marginBottom: 3 }}>หมายเหตุถึงไรเดอร์ (ไม่บังคับ)</label>
+                            <input
+                              placeholder="เช่น แบตต่ำ ควรลดราคา, สภาพดีมาก ต่อราคาได้เต็มที่" value={guidanceNote}
+                              onChange={e => setGuidanceNote(e.target.value)}
+                              style={{ width: "100%", padding: "7px 10px", borderRadius: 7, border: "1px solid #FCD34D", background: "#fff", fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                            />
+                          </div>
+                          <button
+                            disabled={approvingInspection}
+                            onClick={async () => {
+                              setApprovingInspection(true);
+                              const res = await adminApproveInspection(id, {
+                                priceMin:  guidanceMin  ? parseInt(guidanceMin)  : undefined,
+                                priceMax:  guidanceMax  ? parseInt(guidanceMax)  : undefined,
+                                note:      guidanceNote || undefined,
+                              });
+                              setApprovingInspection(false);
+                              if (!res.success) alert(res.error ?? "เกิดข้อผิดพลาด");
+                            }}
+                            style={{ width: "100%", padding: "11px 0", borderRadius: 8, border: "none", background: approvingInspection ? "#D1D5DB" : "#16a34a", color: "#fff", fontSize: 14, fontWeight: 700, cursor: approvingInspection ? "wait" : "pointer", fontFamily: "inherit" }}
+                          >
+                            {approvingInspection ? "กำลังอนุมัติ..." : "✓ อนุมัติผลตรวจ — ให้ไรเดอร์เสนอราคาได้"}
+                          </button>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  <div style={{ textAlign: "center", padding: "28px 0 16px", color: TEXT3 }}>
+                    <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600, color: TEXT2 }}>รอไรเดอร์ส่งผลตรวจสภาพ</p>
+                    <p style={{ margin: 0, fontSize: 12 }}>ผลจะปรากฏที่นี่เมื่อไรเดอร์บันทึกข้อมูล</p>
+                  </div>
+                )
+              ) : (
+                <InspectionForm
+                  requestId={id}
+                  selections={request.device.selections ?? {}}
+                  estimatedPrice={request.device.estimatedPrice}
+                  deviceColor={request.device.color ?? ""}
+                  existing={request.inspection}
+                  onSave={handleInspectionSave}
+                  saving={inspSaving}
+                />
+              )}
+            </div>
+          </Card>
+        )}
+
         {/* D. Appointment */}
         <Card>
           <div style={{ padding: "16px" }}>
@@ -1196,357 +1510,8 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </Card>
 
-        {/* I. Inspection */}
-        {(["confirmed", "pickup_scheduled", "inspecting", "en_route", "price_negotiation", "contracting", "awaiting_transfer", "completed", "rejected"] as RequestStatus[]).includes(request.status) && (
-          <Card ref={inspectionRef}>
-            <div style={{ padding: "16px" }}>
-              {/* Header */}
-              <div style={{ marginBottom: 12 }}>
-                <SectionLabel>ผลการตรวจสภาพ</SectionLabel>
-              </div>
 
-              {/* Negotiation response panel */}
-              {request.status === "price_negotiation" && !request.inspection?.negotiationResponse && (
-                <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
-                  <p style={{ color: "#92400E", fontSize: 13, fontWeight: 700, margin: "0 0 4px" }}>
-                    ⏳ รอลูกค้ายืนยัน — ราคาใหม่รวม ฿{((request.inspection?.actualPrice ?? 0) + (request.inspection?.extraInspections ?? []).reduce((s, e) => s + e.actualPrice, 0)).toLocaleString("th-TH")}
-                  </p>
-                  {request.inspection?.priceReason && (
-                    <p style={{ color: "#92400E", fontSize: 12, margin: "0 0 10px" }}>{request.inspection.priceReason}</p>
-                  )}
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button
-                      onClick={() => handleNegotiationResponse(true)}
-                      disabled={saving === "negotiation"}
-                      style={{ flex: 1, background: "#065F46", border: "none", borderRadius: 10, padding: "10px", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit", opacity: saving === "negotiation" ? 0.6 : 1 }}
-                    >
-                      ✅ ยืนยันแทนลูกค้า
-                    </button>
-                    <button
-                      onClick={() => handleNegotiationResponse(false)}
-                      disabled={saving === "negotiation"}
-                      style={{ flex: 1, background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: "10px", color: "#DC2626", fontSize: 13, fontWeight: 600, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit", opacity: saving === "negotiation" ? 0.6 : 1 }}
-                    >
-                      ❌ ลูกค้าปฏิเสธ
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {request.inspection?.negotiationResponse && (
-                <div style={{ background: request.inspection.negotiationResponse === "accepted" ? "#D1FAE5" : "#FEE2E2", border: `1px solid ${request.inspection.negotiationResponse === "accepted" ? "#6EE7B7" : "#FECACA"}`, borderRadius: 12, padding: "10px 14px", marginBottom: 16 }}>
-                  <p style={{ color: request.inspection.negotiationResponse === "accepted" ? "#065F46" : "#991B1B", fontSize: 13, fontWeight: 600, margin: 0 }}>
-                    {request.inspection.negotiationResponse === "accepted" ? "✅ ยืนยันราคาใหม่แล้ว" : "❌ ปฏิเสธราคาใหม่"}
-                    {" "}(โดย{request.inspection.negotiationRespondedBy === "staff" ? "เจ้าหน้าที่" : "ลูกค้า"})
-                  </p>
-                </div>
-              )}
-
-              {request.riderId ? (
-                /* Rider is assigned — show read-only inspection report */
-                request.inspection?.inspectedAt ? (
-                  <div style={{ marginTop: 4 }}>
-
-                    {/* Source label */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#F0F9FF", border: "1px solid #BAE6FD", borderRadius: 8, padding: "7px 10px", marginBottom: 14 }}>
-                      <span style={{ fontSize: 13 }}>📋</span>
-                      <p style={{ margin: 0, fontSize: 12, color: "#0369A1", fontWeight: 600 }}>
-                        ผลตรวจสภาพจากเจ้าหน้าที่หน้างาน
-                        {request.riderName ? ` · ${request.riderName}` : ""}
-                        {request.inspection.inspectedAt ? ` · ${fmtDateTime(request.inspection.inspectedAt)} น.` : ""}
-                      </p>
-                    </div>
-
-                    {/* Criteria: stated vs actual */}
-                    {(request.inspection.criteria ?? []).length > 0 && (
-                      <div style={{ marginBottom: 16 }}>
-                        <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>สภาพที่ตรวจพบ</p>
-                        <div style={{ border: `1px solid ${BORDER}`, borderRadius: 8, overflow: "hidden" }}>
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 28px", background: "#F8F8FA", borderBottom: `1px solid ${BORDER}`, padding: "5px 10px", gap: 4 }}>
-                            {["รายการ", "ที่แจ้ง", "จริง", ""].map(h => (
-                              <span key={h} style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: TEXT3 }}>{h}</span>
-                            ))}
-                          </div>
-                          {request.inspection.criteria.map((c, i) => (
-                            <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 28px", padding: "7px 10px", gap: 4, borderBottom: i < (request.inspection?.criteria.length ?? 0) - 1 ? `1px solid ${BORDER}` : "none", background: c.pass ? "#fff" : "#FFF8F8" }}>
-                              <span style={{ fontSize: 11, color: TEXT2, fontWeight: 500 }}>{c.label}</span>
-                              <span style={{ fontSize: 11, color: TEXT3 }}>{c.stated}</span>
-                              <span style={{ fontSize: 11, color: TEXT, fontWeight: c.pass ? 400 : 600 }}>{c.actual}</span>
-                              <span style={{ fontSize: 13, color: c.pass ? "#22c55e" : "#ef4444", fontWeight: 700 }}>{c.pass ? "✓" : "✗"}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Device detail row */}
-                    {(request.inspection.imei || request.inspection.serial || request.inspection.batteryHealth || request.inspection.batteryCycles || request.inspection.warrantyExpiry || request.device.color) && (
-                      <div style={{ marginBottom: 16, background: "#F8F8FA", borderRadius: 8, padding: "10px 12px" }}>
-                        <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>รายละเอียดเครื่อง</p>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", rowGap: 5, columnGap: 12 }}>
-                          {([
-                            request.device.color           ? { label: "สี",         value: request.device.color,                                mono: false } : null,
-                            request.inspection.imei         ? { label: "IMEI",       value: request.inspection.imei,                             mono: true  } : null,
-                            request.inspection.serial       ? { label: "Serial",     value: request.inspection.serial,                           mono: true  } : null,
-                            request.inspection.batteryHealth ? { label: "แบตเตอรี่", value: `${request.inspection.batteryHealth}%`,              mono: false } : null,
-                            request.inspection.batteryCycles ? { label: "รอบชาร์จ",  value: `${request.inspection.batteryCycles} รอบ`,           mono: false } : null,
-                            request.inspection.warrantyExpiry ? { label: "ประกัน",   value: fmtDate(request.inspection.warrantyExpiry),          mono: false } : null,
-                          ] as Array<{ label: string; value: string; mono: boolean } | null>).filter(Boolean).map(row => (
-                            <div key={row!.label}>
-                              <span style={{ fontSize: 10, color: TEXT3, display: "block" }}>{row!.label}</span>
-                              <span style={{ fontSize: 12, color: TEXT, fontWeight: 600, fontFamily: row!.mono ? "monospace" : "inherit", letterSpacing: row!.mono ? "0.03em" : undefined }}>{row!.value}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Rider assessment — grade + condition */}
-                    {((request.inspection as { conditionGrade?: string; conditionLabel?: string }).conditionGrade ||
-                      (request.inspection as { conditionGrade?: string; conditionLabel?: string }).conditionLabel) && (() => {
-                      const grade = (request.inspection as { conditionGrade?: string }).conditionGrade;
-                      const label = (request.inspection as { conditionLabel?: string }).conditionLabel;
-                      const gradeColor: Record<string, string> = { A: "#22c55e", "A-": "#84cc16", "B+": "#eab308", B: "#f97316", "B-": "#fb923c", C: "#ef4444" };
-                      const color = grade ? (gradeColor[grade] ?? "#888") : "#888";
-                      return (
-                        <div style={{ marginBottom: 16, borderRadius: 10, border: `1.5px solid ${color}40`, background: `${color}0d`, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12 }}>
-                          {grade && (
-                            <div style={{ minWidth: 44, height: 44, borderRadius: 10, background: `${color}22`, border: `2px solid ${color}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                              <span style={{ fontSize: 16, fontWeight: 800, color, fontFamily: "monospace" }}>{grade}</span>
-                            </div>
-                          )}
-                          <div>
-                            <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>ผลการประเมินจากไรเดอร์</p>
-                            {label && <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: TEXT }}>{label}</p>}
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* Apple Check (SICKW) */}
-                    {request.inspection.sickw_report && (() => {
-                      const raw = request.inspection!.sickw_report!;
-                      const map: Record<string, string> = {};
-                      for (const line of raw.split("\n")) {
-                        const idx = line.indexOf(": ");
-                        if (idx > 0) map[line.slice(0, idx).trim()] = line.slice(idx + 2).trim();
-                      }
-                      // "iCloud Lock: On" = activation locked (BAD)
-                      // "iCloud Status: On" = user is signed into iCloud (NORMAL — do not flag)
-                      const icloudLock   = (map["iCloud Lock"]   ?? "").toLowerCase();
-                      const icloudStatus = (map["iCloud Status"] ?? "").toLowerCase();
-                      const mdm          = (map["MDM Lock"]       ?? "").toLowerCase();
-                      const issues: string[] = [];
-                      if (icloudLock === "on")                        issues.push("iCloud Lock เปิดอยู่ — เครื่องล็อคกับบัญชี Apple");
-                      if (icloudStatus === "on")                      issues.push("ยังไม่ Sign Out iCloud — ต้องปลดก่อนรับซื้อ");
-                      if (icloudLock.includes("lost") || icloudStatus.includes("lost")) issues.push("Find My / Lost Mode");
-                      if (mdm === "on")                               issues.push("MDM Lock เปิดอยู่ — เครื่องล็อคโดยองค์กร");
-                      const passed = issues.length === 0;
-                      return (
-                        <div style={{ marginBottom: 16 }}>
-                          <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>ผลตรวจสอบ Apple</p>
-                          <div style={{ borderRadius: 10, border: `1px solid ${passed ? "#86efac" : "#fca5a5"}`, background: passed ? "#F0FDF4" : "#FFF5F5", padding: "10px 12px", marginBottom: 6 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: passed ? 0 : 6 }}>
-                              <span style={{ fontSize: 15 }}>{passed ? "✅" : "🚫"}</span>
-                              <span style={{ fontSize: 13, fontWeight: 700, color: passed ? "#166534" : "#991b1b" }}>
-                                {passed ? "ผ่านการตรวจสอบ" : `ไม่ผ่าน — ${issues.join(", ")}`}
-                              </span>
-                            </div>
-                            {[
-                              ["รุ่น",        map["Device Configuration"] || map["Model Name"]],
-                              ["iCloud",      map["iCloud Lock"] ?? map["iCloud Status"]],
-                              ["MDM Lock",    map["MDM Lock"]],
-                              ["Carrier Lock",map["Unlock Status"] ?? map["Sim-Lock"]],
-                              ["ประกัน",      map["Limited Warranty"]],
-                              ["หมดประกัน",   map["Coverage End Date"] ?? map["Coverage End"]],
-                            ].filter(([, v]) => v).map(([label, value]) => (
-                              <div key={label as string} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginTop: 4 }}>
-                                <span style={{ color: "#6B7280" }}>{label}</span>
-                                <span style={{ fontWeight: 500 }}>{value}</span>
-                              </div>
-                            ))}
-                          </div>
-                          <details style={{ fontSize: 12 }}>
-                            <summary style={{ cursor: "pointer", color: "#0369A1", userSelect: "none" }}>ดูรายงานเต็ม</summary>
-                            <pre style={{ margin: "6px 0 0", padding: "10px 12px", borderRadius: 8, background: "#F8F8FA", fontSize: 11, lineHeight: 1.6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{raw}</pre>
-                          </details>
-                        </div>
-                      );
-                    })()}
-
-                    {/* Functional tests */}
-                    {(request.inspection.functionalTests ?? []).length > 0 && (
-                      <div style={{ marginBottom: 16 }}>
-                        <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>ทดสอบฟังก์ชัน</p>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                          {request.inspection.functionalTests!.map((t, i) => (
-                            <div key={i} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 6, fontSize: 11, fontWeight: 500, background: t.pass ? "#F0FDF4" : "#FFF5F5", border: `1px solid ${t.pass ? "#86efac" : "#fca5a5"}`, color: t.pass ? "#166534" : "#991b1b" }}>
-                              <span style={{ fontSize: 10, lineHeight: 1 }}>{t.pass ? "✓" : "✗"}</span>
-                              {t.label}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Issues */}
-                    <div style={{ marginBottom: 16 }}>
-                      <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>ปัญหาที่พบ</p>
-                      {(request.inspection.issues ?? []).length === 0
-                        ? <p style={{ margin: 0, fontSize: 12, color: TEXT3 }}>ไม่พบปัญหา</p>
-                        : <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                            {request.inspection.issues.map((iss, i) => (
-                              <span key={i} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, background: "#FFF5F5", border: "1px solid #fca5a5", color: "#991b1b" }}>{iss}</span>
-                            ))}
-                          </div>
-                      }
-                    </div>
-
-                    {/* Photos from rider */}
-                    {(request.inspection.photos ?? []).length > 0 && (
-                      <div style={{ marginBottom: 16 }}>
-                        <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>รูปภาพจากไรเดอร์ ({request.inspection.photos.length})</p>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 4 }}>
-                          {request.inspection.photos.map((url, i) => (
-                            <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={url} alt={`รูป ${i + 1}`} style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: 6, display: "block", border: `1px solid ${BORDER}` }} />
-                            </a>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Price from rider */}
-                    <div style={{ background: "#F8F8FA", borderRadius: 8, padding: "10px 12px", marginBottom: 16 }}>
-                      <p style={{ margin: "0 0 6px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>ราคาที่ไรเดอร์ประเมิน</p>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        {request.inspection.actualPrice !== request.inspection.originalPrice ? (
-                          <>
-                            <span style={{ fontSize: 12, color: TEXT3, textDecoration: "line-through" }}>฿{request.inspection.originalPrice.toLocaleString("th-TH")}</span>
-                            <span style={{ fontSize: 11, color: TEXT3 }}>→</span>
-                            <span style={{ fontSize: 16, fontWeight: 700, color: request.inspection.actualPrice < request.inspection.originalPrice ? "#991b1b" : "#166534" }}>฿{request.inspection.actualPrice.toLocaleString("th-TH")}</span>
-                          </>
-                        ) : (
-                          <span style={{ fontSize: 16, fontWeight: 700, color: TEXT }}>฿{request.inspection.actualPrice.toLocaleString("th-TH")}</span>
-                        )}
-                      </div>
-                      {request.inspection.priceReason && (
-                        <p style={{ margin: "5px 0 0", fontSize: 12, color: TEXT2, fontStyle: "italic" }}>"{request.inspection.priceReason}"</p>
-                      )}
-                    </div>
-
-                    {/* Admin approval gate */}
-                    {request.status === "inspecting" && (() => {
-                      const insp = request.inspection as { adminApprovedAt?: string; adminPriceGuidance?: { priceMin?: number | null; priceMax?: number | null; note?: string | null } };
-                      const approved = !!insp.adminApprovedAt;
-                      if (approved) {
-                        const g = insp.adminPriceGuidance;
-                        return (
-                          <div style={{ borderRadius: 10, background: "#F0FDF4", border: "1px solid #86efac", padding: "12px 14px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: g ? 10 : 0 }}>
-                              <span style={{ fontSize: 15 }}>✅</span>
-                              <div>
-                                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#166534" }}>อนุมัติผลตรวจแล้ว — ไรเดอร์เสนอราคาได้แล้ว</p>
-                              </div>
-                            </div>
-                            {g && (g.priceMin || g.priceMax || g.note) && (
-                              <div style={{ borderTop: "1px solid #86efac", paddingTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
-                                {(g.priceMin || g.priceMax) && (
-                                  <p style={{ margin: 0, fontSize: 12, color: "#166534" }}>
-                                    📊 ช่วงราคาที่แนะนำ: <strong>{g.priceMin ? `฿${g.priceMin.toLocaleString("th-TH")}` : "—"} – {g.priceMax ? `฿${g.priceMax.toLocaleString("th-TH")}` : "—"}</strong>
-                                  </p>
-                                )}
-                                {g.note && <p style={{ margin: 0, fontSize: 12, color: "#166534" }}>📝 {g.note}</p>}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      }
-                      return (
-                        <div style={{ borderRadius: 10, border: "1.5px solid #FCD34D", background: "#FFFBEB", padding: "14px" }}>
-                          <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 600, color: "#92400E" }}>
-                            ⏳ รอแอดมินอนุมัติ — ไรเดอร์จะยังเสนอราคาไม่ได้
-                          </p>
-                          {/* Price guidance fields */}
-                          <p style={{ margin: "0 0 6px", fontSize: 11, fontWeight: 700, color: "#92400E", textTransform: "uppercase", letterSpacing: "0.05em" }}>ช่วงราคาที่แนะนำให้ไรเดอร์เสนอ (ไม่บังคับ)</p>
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                            <div>
-                              <label style={{ display: "block", fontSize: 11, color: "#92400E", marginBottom: 3 }}>ต่ำสุด (฿)</label>
-                              <input
-                                type="number" placeholder="เช่น 35000" value={guidanceMin}
-                                onChange={e => setGuidanceMin(e.target.value)}
-                                style={{ width: "100%", padding: "7px 10px", borderRadius: 7, border: "1px solid #FCD34D", background: "#fff", fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
-                              />
-                            </div>
-                            <div>
-                              <label style={{ display: "block", fontSize: 11, color: "#92400E", marginBottom: 3 }}>สูงสุด (฿)</label>
-                              <input
-                                type="number" placeholder="เช่น 38000" value={guidanceMax}
-                                onChange={e => setGuidanceMax(e.target.value)}
-                                style={{ width: "100%", padding: "7px 10px", borderRadius: 7, border: "1px solid #FCD34D", background: "#fff", fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
-                              />
-                            </div>
-                          </div>
-                          <div style={{ marginBottom: 12 }}>
-                            <label style={{ display: "block", fontSize: 11, color: "#92400E", marginBottom: 3 }}>หมายเหตุถึงไรเดอร์ (ไม่บังคับ)</label>
-                            <input
-                              placeholder="เช่น แบตต่ำ ควรลดราคา, สภาพดีมาก ต่อราคาได้เต็มที่" value={guidanceNote}
-                              onChange={e => setGuidanceNote(e.target.value)}
-                              style={{ width: "100%", padding: "7px 10px", borderRadius: 7, border: "1px solid #FCD34D", background: "#fff", fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
-                            />
-                          </div>
-                          <button
-                            disabled={approvingInspection}
-                            onClick={async () => {
-                              setApprovingInspection(true);
-                              const res = await adminApproveInspection(id, {
-                                priceMin:  guidanceMin  ? parseInt(guidanceMin)  : undefined,
-                                priceMax:  guidanceMax  ? parseInt(guidanceMax)  : undefined,
-                                note:      guidanceNote || undefined,
-                              });
-                              setApprovingInspection(false);
-                              if (!res.success) alert(res.error ?? "เกิดข้อผิดพลาด");
-                            }}
-                            style={{ width: "100%", padding: "11px 0", borderRadius: 8, border: "none", background: approvingInspection ? "#D1D5DB" : "#16a34a", color: "#fff", fontSize: 14, fontWeight: 700, cursor: approvingInspection ? "wait" : "pointer", fontFamily: "inherit" }}
-                          >
-                            {approvingInspection ? "กำลังอนุมัติ..." : "✓ อนุมัติผลตรวจ — ให้ไรเดอร์เสนอราคาได้"}
-                          </button>
-                        </div>
-                      );
-                    })()}
-
-                  </div>
-                ) : (
-                  /* Rider assigned but inspection not yet submitted */
-                  <div style={{ textAlign: "center", padding: "28px 0 16px", color: TEXT3 }}>
-                    <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600, color: TEXT2 }}>รอไรเดอร์ส่งผลตรวจสภาพ</p>
-                    <p style={{ margin: 0, fontSize: 12 }}>ผลจะปรากฏที่นี่เมื่อไรเดอร์บันทึกข้อมูล</p>
-                  </div>
-                )
-              ) : (
-                /* No rider — branch/manual inspection by admin */
-                <InspectionForm
-                  requestId={id}
-                  model={request.device.model}
-                  selections={request.device.selections ?? {}}
-                  estimatedPrice={request.device.estimatedPrice}
-                  deviceColor={request.device.color ?? ""}
-                  existing={request.inspection}
-                  extraDevices={request.extraDevices}
-                  onSave={handleInspectionSave}
-                  saving={inspSaving}
-                  showColorError={showColorError}
-                  onColorErrorCleared={() => setShowColorError(false)}
-                  onColorChange={c => { setCurrentColorDraft(c); if (c) setShowColorError(false); }}
-                  requireCustomerConfirm={request.source !== "website"}
-                />
-              )}
-            </div>
-          </Card>
-        )}
-
-        {/* J. Contract button — rider job: view only; branch job: generate */}
+                {/* J. Contract button — rider job: view only; branch job: generate */}
         {(["contracting", "awaiting_transfer", "completed"] as RequestStatus[]).includes(request.status) && (
           request.riderId ? (
             request.contractUrl ? (
@@ -1574,19 +1539,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
             )
           ) : (
             <button
-              onClick={async () => {
-                const effectiveColor = request.device.color || currentColorDraft;
-                if (!effectiveColor) {
-                  setShowColorError(true);
-                  inspectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                  return;
-                }
-                if (!request.device.color && currentColorDraft) {
-                  await updateDeviceColor(id, currentColorDraft);
-                  setRequest(prev => prev ? { ...prev, device: { ...prev.device, color: currentColorDraft } } : prev);
-                }
-                router.push(`/admin/requests/${id}/contract`);
-              }}
+              onClick={() => router.push(`/admin/requests/${id}/contract`)}
               style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: GOLD, border: "none", borderRadius: 12, padding: "14px", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit", marginBottom: 10 }}
             >
               ออกสัญญาซื้อขาย + ใบรับเงิน
