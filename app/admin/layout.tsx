@@ -202,7 +202,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
                 <div style={{ height: 1, background: sidebarBorder, margin: "6px 4px" }} />
 
-                <Link href="/admin/help" title={collapsed ? "ช่วยเหลือ" : undefined} style={{ display: "flex", alignItems: "center", gap: collapsed ? 0 : "10px", padding: "10px 12px", borderRadius: "10px", color: sidebarText2, textDecoration: "none", fontSize: "13px", justifyContent: collapsed ? "center" : "flex-start" }}>
+                <Link href="/admin/riders/help" title={collapsed ? "ช่วยเหลือ" : undefined} style={{ display: "flex", alignItems: "center", gap: collapsed ? 0 : "10px", padding: "10px 12px", borderRadius: "10px", color: sidebarText2, textDecoration: "none", fontSize: "13px", justifyContent: collapsed ? "center" : "flex-start" }}>
                   <HelpCircle size={18} strokeWidth={2} />
                   {!collapsed && "ช่วยเหลือ"}
                 </Link>
