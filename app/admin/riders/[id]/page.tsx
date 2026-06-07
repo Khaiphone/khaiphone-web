@@ -15,12 +15,19 @@ import {
   fetchRiderKpiForAdmin, updateRiderTargets, updateRiderRankOverride,
   fetchLeaderboard, fetchRiderLifetimeForAdmin,
 } from "@/app/actions/rider-stats";
+import { fetchRiderVehicleInfo, updateRiderVehicleInfo } from "@/app/actions/admin-users";
+import type { RiderVehicleInfo } from "@/app/actions/admin-users";
 import { fetchRiderHistory, fetchRiderStats, fetchRiderEarnings } from "@/app/actions/rider";
 import { fetchMyProfile } from "@/app/actions/admin-users";
 import type { MonthlyStats, RiderTargets, RiderTier, LeaderboardEntry } from "@/app/actions/rider-stats";
 import type { AdminRequest } from "@/lib/types/admin";
 import type { Badge } from "@/lib/rider-kpi";
 import { computeTier } from "@/lib/rider-kpi";
+
+const emptyVehicle: RiderVehicleInfo = {
+  vehicle_type: null, vehicle_brand: null, vehicle_model: null, license_plate: null,
+  driver_license_number: null, driver_license_expiry: null, vehicle_tax_expiry: null,
+};
 
 // ── Admin palette ──────────────────────────────────────────────────────────────
 const DARK   = "#1a1a2e";
@@ -44,7 +51,7 @@ const R_GOLD   = "#c9a84c";
 const R_ORANGE = "#f97316";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
-type TopTab = "overview" | "stats" | "history";
+type TopTab = "overview" | "stats" | "history" | "vehicle";
 
 type Shift = {
   id: string; clocked_in_at: string; clocked_out_at: string | null;
@@ -132,6 +139,12 @@ export default function RiderDetailPage() {
   const [realDistKm,    setRealDistKm]    = useState<number | null>(null);
   const [ovLoading, setOvLoading]   = useState(true);
   const [loading,   setLoading]     = useState(true);
+
+  // ── Vehicle tab ──
+  const [vehicle,      setVehicle]      = useState<RiderVehicleInfo | null>(null);
+  const [vehicleLoaded, setVehicleLoaded] = useState(false);
+  const [vehicleSaving, setVehicleSaving] = useState(false);
+  const [vehicleSaved,  setVehicleSaved]  = useState(false);
   const [closingShift, setClosingShift] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
 
@@ -278,6 +291,13 @@ export default function RiderDetailPage() {
     if (topTab === "history") loadHistory();
   }, [topTab, loadHistory]);
 
+  useEffect(() => {
+    if (topTab === "vehicle" && !vehicleLoaded) {
+      fetchRiderVehicleInfo(id).then(v => { setVehicle(v); setVehicleLoaded(true); });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topTab]);
+
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -382,8 +402,8 @@ export default function RiderDetailPage() {
 
       {/* ── Top tabs ── */}
       <div style={{ background: "#fff", borderBottom: `1px solid ${BORDER}`, display: "flex" }}>
-        {(["overview", "stats", "history"] as TopTab[]).map(t => {
-          const label = t === "overview" ? "ภาพรวม" : t === "stats" ? "ผลงาน" : "งานของฉัน";
+        {(["overview", "stats", "history", "vehicle"] as TopTab[]).map(t => {
+          const label = t === "overview" ? "ภาพรวม" : t === "stats" ? "ผลงาน" : t === "history" ? "งานของฉัน" : "ข้อมูลรถ";
           const active = topTab === t;
           return (
             <button
@@ -798,6 +818,88 @@ export default function RiderDetailPage() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════════ */}
+      {/* ── VEHICLE TAB (ข้อมูลรถ) ── */}
+      {/* ══════════════════════════════════════════════════════════════════════════ */}
+      {topTab === "vehicle" && (
+        <div style={{ padding: 20, maxWidth: 560, margin: "0 auto" }}>
+          {!vehicleLoaded ? (
+            <p style={{ textAlign: "center", color: TEXT2, padding: 40 }}>กำลังโหลด...</p>
+          ) : (
+            <div style={{ background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 16, padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: TEXT }}>ข้อมูลยานพาหนะ</p>
+
+              {/* Vehicle type */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: TEXT2, display: "block", marginBottom: 6 }}>ประเภทรถ</label>
+                <select
+                  value={vehicle?.vehicle_type ?? ""}
+                  onChange={e => setVehicle(v => ({ ...(v ?? emptyVehicle), vehicle_type: e.target.value || null }))}
+                  style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1px solid ${BORDER}`, fontSize: 14, color: TEXT, background: "#fafafa" }}
+                >
+                  <option value="">— เลือกประเภท —</option>
+                  <option value="motorcycle">มอเตอร์ไซค์</option>
+                  <option value="car">รถยนต์</option>
+                </select>
+              </div>
+
+              {[
+                { key: "vehicle_brand",  label: "ยี่ห้อรถ",     placeholder: "เช่น Honda, Toyota" },
+                { key: "vehicle_model",  label: "รุ่นรถ",        placeholder: "เช่น PCX 160, Vios" },
+                { key: "license_plate",  label: "ป้ายทะเบียน",  placeholder: "เช่น กข 1234 กรุงเทพ" },
+                { key: "driver_license_number", label: "เลขใบขับขี่", placeholder: "เลขใบขับขี่" },
+              ].map(({ key, label, placeholder }) => (
+                <div key={key}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: TEXT2, display: "block", marginBottom: 6 }}>{label}</label>
+                  <input
+                    type="text"
+                    value={(vehicle as Record<string, string | null> ?? {})[key] ?? ""}
+                    onChange={e => setVehicle(v => ({ ...(v ?? emptyVehicle), [key]: e.target.value || null }))}
+                    placeholder={placeholder}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${BORDER}`, fontSize: 14, color: TEXT, background: "#fafafa" }}
+                  />
+                </div>
+              ))}
+
+              {[
+                { key: "driver_license_expiry", label: "วันหมดอายุใบขับขี่" },
+                { key: "vehicle_tax_expiry",    label: "วันหมดอายุภาษีรถ"   },
+              ].map(({ key, label }) => (
+                <div key={key}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: TEXT2, display: "block", marginBottom: 6 }}>{label}</label>
+                  <input
+                    type="date"
+                    value={(vehicle as Record<string, string | null> ?? {})[key] ?? ""}
+                    onChange={e => setVehicle(v => ({ ...(v ?? emptyVehicle), [key]: e.target.value || null }))}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${BORDER}`, fontSize: 14, color: TEXT, background: "#fafafa" }}
+                  />
+                </div>
+              ))}
+
+              <button
+                onClick={async () => {
+                  if (!vehicle) return;
+                  setVehicleSaving(true);
+                  await updateRiderVehicleInfo(id, vehicle);
+                  setVehicleSaving(false);
+                  setVehicleSaved(true);
+                  setTimeout(() => setVehicleSaved(false), 2500);
+                }}
+                disabled={vehicleSaving}
+                style={{
+                  padding: "12px", borderRadius: 12, border: "none",
+                  background: vehicleSaved ? "#10B981" : GOLD,
+                  color: "#fff", fontWeight: 700, fontSize: 14, cursor: vehicleSaving ? "not-allowed" : "pointer",
+                  transition: "background 0.2s",
+                }}
+              >
+                {vehicleSaved ? "บันทึกแล้ว ✓" : vehicleSaving ? "กำลังบันทึก..." : "บันทึก"}
+              </button>
+            </div>
+          )}
         </div>
       )}
 

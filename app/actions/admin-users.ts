@@ -20,6 +20,31 @@ export type AdminUserRow = {
   is_rider: boolean;
 };
 
+export type StaffProfile = {
+  id: string;
+  user_id: string;
+  name: string;
+  email: string;
+  role: AdminRole;
+  active: boolean;
+  avatar_url: string | null;
+  phone: string | null;
+  position: string | null;
+  started_at: string | null;
+  note: string | null;
+  created_at: string;
+};
+
+export type RiderVehicleInfo = {
+  vehicle_type: string | null;
+  vehicle_brand: string | null;
+  vehicle_model: string | null;
+  license_plate: string | null;
+  driver_license_number: string | null;
+  driver_license_expiry: string | null;
+  vehicle_tax_expiry: string | null;
+};
+
 export async function fetchMyProfile(userId: string): Promise<{ name: string; role: AdminRole; email: string; permissions: Permission[]; is_rider: boolean; avatar_url: string | null } | null> {
   const supabase = createServerClient();
   const { data } = await supabase
@@ -172,6 +197,51 @@ export async function updateRiderAvatar(userId: string, avatarUrl: string | null
     .from("admin_users")
     .update({ avatar_url: avatarUrl })
     .eq("user_id", userId);
+  if (error) return { success: false as const, error: error.message };
+  return { success: true as const };
+}
+
+export async function fetchStaffProfile(id: string): Promise<StaffProfile | null> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("admin_users")
+    .select("id, user_id, name, email, role, active, avatar_url, phone, position, started_at, note, created_at")
+    .eq("id", id)
+    .single();
+  if (!data) return null;
+  return data as StaffProfile;
+}
+
+export async function updateStaffProfile(
+  id: string,
+  updates: { name?: string; phone?: string; position?: string; started_at?: string | null; note?: string },
+) {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { error } = await supabase.from("admin_users").update(updates).eq("id", id);
+  if (error) return { success: false as const, error: error.message };
+  return { success: true as const };
+}
+
+export async function fetchRiderVehicleInfo(riderId: string): Promise<RiderVehicleInfo | null> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("rider_profiles")
+    .select("vehicle_type, vehicle_brand, vehicle_model, license_plate, driver_license_number, driver_license_expiry, vehicle_tax_expiry")
+    .eq("rider_id", riderId)
+    .maybeSingle();
+  if (!data) return { vehicle_type: null, vehicle_brand: null, vehicle_model: null, license_plate: null, driver_license_number: null, driver_license_expiry: null, vehicle_tax_expiry: null };
+  return data as RiderVehicleInfo;
+}
+
+export async function updateRiderVehicleInfo(riderId: string, updates: Partial<RiderVehicleInfo>) {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { error } = await supabase
+    .from("rider_profiles")
+    .upsert({ rider_id: riderId, ...updates }, { onConflict: "rider_id" });
   if (error) return { success: false as const, error: error.message };
   return { success: true as const };
 }

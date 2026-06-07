@@ -282,7 +282,7 @@ export default function StaffPage() {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      <p style={{ color: TEXT, fontSize: 14, fontWeight: 600, margin: 0 }}>{u.name}</p>
+                      <button onClick={() => router.push(`/admin/staff/${u.id}`)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: TEXT, fontSize: 14, fontWeight: 600, textDecoration: "underline dotted" }}>{u.name}</button>
                       <span style={{
                         fontSize: 10, padding: "1px 8px", borderRadius: 99, fontWeight: 600,
                         background: ROLE_COLOR[u.role].bg, color: ROLE_COLOR[u.role].icon,
