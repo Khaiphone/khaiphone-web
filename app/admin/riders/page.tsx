@@ -48,11 +48,13 @@ type ActiveRider = {
 
 type Job = {
   id: string; order_number: string; device_model: string | null;
-  customer_name: string | null; appt_location: string | null;
+  customer_name: string | null; customer_phone: string | null;
+  appt_location: string | null;
   appt_date: string | null; appt_time: string | null;
   appt_lat: number | null; appt_lng: number | null;
   rider_id: string | null; rider_name: string | null;
   status: string;
+  estimated_price: number | null; actual_price: number | null;
 };
 
 type AllShift = {
@@ -341,6 +343,7 @@ export default function PlannerDashboard() {
   const [reclaimBusy, setReclaimBusy] = useState<string | null>(null);
   const [rightTab, setRightTab] = useState<"queue" | "shifts">("queue");
   const [leftOpen, setLeftOpen] = useState(true);
+  const [previewJob, setPreviewJob] = useState<Job | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Data fetchers
@@ -459,6 +462,7 @@ export default function PlannerDashboard() {
   }
 
   return (
+    <>
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: BG, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", overflow: "hidden" }}>
 
       {/* ── Header ── */}
@@ -880,7 +884,7 @@ export default function PlannerDashboard() {
                       <JobCard
                         key={job.id} job={job} riders={riders} assigning={assigning}
                         assignDropdownJob={assignDropdownJob} setAssignDropdownJob={setAssignDropdownJob}
-                        onAssign={handleAssign} onNavigate={id => router.push(`/admin/requests/${id}`)}
+                        onAssign={handleAssign} onNavigate={id => { const j = jobs.find(x => x.id === id); if (j) setPreviewJob(j); }}
                         dragJobId={dragJobId} setDragJobId={setDragJobId} accentColor={RED}
                       />
                     ))}
@@ -896,7 +900,7 @@ export default function PlannerDashboard() {
                       <JobCard
                         key={job.id} job={job} riders={riders} assigning={assigning}
                         assignDropdownJob={assignDropdownJob} setAssignDropdownJob={setAssignDropdownJob}
-                        onAssign={handleAssign} onNavigate={id => router.push(`/admin/requests/${id}`)}
+                        onAssign={handleAssign} onNavigate={id => { const j = jobs.find(x => x.id === id); if (j) setPreviewJob(j); }}
                         dragJobId={dragJobId} setDragJobId={setDragJobId} accentColor={YELLOW}
                       />
                     ))}
@@ -912,7 +916,7 @@ export default function PlannerDashboard() {
                       <JobCard
                         key={job.id} job={job} riders={riders} assigning={assigning}
                         assignDropdownJob={assignDropdownJob} setAssignDropdownJob={setAssignDropdownJob}
-                        onAssign={handleAssign} onNavigate={id => router.push(`/admin/requests/${id}`)}
+                        onAssign={handleAssign} onNavigate={id => { const j = jobs.find(x => x.id === id); if (j) setPreviewJob(j); }}
                         dragJobId={dragJobId} setDragJobId={setDragJobId} accentColor={GREEN}
                       />
                     ))}
@@ -1112,6 +1116,76 @@ export default function PlannerDashboard() {
           <ArrowRight size={13} color={ORANGE} />
         </button>
       </div>
+    </div>
+
+    {/* ── Job preview modal ── */}
+
+    {previewJob && (
+      <div
+        onClick={() => setPreviewJob(null)}
+        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+      >
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{ background: "#fff", borderRadius: 20, padding: 24, width: "100%", maxWidth: 440, boxShadow: "0 8px 40px rgba(0,0,0,0.2)" }}
+        >
+          {/* Header */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+            <div>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: TEXT }}>#{previewJob.order_number}</p>
+              <p style={{ margin: "2px 0 0", fontSize: 11, color: TEXT2 }}>{
+                ({ confirmed: "ยืนยันแล้ว", pickup_scheduled: "รับงานแล้ว", en_route: "กำลังเดินทาง", inspecting: "กำลังตรวจเครื่อง", price_negotiation: "กำลังต่อราคา", contracting: "ทำสัญญา", awaiting_transfer: "รอโอนเงิน" } as Record<string, string>)[previewJob.status] ?? previewJob.status
+              }</p>
+            </div>
+            <button onClick={() => setPreviewJob(null)} style={{ background: "none", border: "none", cursor: "pointer", color: TEXT2, padding: 4 }}>
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Info rows */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 13 }}>
+            <Row label="อุปกรณ์" value={previewJob.device_model ?? "—"} />
+            <Row label="ลูกค้า" value={previewJob.customer_name ?? "—"} />
+            {previewJob.customer_phone && (
+              <Row label="เบอร์โทร" value={
+                <a href={`tel:${previewJob.customer_phone}`} style={{ color: BLUE, textDecoration: "none", fontWeight: 600 }}>{previewJob.customer_phone}</a>
+              } />
+            )}
+            <Row label="นัดหมาย" value={previewJob.appt_date && previewJob.appt_time ? `${previewJob.appt_date} · ${previewJob.appt_time} น.` : previewJob.appt_date ?? "—"} />
+            {previewJob.appt_location && <Row label="สถานที่" value={previewJob.appt_location} />}
+            <Row label="ราคา" value={
+              previewJob.actual_price != null
+                ? `฿${previewJob.actual_price.toLocaleString()} (จริง)`
+                : previewJob.estimated_price != null
+                  ? `฿${previewJob.estimated_price.toLocaleString()} (ประเมิน)`
+                  : "—"
+            } />
+            {previewJob.rider_name && <Row label="ไรเดอร์" value={previewJob.rider_name} />}
+          </div>
+
+          {/* Actions */}
+          <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+            <button
+              onClick={() => setPreviewJob(null)}
+              style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: `1px solid ${BORDER}`, background: "transparent", fontSize: 13, color: TEXT2, cursor: "pointer", fontFamily: "inherit" }}
+            >ปิด</button>
+            <button
+              onClick={() => { router.push(`/admin/requests/${previewJob.id}`); setPreviewJob(null); }}
+              style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "none", background: BLUE, fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "inherit" }}
+            >เปิดหน้าเต็ม →</button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
+  );
+}
+
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", gap: 8 }}>
+      <span style={{ color: TEXT2, minWidth: 72, flexShrink: 0 }}>{label}</span>
+      <span style={{ color: TEXT, fontWeight: 500, flex: 1 }}>{value}</span>
     </div>
   );
 }
