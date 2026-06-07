@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
   Clock, CheckCircle2, XCircle, ClipboardList, Loader2,
-  AlertTriangle, Package, Truck, PackageCheck, RotateCcw,
+  AlertTriangle, Package, Truck, PackageCheck, RotateCcw, Target,
 } from "lucide-react";
 import { fetchRiderJobs, adminConfirmReturn, adminReclaimJob } from "@/app/actions/admin-requests";
 import type { AdminRequest, RequestStatus } from "@/lib/types/admin";
@@ -25,6 +25,7 @@ const ORANGE = "#F59E0B";
 const RED    = "#EF4444";
 const PURPLE = "#8B5CF6";
 
+type ViewMode  = "jobs" | "sla";
 type FilterKey = "all" | "unassigned" | "waiting" | "in_progress" | "completed" | "cancelled";
 
 const IN_PROGRESS_STATUSES: RequestStatus[] = ["pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting", "awaiting_transfer"];
@@ -48,12 +49,64 @@ function shiftDate(iso: string, delta: number) {
   return d.toISOString().slice(0, 10);
 }
 function fmt(n: number) { return n.toLocaleString("th-TH"); }
+function fmtTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit" });
+}
 
 type RiderRow = {
   riderId: string; riderName: string;
   total: number; completed: number; inProgress: number; cancelled: number; waiting: number;
   pendingReturn: number;
 };
+
+// ── SLA helpers ────────────────────────────────────────────────────────────────
+type SLAResult =
+  | { status: "no_appt" }
+  | { status: "cancelled" }
+  | { status: "pending";   apptMs: number }
+  | { status: "overdue";   apptMs: number }
+  | { status: "met";       apptMs: number; completedMs: number; deltaMin: number }
+  | { status: "warning";   apptMs: number; completedMs: number; deltaMin: number }
+  | { status: "exceeded";  apptMs: number; completedMs: number; deltaMin: number };
+
+function computeSLA(job: AdminRequest): SLAResult {
+  const { date, time } = job.appointment;
+  if (!date || !time) return { status: "no_appt" };
+  if (CANCELLED_STATUSES.includes(job.status)) return { status: "cancelled" };
+
+  const apptMs = new Date(`${date}T${time}:00+07:00`).getTime();
+  const completedEntry = [...(job.statusLog ?? [])].reverse().find(s => s.status === "completed");
+
+  if (!completedEntry) {
+    return Date.now() > apptMs + 30 * 60_000
+      ? { status: "overdue", apptMs }
+      : { status: "pending", apptMs };
+  }
+
+  const completedMs = new Date(completedEntry.timestamp).getTime();
+  const deltaMin    = Math.round((completedMs - apptMs) / 60_000);
+  return deltaMin <= 30
+    ? { status: "met",      apptMs, completedMs, deltaMin }
+    : deltaMin <= 120
+    ? { status: "warning",  apptMs, completedMs, deltaMin }
+    : { status: "exceeded", apptMs, completedMs, deltaMin };
+}
+
+function slaLabel(r: SLAResult) {
+  if (r.status === "met")      return { label: "ตรงเวลา",       color: GREEN,  bg: GREEN  + "15" };
+  if (r.status === "warning")  return { label: "ล่าช้าเล็กน้อย", color: ORANGE, bg: ORANGE + "15" };
+  if (r.status === "exceeded") return { label: "เกิน SLA",       color: RED,    bg: RED    + "15" };
+  if (r.status === "overdue")  return { label: "ค้างเกิน",       color: RED,    bg: RED    + "12" };
+  if (r.status === "pending")  return { label: "กำลังดำเนินการ", color: BLUE,   bg: BLUE   + "12" };
+  return { label: "—", color: TEXT3, bg: BORDER };
+}
+
+function deltaTxt(r: SLAResult) {
+  if (r.status === "met")      return r.deltaMin <= 0 ? `ก่อน ${Math.abs(r.deltaMin)} นาที` : `ช้า ${r.deltaMin} นาที`;
+  if (r.status === "warning")  return `ช้า ${r.deltaMin} นาที`;
+  if (r.status === "exceeded") return `ช้า ${r.deltaMin} นาที`;
+  return null;
+}
 
 function Avatar({ name, size = 36 }: { name: string; size?: number }) {
   const colors = ["#8B5CF6","#3B82F6","#10B981","#F59E0B","#EF4444","#06B6D4","#EC4899"];
@@ -77,6 +130,7 @@ export default function RiderJobsPage() {
   const today  = new Date().toISOString().slice(0, 10);
   const now    = new Date();
 
+  const [view,        setView]       = useState<ViewMode>("jobs");
   const [mode,        setMode]       = useState<"day" | "month">("day");
   const [date,        setDate]       = useState(today);
   const [monthYear,   setMonthYear]  = useState({ year: now.getFullYear(), month: now.getMonth() + 1 });
@@ -122,7 +176,6 @@ export default function RiderJobsPage() {
     const inProgress = jobs.filter(j => jobCategory(j) === "in_progress");
     const waiting    = jobs.filter(j => jobCategory(j) === "waiting");
     const unassigned = jobs.filter(j => jobCategory(j) === "unassigned");
-    // Device custody tracking
     const withRider      = inProgress;
     const pendingSubmit  = completed.filter(j => !j.returnedToOfficeAt);
     const pendingConfirm = completed.filter(j => j.returnSubmittedAt && !j.returnedToOfficeAt);
@@ -155,6 +208,28 @@ export default function RiderJobsPage() {
     return jobs.filter(j => jobCategory(j) === filter);
   }, [jobs, filter]);
 
+  // ── SLA data ──────────────────────────────────────────────────────────────
+  const slaRows = useMemo(() =>
+    jobs
+      .filter(j => j.appointment.date && j.appointment.time)
+      .map(j => ({ job: j, sla: computeSLA(j) }))
+      .filter(r => r.sla.status !== "no_appt" && r.sla.status !== "cancelled")
+      .sort((a, b) => {
+        const aMs = ("apptMs" in a.sla ? a.sla.apptMs : 0);
+        const bMs = ("apptMs" in b.sla ? b.sla.apptMs : 0);
+        return aMs - bMs;
+      }),
+    [jobs]
+  );
+
+  const slaMet      = slaRows.filter(r => r.sla.status === "met").length;
+  const slaWarning  = slaRows.filter(r => r.sla.status === "warning").length;
+  const slaExceeded = slaRows.filter(r => r.sla.status === "exceeded").length;
+  const slaOverdue  = slaRows.filter(r => r.sla.status === "overdue").length;
+  const slaPending  = slaRows.filter(r => r.sla.status === "pending").length;
+  const slaTotal    = slaRows.length;
+  const slaRate     = slaTotal > 0 ? Math.round(((slaMet + slaWarning) / Math.max(1, slaTotal - slaPending)) * 100) : null;
+
   const FILTER_TABS: Array<{ key: FilterKey; label: string; count: number; color: string }> = [
     { key: "all",         label: "ทั้งหมด",        count: stats.total,              color: TEXT    },
     { key: "unassigned",  label: "ยังไม่จ่ายงาน",  count: stats.unassigned.length,  color: RED     },
@@ -166,6 +241,7 @@ export default function RiderJobsPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: BG }}>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
       {/* ── Sticky header ── */}
       <div style={{ position: "sticky", top: 0, zIndex: 10, background: CARD, borderBottom: `1px solid ${BORDER}` }}>
@@ -179,10 +255,10 @@ export default function RiderJobsPage() {
             </div>
             {/* Mode toggle */}
             <div style={{ display: "flex", borderRadius: 8, border: `1px solid ${BORDER}`, overflow: "hidden", flexShrink: 0 }}>
-              <button onClick={() => setMode("day")} style={{ padding: "5px 10px", fontSize: 12, fontWeight: 600, background: mode === "day" ? GOLD + "20" : "none", color: mode === "day" ? GOLD : TEXT2, border: "none", cursor: "pointer", fontFamily: "inherit" }}>รายวัน</button>
+              <button onClick={() => setMode("day")}   style={{ padding: "5px 10px", fontSize: 12, fontWeight: 600, background: mode === "day"   ? GOLD + "20" : "none", color: mode === "day"   ? GOLD : TEXT2, border: "none", cursor: "pointer", fontFamily: "inherit" }}>รายวัน</button>
               <button onClick={() => setMode("month")} style={{ padding: "5px 10px", fontSize: 12, fontWeight: 600, background: mode === "month" ? GOLD + "20" : "none", color: mode === "month" ? GOLD : TEXT2, border: "none", cursor: "pointer", fontFamily: "inherit" }}>รายเดือน</button>
             </div>
-            {/* Date / Month nav */}
+            {/* Date/Month nav */}
             {mode === "day" ? (
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <button onClick={() => setDate(d => shiftDate(d, -1))} style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "5px 8px", cursor: "pointer", display: "flex", color: TEXT2 }}><ChevronLeft size={15} /></button>
@@ -201,12 +277,34 @@ export default function RiderJobsPage() {
               </div>
             )}
           </div>
+
           <p style={{ margin: "0 0 10px", fontSize: 12, color: TEXT3 }}>
             {mode === "day"
               ? thDate(date + "T00:00:00")
               : (() => { const r = getMonthRange(monthYear.year, monthYear.month); return `${new Date(r.from + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" })} — ${new Date(r.to + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" })}`; })()
             }
           </p>
+
+          {/* ── View tabs ── */}
+          <div style={{ display: "flex", gap: 0, borderTop: `1px solid ${BORDER}`, margin: "0 -20px" }}>
+            {([["jobs", "งาน"], ["sla", "SLA Report"]] as [ViewMode, string][]).map(([v, label]) => (
+              <button key={v} onClick={() => setView(v)} style={{
+                flex: 1, padding: "10px 0", border: "none", fontFamily: "inherit",
+                background: view === v ? CARD : "transparent",
+                color: view === v ? (v === "sla" ? PURPLE : GOLD) : TEXT2,
+                fontSize: 13, fontWeight: view === v ? 700 : 400, cursor: "pointer",
+                borderBottom: view === v ? `2px solid ${v === "sla" ? PURPLE : GOLD}` : "2px solid transparent",
+              }}>
+                {v === "sla" && <Target size={13} style={{ marginRight: 5, verticalAlign: "middle" }} />}
+                {label}
+                {v === "sla" && slaRate !== null && (
+                  <span style={{ marginLeft: 6, fontSize: 11, color: slaRate >= 80 ? GREEN : slaRate >= 60 ? ORANGE : RED, fontWeight: 700 }}>
+                    {slaRate}%
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -214,10 +312,136 @@ export default function RiderJobsPage() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 300 }}>
           <Loader2 size={28} style={{ color: GOLD, animation: "spin 1s linear infinite" }} />
         </div>
-      ) : (
+      ) : view === "sla" ? (
+
+        /* ════════════════════════════════════════════════════════════════════ */
+        /* ── SLA REPORT TAB ── */
+        /* ════════════════════════════════════════════════════════════════════ */
         <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
 
-          {/* ── Device custody tracking ── */}
+          {/* Summary bar */}
+          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "16px 18px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <Target size={16} color={PURPLE} />
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: TEXT }}>SLA Overview</p>
+              {slaRate !== null && (
+                <span style={{ marginLeft: "auto", fontSize: 24, fontWeight: 800, color: slaRate >= 80 ? GREEN : slaRate >= 60 ? ORANGE : RED }}>
+                  {slaRate}%
+                </span>
+              )}
+            </div>
+
+            {/* Progress bar */}
+            {slaTotal > 0 && (
+              <div style={{ height: 8, borderRadius: 99, background: BORDER, overflow: "hidden", display: "flex", marginBottom: 12 }}>
+                <div style={{ width: `${(slaMet / slaTotal) * 100}%`, background: GREEN, transition: "width 0.4s" }} />
+                <div style={{ width: `${(slaWarning / slaTotal) * 100}%`, background: ORANGE, transition: "width 0.4s" }} />
+                <div style={{ width: `${((slaExceeded + slaOverdue) / slaTotal) * 100}%`, background: RED, transition: "width 0.4s" }} />
+              </div>
+            )}
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+              {[
+                { label: "ตรงเวลา",       count: slaMet,               color: GREEN  },
+                { label: "ล่าช้าเล็กน้อย", count: slaWarning,           color: ORANGE },
+                { label: "เกิน SLA",       count: slaExceeded + slaOverdue, color: RED },
+                { label: "กำลังดำเนิน",   count: slaPending,            color: BLUE   },
+              ].map(({ label, count, color }) => (
+                <div key={label} style={{ textAlign: "center" }}>
+                  <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color }}>{count}</p>
+                  <p style={{ margin: 0, fontSize: 10, color: TEXT3 }}>{label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Per-job SLA list */}
+          {slaRows.length === 0 ? (
+            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "60px 20px", textAlign: "center" }}>
+              <Target size={32} color={BORDER} style={{ marginBottom: 12 }} />
+              <p style={{ margin: "0 0 6px", fontSize: 15, fontWeight: 600, color: TEXT2 }}>ไม่มีงานที่มีนัดหมาย</p>
+              <p style={{ margin: 0, fontSize: 13, color: TEXT3 }}>SLA จะแสดงเมื่อมีงานที่ระบุวันและเวลานัด</p>
+            </div>
+          ) : (
+            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, overflow: "hidden" }}>
+              <div style={{ padding: "14px 16px", borderBottom: `1px solid ${BORDER}` }}>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: TEXT }}>
+                  รายการ <span style={{ fontWeight: 400, color: TEXT2 }}>({slaRows.length} งาน)</span>
+                </p>
+              </div>
+              {slaRows.map(({ job, sla }, i) => {
+                const { label, color, bg } = slaLabel(sla);
+                const delta = deltaTxt(sla);
+                const apptTimeStr = job.appointment.time ? `${job.appointment.time} น.` : "";
+                const completedTimeStr = (sla.status === "met" || sla.status === "warning" || sla.status === "exceeded")
+                  ? fmtTime(new Date(sla.completedMs).toISOString())
+                  : null;
+                return (
+                  <div
+                    key={job.id}
+                    onClick={() => router.push(`/admin/requests/${job.id}`)}
+                    style={{
+                      padding: "14px 16px",
+                      borderBottom: i < slaRows.length - 1 ? `1px solid ${BORDER}` : "none",
+                      cursor: "pointer",
+                      display: "flex", alignItems: "flex-start", gap: 12,
+                      borderLeft: `3px solid ${color}`,
+                    }}
+                  >
+                    {/* Left: color bar already from borderLeft */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {/* Row 1: order + badge */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: TEXT2 }}>{job.orderNumber}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: bg, color }}>{label}</span>
+                        {mode === "month" && job.appointment.date && (
+                          <span style={{ fontSize: 11, color: TEXT3 }}>
+                            {new Date(job.appointment.date + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short" })}
+                          </span>
+                        )}
+                      </div>
+                      {/* Row 2: device + customer */}
+                      <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 700, color: TEXT }}>
+                        {job.device.model}{job.device.storage ? ` · ${job.device.storage}` : ""}
+                      </p>
+                      <p style={{ margin: 0, fontSize: 12, color: TEXT2 }}>
+                        {job.customer.name}
+                        {job.riderName && <span style={{ color: TEXT3 }}> · {job.riderName}</span>}
+                      </p>
+                      {/* Row 3: time info */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 11, color: TEXT3 }}>🕐 นัด {apptTimeStr}</span>
+                        {completedTimeStr && (
+                          <span style={{ fontSize: 11, color: TEXT3 }}>✅ เสร็จ {completedTimeStr}</span>
+                        )}
+                        {delta && (
+                          <span style={{ fontSize: 11, fontWeight: 700, color }}>({delta})</span>
+                        )}
+                        {sla.status === "overdue" && (
+                          <span style={{ fontSize: 11, fontWeight: 700, color: RED }}>⚠ เกินนัดและยังไม่เสร็จ</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right: status badge */}
+                    <div style={{ flexShrink: 0 }}>
+                      <StatusBadge status={job.status} size="xs" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+      ) : (
+
+        /* ════════════════════════════════════════════════════════════════════ */
+        /* ── JOBS TAB (existing content) ── */
+        /* ════════════════════════════════════════════════════════════════════ */
+        <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
+
+          {/* Device custody tracking */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "14px 16px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
@@ -253,7 +477,7 @@ export default function RiderJobsPage() {
             </div>
           </div>
 
-          {/* ── Status cards ── */}
+          {/* Status cards */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
             {FILTER_TABS.map(({ key, label, count, color }) => {
               const active = filter === key;
@@ -266,7 +490,7 @@ export default function RiderJobsPage() {
             })}
           </div>
 
-          {/* ── Unassigned alert ── */}
+          {/* Unassigned alert */}
           {unassignedJobs.length > 0 && (
             <div style={{ background: "#FEF2F2", border: `1px solid ${RED}30`, borderRadius: 14, padding: "12px 16px", display: "flex", gap: 10, alignItems: "center" }}>
               <AlertTriangle size={18} color={RED} />
@@ -278,7 +502,7 @@ export default function RiderJobsPage() {
             </div>
           )}
 
-          {/* ── Rider performance cards ── */}
+          {/* Rider performance cards */}
           {riderRows.length > 0 && (
             <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, overflow: "hidden" }}>
               <button
@@ -288,14 +512,12 @@ export default function RiderJobsPage() {
                 <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: TEXT, flex: 1, textAlign: "left" }}>ประสิทธิภาพไรเดอร์ <span style={{ fontWeight: 400, color: TEXT3 }}>({riderRows.length} คน)</span></p>
                 {expanded ? <ChevronUp size={16} color={TEXT2} /> : <ChevronDown size={16} color={TEXT2} />}
               </button>
-
               {expanded && riderRows.map((r, i) => {
-                const successPct  = r.total > 0 ? Math.round((r.completed / r.total) * 100) : 0;
-                const barColor    = successPct >= 80 ? GREEN : successPct >= 50 ? ORANGE : RED;
-                const active      = r.inProgress + r.waiting;
+                const successPct = r.total > 0 ? Math.round((r.completed / r.total) * 100) : 0;
+                const barColor   = successPct >= 80 ? GREEN : successPct >= 50 ? ORANGE : RED;
+                const active     = r.inProgress + r.waiting;
                 return (
                   <div key={r.riderId} style={{ padding: "16px", borderBottom: i < riderRows.length - 1 ? `1px solid ${BORDER}` : "none" }}>
-                    {/* Top row: avatar + name + success rate */}
                     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
                       <Avatar name={r.riderName} size={38} />
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -312,8 +534,6 @@ export default function RiderJobsPage() {
                         <p style={{ margin: 0, fontSize: 10, color: TEXT3 }}>งานทั้งหมด</p>
                       </div>
                     </div>
-
-                    {/* Bottom row: stat chips */}
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 5, background: GREEN + "12", border: `1px solid ${GREEN}30`, borderRadius: 8, padding: "5px 10px" }}>
                         <CheckCircle2 size={12} color={GREEN} />
@@ -348,7 +568,7 @@ export default function RiderJobsPage() {
             </div>
           )}
 
-          {/* ── Job list ── */}
+          {/* Job list */}
           <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, overflow: "hidden" }}>
             <div style={{ padding: "14px 16px 0", borderBottom: `1px solid ${BORDER}` }}>
               <p style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 700, color: TEXT }}>
@@ -365,28 +585,19 @@ export default function RiderJobsPage() {
                 })}
               </div>
             </div>
-
             {filtered.length === 0 ? (
               <div style={{ padding: "48px 0", textAlign: "center" }}>
                 <CheckCircle2 size={32} color={BORDER} style={{ marginBottom: 10 }} />
                 <p style={{ margin: 0, fontSize: 14, color: TEXT3 }}>ไม่มีข้อมูลในหมวดนี้</p>
               </div>
             ) : filtered.map((job, i) => {
-              const price = job.device.actualPrice ?? job.device.estimatedPrice;
-              const cat   = jobCategory(job);
+              const price    = job.device.actualPrice ?? job.device.estimatedPrice;
+              const cat      = jobCategory(job);
               const catColor = cat === "completed" ? GREEN : cat === "cancelled" ? TEXT3 : cat === "unassigned" ? RED : cat === "waiting" ? ORANGE : BLUE;
               return (
-                <div
-                  key={job.id}
-                  style={{ padding: "12px 16px", borderBottom: i < filtered.length - 1 ? `1px solid ${BORDER}` : "none" }}
-                >
-                  <div
-                    onClick={() => router.push(`/admin/requests/${job.id}`)}
-                    style={{ cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}
-                  >
-                    {/* Left accent */}
+                <div key={job.id} style={{ padding: "12px 16px", borderBottom: i < filtered.length - 1 ? `1px solid ${BORDER}` : "none" }}>
+                  <div onClick={() => router.push(`/admin/requests/${job.id}`)} style={{ cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}>
                     <div style={{ width: 3, borderRadius: 2, background: catColor, alignSelf: "stretch", flexShrink: 0, minHeight: 40 }} />
-
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: TEXT2 }}>{job.orderNumber}</span>
@@ -407,7 +618,6 @@ export default function RiderJobsPage() {
                       <p style={{ margin: "0 0 3px", fontSize: 14, fontWeight: 700, color: TEXT }}>{job.device.model}{job.device.storage ? ` · ${job.device.storage}` : ""}</p>
                       <p style={{ margin: 0, fontSize: 12, color: TEXT2 }}>{job.customer.name}{job.riderName ? <span style={{ color: TEXT3 }}> · ไรเดอร์: {job.riderName}</span> : job.status === "confirmed" ? <span style={{ color: RED, fontWeight: 600 }}> · ยังไม่จ่ายงาน</span> : null}</p>
                     </div>
-
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
                       <p style={{ margin: 0, fontSize: 14, fontWeight: 800, color: cat === "completed" ? GREEN : TEXT }}>฿{fmt(price)}</p>
                       {job.device.actualPrice && job.device.actualPrice !== job.device.estimatedPrice && (
@@ -415,8 +625,6 @@ export default function RiderJobsPage() {
                       )}
                     </div>
                   </div>
-
-                  {/* Reclaim button */}
                   {job.riderId && ["confirmed", "pickup_scheduled", "en_route", "inspecting"].includes(job.status) && (
                     <div style={{ marginTop: 10, marginLeft: 15 }}>
                       <button
@@ -426,11 +634,7 @@ export default function RiderJobsPage() {
                           if (!confirm(`ดึงงาน ${job.orderNumber} คืนจาก ${job.riderName ?? "ไรเดอร์"}?`)) return;
                           setReclaimBusy(job.id);
                           const res = await adminReclaimJob(job.id);
-                          if (res.success) {
-                            refresh();
-                          } else {
-                            alert(res.error);
-                          }
+                          if (res.success) refresh(); else alert(res.error);
                           setReclaimBusy(null);
                         }}
                         style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${RED}50`, background: RED + "15", color: RED, fontSize: 13, fontWeight: 700, cursor: reclaimBusy === job.id ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}
@@ -440,9 +644,7 @@ export default function RiderJobsPage() {
                       </button>
                     </div>
                   )}
-
-                  {/* Confirm return button — show whenever job is completed and not yet confirmed */}
-                  {cat === "completed" && !job.returnedToOfficeAt && (
+                  {jobCategory(job) === "completed" && !job.returnedToOfficeAt && (
                     <div style={{ marginTop: 10, marginLeft: 15 }}>
                       <button
                         disabled={confirmBusy === job.id}
@@ -450,11 +652,7 @@ export default function RiderJobsPage() {
                           e.stopPropagation();
                           setConfirmBusy(job.id);
                           const res = await adminConfirmReturn(job.id);
-                          if (res.success) {
-                            refresh();
-                          } else {
-                            alert(res.error);
-                          }
+                          if (res.success) refresh(); else alert(res.error);
                           setConfirmBusy(null);
                         }}
                         style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${GREEN}50`, background: GREEN + "15", color: GREEN, fontSize: 13, fontWeight: 700, cursor: confirmBusy === job.id ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}
@@ -476,7 +674,6 @@ export default function RiderJobsPage() {
               <p style={{ margin: 0, fontSize: 13, color: TEXT3 }}>งานที่มีนัดวันนี้จะแสดงที่นี่</p>
             </div>
           )}
-
         </div>
       )}
     </div>
