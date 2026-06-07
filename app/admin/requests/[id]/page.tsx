@@ -1305,7 +1305,57 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                     <p style={{ margin: 0, fontSize: 12 }}>ผลจะปรากฏที่นี่เมื่อไรเดอร์บันทึกข้อมูล</p>
                   </div>
                 )
+              ) : request.inspection?.inspectedAt ? (
+                /* Walk-in: inspection already saved — show summary + next step */
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
+                    <span style={{ fontSize: 20, lineHeight: 1 }}>✓</span>
+                    <div>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#065F46" }}>บันทึกผลตรวจแล้ว</p>
+                      <p style={{ margin: "2px 0 0", fontSize: 11, color: TEXT3 }}>{fmtDateTime(request.inspection.inspectedAt)} น.</p>
+                    </div>
+                    <button
+                      onClick={() => setRequest(prev => prev ? { ...prev, inspection: { ...prev.inspection!, inspectedAt: "" } } : prev)}
+                      style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontSize: 12, color: TEXT3, fontFamily: "inherit", textDecoration: "underline", padding: 0 }}
+                    >
+                      แก้ไข
+                    </button>
+                  </div>
+
+                  {/* Key data */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+                    {[
+                      request.device.color           && { label: "สี",        value: request.device.color },
+                      request.inspection.serial      && { label: "Serial",    value: request.inspection.serial },
+                      request.inspection.batteryHealth && { label: "Battery", value: `${request.inspection.batteryHealth}%` },
+                      (request.inspection as { conditionGrade?: string }).conditionGrade && { label: "เกรด", value: (request.inspection as { conditionGrade?: string }).conditionGrade! },
+                      request.inspection.actualPrice  && { label: "ราคารับซื้อ", value: `฿${request.inspection.actualPrice.toLocaleString("th-TH")}` },
+                    ].filter(Boolean).map((row) => {
+                      const r = row as { label: string; value: string };
+                      return (
+                        <div key={r.label} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 10px" }}>
+                          <p style={{ margin: "0 0 2px", fontSize: 10, color: TEXT3 }}>{r.label}</p>
+                          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: TEXT }}>{r.value}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Next step */}
+                  {request.status === "contracting" && (
+                    <button
+                      onClick={() => router.push(`/admin/requests/${id}/contract`)}
+                      style={{ width: "100%", padding: "14px", borderRadius: 12, border: "none", background: GOLD, color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", touchAction: "manipulation", fontFamily: "inherit" }}
+                    >
+                      ออกสัญญาซื้อขาย + ใบรับเงิน →
+                    </button>
+                  )}
+                  {request.status === "rejected" && (
+                    <div style={{ textAlign: "center", padding: "10px 0", color: TEXT3, fontSize: 13 }}>งานถูกปิด — ปฏิเสธการรับซื้อ</div>
+                  )}
+                </div>
               ) : (
+                /* Walk-in: no inspection yet — show form */
                 <InspectionForm
                   requestId={id}
                   model={request.device.model}
