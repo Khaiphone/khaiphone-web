@@ -689,9 +689,10 @@ export default function PlannerDashboard() {
 
               {/* Rider markers */}
               {riders.map(r => {
-                const name = r.admin_users?.name ?? "ไรเดอร์";
-                const hasJob = r.current_job_id != null && r.tracking_mode === "idle";
-                const color = hasJob ? PURPLE : (MODE_COLOR[r.tracking_mode] ?? BLUE);
+                const name      = r.admin_users?.name ?? "ไรเดอร์";
+                const avatarUrl = (r.admin_users as { avatar_url?: string | null } | null)?.avatar_url ?? null;
+                const hasJob    = r.current_job_id != null && r.tracking_mode === "idle";
+                const color     = hasJob ? PURPLE : (MODE_COLOR[r.tracking_mode] ?? BLUE);
                 const isSelected = r.rider_id === selectedRiderId;
                 return (
                   <AdvancedMarker key={r.rider_id} position={{ lat: r.lat, lng: r.lng }} onClick={() => setSelectedRiderId(r.rider_id === selectedRiderId ? null : r.rider_id)}>
@@ -703,9 +704,14 @@ export default function PlannerDashboard() {
                         display: "flex", alignItems: "center", justifyContent: "center",
                         cursor: "pointer", overflow: "hidden",
                       }}>
-                        <span style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>
-                          {name.charAt(0).toUpperCase()}
-                        </span>
+                        {avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={avatarUrl} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                        ) : (
+                          <span style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>
+                            {name.charAt(0).toUpperCase()}
+                          </span>
+                        )}
                       </div>
                       {isSelected && (
                         <div style={{ position: "absolute", bottom: 42, left: "50%", transform: "translateX(-50%)", background: DARK, color: "#fff", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap", boxShadow: "0 2px 8px rgba(0,0,0,.3)" }}>
