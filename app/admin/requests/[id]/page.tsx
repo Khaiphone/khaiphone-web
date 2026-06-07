@@ -1308,6 +1308,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
               ) : (
                 <InspectionForm
                   requestId={id}
+                  model={request.device.model}
                   selections={request.device.selections ?? {}}
                   estimatedPrice={request.device.estimatedPrice}
                   deviceColor={request.device.color ?? ""}

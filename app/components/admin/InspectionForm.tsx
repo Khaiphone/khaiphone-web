@@ -137,6 +137,7 @@ function CheckRow({ label, pass, onToggle }: { label: string; pass: boolean; onT
 
 interface Props {
   requestId: string;
+  model?: string;
   selections: Record<string, string>;
   estimatedPrice: number;
   deviceColor?: string;
@@ -145,7 +146,17 @@ interface Props {
   saving: boolean;
 }
 
-export default function InspectionForm({ requestId, selections, estimatedPrice, deviceColor, existing, onSave, saving }: Props) {
+function hasCameraControl(model?: string) {
+  return /iPhone\s+1[67]/i.test(model ?? "");
+}
+
+function buildFunctionalDefaults(model?: string): FunctionalTest[] {
+  const list = FUNCTIONAL_DEFAULTS.map(t => ({ ...t }));
+  if (hasCameraControl(model)) list.push({ label: "ปุ่ม Camera Control", pass: true });
+  return list;
+}
+
+export default function InspectionForm({ requestId, model, selections, estimatedPrice, deviceColor, existing, onSave, saving }: Props) {
   // ── Device info state ──────────────────────────────────────────────────────
   const [serial,  setSerial]  = useState(existing?.serial  ?? "");
   const [imei,    setImei]    = useState(existing?.imei    ?? "");
@@ -183,7 +194,7 @@ export default function InspectionForm({ requestId, selections, estimatedPrice, 
     return init;
   });
   const [functional, setFunctional] = useState<FunctionalTest[]>(
-    existing?.functionalTests?.length ? existing.functionalTests : FUNCTIONAL_DEFAULTS.map(t => ({ ...t }))
+    existing?.functionalTests?.length ? existing.functionalTests : buildFunctionalDefaults(model)
   );
 
   // ── Accessories ────────────────────────────────────────────────────────────

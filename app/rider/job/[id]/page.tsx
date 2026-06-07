@@ -314,7 +314,11 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
     INSPECT_KEYS.forEach(k => { if (sels[k]) init[k] = { stated: sels[k], actual: sels[k] }; });
     return init;
   });
-  const [functional, setFunctional] = useState<FunctionalTest[]>(FUNCTIONAL_DEFAULTS.map(t => ({ ...t })));
+  const [functional, setFunctional] = useState<FunctionalTest[]>(() => {
+    const list = FUNCTIONAL_DEFAULTS.map(t => ({ ...t }));
+    if (/iPhone\s+1[67]/i.test(job.device.model ?? "")) list.push({ label: "ปุ่ม Camera Control", pass: true });
+    return list;
+  });
   const scanRef = useRef<HTMLInputElement>(null!);
   const [scanning,     setScanning]     = useState(false);
   const [sickwResult,  setSickwResult]  = useState<SickwResult | null>(null);
