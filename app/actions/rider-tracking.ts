@@ -3,6 +3,7 @@
 import { requireAuth } from "@/lib/require-auth";
 import { createServerClient } from "@/lib/supabase-server";
 import { startOfThaiDay, endOfThaiDay } from "@/lib/thai-date";
+import { haversineKm, etaMinutes as etaMinutesGeo } from "@/lib/geo-utils";
 
 // ─── Open shift (clock-in) ────────────────────────────────────────────────────
 export async function openShift(lat: number, lng: number): Promise<{ success: true; shiftId: string } | { success: false; error: string }> {
@@ -443,7 +444,7 @@ export async function fetchRiderSuggestionsForRequest(requestId: string): Promis
   const targetLat = req?.appt_lat ?? null;
   const targetLng = req?.appt_lng ?? null;
 
-  const { haversineKm, etaMinutes } = await import("@/lib/geo-utils");
+  const etaMinutes = etaMinutesGeo;
 
   const suggestions = locs
     .map(r => {
@@ -480,6 +481,48 @@ export async function fetchRiderShiftStats(riderId: string, dateFrom: string, da
     .order("clocked_in_at", { ascending: false });
 
   return data ?? [];
+}
+
+// ─── Count rider jobs from requests table (accurate, not denormalized) ────────
+export async function fetchRiderJobCountByRange(
+  riderId: string,
+  dateFrom: string,
+  dateTo: string
+): Promise<number> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { count } = await supabase
+    .from("requests")
+    .select("id", { count: "exact", head: true })
+    .eq("rider_id", riderId)
+    .in("status", ["completed", "cancelled", "no_show", "rejected"])
+    .gte("appt_date", dateFrom)
+    .lte("appt_date", dateTo);
+  return count ?? 0;
+}
+
+// ─── Compute cumulative GPS distance for a rider over a date range ────────────
+export async function fetchRiderTrailDistanceKm(
+  riderId: string,
+  dateFrom: string,
+  dateTo: string
+): Promise<number> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("rider_location_history")
+    .select("lat, lng")
+    .eq("rider_id", riderId)
+    .gte("recorded_at", startOfThaiDay(dateFrom))
+    .lte("recorded_at", endOfThaiDay(dateTo))
+    .order("recorded_at", { ascending: true });
+
+  if (!data || data.length < 2) return 0;
+  let total = 0;
+  for (let i = 1; i < data.length; i++) {
+    total += haversineKm(data[i - 1].lat, data[i - 1].lng, data[i].lat, data[i].lng);
+  }
+  return Math.round(total * 10) / 10;
 }
 
 // ─── Today's request stats for planner dashboard ─────────────────────────────

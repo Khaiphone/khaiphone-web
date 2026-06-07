@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { updateRiderAvatar } from "@/app/actions/admin-users";
-import { fetchRiderShiftStats, fetchRiderTrail, fetchActiveRiders, adminCloseRiderShift } from "@/app/actions/rider-tracking";
+import { fetchRiderShiftStats, fetchRiderTrail, fetchActiveRiders, adminCloseRiderShift, fetchRiderJobCountByRange, fetchRiderTrailDistanceKm } from "@/app/actions/rider-tracking";
 import { fmtDistance, fmtEta, etaMinutes, distanceToOfficeKm, OFFICE_LAT, OFFICE_LNG } from "@/lib/geo-utils";
 import {
   fetchRiderKpiForAdmin, updateRiderTargets, updateRiderRankOverride,
@@ -128,6 +128,9 @@ export default function RiderDetailPage() {
   const [shifts,    setShifts]      = useState<Shift[]>([]);
   const [trail,     setTrail]       = useState<TrailPoint[]>([]);
   const [ovTab,     setOvTab]       = useState<"today" | "week" | "month">("today");
+  const [realJobCount,  setRealJobCount]  = useState<number | null>(null);
+  const [realDistKm,    setRealDistKm]    = useState<number | null>(null);
+  const [ovLoading, setOvLoading]   = useState(true);
   const [loading,   setLoading]     = useState(true);
   const [closingShift, setClosingShift] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
@@ -181,13 +184,18 @@ export default function RiderDetailPage() {
     const { from, to } = dateRange();
     const past30 = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
     const todayStr = new Date().toISOString().slice(0, 10);
-    const [shiftData, allRiders, recentData] = await Promise.all([
+    const [shiftData, allRiders, recentData, jobCount, distKm] = await Promise.all([
       fetchRiderShiftStats(id, from, to),
       fetchActiveRiders(),
       fetchRiderShiftStats(id, past30, todayStr),
+      fetchRiderJobCountByRange(id, from, to),
+      fetchRiderTrailDistanceKm(id, from, to),
     ]);
     setShifts(shiftData as Shift[]);
     setRecentShifts(recentData as Shift[]);
+    setRealJobCount(jobCount);
+    setRealDistKm(distKm);
+    setOvLoading(false);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const me = (allRiders as any[]).find(r => r.rider_id === id);
     if (me) {
@@ -299,8 +307,8 @@ export default function RiderDetailPage() {
     loadOverview();
   }
 
-  const totalJobs   = shifts.reduce((s, sh) => s + (sh.jobs_completed ?? 0), 0);
-  const totalDistKm = shifts.reduce((s, sh) => s + (sh.total_distance_km ?? 0), 0);
+  const totalJobs   = realJobCount ?? 0;
+  const totalDistKm = realDistKm ?? 0;
   const openShift   = shifts.find(s => !s.clocked_out_at);
   const distOffice  = currentLocation ? distanceToOfficeKm(currentLocation.lat, currentLocation.lng) : null;
 
@@ -421,14 +429,14 @@ export default function RiderDetailPage() {
           <div style={{ background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
             <div style={{ borderBottom: `1px solid ${BORDER}`, display: "flex" }}>
               {(["today", "week", "month"] as const).map(t => (
-                <button key={t} onClick={() => setOvTab(t)} style={{ flex: 1, padding: "10px 0", border: "none", background: ovTab === t ? `${ACCENT}10` : "transparent", color: ovTab === t ? ACCENT : TEXT2, fontSize: 13, fontWeight: ovTab === t ? 700 : 400, cursor: "pointer", fontFamily: "inherit", borderBottom: ovTab === t ? `2px solid ${ACCENT}` : "none" }}>
+                <button key={t} onClick={() => { setOvTab(t); setRealJobCount(null); setRealDistKm(null); setOvLoading(true); }} style={{ flex: 1, padding: "10px 0", border: "none", background: ovTab === t ? `${ACCENT}10` : "transparent", color: ovTab === t ? ACCENT : TEXT2, fontSize: 13, fontWeight: ovTab === t ? 700 : 400, cursor: "pointer", fontFamily: "inherit", borderBottom: ovTab === t ? `2px solid ${ACCENT}` : "none" }}>
                   {t === "today" ? "วันนี้" : t === "week" ? "สัปดาห์" : "เดือนนี้"}
                 </button>
               ))}
             </div>
             <div style={{ padding: "16px 18px", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-              <KpiItem label="งานสำเร็จ" value={String(totalJobs)} icon={<CheckCircle2 size={16} color={GREEN} />} />
-              <KpiItem label="ระยะทาง" value={totalDistKm > 0 ? `${totalDistKm.toFixed(0)} กม.` : "—"} icon={<MapPin size={16} color={ACCENT} />} />
+              <KpiItem label="งานทั้งหมด" value={ovLoading || realJobCount === null ? "…" : String(totalJobs)} icon={<CheckCircle2 size={16} color={GREEN} />} />
+              <KpiItem label="ระยะทาง" value={ovLoading || realDistKm === null ? "…" : totalDistKm > 0 ? `${totalDistKm.toFixed(0)} กม.` : "—"} icon={<MapPin size={16} color={ACCENT} />} />
               <KpiItem label="จำนวน Shift" value={String(shifts.length)} icon={<Clock size={16} color={GOLD} />} />
             </div>
           </div>
