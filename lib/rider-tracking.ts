@@ -101,19 +101,12 @@ export async function startTracking(fn: PingFn): Promise<boolean> {
   await acquireWakeLock();
 
   document.addEventListener("visibilitychange", handleVisibility);
-  window.addEventListener("pagehide", handlePageHide);
-  window.addEventListener("beforeunload", handlePageHide);
 
   return true;
 }
 
 function handleVisibility() {
-  if (document.hidden) {
-    // Page went to background — stop the interval so Android Chrome doesn't keep pinging.
-    // The pagehide beacon below handles marking offline in the DB.
-    if (intervalId) { clearInterval(intervalId); intervalId = null; }
-  } else {
-    // Page came back to foreground — resume tracking.
+  if (!document.hidden) {
     restartInterval();
     navigator.geolocation.getCurrentPosition(
       (pos) => { currentPos = pos; sendPing("foreground"); },
@@ -121,13 +114,6 @@ function handleVisibility() {
       { enableHighAccuracy: true, timeout: 5_000 }
     );
   }
-}
-
-function handlePageHide() {
-  // pagehide is the only reliable unload event on iOS PWA.
-  // sendBeacon completes even as the page freezes/unloads.
-  navigator.sendBeacon("/api/rider/offline");
-  if (intervalId) { clearInterval(intervalId); intervalId = null; }
 }
 
 export function setTrackingMode(mode: TrackingMode) {
@@ -147,8 +133,6 @@ export function stopTracking() {
   if (intervalId)        { clearInterval(intervalId); intervalId = null; }
   releaseWakeLock();
   document.removeEventListener("visibilitychange", handleVisibility);
-  window.removeEventListener("pagehide", handlePageHide);
-  window.removeEventListener("beforeunload", handlePageHide);
   pingFn = null;
   currentPos = null;
   currentMode = "idle";
