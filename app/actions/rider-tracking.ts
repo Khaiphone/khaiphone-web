@@ -3,7 +3,7 @@
 import { requireAuth } from "@/lib/require-auth";
 import { createServerClient } from "@/lib/supabase-server";
 import { startOfThaiDay, endOfThaiDay } from "@/lib/thai-date";
-import { haversineKm, etaMinutes as etaMinutesGeo } from "@/lib/geo-utils";
+import { haversineKm, etaMinutes as etaMinutesGeo, OFFICE_LAT, OFFICE_LNG } from "@/lib/geo-utils";
 
 // ─── Open shift (clock-in) ────────────────────────────────────────────────────
 export async function openShift(lat: number, lng: number): Promise<{ success: true; shiftId: string } | { success: false; error: string }> {
@@ -522,6 +522,61 @@ export async function fetchRiderTrailDistanceKm(
   for (let i = 1; i < data.length; i++) {
     total += haversineKm(data[i - 1].lat, data[i - 1].lng, data[i].lat, data[i].lng);
   }
+  return Math.round(total * 10) / 10;
+}
+
+// ─── Compute chain distance from appointment coordinates ─────────────────────
+// office→job[0]→job[1]→...→job[N]→office
+// If job[i] has direct_chain in status_log, skip the return-to-office segment after it
+export async function fetchRiderChainDistanceKm(
+  riderId: string,
+  dateFrom: string,
+  dateTo: string
+): Promise<number> {
+  await requireAuth();
+  const supabase = createServerClient();
+
+  const { data } = await supabase
+    .from("requests")
+    .select("appt_lat, appt_lng, status_log")
+    .eq("rider_id", riderId)
+    .in("status", ["completed", "cancelled", "no_show", "rejected"])
+    .gte("appt_date", dateFrom)
+    .lte("appt_date", dateTo);
+
+  if (!data || data.length === 0) return 0;
+
+  type LogEntry = { status: string; timestamp: string };
+
+  const jobs = data
+    .filter(j => j.appt_lat != null && j.appt_lng != null)
+    .map(j => {
+      const log = ((j.status_log as unknown) as LogEntry[]) ?? [];
+      const ts  = log.find(e => e.status === "completed" || e.status === "direct_chain")?.timestamp
+               ?? log.find(e => e.status === "inspecting")?.timestamp
+               ?? "9999";
+      return {
+        lat:      j.appt_lat as number,
+        lng:      j.appt_lng as number,
+        ts,
+        chained:  log.some(e => e.status === "direct_chain"),
+      };
+    })
+    .sort((a, b) => a.ts.localeCompare(b.ts));
+
+  if (jobs.length === 0) return 0;
+
+  const OLat = OFFICE_LAT, OLng = OFFICE_LNG;
+  let total = 0, prevLat = OLat, prevLng = OLng;
+
+  for (let i = 0; i < jobs.length; i++) {
+    const { lat, lng, chained } = jobs[i];
+    total += haversineKm(prevLat, prevLng, lat, lng);            // travel to this job
+    const goDirectlyNext = chained && i < jobs.length - 1;
+    if (goDirectlyNext) { prevLat = lat; prevLng = lng; }        // chain → stay at job location
+    else { total += haversineKm(lat, lng, OLat, OLng); prevLat = OLat; prevLng = OLng; } // return office
+  }
+
   return Math.round(total * 10) / 10;
 }
 

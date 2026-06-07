@@ -1081,3 +1081,33 @@ export async function riderSubmitReturn(id: string) {
 
   return { success: true as const };
 }
+
+// ─── Chain to next job (ไปงานถัดไปโดยไม่กลับออฟฟิศ) ─────────────────────────
+export async function riderChainToNext(jobId: string): Promise<{ nextJobId: string | null }> {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+  const now = new Date().toISOString();
+
+  const { data: job } = await supabase
+    .from("requests")
+    .select("status_log")
+    .eq("id", jobId)
+    .single();
+
+  if (job) {
+    const newLog = [...((job.status_log as unknown[]) ?? []), { status: "direct_chain", timestamp: now }];
+    await supabase.from("requests").update({ status_log: newLog, updated_at: now }).eq("id", jobId);
+  }
+
+  const { data: next } = await supabase
+    .from("requests")
+    .select("id")
+    .eq("rider_id", user.id)
+    .in("status", ["pickup_scheduled", "confirmed"])
+    .neq("id", jobId)
+    .order("appt_date", { ascending: true })
+    .order("appt_time", { ascending: true })
+    .limit(1);
+
+  return { nextJobId: next?.[0]?.id ?? null };
+}

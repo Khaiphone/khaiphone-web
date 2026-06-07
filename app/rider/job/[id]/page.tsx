@@ -12,7 +12,7 @@ import {
   riderSaveInspection, riderAutoSaveSickw, riderConfirmPrice, riderAdjustPrice,
   riderCustomerAccepted, riderCustomerRejected,
   riderCompleteCash, riderCompleteTransfer, riderRequestTransfer,
-  riderRequestHelp, riderSubmitReturn,
+  riderRequestHelp, riderChainToNext,
 } from "@/app/actions/rider";
 import { uploadContractFiles, saveContractUrls, markContractSigned, savePaymentSlip, getDocumentSignedUrl, patchReceiptWithSlip } from "@/app/actions/admin-requests";
 import { supabase } from "@/lib/supabase";
@@ -1619,8 +1619,8 @@ export default function JobWizardPage() {
   const [helpMsg, setHelpMsg]         = useState("");
   const [helpSent, setHelpSent]       = useState(false);
   const [helpBusy, setHelpBusy]       = useState(false);
-  const [returningToOffice, setReturningToOffice] = useState(false);
-  const [returnBusy, setReturnBusy]               = useState(false);
+  const [nextJobId,  setNextJobId]  = useState<string | null>(null);
+  const [chainBusy,  setChainBusy]  = useState(false);
   const [currentUserId, setCurrentUserId]         = useState<string | null>(null);
   const [reclaimed, setReclaimed]                 = useState(false);
 
@@ -1638,6 +1638,13 @@ export default function JobWizardPage() {
       setBlockingJob(blocker?.orderNumber ?? null);
     } else {
       setBlockingJob(null);
+    }
+    if (j?.status === "completed" && j.riderId && !j.returnSubmittedAt) {
+      const active = await fetchRiderJobs(j.riderId);
+      const next = active.find(a => a.id !== id && a.status === "pickup_scheduled");
+      setNextJobId(next?.id ?? null);
+    } else {
+      setNextJobId(null);
     }
   }, [id]);
 
@@ -1902,7 +1909,6 @@ export default function JobWizardPage() {
               <p style={{ margin:"0 0 4px", fontSize:18, fontWeight:800, color:GREEN }}>งานเสร็จสิ้น!</p>
               <p style={{ margin:"0 0 16px", fontSize:14, color:TEXT2 }}>฿{price.toLocaleString("th-TH")} · {job.orderNumber}</p>
 
-              {/* Return device two-step flow */}
               {job.returnedToOfficeAt ? (
                 <div style={{ background:"rgba(74,222,128,0.12)", border:`1px solid ${GREEN}`, borderRadius:10, padding:"10px 14px" }}>
                   <p style={{ margin:0, fontSize:14, fontWeight:700, color:GREEN }}>✓ ส่งคืนเครื่องเรียบร้อยแล้ว</p>
@@ -1913,33 +1919,29 @@ export default function JobWizardPage() {
                   <p style={{ margin:0, fontSize:14, fontWeight:700, color:"#EAB308" }}>⏳ รอ Admin ยืนยันรับเครื่อง</p>
                   <p style={{ margin:"4px 0 0", fontSize:12, color:TEXT2 }}>แจ้งส่งคืนแล้ว — รอ office ยืนยัน</p>
                 </div>
-              ) : returningToOffice ? (
+              ) : (
                 <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                  <div style={{ background:"rgba(124,58,237,0.1)", border:"1px solid rgba(124,58,237,0.3)", borderRadius:10, padding:"10px 14px" }}>
-                    <p style={{ margin:0, fontSize:14, fontWeight:700, color:"#7c3aed" }}>🏠 กำลังเดินทางกลับออฟฟิศ</p>
-                    <p style={{ margin:"4px 0 0", fontSize:12, color:TEXT2 }}>ระบบกำลังติดตามตำแหน่งของคุณ</p>
-                  </div>
+                  {nextJobId && (
+                    <button
+                      disabled={chainBusy}
+                      onClick={async () => {
+                        setChainBusy(true);
+                        const { nextJobId: nid } = await riderChainToNext(job.id);
+                        setTrackingMode("enroute");
+                        router.push(`/rider/job/${nid ?? nextJobId}`);
+                      }}
+                      style={{ width:"100%", padding:"14px 0", borderRadius:12, border:"none", background: chainBusy ? BORDER : ACCENT, color:"#000", fontSize:15, fontWeight:700, cursor: chainBusy ? "not-allowed" : "pointer", fontFamily:"inherit", opacity: chainBusy ? 0.6 : 1 }}
+                    >
+                      {chainBusy ? "กำลังโหลด..." : "🏃 ไปงานถัดไปเลย"}
+                    </button>
+                  )}
                   <button
-                    disabled={returnBusy}
-                    onClick={async () => {
-                      setReturnBusy(true);
-                      const res = await riderSubmitReturn(job.id);
-                      if (res.success) { setTrackingMode("idle"); await reload(); }
-                      else alert(res.error);
-                      setReturnBusy(false);
-                    }}
-                    style={{ width:"100%", padding:"12px 0", borderRadius:12, border:"none", background: returnBusy ? BORDER : GREEN, color:"#000", fontSize:15, fontWeight:700, cursor: returnBusy ? "not-allowed" : "pointer", fontFamily:"inherit" }}
+                    onClick={() => { setTrackingMode("return"); router.push("/rider"); }}
+                    style={{ width:"100%", padding:"14px 0", borderRadius:12, border: nextJobId ? `1.5px solid #1a1a2e` : "none", background: nextJobId ? "transparent" : "#1a1a2e", color: nextJobId ? "#1a1a2e" : "#F0C040", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}
                   >
-                    {returnBusy ? "กำลังส่ง..." : "📦 ส่งคืนเครื่องออฟฟิศแล้ว"}
+                    🏠 กลับออฟฟิศ
                   </button>
                 </div>
-              ) : (
-                <button
-                  onClick={() => { setTrackingMode("return"); setReturningToOffice(true); }}
-                  style={{ width:"100%", padding:"12px 0", borderRadius:12, border:"none", background:"#1a1a2e", color:"#F0C040", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}
-                >
-                  🏠 เริ่มเดินทางกลับออฟฟิศ
-                </button>
               )}
             </div>
           ) : isCancelled ? (

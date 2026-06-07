@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, Banknote, ArrowUpDown, Package, Wifi, WifiOff, CheckCircle2, Navigation, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { fetchRiderHomeData, riderAcceptJob, riderRejectJob } from "@/app/actions/rider";
+import { fetchRiderHomeData, riderAcceptJob, riderRejectJob, riderSubmitReturn } from "@/app/actions/rider";
 import { openShift, closeShift, riderPingLocation, fetchActiveShift } from "@/app/actions/rider-tracking";
 import { startTracking, stopTracking, setTrackingMode, isTracking } from "@/lib/rider-tracking";
 import { Sk } from "@/app/rider/skeleton";
@@ -38,6 +38,7 @@ export default function RiderHomePage() {
   const [stats, setStats]             = useState({ completedJobs: 0, totalEarnings: 0 });
   const [accepting, setAccepting]     = useState<string | null>(null);
   const [rejecting, setRejecting]     = useState<string | null>(null);
+  const [submittingReturn, setSubmittingReturn] = useState<string | null>(null);
   const [loading, setLoading]         = useState(true);
 
   const loadData = useCallback(async (uid: string) => {
@@ -219,8 +220,10 @@ export default function RiderHomePage() {
     </div>
   );
 
-  const cashTotal = activeJobs
-    .filter(j => j.payment.method === "cash" && j.status !== "completed")
+  const returnPendingJobs = activeJobs.filter(j => j.status === "completed" && !j.returnSubmittedAt);
+  const inProgressJobs    = activeJobs.filter(j => j.status !== "completed" || j.returnSubmittedAt);
+  const cashTotal = inProgressJobs
+    .filter(j => j.payment.method === "cash")
     .reduce((s, j) => s + (j.device.actualPrice ?? j.device.estimatedPrice), 0);
 
   return (
@@ -266,6 +269,42 @@ export default function RiderHomePage() {
           </div>
         </button>
       </div>
+
+      {/* Return pending jobs — ส่งคืนเครื่อง batch */}
+      {returnPendingJobs.length > 0 && (
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#7c3aed", boxShadow: "0 0 6px #7c3aed" }} />
+            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: TEXT }}>ส่งคืนเครื่อง</p>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#7c3aed", background: "rgba(124,58,237,0.12)", padding: "3px 10px", borderRadius: 20 }}>
+              {returnPendingJobs.length} เครื่อง
+            </span>
+          </div>
+          <div style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.25)", borderRadius: 16, overflow: "hidden" }}>
+            {returnPendingJobs.map((job, i) => (
+              <div key={job.id} style={{ padding: "14px 16px", borderBottom: i < returnPendingJobs.length - 1 ? "1px solid rgba(124,58,237,0.15)" : "none", display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: TEXT }}>{job.device.model}</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 12, color: TEXT2 }}>{job.customer.name} · {job.orderNumber}</p>
+                </div>
+                <button
+                  disabled={submittingReturn === job.id}
+                  onClick={async () => {
+                    setSubmittingReturn(job.id);
+                    const res = await riderSubmitReturn(job.id);
+                    if (!res.success) alert((res as { success: false; error: string }).error);
+                    if (userId) loadData(userId);
+                    setSubmittingReturn(null);
+                  }}
+                  style={{ flexShrink: 0, padding: "9px 16px", borderRadius: 10, border: "none", background: submittingReturn === job.id ? BORDER : "#7c3aed", color: "#fff", fontSize: 13, fontWeight: 700, cursor: submittingReturn === job.id ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: submittingReturn === job.id ? 0.6 : 1 }}
+                >
+                  {submittingReturn === job.id ? "..." : "📦 ส่งคืนแล้ว"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Pending jobs (new) */}
       {pendingJobs.length > 0 && (
@@ -412,40 +451,37 @@ export default function RiderHomePage() {
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: TEXT }}>งานที่กำลังดำเนินการ</p>
-          {activeJobs.length > 0 && (
-            <span style={{ fontSize: 12, color: TEXT2 }}>{activeJobs.length} งาน</span>
+          {inProgressJobs.length > 0 && (
+            <span style={{ fontSize: 12, color: TEXT2 }}>{inProgressJobs.length} งาน</span>
           )}
         </div>
-        {activeJobs.length === 0 ? (
+        {inProgressJobs.length === 0 ? (
           <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 32, textAlign: "center" }}>
             <p style={{ margin: 0, fontSize: 14, color: TEXT2 }}>ไม่มีงานที่กำลังดำเนินการ</p>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {activeJobs.map(job => {
-              const isReturnPending = job.status === "completed";
-              return (
-                <button
-                  key={job.id}
-                  onClick={() => router.push(`/rider/job/${job.id}`)}
-                  style={{ width: "100%", background: isReturnPending ? "rgba(124,58,237,0.06)" : CARD, border: `1px solid ${isReturnPending ? "rgba(124,58,237,0.35)" : BORDER}`, borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, textAlign: "left", cursor: "pointer" }}
-                >
-                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: isReturnPending ? "#7c3aed" : ACCENT, boxShadow: `0 0 6px ${isReturnPending ? "#7c3aed" : ACCENT}`, flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: TEXT }}>{job.orderNumber}</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 12, color: TEXT2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {job.customer.name} · {job.device.model}
-                    </p>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: isReturnPending ? "#7c3aed" : ACCENT, background: isReturnPending ? "rgba(124,58,237,0.12)" : "rgba(74,222,128,0.12)", padding: "3px 8px", borderRadius: 6 }}>
-                      {STATUS_LABEL[job.status] ?? job.status}
-                    </span>
-                    <ChevronRight size={14} color={TEXT2} />
-                  </div>
-                </button>
-              );
-            })}
+            {inProgressJobs.map(job => (
+              <button
+                key={job.id}
+                onClick={() => router.push(`/rider/job/${job.id}`)}
+                style={{ width: "100%", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, textAlign: "left", cursor: "pointer" }}
+              >
+                <div style={{ width: 10, height: 10, borderRadius: "50%", background: ACCENT, boxShadow: `0 0 6px ${ACCENT}`, flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: TEXT }}>{job.orderNumber}</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 12, color: TEXT2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {job.customer.name} · {job.device.model}
+                  </p>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: ACCENT, background: "rgba(74,222,128,0.12)", padding: "3px 8px", borderRadius: 6 }}>
+                    {STATUS_LABEL[job.status] ?? job.status}
+                  </span>
+                  <ChevronRight size={14} color={TEXT2} />
+                </div>
+              </button>
+            ))}
           </div>
         )}
       </div>

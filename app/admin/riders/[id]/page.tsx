@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { updateRiderAvatar } from "@/app/actions/admin-users";
-import { fetchRiderShiftStats, fetchRiderTrail, fetchActiveRiders, adminCloseRiderShift, fetchRiderJobCountByRange, fetchRiderTrailDistanceKm } from "@/app/actions/rider-tracking";
+import { fetchRiderShiftStats, fetchRiderTrail, fetchActiveRiders, adminCloseRiderShift, fetchRiderJobCountByRange, fetchRiderChainDistanceKm } from "@/app/actions/rider-tracking";
 import { fmtDistance, fmtEta, etaMinutes, distanceToOfficeKm, OFFICE_LAT, OFFICE_LNG } from "@/lib/geo-utils";
 import {
   fetchRiderKpiForAdmin, updateRiderTargets, updateRiderRankOverride,
@@ -189,7 +189,7 @@ export default function RiderDetailPage() {
       fetchActiveRiders(),
       fetchRiderShiftStats(id, past30, todayStr),
       fetchRiderJobCountByRange(id, from, to),
-      fetchRiderTrailDistanceKm(id, from, to),
+      fetchRiderChainDistanceKm(id, from, to),
     ]);
     setShifts(shiftData as Shift[]);
     setRecentShifts(recentData as Shift[]);
