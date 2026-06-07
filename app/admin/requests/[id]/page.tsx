@@ -1306,39 +1306,196 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                   </div>
                 )
               ) : request.inspection?.inspectedAt ? (
-                /* Walk-in: inspection already saved — show summary + next step */
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
-                    <span style={{ fontSize: 20, lineHeight: 1 }}>✓</span>
-                    <div>
-                      <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#065F46" }}>บันทึกผลตรวจแล้ว</p>
-                      <p style={{ margin: "2px 0 0", fontSize: 11, color: TEXT3 }}>{fmtDateTime(request.inspection.inspectedAt)} น.</p>
-                    </div>
+                /* Walk-in: inspection saved — show full read-only report */
+                <div style={{ marginTop: 4 }}>
+                  {/* Source label */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#F0F9FF", border: "1px solid #BAE6FD", borderRadius: 8, padding: "7px 10px", marginBottom: 14 }}>
+                    <span style={{ fontSize: 13 }}>📋</span>
+                    <p style={{ margin: 0, fontSize: 12, color: "#0369A1", fontWeight: 600, flex: 1 }}>
+                      แอดมินบันทึกโดยตรง · {fmtDateTime(request.inspection.inspectedAt)} น.
+                    </p>
                     <button
                       onClick={() => setRequest(prev => prev ? { ...prev, inspection: { ...prev.inspection!, inspectedAt: "" } } : prev)}
-                      style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontSize: 12, color: TEXT3, fontFamily: "inherit", textDecoration: "underline", padding: 0 }}
+                      style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "#0369A1", fontFamily: "inherit", textDecoration: "underline", padding: 0, flexShrink: 0 }}
                     >
                       แก้ไข
                     </button>
                   </div>
 
-                  {/* Key data */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
-                    {[
-                      request.device.color           && { label: "สี",        value: request.device.color },
-                      request.inspection.serial      && { label: "Serial",    value: request.inspection.serial },
-                      request.inspection.batteryHealth && { label: "Battery", value: `${request.inspection.batteryHealth}%` },
-                      (request.inspection as { conditionGrade?: string }).conditionGrade && { label: "เกรด", value: (request.inspection as { conditionGrade?: string }).conditionGrade! },
-                      request.inspection.actualPrice  && { label: "ราคารับซื้อ", value: `฿${request.inspection.actualPrice.toLocaleString("th-TH")}` },
-                    ].filter(Boolean).map((row) => {
-                      const r = row as { label: string; value: string };
-                      return (
-                        <div key={r.label} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 10px" }}>
-                          <p style={{ margin: "0 0 2px", fontSize: 10, color: TEXT3 }}>{r.label}</p>
-                          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: TEXT }}>{r.value}</p>
+                  {/* Criteria */}
+                  {(request.inspection.criteria ?? []).length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>สภาพที่ตรวจพบ</p>
+                      <div style={{ border: `1px solid ${BORDER}`, borderRadius: 8, overflow: "hidden" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 28px", background: "#F8F8FA", borderBottom: `1px solid ${BORDER}`, padding: "5px 10px", gap: 4 }}>
+                          {["รายการ", "ที่แจ้ง", "จริง", ""].map(h => (
+                            <span key={h} style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: TEXT3 }}>{h}</span>
+                          ))}
                         </div>
-                      );
-                    })}
+                        {request.inspection.criteria.map((c, i) => (
+                          <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 28px", padding: "7px 10px", gap: 4, borderBottom: i < (request.inspection?.criteria.length ?? 0) - 1 ? `1px solid ${BORDER}` : "none", background: c.pass ? "#fff" : "#FFF8F8" }}>
+                            <span style={{ fontSize: 11, color: TEXT2, fontWeight: 500 }}>{c.label}</span>
+                            <span style={{ fontSize: 11, color: TEXT3 }}>{c.stated}</span>
+                            <span style={{ fontSize: 11, color: TEXT, fontWeight: c.pass ? 400 : 600 }}>{c.actual}</span>
+                            <span style={{ fontSize: 13, color: c.pass ? "#22c55e" : "#ef4444", fontWeight: 700 }}>{c.pass ? "✓" : "✗"}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Device details */}
+                  {(request.inspection.imei || request.inspection.serial || request.inspection.batteryHealth || request.inspection.batteryCycles || request.inspection.warrantyExpiry || request.device.color) && (
+                    <div style={{ marginBottom: 16, background: "#F8F8FA", borderRadius: 8, padding: "10px 12px" }}>
+                      <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>รายละเอียดเครื่อง</p>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", rowGap: 5, columnGap: 12 }}>
+                        {([
+                          request.device.color             ? { label: "สี",         value: request.device.color,                               mono: false } : null,
+                          request.inspection.imei          ? { label: "IMEI",       value: request.inspection.imei,                            mono: true  } : null,
+                          request.inspection.serial        ? { label: "Serial",     value: request.inspection.serial,                          mono: true  } : null,
+                          request.inspection.batteryHealth ? { label: "แบตเตอรี่", value: `${request.inspection.batteryHealth}%`,             mono: false } : null,
+                          request.inspection.batteryCycles ? { label: "รอบชาร์จ",  value: `${request.inspection.batteryCycles} รอบ`,          mono: false } : null,
+                          request.inspection.warrantyExpiry ? { label: "ประกัน",   value: fmtDate(request.inspection.warrantyExpiry),         mono: false } : null,
+                        ] as Array<{ label: string; value: string; mono: boolean } | null>).filter(Boolean).map(row => (
+                          <div key={row!.label}>
+                            <span style={{ fontSize: 10, color: TEXT3, display: "block" }}>{row!.label}</span>
+                            <span style={{ fontSize: 12, color: TEXT, fontWeight: 600, fontFamily: row!.mono ? "monospace" : "inherit", letterSpacing: row!.mono ? "0.03em" : undefined }}>{row!.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Grade / condition */}
+                  {((request.inspection as { conditionGrade?: string; conditionLabel?: string }).conditionGrade ||
+                    (request.inspection as { conditionGrade?: string; conditionLabel?: string }).conditionLabel) && (() => {
+                    const grade = (request.inspection as { conditionGrade?: string }).conditionGrade;
+                    const label = (request.inspection as { conditionLabel?: string }).conditionLabel;
+                    const gradeColor: Record<string, string> = { A: "#22c55e", "A-": "#84cc16", "B+": "#eab308", B: "#f97316", "B-": "#fb923c", C: "#ef4444" };
+                    const color = grade ? (gradeColor[grade] ?? "#888") : "#888";
+                    return (
+                      <div style={{ marginBottom: 16, borderRadius: 10, border: `1.5px solid ${color}40`, background: `${color}0d`, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                        {grade && (
+                          <div style={{ minWidth: 44, height: 44, borderRadius: 10, background: `${color}22`, border: `2px solid ${color}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <span style={{ fontSize: 16, fontWeight: 800, color, fontFamily: "monospace" }}>{grade}</span>
+                          </div>
+                        )}
+                        <div>
+                          <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>ผลการประเมิน</p>
+                          {label && <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: TEXT }}>{label}</p>}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* SICKW */}
+                  {request.inspection.sickw_report && (() => {
+                    const raw = request.inspection!.sickw_report!;
+                    const map: Record<string, string> = {};
+                    for (const line of raw.split("\n")) {
+                      const idx = line.indexOf(": ");
+                      if (idx > 0) map[line.slice(0, idx).trim()] = line.slice(idx + 2).trim();
+                    }
+                    const icloudLock   = (map["iCloud Lock"]   ?? "").toLowerCase();
+                    const icloudStatus = (map["iCloud Status"] ?? "").toLowerCase();
+                    const mdm          = (map["MDM Lock"]       ?? "").toLowerCase();
+                    const issues: string[] = [];
+                    if (icloudLock === "on")                        issues.push("iCloud Lock เปิดอยู่ — เครื่องล็อคกับบัญชี Apple");
+                    if (icloudStatus === "on")                      issues.push("ยังไม่ Sign Out iCloud — ต้องปลดก่อนรับซื้อ");
+                    if (icloudLock.includes("lost") || icloudStatus.includes("lost")) issues.push("Find My / Lost Mode");
+                    if (mdm === "on")                               issues.push("MDM Lock เปิดอยู่ — เครื่องล็อคโดยองค์กร");
+                    const passed = issues.length === 0;
+                    return (
+                      <div style={{ marginBottom: 16 }}>
+                        <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>ผลตรวจสอบ Apple</p>
+                        <div style={{ borderRadius: 10, border: `1px solid ${passed ? "#86efac" : "#fca5a5"}`, background: passed ? "#F0FDF4" : "#FFF5F5", padding: "10px 12px", marginBottom: 6 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: passed ? 0 : 6 }}>
+                            <span style={{ fontSize: 15 }}>{passed ? "✅" : "🚫"}</span>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: passed ? "#166534" : "#991b1b" }}>
+                              {passed ? "ผ่านการตรวจสอบ" : `ไม่ผ่าน — ${issues.join(", ")}`}
+                            </span>
+                          </div>
+                          {[
+                            ["รุ่น",         map["Device Configuration"] || map["Model Name"]],
+                            ["iCloud",       map["iCloud Lock"] ?? map["iCloud Status"]],
+                            ["MDM Lock",     map["MDM Lock"]],
+                            ["Carrier Lock", map["Unlock Status"] ?? map["Sim-Lock"]],
+                            ["ประกัน",       map["Limited Warranty"]],
+                            ["หมดประกัน",    map["Coverage End Date"] ?? map["Coverage End"]],
+                          ].filter(([, v]) => v).map(([label, value]) => (
+                            <div key={label as string} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginTop: 4 }}>
+                              <span style={{ color: "#6B7280" }}>{label}</span>
+                              <span style={{ fontWeight: 500 }}>{value}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <details style={{ fontSize: 12 }}>
+                          <summary style={{ cursor: "pointer", color: "#0369A1", userSelect: "none" }}>ดูรายงานเต็ม</summary>
+                          <pre style={{ margin: "6px 0 0", padding: "10px 12px", borderRadius: 8, background: "#F8F8FA", fontSize: 11, lineHeight: 1.6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{raw}</pre>
+                        </details>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Functional tests */}
+                  {(request.inspection.functionalTests ?? []).length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>ทดสอบฟังก์ชัน</p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                        {request.inspection.functionalTests!.map((t, i) => (
+                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 6, fontSize: 11, fontWeight: 500, background: t.pass ? "#F0FDF4" : "#FFF5F5", border: `1px solid ${t.pass ? "#86efac" : "#fca5a5"}`, color: t.pass ? "#166534" : "#991b1b" }}>
+                            <span style={{ fontSize: 10, lineHeight: 1 }}>{t.pass ? "✓" : "✗"}</span>
+                            {t.label}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Accessories */}
+                  {((request.inspection as { accessories?: string[] }).accessories ?? []).length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>อุปกรณ์ที่ให้มา</p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                        {(request.inspection as { accessories?: string[] }).accessories!.map((a, i) => (
+                          <span key={i} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, background: "#F0F9FF", border: "1px solid #BAE6FD", color: "#0369A1" }}>{a}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Photos */}
+                  {(request.inspection.photos ?? []).length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>รูปภาพ ({request.inspection.photos.length})</p>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 4 }}>
+                        {request.inspection.photos.map((url, i) => (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={url} alt={`รูป ${i + 1}`} style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: 6, display: "block", border: `1px solid ${BORDER}` }} />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Price */}
+                  <div style={{ background: "#F8F8FA", borderRadius: 8, padding: "10px 12px", marginBottom: 16 }}>
+                    <p style={{ margin: "0 0 6px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>ราคารับซื้อ</p>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {request.inspection.actualPrice !== request.inspection.originalPrice && request.inspection.originalPrice > 0 ? (
+                        <>
+                          <span style={{ fontSize: 12, color: TEXT3, textDecoration: "line-through" }}>฿{request.inspection.originalPrice.toLocaleString("th-TH")}</span>
+                          <span style={{ fontSize: 11, color: TEXT3 }}>→</span>
+                          <span style={{ fontSize: 16, fontWeight: 700, color: TEXT }}>฿{request.inspection.actualPrice.toLocaleString("th-TH")}</span>
+                        </>
+                      ) : (
+                        <span style={{ fontSize: 16, fontWeight: 700, color: TEXT }}>฿{request.inspection.actualPrice.toLocaleString("th-TH")}</span>
+                      )}
+                    </div>
+                    {request.inspection.priceReason && (
+                      <p style={{ margin: "5px 0 0", fontSize: 12, color: TEXT2, fontStyle: "italic" }}>"{request.inspection.priceReason}"</p>
+                    )}
                   </div>
 
                   {/* Next step */}
