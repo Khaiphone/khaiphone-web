@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { APIProvider, Map, AdvancedMarker, Polyline } from "@vis.gl/react-google-maps";
 import {
   ArrowLeft, Battery, MapPin, Clock, CheckCircle2, AlertTriangle, Settings, X,
-  Trophy, Flame, Star, Package, ChevronLeft, ChevronRight, XCircle,
+  Trophy, Flame, Star, Package, ChevronLeft, ChevronRight, XCircle, Camera, UserCircle,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { updateRiderAvatar } from "@/app/actions/admin-users";
 import { fetchRiderShiftStats, fetchRiderTrail, fetchActiveRiders, adminCloseRiderShift } from "@/app/actions/rider-tracking";
 import { fmtDistance, fmtEta, etaMinutes, distanceToOfficeKm, OFFICE_LAT, OFFICE_LNG } from "@/lib/geo-utils";
 import {
@@ -15,6 +16,7 @@ import {
   fetchLeaderboard, fetchRiderLifetimeForAdmin,
 } from "@/app/actions/rider-stats";
 import { fetchRiderHistory, fetchRiderStats, fetchRiderEarnings } from "@/app/actions/rider";
+import { fetchMyProfile } from "@/app/actions/admin-users";
 import type { MonthlyStats, RiderTargets, RiderTier, LeaderboardEntry } from "@/app/actions/rider-stats";
 import type { AdminRequest } from "@/lib/types/admin";
 import type { Badge } from "@/lib/rider-kpi";
@@ -118,6 +120,9 @@ export default function RiderDetailPage() {
 
   // ── Overview state ──
   const [riderName, setRiderName]   = useState("");
+  const [riderAvatar, setRiderAvatar] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number; mode: string; battery: number | null } | null>(null);
   const [currentJob, setCurrentJob] = useState<{ order_number: string; device_model: string | null; customer_name: string | null; appt_location: string | null } | null>(null);
   const [shifts,    setShifts]      = useState<Shift[]>([]);
@@ -227,6 +232,12 @@ export default function RiderDetailPage() {
 
   // ── Effects ──
   useEffect(() => {
+    fetchMyProfile(id).then(p => {
+      if (p) {
+        setRiderName(p.name ?? "ไรเดอร์");
+        setRiderAvatar(p.avatar_url ?? null);
+      }
+    });
     loadOverview();
     fetchRiderKpiForAdmin(id, curMonth).then(({ stats, targets }) => {
       setKpiStats(stats);
@@ -258,6 +269,27 @@ export default function RiderDetailPage() {
   useEffect(() => {
     if (topTab === "history") loadHistory();
   }, [topTab, loadHistory]);
+
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `${id}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+      const url = `${publicUrl}?t=${Date.now()}`;
+      await updateRiderAvatar(id, url);
+      setRiderAvatar(url);
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  }
 
   async function handleCloseShift() {
     setClosingShift(true);
@@ -294,10 +326,33 @@ export default function RiderDetailPage() {
     <div style={{ minHeight: "100vh", background: "#f5f5f7", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
 
       {/* ── Header ── */}
+      <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: "none" }} onChange={handleAvatarUpload} />
       <div style={{ background: DARK, padding: "16px 24px", display: "flex", alignItems: "center", gap: 16 }}>
         <button onClick={() => router.back()} style={{ background: "none", border: "none", color: GOLD, cursor: "pointer", padding: 0 }}>
           <ArrowLeft size={20} />
         </button>
+
+        {/* Avatar */}
+        <div style={{ position: "relative", flexShrink: 0 }}>
+          <button onClick={() => avatarInputRef.current?.click()} disabled={uploadingAvatar} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "block" }}>
+            {riderAvatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={riderAvatar} alt={riderName} style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", display: "block" }} />
+            ) : (
+              <div style={{ width: 40, height: 40, borderRadius: "50%", background: GOLD, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <UserCircle size={22} color={DARK} />
+              </div>
+            )}
+            <div style={{ position: "absolute", bottom: -2, right: -2, width: 16, height: 16, borderRadius: "50%", background: uploadingAvatar ? "#6b7280" : GOLD, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${DARK}` }}>
+              {uploadingAvatar
+                ? <div style={{ width: 7, height: 7, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", animation: "spin 0.8s linear infinite" }} />
+                : <Camera size={8} color={DARK} />
+              }
+            </div>
+          </button>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+
         <div style={{ flex: 1 }}>
           <h1 style={{ margin: 0, color: GOLD, fontSize: 18, fontWeight: 800 }}>{riderName || "ไรเดอร์"}</h1>
           {currentLocation && (

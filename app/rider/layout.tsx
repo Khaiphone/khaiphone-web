@@ -40,10 +40,11 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
   const { BG, CARD, BORDER, ACCENT, GREEN, TEXT, TEXT2 } = useRiderTheme();
 
   const [ready, setReady]         = useState(false);
-  const [riderName, setRiderName] = useState("");
+  const [riderName, setRiderName]   = useState("");
   const [riderEmail, setRiderEmail] = useState("");
-  const [riderRole, setRiderRole] = useState("");
-  const [userId, setUserId]       = useState<string>("");
+  const [riderRole, setRiderRole]   = useState("");
+  const [avatarUrl, setAvatarUrl]   = useState<string | null>(null);
+  const [userId, setUserId]         = useState<string>("");
   const [isOnline, setIsOnline]   = useState(false);
   const [notifs, setNotifs]       = useState<Notif[]>([]);
   const [showNotifs, setShowNotifs] = useState(false);
@@ -162,6 +163,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
       setRiderName(profile.name ?? "ไรเดอร์");
       setRiderEmail(profile.email ?? "");
       setRiderRole(profile.role ?? "");
+      setAvatarUrl(profile.avatar_url ?? null);
       setUserId(uid);
       setIsOnline(online);
       setReady(true);
@@ -200,7 +202,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
   const isJobPage = /^\/rider\/job\//.test(pathname);
 
   return (
-    <RiderSessionContext.Provider value={{ userId, riderName, riderEmail, riderRole, isOnline, setIsOnline }}>
+    <RiderSessionContext.Provider value={{ userId, riderName, riderEmail, riderRole, avatarUrl, setAvatarUrl, isOnline, setIsOnline }}>
     <div style={{ height: "100dvh", background: BG, color: TEXT, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", display: "flex", flexDirection: "column", overflow: "hidden", overscrollBehavior: "none" }}>
 
       {/* Header */}

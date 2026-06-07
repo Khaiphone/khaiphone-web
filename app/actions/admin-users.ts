@@ -20,11 +20,11 @@ export type AdminUserRow = {
   is_rider: boolean;
 };
 
-export async function fetchMyProfile(userId: string): Promise<{ name: string; role: AdminRole; email: string; permissions: Permission[]; is_rider: boolean } | null> {
+export async function fetchMyProfile(userId: string): Promise<{ name: string; role: AdminRole; email: string; permissions: Permission[]; is_rider: boolean; avatar_url: string | null } | null> {
   const supabase = createServerClient();
   const { data } = await supabase
     .from("admin_users")
-    .select("name, role, email, permissions, is_rider")
+    .select("name, role, email, permissions, is_rider, avatar_url")
     .eq("user_id", userId)
     .single();
   if (!data) return null;
@@ -34,6 +34,7 @@ export async function fetchMyProfile(userId: string): Promise<{ name: string; ro
     email: data.email,
     permissions: (data.permissions ?? []) as Permission[],
     is_rider: data.is_rider ?? false,
+    avatar_url: data.avatar_url ?? null,
   };
 }
 
@@ -163,6 +164,16 @@ export async function sendPasswordReset(email: string): Promise<{ success: boole
   });
   if (error) return { success: false, error: error.message };
   return { success: true };
+}
+
+export async function updateRiderAvatar(userId: string, avatarUrl: string | null) {
+  const supabase = createServerClient();
+  const { error } = await supabase
+    .from("admin_users")
+    .update({ avatar_url: avatarUrl })
+    .eq("user_id", userId);
+  if (error) return { success: false as const, error: error.message };
+  return { success: true as const };
 }
 
 export async function deleteAdminUser(id: string, userId: string) {

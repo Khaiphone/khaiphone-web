@@ -7,12 +7,15 @@ export interface RiderSessionCtx {
   riderName: string;
   riderEmail: string;
   riderRole: string;
+  avatarUrl: string | null;
+  setAvatarUrl: (v: string | null) => void;
   isOnline: boolean;
   setIsOnline: (v: boolean) => void;
 }
 
 const RiderSessionContext = createContext<RiderSessionCtx>({
   userId: "", riderName: "", riderEmail: "", riderRole: "",
+  avatarUrl: null, setAvatarUrl: () => {},
   isOnline: false, setIsOnline: () => {},
 });
 

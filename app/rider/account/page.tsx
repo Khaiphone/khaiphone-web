@@ -1,22 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { UserCircle, LogOut, Wifi, WifiOff, ChevronRight, Moon, Sun, ShieldX } from "lucide-react";
+import { UserCircle, LogOut, Wifi, WifiOff, ChevronRight, Moon, Sun, ShieldX, Camera } from "lucide-react";
 import { Sk } from "@/app/rider/skeleton";
 import { supabase } from "@/lib/supabase";
 import { setRiderOnlineStatus } from "@/app/actions/rider";
 import { saveLocationConsent } from "@/app/actions/rider-tracking";
+import { updateRiderAvatar } from "@/app/actions/admin-users";
 import { useRiderTheme } from "@/app/rider/theme";
 import { useRiderSession } from "@/app/rider/context";
 
 export default function AccountPage() {
   const router = useRouter();
   const { BG: _BG, CARD, BORDER, ACCENT, GREEN, RED, TEXT, TEXT2, isDark, toggleTheme } = useRiderTheme();
-  const { userId, riderName, riderEmail, riderRole, isOnline, setIsOnline } = useRiderSession();
+  const { userId, riderName, riderEmail, riderRole, avatarUrl, setAvatarUrl, isOnline, setIsOnline } = useRiderSession();
   const [toggling, setToggling] = useState(false);
   const [showConsentRevoke, setShowConsentRevoke] = useState(false);
   const [revoking, setRevoking] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function toggleOnline() {
     setToggling(true);
@@ -38,6 +41,28 @@ export default function AccountPage() {
     setRevoking(false);
     setShowConsentRevoke(false);
     router.replace("/rider/consent");
+  }
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !userId) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `${userId}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+      // Bust cache with timestamp
+      const url = `${publicUrl}?t=${Date.now()}`;
+      await updateRiderAvatar(userId, url);
+      setAvatarUrl(url);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   }
 
   // account page never shows a loading skeleton — data comes from context instantly
@@ -69,9 +94,49 @@ export default function AccountPage() {
 
       {/* Profile card */}
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 24, display: "flex", alignItems: "center", gap: 16 }}>
-        <div style={{ width: 56, height: 56, borderRadius: "50%", background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <UserCircle size={30} color="#000" />
+        {/* Avatar with upload button */}
+        <div style={{ position: "relative", flexShrink: 0 }}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            style={{ display: "none" }}
+            onChange={handleAvatarChange}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", position: "relative", display: "block" }}
+          >
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarUrl}
+                alt={riderName}
+                style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", display: "block" }}
+              />
+            ) : (
+              <div style={{ width: 64, height: 64, borderRadius: "50%", background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <UserCircle size={34} color="#000" />
+              </div>
+            )}
+            {/* Camera overlay */}
+            <div style={{
+              position: "absolute", bottom: 0, right: 0,
+              width: 22, height: 22, borderRadius: "50%",
+              background: uploading ? TEXT2 : ACCENT,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              border: `2px solid ${CARD}`,
+            }}>
+              {uploading
+                ? <div style={{ width: 10, height: 10, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", animation: "spin 0.8s linear infinite" }} />
+                : <Camera size={11} color="#000" />
+              }
+            </div>
+          </button>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
+
         <div>
           <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: TEXT }}>{riderName}</p>
           <p style={{ margin: "2px 0 0", fontSize: 13, color: TEXT2 }}>{riderEmail}</p>
