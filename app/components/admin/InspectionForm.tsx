@@ -660,9 +660,9 @@ export default function InspectionForm({ requestId, selections, deviceColor, exi
         <p style={labelStyle}>ผลการตรวจ</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
           {([
-            { value: "contracting",      label: "✅ ผ่าน",       color: GREEN },
-            { value: "price_negotiation", label: "🔄 ต่อรองราคา", color: "#eab308" },
-            { value: "rejected",          label: "❌ ปฏิเสธ",     color: RED },
+            { value: "contracting",       label: "ผ่าน",        color: GREEN },
+            { value: "price_negotiation", label: "ต่อรองราคา",  color: "#eab308" },
+            { value: "rejected",          label: "ปฏิเสธ",      color: RED },
           ] as const).map(opt => (
             <button key={opt.value} onClick={() => setNewStatus(opt.value)}
               style={{ padding: "10px 8px", borderRadius: 10, border: `2px solid ${newStatus === opt.value ? opt.color : BORDER}`, background: newStatus === opt.value ? `${opt.color}18` : CARD, color: newStatus === opt.value ? opt.color : TEXT2, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
