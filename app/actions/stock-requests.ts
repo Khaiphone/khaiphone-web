@@ -105,8 +105,15 @@ export async function createStockFromRequest(
     phone: "โทรศัพท์", manual: "หน้าร้าน",
   };
   const year = new Date().getFullYear();
-  const { count: totalCount } = await supabase.from("stocks").select("*", { count: "exact", head: true });
-  const stockId = `STK-${year}-${String((totalCount ?? 0) + 1).padStart(5, "0")}`;
+  // Use max existing ID (not count) so deleted records don't cause collisions
+  const { data: maxRow } = await supabase
+    .from("stocks")
+    .select("id")
+    .like("id", `STK-${year}-%`)
+    .order("id", { ascending: false })
+    .limit(1);
+  const maxNum = maxRow?.[0] ? parseInt(maxRow[0].id.split("-")[2] ?? "0", 10) : 0;
+  const stockId = `STK-${year}-${String(maxNum + 1).padStart(5, "0")}`;
   const now = new Date().toISOString();
 
   // Snapshot from inspection — staff-entered values for cross-checking later
