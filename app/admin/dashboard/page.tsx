@@ -67,8 +67,19 @@ export default function DashboardPage() {
       lastRefetchRef.current = now;
       fetchRequests(staffUserIdRef.current).then(d => { setRequests(d); cacheSet("admin:requests", d); });
     };
+
+    const channel = supabase
+      .channel("admin-dashboard-requests")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "requests" }, refetch)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "requests" }, refetch)
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "requests" }, refetch)
+      .subscribe();
+
     window.addEventListener("focus", refetch);
-    return () => window.removeEventListener("focus", refetch);
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener("focus", refetch);
+    };
   }, []);
 
   useEffect(() => {

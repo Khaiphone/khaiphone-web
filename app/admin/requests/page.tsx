@@ -78,6 +78,7 @@ export default function RequestsPage() {
       .channel("admin-requests-list")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "requests" }, refetch)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "requests" }, refetch)
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "requests" }, refetch)
       .subscribe();
 
     window.addEventListener("focus", refetch);
