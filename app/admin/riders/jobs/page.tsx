@@ -8,8 +8,12 @@ import {
   AlertTriangle, Package, Truck, PackageCheck, RotateCcw, Target,
 } from "lucide-react";
 import { fetchRiderJobs, adminConfirmReturn, adminReclaimJob } from "@/app/actions/admin-requests";
+import { fetchRiderSystemSettings } from "@/app/actions/rider-settings";
 import type { AdminRequest, RequestStatus } from "@/lib/types/admin";
 import StatusBadge from "@/app/components/admin/StatusBadge";
+
+type SLAConfig = { arriveOntime: number; arriveSlight: number; jobFast: number; jobSlight: number };
+const SLA_DEFAULTS: SLAConfig = { arriveOntime: 5, arriveSlight: 20, jobFast: 30, jobSlight: 60 };
 
 const BG     = "var(--admin-bg)";
 const CARD   = "var(--admin-card)";
@@ -81,7 +85,7 @@ type EfficiencySLA =
 
 type SLARow = { job: AdminRequest; punct: PunctualitySLA; eff: EfficiencySLA };
 
-function computePunctualitySLA(job: AdminRequest): PunctualitySLA {
+function computePunctualitySLA(job: AdminRequest, cfg: SLAConfig): PunctualitySLA {
   const { date, time } = job.appointment;
   if (!date || !time) return { status: "no_appt" };
   if (CANCELLED_STATUSES.includes(job.status)) return { status: "cancelled" };
@@ -90,21 +94,21 @@ function computePunctualitySLA(job: AdminRequest): PunctualitySLA {
   const arrivedEntry = (job.statusLog ?? []).find(s => s.status === "inspecting");
 
   if (!arrivedEntry) {
-    return Date.now() > apptMs + 20 * 60_000
+    return Date.now() > apptMs + cfg.arriveSlight * 60_000
       ? { status: "overdue", apptMs }
       : { status: "pending", apptMs };
   }
 
   const arrivedMs = new Date(arrivedEntry.timestamp).getTime();
   const deltaMin  = Math.round((arrivedMs - apptMs) / 60_000);
-  return deltaMin <= 5
+  return deltaMin <= cfg.arriveOntime
     ? { status: "ontime", apptMs, arrivedMs, deltaMin }
-    : deltaMin <= 20
+    : deltaMin <= cfg.arriveSlight
     ? { status: "slight", apptMs, arrivedMs, deltaMin }
     : { status: "late",   apptMs, arrivedMs, deltaMin };
 }
 
-function computeEfficiencySLA(job: AdminRequest): EfficiencySLA {
+function computeEfficiencySLA(job: AdminRequest, cfg: SLAConfig): EfficiencySLA {
   const arrivedEntry  = (job.statusLog ?? []).find(s => s.status === "inspecting");
   if (!arrivedEntry) return { status: "no_arrival" };
 
@@ -114,9 +118,9 @@ function computeEfficiencySLA(job: AdminRequest): EfficiencySLA {
 
   const completedMs = new Date(completedEntry.timestamp).getTime();
   const deltaMin    = Math.round((completedMs - arrivedMs) / 60_000);
-  return deltaMin <= 30
+  return deltaMin <= cfg.jobFast
     ? { status: "fast",   arrivedMs, completedMs, deltaMin }
-    : deltaMin <= 60
+    : deltaMin <= cfg.jobSlight
     ? { status: "slight", arrivedMs, completedMs, deltaMin }
     : { status: "slow",   arrivedMs, completedMs, deltaMin };
 }
@@ -174,6 +178,16 @@ export default function RiderJobsPage() {
   const [expanded,    setExpanded]   = useState(true);
   const [confirmBusy, setConfirmBusy] = useState<string | null>(null);
   const [reclaimBusy, setReclaimBusy] = useState<string | null>(null);
+  const [slaCfg,      setSLACfg]     = useState<SLAConfig>(SLA_DEFAULTS);
+
+  useEffect(() => {
+    fetchRiderSystemSettings().then(s => setSLACfg({
+      arriveOntime: s.sla_arrive_ontime_min,
+      arriveSlight: s.sla_arrive_slight_min,
+      jobFast:      s.sla_job_fast_min,
+      jobSlight:    s.sla_job_slight_min,
+    }));
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -246,14 +260,14 @@ export default function RiderJobsPage() {
   const slaRows = useMemo((): SLARow[] =>
     jobs
       .filter(j => j.appointment.date && j.appointment.time)
-      .map(j => ({ job: j, punct: computePunctualitySLA(j), eff: computeEfficiencySLA(j) }))
+      .map(j => ({ job: j, punct: computePunctualitySLA(j, slaCfg), eff: computeEfficiencySLA(j, slaCfg) }))
       .filter(r => r.punct.status !== "no_appt" && r.punct.status !== "cancelled")
       .sort((a, b) => {
         const aMs = ("apptMs" in a.punct ? a.punct.apptMs : 0);
         const bMs = ("apptMs" in b.punct ? b.punct.apptMs : 0);
         return aMs - bMs;
       }),
-    [jobs]
+    [jobs, slaCfg]
   );
 
   // Planner SLA summary
@@ -399,7 +413,7 @@ export default function RiderJobsPage() {
           <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "16px 18px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
               <Target size={15} color={PURPLE} />
-              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: TEXT }}>Rider SLA · เวลาทำงาน (เป้า ≤ 30 นาที)</p>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: TEXT }}>Rider SLA · เวลาทำงาน (เป้า ≤ {slaCfg.jobFast} นาที)</p>
               {eRate !== null && (
                 <span style={{ marginLeft: "auto", fontSize: 22, fontWeight: 800, color: eRate >= 80 ? GREEN : eRate >= 60 ? ORANGE : RED }}>{eRate}%</span>
               )}
@@ -416,9 +430,9 @@ export default function RiderJobsPage() {
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
                 {[
-                  { label: "≤ 30 นาที",    count: eFast,    color: GREEN  },
-                  { label: "30–60 นาที",   count: eSlight,  color: ORANGE },
-                  { label: "> 60 นาที",    count: eSlow,    color: RED    },
+                  { label: `≤ ${slaCfg.jobFast} นาที`,                               count: eFast,    color: GREEN  },
+                  { label: `${slaCfg.jobFast}–${slaCfg.jobSlight} นาที`,           count: eSlight,  color: ORANGE },
+                  { label: `> ${slaCfg.jobSlight} นาที`,                            count: eSlow,    color: RED    },
                   { label: "กำลังทำ",      count: ePending, color: BLUE   },
                 ].map(({ label, count, color }) => (
                   <div key={label} style={{ textAlign: "center" }}>

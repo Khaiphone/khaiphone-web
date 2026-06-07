@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, MapPin, Clock, Bell, Smartphone, Save, Send,
-  CheckCircle2, XCircle, Loader2, RefreshCw,
+  CheckCircle2, XCircle, Loader2, RefreshCw, Target,
 } from "lucide-react";
 import {
   fetchRiderSystemSettings, updateRiderSystemSettings,
@@ -83,16 +83,22 @@ export default function RiderSettingsPage() {
   // Section saving flags
   const [savingOffice,    setSavingOffice]    = useState(false);
   const [savingTracking,  setSavingTracking]  = useState(false);
+  const [savingSLA,       setSavingSLA]       = useState(false);
   const [savedOffice,     setSavedOffice]     = useState(false);
   const [savedTracking,   setSavedTracking]   = useState(false);
+  const [savedSLA,        setSavedSLA]        = useState(false);
 
   // Local editable copies
-  const [officeName,   setOfficeName]   = useState("");
-  const [officeLat,    setOfficeLat]    = useState("");
-  const [officeLng,    setOfficeLng]    = useState("");
-  const [timeout,      setTimeout_]     = useState("");
-  const [interval,     setInterval_]    = useState("");
-  const [radius,       setRadius]       = useState("");
+  const [officeName,        setOfficeName]        = useState("");
+  const [officeLat,         setOfficeLat]         = useState("");
+  const [officeLng,         setOfficeLng]         = useState("");
+  const [timeout,           setTimeout_]          = useState("");
+  const [interval,          setInterval_]         = useState("");
+  const [radius,            setRadius]            = useState("");
+  const [arriveOntime,      setArriveOntime]      = useState("");
+  const [arriveSlight,      setArriveSlight]      = useState("");
+  const [jobFast,           setJobFast]           = useState("");
+  const [jobSlight,         setJobSlight]         = useState("");
 
   // ── Push / Notification state ──
   const [pushStatus,    setPushStatus]    = useState<RiderPushStatus[]>([]);
@@ -111,6 +117,10 @@ export default function RiderSettingsPage() {
       setTimeout_(String(s.shift_auto_timeout_min));
       setInterval_(String(s.location_interval_sec));
       setRadius(String(s.return_radius_m));
+      setArriveOntime(String(s.sla_arrive_ontime_min));
+      setArriveSlight(String(s.sla_arrive_slight_min));
+      setJobFast(String(s.sla_job_fast_min));
+      setJobSlight(String(s.sla_job_slight_min));
       setPushStatus(ps);
       setLoaded(true);
     });
@@ -137,6 +147,19 @@ export default function RiderSettingsPage() {
     });
     setSavingTracking(false);
     if (res.success) { setSavedTracking(true); setTimeout(() => setSavedTracking(false), 3000); }
+    else alert(res.error);
+  }
+
+  async function saveSLA() {
+    setSavingSLA(true);
+    const res = await updateRiderSystemSettings({
+      sla_arrive_ontime_min: parseInt(arriveOntime),
+      sla_arrive_slight_min: parseInt(arriveSlight),
+      sla_job_fast_min:      parseInt(jobFast),
+      sla_job_slight_min:    parseInt(jobSlight),
+    });
+    setSavingSLA(false);
+    if (res.success) { setSavedSLA(true); setTimeout(() => setSavedSLA(false), 3000); }
     else alert(res.error);
   }
 
@@ -238,6 +261,35 @@ export default function RiderSettingsPage() {
             <p style={{ margin: 0, fontSize: 12, color: TEXT2, lineHeight: 1.7 }}>
               ⚠️ การเปลี่ยนค่า <strong>location interval</strong> และ <strong>รัศมีออฟฟิศ</strong> มีผลเมื่อไรเดอร์เปิดแอพใหม่ครั้งถัดไป
             </p>
+          </div>
+        </SectionCard>
+
+        {/* ══ 3. SLA ══ */}
+        <SectionCard icon={<Target size={16} />} title="SLA Threshold">
+          <p style={{ margin: "0 0 14px", fontSize: 12, color: TEXT3, lineHeight: 1.6 }}>
+            กำหนดเกณฑ์เวลาสำหรับรายงาน SLA ในหน้ารายงานงานไรเดอร์
+          </p>
+          <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: TEXT2 }}>Planner SLA — ไรเดอร์ถึงที่นัดหมาย</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+            <Field label="ถึงตรงเวลา (นาที)" hint="ถ้ามาช้าไม่เกินนี้ = ตรงเวลา">
+              <Input value={arriveOntime} onChange={setArriveOntime} type="number" placeholder="5" />
+            </Field>
+            <Field label="สายเล็กน้อย (นาที)" hint="ช้าเกินนี้แต่ไม่เกินช่องถัดไป = สายเล็กน้อย">
+              <Input value={arriveSlight} onChange={setArriveSlight} type="number" placeholder="20" />
+            </Field>
+          </div>
+          <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: TEXT2 }}>Rider SLA — เวลาทำงานหลังถึงที่นัด</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Field label="เสร็จเร็ว (นาที)" hint="เสร็จไม่เกินนี้ = เสร็จเร็ว">
+              <Input value={jobFast} onChange={setJobFast} type="number" placeholder="30" />
+            </Field>
+            <Field label="ล่าช้าเล็กน้อย (นาที)" hint="เกินนี้ขึ้นไป = ช้าเกินไป">
+              <Input value={jobSlight} onChange={setJobSlight} type="number" placeholder="60" />
+            </Field>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14 }}>
+            <SaveBtn loading={savingSLA} onClick={saveSLA} />
+            {savedSLA && <span style={{ fontSize: 12, color: GREEN, fontWeight: 600 }}>✓ บันทึกแล้ว</span>}
           </div>
         </SectionCard>
 

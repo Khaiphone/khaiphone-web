@@ -11,6 +11,10 @@ export type RiderSystemSettings = {
   shift_auto_timeout_min: number;
   location_interval_sec:  number;
   return_radius_m:        number;
+  sla_arrive_ontime_min:  number;
+  sla_arrive_slight_min:  number;
+  sla_job_fast_min:       number;
+  sla_job_slight_min:     number;
 };
 
 const DEFAULTS: RiderSystemSettings = {
@@ -20,6 +24,10 @@ const DEFAULTS: RiderSystemSettings = {
   shift_auto_timeout_min: 60,
   location_interval_sec:  30,
   return_radius_m:        500,
+  sla_arrive_ontime_min:  5,
+  sla_arrive_slight_min:  20,
+  sla_job_fast_min:       30,
+  sla_job_slight_min:     60,
 };
 
 export async function fetchRiderSystemSettings(): Promise<RiderSystemSettings> {
@@ -34,6 +42,10 @@ export async function fetchRiderSystemSettings(): Promise<RiderSystemSettings> {
     shift_auto_timeout_min: parseInt(map.shift_auto_timeout_min   ?? String(DEFAULTS.shift_auto_timeout_min)),
     location_interval_sec:  parseInt(map.location_interval_sec    ?? String(DEFAULTS.location_interval_sec)),
     return_radius_m:        parseInt(map.return_radius_m          ?? String(DEFAULTS.return_radius_m)),
+    sla_arrive_ontime_min:  parseInt(map.sla_arrive_ontime_min    ?? String(DEFAULTS.sla_arrive_ontime_min)),
+    sla_arrive_slight_min:  parseInt(map.sla_arrive_slight_min    ?? String(DEFAULTS.sla_arrive_slight_min)),
+    sla_job_fast_min:       parseInt(map.sla_job_fast_min         ?? String(DEFAULTS.sla_job_fast_min)),
+    sla_job_slight_min:     parseInt(map.sla_job_slight_min       ?? String(DEFAULTS.sla_job_slight_min)),
   };
 }
 
