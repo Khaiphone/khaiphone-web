@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   LayoutDashboard, ClipboardList, CalendarDays, Bell, MoreHorizontal, Moon, Sun,
   Map, Users, ArrowLeft, BarChart2, Settings, HelpCircle, ChevronLeft, ChevronRight, LogOut,
@@ -173,7 +174,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
             <>
               {/* Logo header */}
               <div style={{ padding: collapsed ? "0 0 20px" : "0 20px 20px", borderBottom: `1px solid ${sidebarBorder}`, display: "flex", alignItems: "center", gap: 10, justifyContent: collapsed ? "center" : "flex-start" }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: GOLD, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: dark ? "#1a1a2e" : "#fff", fontSize: 16, flexShrink: 0 }}>K</div>
+                <Image src="/logo-icon.webp" alt="Khaiphone" width={36} height={36} style={{ borderRadius: 10, flexShrink: 0 }} />
                 {!collapsed && (
                   <div>
                     <p style={{ color: sidebarText, fontWeight: 800, fontSize: "14px", margin: 0, letterSpacing: 0.5 }}>KHAIPHONE</p>
