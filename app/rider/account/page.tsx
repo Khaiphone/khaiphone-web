@@ -19,6 +19,8 @@ export default function AccountPage() {
   const [showConsentRevoke, setShowConsentRevoke] = useState(false);
   const [revoking, setRevoking] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function toggleOnline() {
@@ -43,25 +45,41 @@ export default function AccountPage() {
     router.replace("/rider/consent");
   }
 
-  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !userId) return;
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setPreviewFile(file);
+    setPreviewUrl(url);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function cancelPreview() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewFile(null);
+    setPreviewUrl(null);
+  }
+
+  async function confirmUpload() {
+    if (!previewFile || !userId) return;
     setUploading(true);
+    const urlToRevoke = previewUrl;
+    setPreviewFile(null);
+    setPreviewUrl(null);
     try {
-      const ext = file.name.split(".").pop() ?? "jpg";
+      const ext = previewFile.name.split(".").pop() ?? "jpg";
       const path = `${userId}.${ext}`;
       const { error: upErr } = await supabase.storage
         .from("avatars")
-        .upload(path, file, { upsert: true, contentType: file.type });
+        .upload(path, previewFile, { upsert: true, contentType: previewFile.type });
       if (upErr) throw upErr;
       const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-      // Bust cache with timestamp
       const url = `${publicUrl}?t=${Date.now()}`;
       await updateRiderAvatar(userId, url);
       setAvatarUrl(url);
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
     }
   }
 
@@ -256,6 +274,54 @@ export default function AccountPage() {
         <LogOut size={18} />
         ออกจากระบบ
       </button>
+
+      {/* ── Avatar preview bottom sheet ── */}
+      {previewUrl && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 50, display: "flex", alignItems: "flex-end" }}
+          onClick={cancelPreview}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ width: "100%", background: CARD, borderRadius: "20px 20px 0 0", padding: "28px 20px", paddingBottom: "calc(28px + env(safe-area-inset-bottom))", display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}
+          >
+            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: TEXT }}>รูปโปรไฟล์</p>
+
+            {/* Circular preview */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={previewUrl}
+              alt="preview"
+              style={{ width: 140, height: 140, borderRadius: "50%", objectFit: "cover", border: `3px solid ${ACCENT}` }}
+            />
+
+            <p style={{ margin: 0, fontSize: 13, color: TEXT2, textAlign: "center" }}>
+              รูปจะถูกตัดเป็นวงกลมอัตโนมัติ<br />เลือกรูปที่มีหน้าอยู่ตรงกลางจะดูดีที่สุด
+            </p>
+
+            <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 10 }}>
+              <button
+                onClick={confirmUpload}
+                style={{ padding: "14px 0", borderRadius: 12, border: "none", background: ACCENT, color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                ใช้รูปนี้
+              </button>
+              <button
+                onClick={() => { cancelPreview(); fileInputRef.current?.click(); }}
+                style={{ padding: "14px 0", borderRadius: 12, border: `1px solid ${BORDER}`, background: "transparent", color: TEXT, fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                เลือกรูปใหม่
+              </button>
+              <button
+                onClick={cancelPreview}
+                style={{ padding: "14px 0", borderRadius: 12, border: "none", background: "transparent", color: TEXT2, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                ยกเลิก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Consent revoke confirmation bottom sheet */}
       {showConsentRevoke && (
