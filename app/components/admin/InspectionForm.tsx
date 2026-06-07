@@ -145,7 +145,7 @@ interface Props {
   saving: boolean;
 }
 
-export default function InspectionForm({ requestId, selections, deviceColor, existing, onSave, saving }: Props) {
+export default function InspectionForm({ requestId, selections, estimatedPrice, deviceColor, existing, onSave, saving }: Props) {
   // ── Device info state ──────────────────────────────────────────────────────
   const [serial,  setSerial]  = useState(existing?.serial  ?? "");
   const [imei,    setImei]    = useState(existing?.imei    ?? "");
@@ -201,7 +201,9 @@ export default function InspectionForm({ requestId, selections, deviceColor, exi
   const [uploading, setUploading] = useState(false);
 
   // ── Result & error ─────────────────────────────────────────────────────────
-  const [newStatus, setNewStatus] = useState<"contracting" | "price_negotiation" | "rejected">("contracting");
+  const [newStatus,    setNewStatus]    = useState<"contracting" | "price_negotiation" | "rejected">("contracting");
+  const [actualPrice,  setActualPrice]  = useState(String(existing?.actualPrice || estimatedPrice || ""));
+  const [priceReason,  setPriceReason]  = useState(existing?.priceReason ?? "");
   const [error, setError] = useState("");
 
   // Restore SICKW result from saved raw text on mount
@@ -326,9 +328,9 @@ export default function InspectionForm({ requestId, selections, deviceColor, exi
       criteria:            criteriaArr,
       issues:              [],
       photos,
-      originalPrice:       0,
-      actualPrice:         0,
-      priceReason:         "",
+      originalPrice:       estimatedPrice,
+      actualPrice:         parseInt(actualPrice.replace(/,/g, "")) || estimatedPrice,
+      priceReason:         priceReason.trim(),
       negotiationResponse: null,
       negotiationRespondedAt:  null,
       negotiationRespondedBy:  null,
@@ -652,6 +654,35 @@ export default function InspectionForm({ requestId, selections, deviceColor, exi
               {conditionLabel && <span style={{ fontSize: 13, color: TEXT, fontWeight: 500 }}>{conditionLabel}</span>}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* ── Price ── */}
+      <div style={cardStyle}>
+        <div style={{ padding: "12px 16px", borderBottom: `1px solid ${BORDER}` }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: TEXT }}>ราคารับซื้อ</p>
+        </div>
+        <div style={{ padding: "12px 16px", borderBottom: `1px solid ${BORDER}` }}>
+          <p style={{ margin: "0 0 4px", fontSize: 11, color: TEXT2 }}>ราคาที่ตกลงกัน (บาท)</p>
+          <input
+            type="number"
+            value={actualPrice}
+            onChange={e => setActualPrice(e.target.value)}
+            placeholder={String(estimatedPrice)}
+            style={{ width: "100%", background: "none", border: "none", color: GOLD, fontSize: 22, fontWeight: 800, fontFamily: "inherit", outline: "none" }}
+          />
+          {estimatedPrice > 0 && parseInt(actualPrice) !== estimatedPrice && actualPrice !== "" && (
+            <p style={{ margin: "4px 0 0", fontSize: 11, color: TEXT3 }}>ราคาประเมินเดิม ฿{estimatedPrice.toLocaleString("th-TH")}</p>
+          )}
+        </div>
+        <div style={{ padding: "12px 16px" }}>
+          <p style={{ margin: "0 0 4px", fontSize: 11, color: TEXT2 }}>เหตุผล (ถ้าราคาเปลี่ยน)</p>
+          <input
+            value={priceReason}
+            onChange={e => setPriceReason(e.target.value)}
+            placeholder="เช่น แบตเตอรี่เหลือ 72% ลดราคา"
+            style={{ width: "100%", background: "none", border: "none", color: TEXT, fontSize: 14, fontFamily: "inherit", outline: "none" }}
+          />
         </div>
       </div>
 
