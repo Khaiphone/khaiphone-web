@@ -55,7 +55,7 @@ export async function fetchMyMonthlyStats(month: string): Promise<{ stats: Month
   const [{ data: shifts }, { data: requests }, { data: userRow }, { data: rankRows }] = await Promise.all([
     supabase
       .from("rider_shifts")
-      .select("jobs_completed, jobs_attempted, jobs_declined, total_distance_km")
+      .select("jobs_attempted, jobs_declined, total_distance_km")
       .eq("rider_id", user.id)
       .gte("clocked_in_at", start)
       .lt("clocked_in_at", end),
@@ -74,7 +74,7 @@ export async function fetchMyMonthlyStats(month: string): Promise<{ stats: Month
     supabase.from("rank_configs").select("*"),
   ]);
 
-  const jobsCompleted  = (shifts ?? []).reduce((s, sh) => s + (sh.jobs_completed ?? 0), 0);
+  const jobsCompleted  = (requests ?? []).length;
   const jobsAttempted  = (shifts ?? []).reduce((s, sh) => s + (sh.jobs_attempted ?? 0), 0);
   const jobsDeclined   = (shifts ?? []).reduce((s, sh) => s + (sh.jobs_declined  ?? 0), 0);
   const distanceKm     = (shifts ?? []).reduce((s, sh) => s + (sh.total_distance_km ?? 0), 0);
@@ -116,13 +116,20 @@ export async function fetchMyLifetimeStats(): Promise<{
   const user = await requireAuth();
   const supabase = createServerClient();
 
-  const { data: allShifts } = await supabase
-    .from("rider_shifts")
-    .select("clocked_in_at, jobs_completed, jobs_attempted, jobs_declined, total_distance_km")
-    .eq("rider_id", user.id)
-    .order("clocked_in_at", { ascending: false });
+  const [{ data: allShifts }, { count: completedCount }] = await Promise.all([
+    supabase
+      .from("rider_shifts")
+      .select("clocked_in_at, jobs_completed, jobs_attempted, jobs_declined, total_distance_km")
+      .eq("rider_id", user.id)
+      .order("clocked_in_at", { ascending: false }),
+    supabase
+      .from("requests")
+      .select("*", { count: "exact", head: true })
+      .eq("rider_id", user.id)
+      .eq("status", "completed"),
+  ]);
 
-  const lifetimeCompleted  = (allShifts ?? []).reduce((s, sh) => s + (sh.jobs_completed ?? 0), 0);
+  const lifetimeCompleted  = completedCount ?? 0;
   const lifetimeDistanceKm = (allShifts ?? []).reduce((s, sh) => s + (sh.total_distance_km ?? 0), 0);
   const currentStreak      = computeStreak(allShifts ?? []);
   const tier               = computeTier(lifetimeCompleted);
@@ -227,7 +234,7 @@ export async function fetchRiderKpiForAdmin(riderId: string, month: string): Pro
   const [{ data: shifts }, { data: requests }, { data: userRow }, { data: rankRows }] = await Promise.all([
     supabase
       .from("rider_shifts")
-      .select("jobs_completed, jobs_attempted, jobs_declined, total_distance_km")
+      .select("jobs_attempted, jobs_declined, total_distance_km")
       .eq("rider_id", riderId)
       .gte("clocked_in_at", start)
       .lt("clocked_in_at", end),
@@ -246,7 +253,7 @@ export async function fetchRiderKpiForAdmin(riderId: string, month: string): Pro
     supabase.from("rank_configs").select("*"),
   ]);
 
-  const jobsCompleted  = (shifts ?? []).reduce((s, sh) => s + (sh.jobs_completed ?? 0), 0);
+  const jobsCompleted  = (requests ?? []).length;
   const jobsAttempted  = (shifts ?? []).reduce((s, sh) => s + (sh.jobs_attempted ?? 0), 0);
   const jobsDeclined   = (shifts ?? []).reduce((s, sh) => s + (sh.jobs_declined  ?? 0), 0);
   const distanceKm     = (shifts ?? []).reduce((s, sh) => s + (sh.total_distance_km ?? 0), 0);
@@ -307,13 +314,20 @@ export async function fetchRiderLifetimeForAdmin(riderId: string): Promise<{
   await requireAuth();
   const supabase = createServerClient();
 
-  const { data: allShifts } = await supabase
-    .from("rider_shifts")
-    .select("clocked_in_at, jobs_completed, jobs_attempted, jobs_declined, total_distance_km")
-    .eq("rider_id", riderId)
-    .order("clocked_in_at", { ascending: false });
+  const [{ data: allShifts }, { count: completedCount }] = await Promise.all([
+    supabase
+      .from("rider_shifts")
+      .select("clocked_in_at, jobs_completed, jobs_attempted, jobs_declined, total_distance_km")
+      .eq("rider_id", riderId)
+      .order("clocked_in_at", { ascending: false }),
+    supabase
+      .from("requests")
+      .select("*", { count: "exact", head: true })
+      .eq("rider_id", riderId)
+      .eq("status", "completed"),
+  ]);
 
-  const lifetimeCompleted  = (allShifts ?? []).reduce((s, sh) => s + (sh.jobs_completed ?? 0), 0);
+  const lifetimeCompleted  = completedCount ?? 0;
   const lifetimeDistanceKm = (allShifts ?? []).reduce((s, sh) => s + (sh.total_distance_km ?? 0), 0);
   const currentStreak      = computeStreak(allShifts ?? []);
   const tier               = computeTier(lifetimeCompleted);
