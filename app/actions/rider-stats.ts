@@ -63,7 +63,7 @@ export async function fetchMyMonthlyStats(month: string): Promise<{ stats: Month
       .from("requests")
       .select("actual_price, distance_km")
       .eq("rider_id", user.id)
-      .eq("status", "completed")
+      .in("status", ["completed", "cancelled", "no_show", "rejected"])
       .gte("appt_date", month + "-01")
       .lte("appt_date", month + "-31"),
     supabase
@@ -126,7 +126,7 @@ export async function fetchMyLifetimeStats(): Promise<{
       .from("requests")
       .select("*", { count: "exact", head: true })
       .eq("rider_id", user.id)
-      .eq("status", "completed"),
+      .in("status", ["completed", "cancelled", "no_show", "rejected"]),
   ]);
 
   const lifetimeCompleted  = completedCount ?? 0;
@@ -163,7 +163,7 @@ export async function fetchLeaderboard(month: string): Promise<LeaderboardEntry[
     supabase
       .from("requests")
       .select("rider_id, actual_price")
-      .eq("status", "completed")
+      .in("status", ["completed", "cancelled", "no_show", "rejected"])
       .gte("appt_date", month + "-01")
       .lte("appt_date", month + "-31"),
   ]);
@@ -174,12 +174,12 @@ export async function fetchLeaderboard(month: string): Promise<LeaderboardEntry[
   }
   for (const s of shifts ?? []) {
     const e = map.get(s.rider_id);
-    if (e) { e.jobsCompleted += s.jobs_completed ?? 0; e.distanceKm += s.total_distance_km ?? 0; }
+    if (e) { e.distanceKm += s.total_distance_km ?? 0; }
   }
   for (const r of requests ?? []) {
     if (!r.rider_id) continue;
     const e = map.get(r.rider_id);
-    if (e) e.earningsThb += r.actual_price ?? 0;
+    if (e) { e.jobsCompleted += 1; e.earningsThb += r.actual_price ?? 0; }
   }
 
   return Array.from(map.values()).sort((a, b) => b.jobsCompleted - a.jobsCompleted);
@@ -242,7 +242,7 @@ export async function fetchRiderKpiForAdmin(riderId: string, month: string): Pro
       .from("requests")
       .select("actual_price, distance_km")
       .eq("rider_id", riderId)
-      .eq("status", "completed")
+      .in("status", ["completed", "cancelled", "no_show", "rejected"])
       .gte("appt_date", month + "-01")
       .lte("appt_date", month + "-31"),
     supabase
@@ -324,7 +324,7 @@ export async function fetchRiderLifetimeForAdmin(riderId: string): Promise<{
       .from("requests")
       .select("*", { count: "exact", head: true })
       .eq("rider_id", riderId)
-      .eq("status", "completed"),
+      .in("status", ["completed", "cancelled", "no_show", "rejected"]),
   ]);
 
   const lifetimeCompleted  = completedCount ?? 0;
