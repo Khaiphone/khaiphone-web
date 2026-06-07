@@ -70,17 +70,20 @@ export default function HistoryPage() {
 
       <div style={{ background: CARD, borderRadius: 16, padding: 20 }}>
         <p style={{ margin: "0 0 16px", fontSize: 13, fontWeight: 600, color: TEXT2, textTransform: "uppercase", letterSpacing: 0.5 }}>สถิติเดือนนี้</p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           {[
             { label: "งานสำเร็จ", value: stats.completedJobs, color: GREEN },
             { label: "ยกเลิก",    value: stats.cancelledJobs, color: RED   },
-            { label: "มูลค่า",    value: `฿${fmt(stats.totalEarnings)}`, color: ACCENT, small: true },
-          ].map(({ label, value, color, small }) => (
+          ].map(({ label, value, color }) => (
             <div key={label} style={{ background: CARD2, borderRadius: 12, padding: "12px 10px", textAlign: "center" }}>
-              <p style={{ margin: 0, fontSize: small ? 14 : 24, fontWeight: 800, color }}>{value}</p>
+              <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color }}>{value}</p>
               <p style={{ margin: "4px 0 0", fontSize: 11, color: TEXT2 }}>{label}</p>
             </div>
           ))}
+        </div>
+        <div style={{ background: CARD2, borderRadius: 12, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
+          <p style={{ margin: 0, fontSize: 11, color: TEXT2 }}>มูลค่าสินค้า</p>
+          <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: ACCENT }}>฿{fmt(stats.totalEarnings)}</p>
         </div>
       </div>
 
