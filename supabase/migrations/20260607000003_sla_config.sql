@@ -1,4 +1,5 @@
 insert into rider_system_settings (key, value) values
+  ('sla_arrive_radius_m',   '500'),
   ('sla_dispatch_good_min', '120'),
   ('sla_dispatch_warn_min', '30'),
   ('sla_arrive_ontime_min', '5'),

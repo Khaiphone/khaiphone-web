@@ -12,8 +12,16 @@ import { fetchRiderSystemSettings } from "@/app/actions/rider-settings";
 import type { AdminRequest, RequestStatus } from "@/lib/types/admin";
 import StatusBadge from "@/app/components/admin/StatusBadge";
 
-type SLAConfig = { dispatchGood: number; dispatchWarn: number; arriveOntime: number; arriveSlight: number; jobFast: number; jobSlight: number };
-const SLA_DEFAULTS: SLAConfig = { dispatchGood: 120, dispatchWarn: 30, arriveOntime: 5, arriveSlight: 20, jobFast: 30, jobSlight: 60 };
+type SLAConfig = { arriveRadiusM: number; dispatchGood: number; dispatchWarn: number; arriveOntime: number; arriveSlight: number; jobFast: number; jobSlight: number };
+const SLA_DEFAULTS: SLAConfig = { arriveRadiusM: 500, dispatchGood: 120, dispatchWarn: 30, arriveOntime: 5, arriveSlight: 20, jobFast: 30, jobSlight: 60 };
+
+function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 const BG     = "var(--admin-bg)";
 const CARD   = "var(--admin-card)";
@@ -215,6 +223,7 @@ export default function RiderJobsPage() {
 
   useEffect(() => {
     fetchRiderSystemSettings().then(s => setSLACfg({
+      arriveRadiusM: s.sla_arrive_radius_m,
       dispatchGood: s.sla_dispatch_good_min,
       dispatchWarn: s.sla_dispatch_warn_min,
       arriveOntime: s.sla_arrive_ontime_min,
@@ -504,7 +513,18 @@ export default function RiderJobsPage() {
                 const dispatchTimeStr = ("dispatchMs" in planner) ? fmtTime(new Date(planner.dispatchMs).toISOString()) : null;
                 const arrivedTimeStr  = ("arrivedMs"  in arrival)  ? fmtTime(new Date(arrival.arrivedMs).toISOString())  : null;
                 const completedTimeStr = ("completedMs" in eff)    ? fmtTime(new Date(eff.completedMs).toISOString())    : null;
-                const worstColor = [pl.color, al.color, el.color].includes(RED) ? RED
+
+                // GPS location check
+                const inspEntry = (job.statusLog ?? []).find(s => s.status === "inspecting") as (Record<string, unknown> | undefined);
+                const iLat = inspEntry?.lat as number | undefined;
+                const iLng = inspEntry?.lng as number | undefined;
+                const aLat = job.appointment.lat;
+                const aLng = job.appointment.lng;
+                const gpsDistM = (iLat != null && iLng != null && aLat && aLng)
+                  ? Math.round(haversineM(iLat, iLng, aLat, aLng)) : null;
+                const gpsFlagged = gpsDistM != null && gpsDistM > slaCfg.arriveRadiusM;
+
+                const worstColor = gpsFlagged || [pl.color, al.color, el.color].includes(RED) ? RED
                   : [pl.color, al.color, el.color].includes(ORANGE) ? ORANGE : GREEN;
                 return (
                   <div
@@ -547,7 +567,7 @@ export default function RiderJobsPage() {
                         )}
                       </div>
                       {/* Row 4: Rider SLA — arrival */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: gpsFlagged || gpsDistM != null ? 4 : 4, flexWrap: "wrap" }}>
                         <span style={{ fontSize: 10, color: TEXT3, minWidth: 60 }}>📍 ถึงที่</span>
                         <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: al.bg, color: al.color }}>{al.label}</span>
                         <span style={{ fontSize: 11, color: TEXT3 }}>นัด {apptTimeStr}</span>
@@ -558,7 +578,22 @@ export default function RiderJobsPage() {
                           </span>
                         )}
                       </div>
-                      {/* Row 5: Rider SLA — job duration */}
+                      {/* Row 5: GPS flag */}
+                      {gpsDistM != null && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 10, color: TEXT3, minWidth: 60 }}>📡 GPS</span>
+                          {gpsFlagged ? (
+                            <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: RED + "18", color: RED }}>
+                              ⚠ ห่าง {gpsDistM} ม. (เกิน {slaCfg.arriveRadiusM} ม.)
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: GREEN + "18", color: GREEN }}>
+                              ✓ ห่าง {gpsDistM} ม.
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {/* Row 6: Rider SLA — job duration */}
                       <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                         <span style={{ fontSize: 10, color: TEXT3, minWidth: 60 }}>⚡ ทำงาน</span>
                         {eff.status === "no_arrival" ? (

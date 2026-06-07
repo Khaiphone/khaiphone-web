@@ -95,6 +95,7 @@ export default function RiderSettingsPage() {
   const [timeout,           setTimeout_]          = useState("");
   const [interval,          setInterval_]         = useState("");
   const [radius,            setRadius]            = useState("");
+  const [arriveRadius,      setArriveRadius]      = useState("");
   const [dispatchGood,      setDispatchGood]      = useState("");
   const [dispatchWarn,      setDispatchWarn]      = useState("");
   const [arriveOntime,      setArriveOntime]      = useState("");
@@ -119,6 +120,7 @@ export default function RiderSettingsPage() {
       setTimeout_(String(s.shift_auto_timeout_min));
       setInterval_(String(s.location_interval_sec));
       setRadius(String(s.return_radius_m));
+      setArriveRadius(String(s.sla_arrive_radius_m));
       setDispatchGood(String(s.sla_dispatch_good_min));
       setDispatchWarn(String(s.sla_dispatch_warn_min));
       setArriveOntime(String(s.sla_arrive_ontime_min));
@@ -157,6 +159,7 @@ export default function RiderSettingsPage() {
   async function saveSLA() {
     setSavingSLA(true);
     const res = await updateRiderSystemSettings({
+      sla_arrive_radius_m:   parseInt(arriveRadius),
       sla_dispatch_good_min: parseInt(dispatchGood),
       sla_dispatch_warn_min: parseInt(dispatchWarn),
       sla_arrive_ontime_min: parseInt(arriveOntime),
@@ -273,8 +276,14 @@ export default function RiderSettingsPage() {
         {/* ══ 3. SLA ══ */}
         <SectionCard icon={<Target size={16} />} title="SLA Threshold">
           <p style={{ margin: "0 0 14px", fontSize: 12, color: TEXT3, lineHeight: 1.6 }}>
-            กำหนดเกณฑ์เวลาสำหรับรายงาน SLA ในหน้ารายงานงานไรเดอร์
+            กำหนดเกณฑ์เวลาและระยะทางสำหรับรายงาน SLA
           </p>
+          <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: TEXT2 }}>ตรวจสอบพิกัด GPS</p>
+          <div style={{ marginBottom: 16 }}>
+            <Field label="รัศมีที่ยอมรับได้ (เมตร)" hint="ถ้ากด ถึงแล้ว ขณะห่างจากพิกัดลูกค้าเกินนี้ = flag ใน SLA report">
+              <Input value={arriveRadius} onChange={setArriveRadius} type="number" placeholder="500" />
+            </Field>
+          </div>
           <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: TEXT2 }}>Planner SLA — จ่ายงานล่วงหน้า</p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
             <Field label="ล่วงหน้า (นาที)" hint="จ่ายงานก่อนนัดอย่างน้อยเท่านี้ = จัดการล่วงหน้าดี">

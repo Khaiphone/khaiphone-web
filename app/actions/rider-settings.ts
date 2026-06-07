@@ -11,6 +11,7 @@ export type RiderSystemSettings = {
   shift_auto_timeout_min: number;
   location_interval_sec:  number;
   return_radius_m:        number;
+  sla_arrive_radius_m:    number;
   sla_dispatch_good_min:  number;
   sla_dispatch_warn_min:  number;
   sla_arrive_ontime_min:  number;
@@ -26,6 +27,7 @@ const DEFAULTS: RiderSystemSettings = {
   shift_auto_timeout_min: 60,
   location_interval_sec:  30,
   return_radius_m:        500,
+  sla_arrive_radius_m:    500,
   sla_dispatch_good_min:  120,
   sla_dispatch_warn_min:  30,
   sla_arrive_ontime_min:  5,
@@ -46,6 +48,7 @@ export async function fetchRiderSystemSettings(): Promise<RiderSystemSettings> {
     shift_auto_timeout_min: parseInt(map.shift_auto_timeout_min   ?? String(DEFAULTS.shift_auto_timeout_min)),
     location_interval_sec:  parseInt(map.location_interval_sec    ?? String(DEFAULTS.location_interval_sec)),
     return_radius_m:        parseInt(map.return_radius_m          ?? String(DEFAULTS.return_radius_m)),
+    sla_arrive_radius_m:    parseInt(map.sla_arrive_radius_m      ?? String(DEFAULTS.sla_arrive_radius_m)),
     sla_dispatch_good_min:  parseInt(map.sla_dispatch_good_min    ?? String(DEFAULTS.sla_dispatch_good_min)),
     sla_dispatch_warn_min:  parseInt(map.sla_dispatch_warn_min    ?? String(DEFAULTS.sla_dispatch_warn_min)),
     sla_arrive_ontime_min:  parseInt(map.sla_arrive_ontime_min    ?? String(DEFAULTS.sla_arrive_ontime_min)),

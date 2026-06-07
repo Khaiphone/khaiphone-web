@@ -1684,8 +1684,15 @@ export default function JobWizardPage() {
   }
   async function handleArrive() {
     setBusy(true);
-    await riderArriveJob(id);
-    setTrackingMode("on_site"); // keep local ping state in sync
+    let gps: { lat: number; lng: number } | null = null;
+    try {
+      const pos = await new Promise<GeolocationPosition>((res, rej) =>
+        navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000, maximumAge: 10000 })
+      );
+      gps = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    } catch { /* GPS unavailable — proceed without */ }
+    await riderArriveJob(id, gps);
+    setTrackingMode("on_site");
     reload();
   }
   async function handleNoShow() {

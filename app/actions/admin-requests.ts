@@ -97,6 +97,8 @@ function mapRow(row: any): AdminRequest {
       time:     row.appt_time     ?? "",
       location: row.appt_location ?? "",
       method:   (row.appt_method  ?? "branch") as SellMethod,
+      lat:      row.appt_lat      ?? null,
+      lng:      row.appt_lng      ?? null,
     },
     payment: {
       method:           (row.payment_method ?? "cash") as PayMethod,

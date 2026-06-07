@@ -134,6 +134,8 @@ export interface AdminRequest {
     time: string;
     location: string;
     method: SellMethod;
+    lat?: number | null;
+    lng?: number | null;
   };
   payment: {
     method: PayMethod;
