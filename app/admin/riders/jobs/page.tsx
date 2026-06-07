@@ -12,8 +12,8 @@ import { fetchRiderSystemSettings } from "@/app/actions/rider-settings";
 import type { AdminRequest, RequestStatus } from "@/lib/types/admin";
 import StatusBadge from "@/app/components/admin/StatusBadge";
 
-type SLAConfig = { arriveOntime: number; arriveSlight: number; jobFast: number; jobSlight: number };
-const SLA_DEFAULTS: SLAConfig = { arriveOntime: 5, arriveSlight: 20, jobFast: 30, jobSlight: 60 };
+type SLAConfig = { dispatchGood: number; dispatchWarn: number; arriveOntime: number; arriveSlight: number; jobFast: number; jobSlight: number };
+const SLA_DEFAULTS: SLAConfig = { dispatchGood: 120, dispatchWarn: 30, arriveOntime: 5, arriveSlight: 20, jobFast: 30, jobSlight: 60 };
 
 const BG     = "var(--admin-bg)";
 const CARD   = "var(--admin-card)";
@@ -65,17 +65,25 @@ type RiderRow = {
 
 // ── SLA helpers ────────────────────────────────────────────────────────────────
 
-// Planner SLA: appointment time → rider arrival (inspecting)
-type PunctualitySLA =
+// Planner SLA: how far in advance was the job dispatched (pickup_scheduled → appointment)
+type PlannerSLA =
   | { status: "no_appt" }
   | { status: "cancelled" }
+  | { status: "no_dispatch" }   // no pickup_scheduled in log
+  | { status: "good";    apptMs: number; dispatchMs: number; leadMin: number }
+  | { status: "warning"; apptMs: number; dispatchMs: number; leadMin: number }
+  | { status: "urgent";  apptMs: number; dispatchMs: number; leadMin: number };
+
+// Rider SLA — part 1: arrival punctuality (appointment → inspecting)
+type ArrivalSLA =
+  | { status: "no_appt" }
   | { status: "pending";  apptMs: number }
   | { status: "overdue";  apptMs: number }
   | { status: "ontime";   apptMs: number; arrivedMs: number; deltaMin: number }
   | { status: "slight";   apptMs: number; arrivedMs: number; deltaMin: number }
   | { status: "late";     apptMs: number; arrivedMs: number; deltaMin: number };
 
-// Rider SLA: arrival (inspecting) → completed
+// Rider SLA — part 2: job efficiency (inspecting → completed)
 type EfficiencySLA =
   | { status: "no_arrival" }
   | { status: "pending";  arrivedMs: number }
@@ -83,14 +91,31 @@ type EfficiencySLA =
   | { status: "slight";   arrivedMs: number; completedMs: number; deltaMin: number }
   | { status: "slow";     arrivedMs: number; completedMs: number; deltaMin: number };
 
-type SLARow = { job: AdminRequest; punct: PunctualitySLA; eff: EfficiencySLA };
+type SLARow = { job: AdminRequest; planner: PlannerSLA; arrival: ArrivalSLA; eff: EfficiencySLA };
 
-function computePunctualitySLA(job: AdminRequest, cfg: SLAConfig): PunctualitySLA {
+function computePlannerSLA(job: AdminRequest, cfg: SLAConfig): PlannerSLA {
   const { date, time } = job.appointment;
   if (!date || !time) return { status: "no_appt" };
   if (CANCELLED_STATUSES.includes(job.status)) return { status: "cancelled" };
 
-  const apptMs = new Date(`${date}T${time}:00+07:00`).getTime();
+  const apptMs      = new Date(`${date}T${time}:00+07:00`).getTime();
+  const dispatchEntry = (job.statusLog ?? []).find(s => s.status === "pickup_scheduled");
+  if (!dispatchEntry) return { status: "no_dispatch" };
+
+  const dispatchMs = new Date(dispatchEntry.timestamp).getTime();
+  const leadMin    = Math.round((apptMs - dispatchMs) / 60_000);
+  return leadMin >= cfg.dispatchGood
+    ? { status: "good",    apptMs, dispatchMs, leadMin }
+    : leadMin >= cfg.dispatchWarn
+    ? { status: "warning", apptMs, dispatchMs, leadMin }
+    : { status: "urgent",  apptMs, dispatchMs, leadMin };
+}
+
+function computeArrivalSLA(job: AdminRequest, cfg: SLAConfig): ArrivalSLA {
+  const { date, time } = job.appointment;
+  if (!date || !time) return { status: "no_appt" };
+
+  const apptMs      = new Date(`${date}T${time}:00+07:00`).getTime();
   const arrivedEntry = (job.statusLog ?? []).find(s => s.status === "inspecting");
 
   if (!arrivedEntry) {
@@ -109,10 +134,10 @@ function computePunctualitySLA(job: AdminRequest, cfg: SLAConfig): PunctualitySL
 }
 
 function computeEfficiencySLA(job: AdminRequest, cfg: SLAConfig): EfficiencySLA {
-  const arrivedEntry  = (job.statusLog ?? []).find(s => s.status === "inspecting");
+  const arrivedEntry = (job.statusLog ?? []).find(s => s.status === "inspecting");
   if (!arrivedEntry) return { status: "no_arrival" };
 
-  const arrivedMs    = new Date(arrivedEntry.timestamp).getTime();
+  const arrivedMs      = new Date(arrivedEntry.timestamp).getTime();
   const completedEntry = [...(job.statusLog ?? [])].reverse().find(s => s.status === "completed");
   if (!completedEntry) return { status: "pending", arrivedMs };
 
@@ -125,20 +150,28 @@ function computeEfficiencySLA(job: AdminRequest, cfg: SLAConfig): EfficiencySLA 
     : { status: "slow",   arrivedMs, completedMs, deltaMin };
 }
 
-function punctLabel(r: PunctualitySLA) {
+function plannerLabel(r: PlannerSLA) {
+  if (r.status === "good")       return { label: "จัดการล่วงหน้า",   color: GREEN,  bg: GREEN  + "18" };
+  if (r.status === "warning")    return { label: "กระทันหันเล็กน้อย", color: ORANGE, bg: ORANGE + "18" };
+  if (r.status === "urgent")     return { label: "กระทันหัน",         color: RED,    bg: RED    + "18" };
+  if (r.status === "no_dispatch") return { label: "ไม่มีข้อมูล",      color: TEXT3,  bg: BORDER };
+  return { label: "—", color: TEXT3, bg: BORDER };
+}
+
+function arrivalLabel(r: ArrivalSLA) {
   if (r.status === "ontime")  return { label: "ถึงตรงเวลา",    color: GREEN,  bg: GREEN  + "18" };
   if (r.status === "slight")  return { label: "สายเล็กน้อย",   color: ORANGE, bg: ORANGE + "18" };
   if (r.status === "late")    return { label: "สายมาก",         color: RED,    bg: RED    + "18" };
-  if (r.status === "overdue") return { label: "ยังไม่ถึง",      color: RED,    bg: RED    + "12" };
+  if (r.status === "overdue") return { label: "เกินนัดแล้ว",    color: RED,    bg: RED    + "12" };
   if (r.status === "pending") return { label: "รอไรเดอร์",      color: BLUE,   bg: BLUE   + "12" };
   return { label: "—", color: TEXT3, bg: BORDER };
 }
 
 function effLabel(r: EfficiencySLA) {
-  if (r.status === "fast")   return { label: "เสร็จเร็ว",      color: GREEN,  bg: GREEN  + "18" };
-  if (r.status === "slight") return { label: "ล่าช้าเล็กน้อย", color: ORANGE, bg: ORANGE + "18" };
-  if (r.status === "slow")   return { label: "ช้าเกินไป",       color: RED,    bg: RED    + "18" };
-  if (r.status === "pending") return { label: "กำลังดำเนินการ", color: BLUE,  bg: BLUE   + "12" };
+  if (r.status === "fast")    return { label: "เสร็จเร็ว",       color: GREEN,  bg: GREEN  + "18" };
+  if (r.status === "slight")  return { label: "ล่าช้าเล็กน้อย",  color: ORANGE, bg: ORANGE + "18" };
+  if (r.status === "slow")    return { label: "ช้าเกินไป",        color: RED,    bg: RED    + "18" };
+  if (r.status === "pending") return { label: "กำลังดำเนินการ",   color: BLUE,   bg: BLUE   + "12" };
   return { label: "—", color: TEXT3, bg: BORDER };
 }
 
@@ -182,6 +215,8 @@ export default function RiderJobsPage() {
 
   useEffect(() => {
     fetchRiderSystemSettings().then(s => setSLACfg({
+      dispatchGood: s.sla_dispatch_good_min,
+      dispatchWarn: s.sla_dispatch_warn_min,
       arriveOntime: s.sla_arrive_ontime_min,
       arriveSlight: s.sla_arrive_slight_min,
       jobFast:      s.sla_job_fast_min,
@@ -260,31 +295,38 @@ export default function RiderJobsPage() {
   const slaRows = useMemo((): SLARow[] =>
     jobs
       .filter(j => j.appointment.date && j.appointment.time)
-      .map(j => ({ job: j, punct: computePunctualitySLA(j, slaCfg), eff: computeEfficiencySLA(j, slaCfg) }))
-      .filter(r => r.punct.status !== "no_appt" && r.punct.status !== "cancelled")
+      .map(j => ({ job: j, planner: computePlannerSLA(j, slaCfg), arrival: computeArrivalSLA(j, slaCfg), eff: computeEfficiencySLA(j, slaCfg) }))
+      .filter(r => r.planner.status !== "no_appt" && r.planner.status !== "cancelled")
       .sort((a, b) => {
-        const aMs = ("apptMs" in a.punct ? a.punct.apptMs : 0);
-        const bMs = ("apptMs" in b.punct ? b.punct.apptMs : 0);
+        const aMs = ("apptMs" in a.planner ? a.planner.apptMs : 0);
+        const bMs = ("apptMs" in b.planner ? b.planner.apptMs : 0);
         return aMs - bMs;
       }),
     [jobs, slaCfg]
   );
 
-  // Planner SLA summary
-  const pOntime  = slaRows.filter(r => r.punct.status === "ontime").length;
-  const pSlight  = slaRows.filter(r => r.punct.status === "slight").length;
-  const pLate    = slaRows.filter(r => r.punct.status === "late" || r.punct.status === "overdue").length;
-  const pPending = slaRows.filter(r => r.punct.status === "pending").length;
+  // Planner SLA summary (dispatch lead time)
+  const pGood    = slaRows.filter(r => r.planner.status === "good").length;
+  const pWarn    = slaRows.filter(r => r.planner.status === "warning").length;
+  const pUrgent  = slaRows.filter(r => r.planner.status === "urgent").length;
+  const pNoDisp  = slaRows.filter(r => r.planner.status === "no_dispatch").length;
   const pTotal   = slaRows.length;
-  const pRate    = pTotal > 0 ? Math.round((pOntime / Math.max(1, pTotal - pPending)) * 100) : null;
+  const pRate    = pTotal > 0 ? Math.round((pGood / Math.max(1, pTotal - pNoDisp)) * 100) : null;
 
-  // Rider SLA summary (only rows that have arrival data)
-  const effRows  = slaRows.filter(r => r.eff.status !== "no_arrival");
-  const eFast    = effRows.filter(r => r.eff.status === "fast").length;
-  const eSlight  = effRows.filter(r => r.eff.status === "slight").length;
-  const eSlow    = effRows.filter(r => r.eff.status === "slow").length;
-  const ePending = effRows.filter(r => r.eff.status === "pending").length;
-  const eTotal   = effRows.length;
+  // Rider SLA summary (arrival punctuality)
+  const aOntime  = slaRows.filter(r => r.arrival.status === "ontime").length;
+  const aSlight  = slaRows.filter(r => r.arrival.status === "slight").length;
+  const aLate    = slaRows.filter(r => r.arrival.status === "late" || r.arrival.status === "overdue").length;
+  const aPending = slaRows.filter(r => r.arrival.status === "pending").length;
+  const aTotal   = slaRows.length;
+  const aRate    = aTotal > 0 ? Math.round((aOntime / Math.max(1, aTotal - aPending)) * 100) : null;
+
+  // Efficiency (for per-job display only)
+  const eFast    = slaRows.filter(r => r.eff.status === "fast").length;
+  const eSlight  = slaRows.filter(r => r.eff.status === "slight").length;
+  const eSlow    = slaRows.filter(r => r.eff.status === "slow").length;
+  const ePending = slaRows.filter(r => r.eff.status === "pending").length;
+  const eTotal   = slaRows.filter(r => r.eff.status !== "no_arrival").length;
   const eRate    = eTotal > 0 ? Math.round((eFast / Math.max(1, eTotal - ePending)) * 100) : null;
 
   const slaRate  = pRate;
@@ -378,28 +420,28 @@ export default function RiderJobsPage() {
         /* ════════════════════════════════════════════════════════════════════ */
         <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
 
-          {/* ── Planner SLA card ── */}
+          {/* ── Planner SLA card: dispatch lead time ── */}
           <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "16px 18px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
               <Clock size={15} color={BLUE} />
-              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: TEXT }}>Planner SLA · ตรงเวลานัดหมาย</p>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: TEXT }}>Planner SLA · จ่ายงานล่วงหน้า</p>
               {pRate !== null && (
                 <span style={{ marginLeft: "auto", fontSize: 22, fontWeight: 800, color: pRate >= 80 ? GREEN : pRate >= 60 ? ORANGE : RED }}>{pRate}%</span>
               )}
             </div>
             {pTotal > 0 && (
               <div style={{ height: 7, borderRadius: 99, background: BORDER, overflow: "hidden", display: "flex", marginBottom: 10 }}>
-                <div style={{ width: `${(pOntime / pTotal) * 100}%`, background: GREEN }} />
-                <div style={{ width: `${(pSlight / pTotal) * 100}%`, background: ORANGE }} />
-                <div style={{ width: `${(pLate / pTotal) * 100}%`, background: RED }} />
+                <div style={{ width: `${(pGood / pTotal) * 100}%`, background: GREEN }} />
+                <div style={{ width: `${(pWarn / pTotal) * 100}%`, background: ORANGE }} />
+                <div style={{ width: `${(pUrgent / pTotal) * 100}%`, background: RED }} />
               </div>
             )}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
               {[
-                { label: "ถึงตรงเวลา",  count: pOntime,  color: GREEN  },
-                { label: "สายเล็กน้อย", count: pSlight,  color: ORANGE },
-                { label: "สายมาก",       count: pLate,    color: RED    },
-                { label: "รอ",           count: pPending, color: BLUE   },
+                { label: "ล่วงหน้า",        count: pGood,   color: GREEN  },
+                { label: "กระทันหันเล็กน้อย", count: pWarn,   color: ORANGE },
+                { label: "กระทันหัน",        count: pUrgent, color: RED    },
+                { label: "ไม่มีข้อมูล",      count: pNoDisp, color: TEXT3  },
               ].map(({ label, count, color }) => (
                 <div key={label} style={{ textAlign: "center" }}>
                   <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color }}>{count}</p>
@@ -409,39 +451,35 @@ export default function RiderJobsPage() {
             </div>
           </div>
 
-          {/* ── Rider SLA card ── */}
+          {/* ── Rider SLA card: arrival punctuality ── */}
           <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "16px 18px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
               <Target size={15} color={PURPLE} />
-              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: TEXT }}>Rider SLA · เวลาทำงาน (เป้า ≤ {slaCfg.jobFast} นาที)</p>
-              {eRate !== null && (
-                <span style={{ marginLeft: "auto", fontSize: 22, fontWeight: 800, color: eRate >= 80 ? GREEN : eRate >= 60 ? ORANGE : RED }}>{eRate}%</span>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: TEXT }}>Rider SLA · ถึงตรงเวลา</p>
+              {aRate !== null && (
+                <span style={{ marginLeft: "auto", fontSize: 22, fontWeight: 800, color: aRate >= 80 ? GREEN : aRate >= 60 ? ORANGE : RED }}>{aRate}%</span>
               )}
             </div>
-            {eTotal > 0 && (
+            {aTotal > 0 && (
               <div style={{ height: 7, borderRadius: 99, background: BORDER, overflow: "hidden", display: "flex", marginBottom: 10 }}>
-                <div style={{ width: `${(eFast / eTotal) * 100}%`, background: GREEN }} />
-                <div style={{ width: `${(eSlight / eTotal) * 100}%`, background: ORANGE }} />
-                <div style={{ width: `${(eSlow / eTotal) * 100}%`, background: RED }} />
+                <div style={{ width: `${(aOntime / aTotal) * 100}%`, background: GREEN }} />
+                <div style={{ width: `${(aSlight / aTotal) * 100}%`, background: ORANGE }} />
+                <div style={{ width: `${(aLate / aTotal) * 100}%`, background: RED }} />
               </div>
             )}
-            {eTotal === 0 ? (
-              <p style={{ margin: 0, fontSize: 12, color: TEXT3 }}>ยังไม่มีข้อมูลเวลามาถึง (ต้องมีสถานะ "กำลังตรวจเครื่อง")</p>
-            ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
-                {[
-                  { label: `≤ ${slaCfg.jobFast} นาที`,                               count: eFast,    color: GREEN  },
-                  { label: `${slaCfg.jobFast}–${slaCfg.jobSlight} นาที`,           count: eSlight,  color: ORANGE },
-                  { label: `> ${slaCfg.jobSlight} นาที`,                            count: eSlow,    color: RED    },
-                  { label: "กำลังทำ",      count: ePending, color: BLUE   },
-                ].map(({ label, count, color }) => (
-                  <div key={label} style={{ textAlign: "center" }}>
-                    <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color }}>{count}</p>
-                    <p style={{ margin: 0, fontSize: 10, color: TEXT3 }}>{label}</p>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+              {[
+                { label: "ตรงเวลา",      count: aOntime,  color: GREEN  },
+                { label: "สายเล็กน้อย",  count: aSlight,  color: ORANGE },
+                { label: "สายมาก",        count: aLate,    color: RED    },
+                { label: "รอ",            count: aPending, color: BLUE   },
+              ].map(({ label, count, color }) => (
+                <div key={label} style={{ textAlign: "center" }}>
+                  <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color }}>{count}</p>
+                  <p style={{ margin: 0, fontSize: 10, color: TEXT3 }}>{label}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Per-job SLA list */}
@@ -458,14 +496,16 @@ export default function RiderJobsPage() {
                   รายการ <span style={{ fontWeight: 400, color: TEXT2 }}>({slaRows.length} งาน)</span>
                 </p>
               </div>
-              {slaRows.map(({ job, punct, eff }, i) => {
-                const pl = punctLabel(punct);
+              {slaRows.map(({ job, planner, arrival, eff }, i) => {
+                const pl = plannerLabel(planner);
+                const al = arrivalLabel(arrival);
                 const el = effLabel(eff);
-                const apptTimeStr = job.appointment.time ? `${job.appointment.time} น.` : "";
-                const arrivedTimeStr = ("arrivedMs" in punct) ? fmtTime(new Date(punct.arrivedMs).toISOString()) : null;
-                const completedTimeStr = ("completedMs" in eff) ? fmtTime(new Date(eff.completedMs).toISOString()) : null;
-                const borderColor = pl.color === GREEN && (eff.status === "fast" || eff.status === "no_arrival" || eff.status === "pending") ? GREEN
-                  : pl.color === RED || el.color === RED ? RED : ORANGE;
+                const apptTimeStr     = job.appointment.time ? `${job.appointment.time} น.` : "";
+                const dispatchTimeStr = ("dispatchMs" in planner) ? fmtTime(new Date(planner.dispatchMs).toISOString()) : null;
+                const arrivedTimeStr  = ("arrivedMs"  in arrival)  ? fmtTime(new Date(arrival.arrivedMs).toISOString())  : null;
+                const completedTimeStr = ("completedMs" in eff)    ? fmtTime(new Date(eff.completedMs).toISOString())    : null;
+                const worstColor = [pl.color, al.color, el.color].includes(RED) ? RED
+                  : [pl.color, al.color, el.color].includes(ORANGE) ? ORANGE : GREEN;
                 return (
                   <div
                     key={job.id}
@@ -475,7 +515,7 @@ export default function RiderJobsPage() {
                       borderBottom: i < slaRows.length - 1 ? `1px solid ${BORDER}` : "none",
                       cursor: "pointer",
                       display: "flex", alignItems: "flex-start", gap: 12,
-                      borderLeft: `3px solid ${borderColor}`,
+                      borderLeft: `3px solid ${worstColor}`,
                     }}
                   >
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -496,21 +536,31 @@ export default function RiderJobsPage() {
                         {job.customer.name}
                         {job.riderName && <span style={{ color: TEXT3 }}> · {job.riderName}</span>}
                       </p>
-                      {/* Row 3: Planner SLA */}
+                      {/* Row 3: Planner SLA — dispatch lead time */}
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
-                        <span style={{ fontSize: 10, color: TEXT3, minWidth: 60 }}>📍 Planner</span>
+                        <span style={{ fontSize: 10, color: TEXT3, minWidth: 60 }}>📅 Planner</span>
                         <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: pl.bg, color: pl.color }}>{pl.label}</span>
+                        {dispatchTimeStr && <span style={{ fontSize: 11, color: TEXT3 }}>จ่ายงาน {dispatchTimeStr}</span>}
+                        <span style={{ fontSize: 11, color: TEXT3 }}>→ นัด {apptTimeStr}</span>
+                        {"leadMin" in planner && (
+                          <span style={{ fontSize: 11, fontWeight: 600, color: pl.color }}>({planner.leadMin} นาทีล่วงหน้า)</span>
+                        )}
+                      </div>
+                      {/* Row 4: Rider SLA — arrival */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 10, color: TEXT3, minWidth: 60 }}>📍 ถึงที่</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: al.bg, color: al.color }}>{al.label}</span>
                         <span style={{ fontSize: 11, color: TEXT3 }}>นัด {apptTimeStr}</span>
                         {arrivedTimeStr && <span style={{ fontSize: 11, color: TEXT3 }}>→ ถึง {arrivedTimeStr}</span>}
-                        {"deltaMin" in punct && (
-                          <span style={{ fontSize: 11, fontWeight: 600, color: pl.color }}>
-                            {punct.deltaMin <= 0 ? `ก่อน ${Math.abs(punct.deltaMin)} นาที` : minTxt(punct.deltaMin, true)}
+                        {"deltaMin" in arrival && (
+                          <span style={{ fontSize: 11, fontWeight: 600, color: al.color }}>
+                            {arrival.deltaMin <= 0 ? `ก่อน ${Math.abs(arrival.deltaMin)} นาที` : minTxt(arrival.deltaMin, true)}
                           </span>
                         )}
                       </div>
-                      {/* Row 4: Rider SLA */}
+                      {/* Row 5: Rider SLA — job duration */}
                       <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                        <span style={{ fontSize: 10, color: TEXT3, minWidth: 60 }}>⚡ Rider</span>
+                        <span style={{ fontSize: 10, color: TEXT3, minWidth: 60 }}>⚡ ทำงาน</span>
                         {eff.status === "no_arrival" ? (
                           <span style={{ fontSize: 11, color: TEXT3 }}>ยังไม่มีข้อมูลเวลามาถึง</span>
                         ) : (

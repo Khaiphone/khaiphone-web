@@ -95,6 +95,8 @@ export default function RiderSettingsPage() {
   const [timeout,           setTimeout_]          = useState("");
   const [interval,          setInterval_]         = useState("");
   const [radius,            setRadius]            = useState("");
+  const [dispatchGood,      setDispatchGood]      = useState("");
+  const [dispatchWarn,      setDispatchWarn]      = useState("");
   const [arriveOntime,      setArriveOntime]      = useState("");
   const [arriveSlight,      setArriveSlight]      = useState("");
   const [jobFast,           setJobFast]           = useState("");
@@ -117,6 +119,8 @@ export default function RiderSettingsPage() {
       setTimeout_(String(s.shift_auto_timeout_min));
       setInterval_(String(s.location_interval_sec));
       setRadius(String(s.return_radius_m));
+      setDispatchGood(String(s.sla_dispatch_good_min));
+      setDispatchWarn(String(s.sla_dispatch_warn_min));
       setArriveOntime(String(s.sla_arrive_ontime_min));
       setArriveSlight(String(s.sla_arrive_slight_min));
       setJobFast(String(s.sla_job_fast_min));
@@ -153,6 +157,8 @@ export default function RiderSettingsPage() {
   async function saveSLA() {
     setSavingSLA(true);
     const res = await updateRiderSystemSettings({
+      sla_dispatch_good_min: parseInt(dispatchGood),
+      sla_dispatch_warn_min: parseInt(dispatchWarn),
       sla_arrive_ontime_min: parseInt(arriveOntime),
       sla_arrive_slight_min: parseInt(arriveSlight),
       sla_job_fast_min:      parseInt(jobFast),
@@ -269,7 +275,16 @@ export default function RiderSettingsPage() {
           <p style={{ margin: "0 0 14px", fontSize: 12, color: TEXT3, lineHeight: 1.6 }}>
             กำหนดเกณฑ์เวลาสำหรับรายงาน SLA ในหน้ารายงานงานไรเดอร์
           </p>
-          <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: TEXT2 }}>Planner SLA — ไรเดอร์ถึงที่นัดหมาย</p>
+          <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: TEXT2 }}>Planner SLA — จ่ายงานล่วงหน้า</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+            <Field label="ล่วงหน้า (นาที)" hint="จ่ายงานก่อนนัดอย่างน้อยเท่านี้ = จัดการล่วงหน้าดี">
+              <Input value={dispatchGood} onChange={setDispatchGood} type="number" placeholder="120" />
+            </Field>
+            <Field label="กระทันหัน (นาที)" hint="จ่ายงานก่อนนัดน้อยกว่านี้ = กระทันหัน">
+              <Input value={dispatchWarn} onChange={setDispatchWarn} type="number" placeholder="30" />
+            </Field>
+          </div>
+          <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: TEXT2 }}>Rider SLA — ถึงที่นัดตรงเวลา</p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
             <Field label="ถึงตรงเวลา (นาที)" hint="ถ้ามาช้าไม่เกินนี้ = ตรงเวลา">
               <Input value={arriveOntime} onChange={setArriveOntime} type="number" placeholder="5" />
