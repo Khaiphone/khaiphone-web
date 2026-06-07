@@ -2,6 +2,7 @@
 
 import { requireAuth } from "@/lib/require-auth";
 import { createServerClient } from "@/lib/supabase-server";
+import { startOfThaiDay, endOfThaiDay } from "@/lib/thai-date";
 
 // ─── Open shift (clock-in) ────────────────────────────────────────────────────
 export async function openShift(lat: number, lng: number): Promise<{ success: true; shiftId: string } | { success: false; error: string }> {
@@ -473,8 +474,8 @@ export async function fetchRiderShiftStats(riderId: string, dateFrom: string, da
     .from("rider_shifts")
     .select("id, clocked_in_at, clocked_out_at, jobs_completed, total_distance_km, ended_reason")
     .eq("rider_id", riderId)
-    .gte("clocked_in_at", dateFrom)
-    .lte("clocked_in_at", dateTo + "T23:59:59")
+    .gte("clocked_in_at", startOfThaiDay(dateFrom))
+    .lte("clocked_in_at", endOfThaiDay(dateTo))
     .order("clocked_in_at", { ascending: false });
 
   return data ?? [];

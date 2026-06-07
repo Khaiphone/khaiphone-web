@@ -9,11 +9,11 @@ export function esc(s: string): string {
 }
 
 export function thDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" });
+  return new Date(iso).toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok", year: "numeric", month: "long", day: "numeric" });
 }
 
 export function thTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit" });
 }
 
 export function shortDate(iso: string): string {
@@ -162,7 +162,7 @@ export function buildContractPage(dev: ContractDevice, devIdx: number, isFirst: 
         const batteryValue = dev.batteryHealth !== undefined ? dev.batteryHealth + "%" : (dev.batteryCycles !== undefined ? dev.batteryCycles + " รอบ" : "—");
         const batteryLabel = dev.batteryCycles !== undefined ? "รอบชาร์จ" : "สุขภาพแบต";
         const wStyle = dev.warrantyExpiry === "expired" ? "color:#DC2626;font-weight:600" : "";
-        const wText = dev.warrantyExpiry === "expired" ? "ประกันสิ้นสุดแล้ว" : dev.warrantyExpiry ? new Date(dev.warrantyExpiry + "T00:00:00").toLocaleDateString("th-TH",{year:"numeric",month:"long",day:"numeric"}) : "—";
+        const wText = dev.warrantyExpiry === "expired" ? "ประกันสิ้นสุดแล้ว" : dev.warrantyExpiry ? new Date(dev.warrantyExpiry + "T00:00:00+07:00").toLocaleDateString("th-TH",{timeZone:"Asia/Bangkok",year:"numeric",month:"long",day:"numeric"}) : "—";
         return `<tr><th>การรับประกัน</th><th>${batteryLabel}</th><th colspan="2"></th></tr><tr><td style="${wStyle}">${wText}</td><td>${batteryValue}</td><td colspan="2"></td></tr>`;
       })() : ""}
       <tr><td colspan="3" style="font-weight:700;text-align:right;background:#f5f4f0">ราคา${dev.label||"ซื้อขาย"}</td><td style="font-weight:700;color:#c9a84c">฿${dev.price.toLocaleString("th-TH")}</td></tr>

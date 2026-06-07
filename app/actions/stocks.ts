@@ -3,6 +3,7 @@
 import { createServerClient } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/require-auth";
 import type { StockItem, StockStatus, AuditEntry } from "@/lib/stock/types";
+import { thaiDateStr, thaiMonthStr, thaiDateOffset, startOfThaiDay } from "@/lib/thai-date";
 
 const FIELD_LABELS: Record<string, string> = {
   model: "รุ่น", storage: "ความจุ", color: "สี", grade: "เกรด",
@@ -325,28 +326,28 @@ export interface CategoryPoint { name: string; count: number; value: number; }
 export async function fetchRevenueData(): Promise<RevenuePoint[]> {
   await requireAuth();
   const supabase = createServerClient();
-  const since = new Date();
-  since.setDate(since.getDate() - 29);
-  since.setHours(0, 0, 0, 0);
+  const todayRevStr = thaiDateStr();
+  const sinceRevStr = thaiDateOffset(todayRevStr, -29);
 
   const { data } = await supabase
     .from("stocks")
     .select("sold_at, sold_price, cost_price, shipping_cost, other_cost")
     .eq("status", "ขายแล้ว")
-    .gte("sold_at", since.toISOString());
+    .gte("sold_at", startOfThaiDay(sinceRevStr));
 
   const map = new Map<string, { revenue: number; cost: number }>();
   // pre-fill all 30 days so chart has no gaps
   for (let i = 0; i < 30; i++) {
-    const d = new Date(since);
-    d.setDate(d.getDate() + i);
-    const key = `${d.getDate()}/${d.getMonth() + 1}`;
+    const ds = thaiDateOffset(sinceRevStr, i);
+    const [, m, day] = ds.split("-");
+    const key = `${parseInt(day)}/${parseInt(m)}`;
     map.set(key, { revenue: 0, cost: 0 });
   }
 
   for (const row of data ?? []) {
-    const d = new Date(row.sold_at);
-    const key = `${d.getDate()}/${d.getMonth() + 1}`;
+    const ds = thaiDateStr(new Date(row.sold_at));
+    const [, m, day] = ds.split("-");
+    const key = `${parseInt(day)}/${parseInt(m)}`;
     if (map.has(key)) {
       const cur = map.get(key)!;
       cur.revenue += row.sold_price ?? 0;
@@ -523,17 +524,16 @@ export async function fetchStockReportData(): Promise<StockReportData> {
 
   // Monthly (last 12 months)
   const monthMap = new Map<string, MonthlyReport>();
+  const [curY, curM] = thaiMonthStr().split("-").map(Number);
   for (let i = 11; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(1);
-    d.setMonth(d.getMonth() - i);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    const label = d.toLocaleDateString("th-TH", { month: "short", year: "2-digit" });
+    let m = curM - i; let y = curY;
+    while (m <= 0) { m += 12; y--; }
+    const key = `${y}-${String(m).padStart(2, "0")}`;
+    const label = new Date(`${key}-01T12:00:00+07:00`).toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok", month: "short", year: "2-digit" });
     monthMap.set(key, { month: label, revenue: 0, cost: 0, profit: 0, count: 0 });
   }
   for (const row of sold) {
-    const d = new Date(row.sold_at);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const key = thaiDateStr(new Date(row.sold_at)).slice(0, 7);
     if (monthMap.has(key)) {
       const m = monthMap.get(key)!;
       const cost = (row.cost_price ?? 0) + (row.shipping_cost ?? 0) + (row.other_cost ?? 0);

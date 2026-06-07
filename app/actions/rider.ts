@@ -3,6 +3,7 @@
 import { after } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/require-auth";
+import { thaiDateStr, thaiMonthStr, startOfThaiDay, startOfThaiMonth } from "@/lib/thai-date";
 import { sendPushToOwners, sendPushToUser } from "@/app/actions/push";
 import { broadcastRequestUpdate } from "@/lib/broadcast";
 import type { AdminRequest } from "@/lib/types/admin";
@@ -84,7 +85,7 @@ async function autoCreateStock(requestId: string) {
 export async function fetchRiderHomeData(riderId: string) {
   await requireAuth();
   const supabase = createServerClient();
-  const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+  const startOfMonth = startOfThaiMonth(thaiMonthStr());
 
   const IN_PROGRESS = ["pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting", "awaiting_transfer"];
 
@@ -901,8 +902,7 @@ export async function fetchRiderNotifications(riderId: string) {
 export async function fetchRiderStats(riderId: string) {
   await requireAuth();
   const supabase = createServerClient();
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const startOfMonth = startOfThaiMonth(thaiMonthStr());
 
   const { data } = await supabase
     .from("requests")
@@ -927,12 +927,13 @@ export async function fetchRiderEarnings(riderId: string) {
   await requireAuth();
   const supabase = createServerClient();
 
-  const now        = new Date();
-  const today      = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-  const weekStart  = new Date(now);
-  weekStart.setDate(now.getDate() - now.getDay());
-  weekStart.setHours(0, 0, 0, 0);
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const todayStr   = thaiDateStr();
+  const today      = startOfThaiDay(todayStr);
+  const monthStart = startOfThaiMonth(thaiMonthStr());
+  // Day-of-week in Bangkok: use noon Bangkok time (= 5am UTC) so getUTCDay() returns Bangkok day
+  const bkkNoon    = new Date(`${todayStr}T12:00:00+07:00`);
+  const dow        = bkkNoon.getUTCDay();
+  const weekStart  = startOfThaiDay(thaiDateStr(new Date(bkkNoon.getTime() - dow * 86_400_000)));
 
   const { data } = await supabase
     .from("requests")
@@ -945,7 +946,7 @@ export async function fetchRiderEarnings(riderId: string) {
   const jobs      = data ?? [];
   const completed = jobs.filter(j => j.status === "completed");
   const todayDone = completed.filter(j => j.created_at >= today);
-  const weekDone  = completed.filter(j => j.created_at >= weekStart.toISOString());
+  const weekDone  = completed.filter(j => j.created_at >= weekStart);
 
   const totalValue = completed.reduce((s, j) => s + ((j.actual_price ?? j.estimated_price) || 0), 0);
 

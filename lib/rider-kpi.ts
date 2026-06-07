@@ -1,4 +1,5 @@
 // Pure helpers — importable from both server and client
+import { thaiDateStr } from "@/lib/thai-date";
 
 export type RiderTier = "bronze" | "silver" | "gold" | "diamond";
 
@@ -45,17 +46,13 @@ export function computeStreak(
   const workDays = new Set(
     shifts
       .filter(s => (s.jobs_completed ?? 0) > 0)
-      .map(s => {
-        const d = new Date(new Date(s.clocked_in_at).getTime() + 7 * 3600 * 1000);
-        return d.toISOString().slice(0, 10);
-      })
+      .map(s => thaiDateStr(new Date(s.clocked_in_at)))
   );
-  const today = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+  const today = thaiDateStr();
+  const todayNoonMs = new Date(`${today}T12:00:00+07:00`).getTime();
   let streak = 0;
   for (let i = 0; i <= 365; i++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().slice(0, 10);
+    const dateStr = thaiDateStr(new Date(todayNoonMs - i * 86_400_000));
     if (workDays.has(dateStr)) {
       streak++;
     } else if (i > 0) {

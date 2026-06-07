@@ -3,6 +3,7 @@
 import { requireAuth } from "@/lib/require-auth";
 import { createServerClient } from "@/lib/supabase-server";
 import { computeTier, computeStreak, computeBadges, computeMonthlyTier } from "@/lib/rider-kpi";
+import { thaiMonthStr, startOfThaiMonth, startOfNextThaiMonth } from "@/lib/thai-date";
 import type { RiderTier, Badge, RankConfig } from "@/lib/rider-kpi";
 export type { RiderTier, BadgeId, Badge, RankConfig } from "@/lib/rider-kpi";
 
@@ -38,10 +39,9 @@ export type LeaderboardEntry = {
 // ── Month helpers ─────────────────────────────────────────────────────────────
 
 function monthBounds(month: string): { start: string; end: string } {
-  const [y, m] = month.split("-").map(Number);
   return {
-    start: new Date(y, m - 1, 1).toISOString(),
-    end:   new Date(y, m, 1).toISOString(),
+    start: startOfThaiMonth(month),
+    end:   startOfNextThaiMonth(month),
   };
 }
 
@@ -128,8 +128,7 @@ export async function fetchMyLifetimeStats(): Promise<{
   const tier               = computeTier(lifetimeCompleted);
 
   // Current month acceptance rate
-  const now = new Date();
-  const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const curMonth = thaiMonthStr();
   const { start, end } = monthBounds(curMonth);
   const monthShifts    = (allShifts ?? []).filter(s => s.clocked_in_at >= start && s.clocked_in_at < end);
   const monthAttempted = monthShifts.reduce((s, sh) => s + (sh.jobs_attempted ?? 0), 0);

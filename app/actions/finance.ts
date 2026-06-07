@@ -2,6 +2,7 @@
 
 import { createServerClient } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/require-auth";
+import { thaiDateStr, thaiMonthStr, thaiDateOffset, startOfThaiDay, endOfThaiDay } from "@/lib/thai-date";
 
 export type FinanceRow = {
   id: string;
@@ -93,8 +94,7 @@ export type FinanceCashFlowSummary = {
 const THAI_MONTHS = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 
 function monthKey(iso: string) {
-  const d = new Date(iso.length === 10 ? iso + "T00:00:00" : iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return thaiDateStr(new Date(iso)).slice(0, 7);
 }
 
 function monthLabel(key: string) {
@@ -106,19 +106,24 @@ type NormSoldItem = { sell_price: number; sell_date: string; cost: number; model
 
 function getPrevPeriod(dateFrom?: string, dateTo?: string): { prevFrom: string; prevTo: string; label: string } {
   if (dateFrom && dateTo) {
-    const from = new Date(dateFrom + "T00:00:00");
-    const to = new Date(dateTo + "T00:00:00");
+    const from = new Date(`${dateFrom}T12:00:00+07:00`);
+    const to   = new Date(`${dateTo}T12:00:00+07:00`);
     const durationMs = to.getTime() - from.getTime();
-    const prevTo = new Date(from.getTime() - 86400000);
+    const prevTo   = new Date(from.getTime() - 86_400_000);
     const prevFrom = new Date(prevTo.getTime() - durationMs);
-    const fmt = (d: Date) => d.toLocaleDateString("th-TH", { day: "numeric", month: "short" });
-    return { prevFrom: prevFrom.toISOString().slice(0, 10), prevTo: prevTo.toISOString().slice(0, 10), label: `${fmt(prevFrom)}–${fmt(prevTo)}` };
+    const fmt = (d: Date) => d.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok", day: "numeric", month: "short" });
+    return { prevFrom: thaiDateStr(prevFrom), prevTo: thaiDateStr(prevTo), label: `${fmt(prevFrom)}–${fmt(prevTo)}` };
   }
-  const now = new Date();
-  const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const lastOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-  const label = firstOfLastMonth.toLocaleDateString("th-TH", { month: "long" });
-  return { prevFrom: firstOfLastMonth.toISOString().slice(0, 10), prevTo: lastOfLastMonth.toISOString().slice(0, 10), label };
+  const curYM = thaiMonthStr();
+  const [cy, cm] = curYM.split("-").map(Number);
+  const prevY  = cm === 1 ? cy - 1 : cy;
+  const prevM  = cm === 1 ? 12 : cm - 1;
+  const prevYM = `${prevY}-${String(prevM).padStart(2, "0")}`;
+  const lastDay = new Date(Date.UTC(cy, cm - 1, 0)).getUTCDate();
+  const prevFrom2 = `${prevYM}-01`;
+  const prevTo2   = `${prevYM}-${String(lastDay).padStart(2, "0")}`;
+  const label = new Date(`${prevFrom2}T12:00:00+07:00`).toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok", month: "long" });
+  return { prevFrom: prevFrom2, prevTo: prevTo2, label };
 }
 
 function pct(curr: number, prev: number): number | null {
@@ -278,7 +283,7 @@ export async function fetchFinanceIncome(dateFrom = "", dateTo = ""): Promise<Fi
         .is("request_ref", null)
         .not("sold_price", "is", null)
         .not("sold_at", "is", null);
-      if (dateFilter) q = q.gte("sold_at", dateFrom).lte("sold_at", dateTo + "T23:59:59");
+      if (dateFilter) q = q.gte("sold_at", dateFrom).lte("sold_at", endOfThaiDay(dateTo));
       return q;
     })(),
     supabase
@@ -334,7 +339,7 @@ export async function fetchFinancePurchases(dateFrom = "", dateTo = ""): Promise
     .from("requests")
     .select("id, order_number, device_model, device_storage, actual_price, estimated_price, sell_price, stock_status, customer_name, source, created_at")
     .eq("status", "completed");
-  if (dateFrom && dateTo) q = q.gte("created_at", dateFrom).lte("created_at", dateTo + "T23:59:59");
+  if (dateFrom && dateTo) q = q.gte("created_at", dateFrom).lte("created_at", endOfThaiDay(dateTo));
   const { data } = await q.order("created_at", { ascending: false });
 
   return (data ?? []).map((row) => ({
@@ -376,7 +381,7 @@ export async function fetchFinanceProfitByModel(dateFrom = "", dateTo = ""): Pro
         .eq("status", "ขายแล้ว")
         .is("request_ref", null)
         .not("sold_price", "is", null);
-      if (dateFilter) q = q.gte("sold_at", dateFrom).lte("sold_at", dateTo + "T23:59:59");
+      if (dateFilter) q = q.gte("sold_at", dateFrom).lte("sold_at", endOfThaiDay(dateTo));
       return q;
     })(),
   ]);
@@ -430,7 +435,7 @@ export async function fetchFinanceCashFlow(dateFrom = "", dateTo = ""): Promise<
         .from("requests")
         .select("id, order_number, device_model, actual_price, estimated_price, customer_name, created_at")
         .eq("status", "completed");
-      if (dateFilter) q = q.gte("created_at", dateFrom).lte("created_at", dateTo + "T23:59:59");
+      if (dateFilter) q = q.gte("created_at", dateFrom).lte("created_at", endOfThaiDay(dateTo));
       return q.order("created_at", { ascending: true });
     })(),
     (() => {
@@ -449,7 +454,7 @@ export async function fetchFinanceCashFlow(dateFrom = "", dateTo = ""): Promise<
         .from("stocks")
         .select("id, model, cost_price, shipping_cost, other_cost, received_at, created_at")
         .is("request_ref", null);
-      if (dateFilter) q = q.gte("created_at", dateFrom).lte("created_at", dateTo + "T23:59:59");
+      if (dateFilter) q = q.gte("created_at", dateFrom).lte("created_at", endOfThaiDay(dateTo));
       return q.order("created_at", { ascending: true });
     })(),
     (() => {
@@ -460,7 +465,7 @@ export async function fetchFinanceCashFlow(dateFrom = "", dateTo = ""): Promise<
         .is("request_ref", null)
         .not("sold_price", "is", null)
         .not("sold_at", "is", null);
-      if (dateFilter) q = q.gte("sold_at", dateFrom).lte("sold_at", dateTo + "T23:59:59");
+      if (dateFilter) q = q.gte("sold_at", dateFrom).lte("sold_at", endOfThaiDay(dateTo));
       return q;
     })(),
   ]);
@@ -518,8 +523,8 @@ export async function fetchFinanceCashFlow(dateFrom = "", dateTo = ""): Promise<
 }
 
 function fmtCF(iso: string) {
-  const d = new Date(iso.length === 10 ? iso + "T00:00:00" : iso);
-  return d.toLocaleString("th-TH", { day: "2-digit", month: "short", year: "2-digit", hour: "2-digit", minute: "2-digit" });
+  const d = new Date(iso);
+  return d.toLocaleString("th-TH", { timeZone: "Asia/Bangkok", day: "2-digit", month: "short", year: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
 export type FinanceAuditEntry = {
@@ -544,7 +549,7 @@ export async function fetchFinanceAudit(dateFrom = "", dateTo = ""): Promise<Fin
         .from("requests")
         .select("id, order_number, device_model, status_log, stock_status, sell_date, sell_price, created_at")
         .order("created_at", { ascending: false });
-      if (dateFilter) q = q.gte("created_at", dateFrom).lte("created_at", dateTo + "T23:59:59");
+      if (dateFilter) q = q.gte("created_at", dateFrom).lte("created_at", endOfThaiDay(dateTo));
       return q.limit(200);
     })(),
     (() => {
@@ -552,7 +557,7 @@ export async function fetchFinanceAudit(dateFrom = "", dateTo = ""): Promise<Fin
         .from("finance_audit_logs")
         .select("*")
         .order("datetime", { ascending: false });
-      if (dateFilter) q = q.gte("datetime", dateFrom).lte("datetime", dateTo + "T23:59:59");
+      if (dateFilter) q = q.gte("datetime", dateFrom).lte("datetime", endOfThaiDay(dateTo));
       return q.limit(200);
     })(),
   ]);
@@ -1070,15 +1075,15 @@ export async function fetchBreakeven(months: 1 | 3 = 3): Promise<BreakevenResult
   await requireAuth();
   const supabase = createServerClient();
 
-  const since = new Date();
-  since.setDate(1);
-  since.setMonth(since.getMonth() - (months - 1));
-  const sinceStr = since.toISOString().slice(0, 10);
+  const [cy2, cm2] = thaiMonthStr().split("-").map(Number);
+  let sinceM = cm2 - (months - 1); let sinceY = cy2;
+  while (sinceM <= 0) { sinceM += 12; sinceY--; }
+  const sinceStr = `${sinceY}-${String(sinceM).padStart(2, "0")}-01`;
 
   const [{ data: stockData }, { data: expenseData }, { data: soldData }] = await Promise.all([
     supabase.from("stocks").select("model, cost_price, shipping_cost, other_cost, selling_price, sold_price, status"),
     supabase.from("expenses").select("amount").gte("date", sinceStr),
-    supabase.from("stocks").select("id").eq("status", "ขายแล้ว").gte("sold_at", sinceStr),
+    supabase.from("stocks").select("id").eq("status", "ขายแล้ว").gte("sold_at", startOfThaiDay(sinceStr)),
   ]);
 
   const totalExpenses = (expenseData ?? []).reduce((s, r) => s + (r.amount ?? 0), 0);
@@ -1120,13 +1125,13 @@ export async function fetchBreakeven(months: 1 | 3 = 3): Promise<BreakevenResult
 export async function fetchOverheadPerUnit(months: 1 | 3 = 3): Promise<number> {
   await requireAuth();
   const supabase = createServerClient();
-  const since = new Date();
-  since.setDate(1);
-  since.setMonth(since.getMonth() - (months - 1));
-  const sinceStr = since.toISOString().slice(0, 10);
+  const [cy3, cm3] = thaiMonthStr().split("-").map(Number);
+  let sinceM2 = cm3 - (months - 1); let sinceY2 = cy3;
+  while (sinceM2 <= 0) { sinceM2 += 12; sinceY2--; }
+  const sinceStr2 = `${sinceY2}-${String(sinceM2).padStart(2, "0")}-01`;
   const [{ data: expenseData }, { data: soldData }] = await Promise.all([
-    supabase.from("expenses").select("amount").gte("date", sinceStr),
-    supabase.from("stocks").select("id").eq("status", "ขายแล้ว").gte("sold_at", sinceStr),
+    supabase.from("expenses").select("amount").gte("date", sinceStr2),
+    supabase.from("stocks").select("id").eq("status", "ขายแล้ว").gte("sold_at", startOfThaiDay(sinceStr2)),
   ]);
   const totalExpenses = (expenseData ?? []).reduce((s, r) => s + (r.amount ?? 0), 0);
   const unitsSold = (soldData ?? []).length;
@@ -1161,9 +1166,8 @@ export async function fetchForecast(): Promise<ForecastData> {
     dayMap.set(day, (dayMap.get(day) ?? 0) + (r.sold_price ?? 0));
   }
 
-  const today = new Date();
-  const todayStr = today.toISOString().slice(0, 10);
-  const thirtyDaysAgo = new Date(today.getTime() - 30 * 86400000).toISOString().slice(0, 10);
+  const todayStr = thaiDateStr();
+  const thirtyDaysAgo = thaiDateOffset(todayStr, -30);
 
   const recentDays = Array.from(dayMap.entries())
     .filter(([d]) => d >= thirtyDaysAgo && d <= todayStr);
@@ -1176,7 +1180,7 @@ export async function fetchForecast(): Promise<ForecastData> {
     points.push({ date, actual });
   }
   for (let i = 1; i <= 30; i++) {
-    const d = new Date(today.getTime() + i * 86400000).toISOString().slice(0, 10);
+    const d = thaiDateOffset(todayStr, i);
     points.push({ date: d, forecast: avgDailyRevenue });
   }
 

@@ -1,6 +1,7 @@
 "use server";
 
 import { createServerClient } from "@/lib/supabase-server";
+import { thaiDateStr, startOfThaiDay } from "@/lib/thai-date";
 
 export interface HealthCheck {
   name: string;
@@ -89,10 +90,10 @@ export async function fetchHealthReport(): Promise<HealthReport> {
   }
 
   // ── Stats ────────────────────────────────────────────────────────────────────
-  const today = new Date().toISOString().slice(0, 10);
+  const today = thaiDateStr();
   const [reqToday, estToday, openReqs, stockCount] = await Promise.all([
-    supabase.from("requests").select("*", { count: "exact", head: true }).gte("created_at", today + "T00:00:00"),
-    supabase.from("estimate_events").select("*", { count: "exact", head: true }).eq("event", "start").gte("created_at", today + "T00:00:00"),
+    supabase.from("requests").select("*", { count: "exact", head: true }).gte("created_at", startOfThaiDay(today)),
+    supabase.from("estimate_events").select("*", { count: "exact", head: true }).eq("event", "start").gte("created_at", startOfThaiDay(today)),
     supabase.from("requests").select("*", { count: "exact", head: true }).not("status", "in", '("completed","cancelled","rejected")'),
     supabase.from("stocks").select("*", { count: "exact", head: true }),
   ]);
