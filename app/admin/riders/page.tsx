@@ -242,7 +242,7 @@ function JobCard({
         <div style={{ display: "flex", gap: 4 }}>
           <button
             onClick={() => onNavigate(job.id)}
-            style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "3px 8px", fontSize: 11, color: TEXT2, cursor: "pointer", fontFamily: "inherit" }}
+            style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "3px 10px", fontSize: 11, fontWeight: 600, color: TEXT2, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
           >รายละเอียด</button>
           <div style={{ position: "relative" }}>
             <button
