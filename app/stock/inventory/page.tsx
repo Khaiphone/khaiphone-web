@@ -12,6 +12,9 @@ import StockDetailDrawer from "@/components/stock/StockDetailDrawer";
 import { useThemeColors } from "@/components/stock/ThemeContext";
 import { fetchStockItems, deleteStockItem, confirmDelivery } from "@/app/actions/stocks";
 import SellModal from "@/components/stock/SellModal";
+import BuybackModal from "@/components/stock/BuybackModal";
+import RepairSendModal from "@/components/stock/RepairSendModal";
+import RepairReceiveModal from "@/components/stock/RepairReceiveModal";
 import { STOCK_STATUS_COLORS } from "@/lib/stock/constants";
 import { getProductImage } from "@/lib/product-image";
 import type { StockItem, StockStatus } from "@/lib/stock/types";
@@ -23,6 +26,8 @@ const STATUSES: Array<{ value: StockStatus | "all"; label: string }> = [
   { value: "ลงขายแล้ว",        label: "ลงขายแล้ว"          },
   { value: "จองแล้ว",          label: "จองแล้ว"            },
   { value: "ขายแล้ว",          label: "ขายแล้ว"            },
+  { value: "รับคืนแล้ว",      label: "รับคืนแล้ว"         },
+  { value: "ส่งซ่อม",          label: "ส่งซ่อม"            },
   { value: "ส่งคืน",           label: "ส่งคืน"             },
   { value: "ตีกลับ/ไม่รับซื้อ", label: "ตีกลับ/ไม่รับซื้อ" },
 ];
@@ -68,6 +73,9 @@ export default function StockInventoryPage() {
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const [sellTarget, setSellTarget] = useState<StockItem | null>(null);
+  const [buybackTarget, setBuybackTarget] = useState<StockItem | null>(null);
+  const [repairSendTarget, setRepairSendTarget] = useState<StockItem | null>(null);
+  const [repairReceiveTarget, setRepairReceiveTarget] = useState<StockItem | null>(null);
   const [deliveryTarget, setDeliveryTarget] = useState<StockItem | null>(null);
   const [trackingInput, setTrackingInput] = useState("");
   const [deliveryChannelInput, setDeliveryChannelInput] = useState("หน้าร้าน");
@@ -193,6 +201,10 @@ export default function StockInventoryPage() {
     setDeliveryAddressInput(item.deliveryAddress ?? "");
     setMoreMenuId(null);
   }
+
+  function openBuyback(item: StockItem) { setBuybackTarget(item); setMoreMenuId(null); }
+  function openRepairSend(item: StockItem) { setRepairSendTarget(item); setMoreMenuId(null); }
+  function openRepairReceive(item: StockItem) { setRepairReceiveTarget(item); setMoreMenuId(null); }
 
   async function handleConfirmDelivery() {
     if (!deliveryTarget) return;
@@ -416,9 +428,24 @@ export default function StockInventoryPage() {
                         <button onClick={() => setSelected(s)} style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: `1px solid ${c.border}`, background: c.card, color: c.text2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
                           <Eye size={13} /> ดูรายละเอียด
                         </button>
-                        {!isSold && (
+                        {!isSold && s.status !== "รับคืนแล้ว" && s.status !== "ส่งซ่อม" && (
                           <button onClick={() => openSellModal(s)} style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: "none", background: "rgba(34,197,94,0.12)", color: "#22c55e", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
                             <ShoppingCart size={13} /> บันทึกขาย
+                          </button>
+                        )}
+                        {s.status === "ขายแล้ว" && (
+                          <button onClick={() => openBuyback(s)} style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: "none", background: "rgba(245,158,11,0.12)", color: "#f59e0b", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                            ซื้อคืน
+                          </button>
+                        )}
+                        {s.status === "รับคืนแล้ว" && (
+                          <button onClick={() => openRepairSend(s)} style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: "none", background: "rgba(236,72,153,0.12)", color: "#ec4899", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                            ส่งซ่อม
+                          </button>
+                        )}
+                        {s.status === "ส่งซ่อม" && (
+                          <button onClick={() => openRepairReceive(s)} style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: "none", background: "rgba(34,197,94,0.12)", color: "#22c55e", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                            รับคืนจากซ่อม
                           </button>
                         )}
                         {s.deliveryStatus === "รอจัดส่ง" && (
@@ -537,8 +564,17 @@ export default function StockInventoryPage() {
                                   <button onClick={() => { router.push(`/stock/inventory/${s.id}`); setMoreMenuId(null); }} style={{ ...btnMenu }}><ExternalLink size={13} /> ดูรายละเอียดเต็ม</button>
                                   <button onClick={() => { copyToClipboard(s.imei, "IMEI"); setMoreMenuId(null); }} style={{ ...btnMenu }}><Copy size={13} /> คัดลอก IMEI</button>
                                   {s.serial && <button onClick={() => { copyToClipboard(s.serial, "Serial"); setMoreMenuId(null); }} style={{ ...btnMenu }}><Copy size={13} /> คัดลอก Serial</button>}
-                                  {s.status !== "ขายแล้ว" && (
+                                  {s.status !== "ขายแล้ว" && s.status !== "รับคืนแล้ว" && s.status !== "ส่งซ่อม" && (
                                     <><div style={{ borderTop: `1px solid ${c.border}` }} /><button onClick={() => openSellModal(s)} style={{ ...btnMenu, color: "#22c55e", fontWeight: 600 }}><ShoppingCart size={13} /> บันทึกการขาย</button></>
+                                  )}
+                                  {s.status === "ขายแล้ว" && (
+                                    <><div style={{ borderTop: `1px solid ${c.border}` }} /><button onClick={() => openBuyback(s)} style={{ ...btnMenu, color: "#f59e0b", fontWeight: 600 }}>↩ ซื้อคืน</button></>
+                                  )}
+                                  {s.status === "รับคืนแล้ว" && (
+                                    <><div style={{ borderTop: `1px solid ${c.border}` }} /><button onClick={() => openRepairSend(s)} style={{ ...btnMenu, color: "#ec4899", fontWeight: 600 }}>🔧 ส่งซ่อม</button></>
+                                  )}
+                                  {s.status === "ส่งซ่อม" && (
+                                    <><div style={{ borderTop: `1px solid ${c.border}` }} /><button onClick={() => openRepairReceive(s)} style={{ ...btnMenu, color: "#22c55e", fontWeight: 600 }}>✓ รับคืนจากซ่อม</button></>
                                   )}
                                   {s.deliveryStatus === "รอจัดส่ง" && (
                                     <><div style={{ borderTop: `1px solid ${c.border}` }} /><button onClick={() => openDeliveryConfirm(s)} style={{ ...btnMenu, color: "#f59e0b", fontWeight: 600 }}><Truck size={13} /> ยืนยันส่งของ</button></>
@@ -593,6 +629,39 @@ export default function StockInventoryPage() {
           onSuccess={updates => {
             setStocks(prev => prev.map(s => s.id === sellTarget.id ? { ...s, ...updates } : s));
             setSellTarget(null);
+          }}
+        />
+      )}
+
+      {buybackTarget && (
+        <BuybackModal
+          item={buybackTarget}
+          onClose={() => setBuybackTarget(null)}
+          onSuccess={updates => {
+            setStocks(prev => prev.map(s => s.id === buybackTarget.id ? { ...s, ...updates } : s));
+            setBuybackTarget(null);
+          }}
+        />
+      )}
+
+      {repairSendTarget && (
+        <RepairSendModal
+          item={repairSendTarget}
+          onClose={() => setRepairSendTarget(null)}
+          onSuccess={updates => {
+            setStocks(prev => prev.map(s => s.id === repairSendTarget.id ? { ...s, ...updates } : s));
+            setRepairSendTarget(null);
+          }}
+        />
+      )}
+
+      {repairReceiveTarget && (
+        <RepairReceiveModal
+          item={repairReceiveTarget}
+          onClose={() => setRepairReceiveTarget(null)}
+          onSuccess={updates => {
+            setStocks(prev => prev.map(s => s.id === repairReceiveTarget.id ? { ...s, ...updates } : s));
+            setRepairReceiveTarget(null);
           }}
         />
       )}

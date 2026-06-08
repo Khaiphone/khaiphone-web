@@ -864,3 +864,84 @@ export async function fetchStockCountSessions(limit = 10): Promise<StockCountSes
     missingItems: r.missing_items ?? [],
   }));
 }
+
+// ── Buyback / Repair flow ──────────────────────────────────────────────────────
+
+export async function buybackStock(
+  id: string,
+  buybackPrice: number,
+  reason: string,
+  by = "admin",
+): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const now = new Date().toISOString();
+  const { data: current } = await supabase.from("stocks").select("status, status_log, audit_log, model, storage").eq("id", id).single();
+  if (!current) return { success: false, error: "ไม่พบสินค้า" };
+  const newStatus: StockStatus = "รับคืนแล้ว";
+  const newStatusLog = [...(current.status_log ?? []), { status: newStatus, timestamp: now, note: `ซื้อคืน ฿${buybackPrice.toLocaleString("th-TH")}${reason ? ` — ${reason}` : ""}`, by }];
+  const newAuditLog: AuditEntry[] = [...(current.audit_log ?? []), {
+    action: "ซื้อคืน",
+    detail: `ซื้อคืนในราคา ฿${buybackPrice.toLocaleString("th-TH")}${reason ? ` เหตุผล: ${reason}` : ""}`,
+    timestamp: now, by,
+  }];
+  const { error } = await supabase.from("stocks")
+    .update({ status: newStatus, status_log: newStatusLog, audit_log: newAuditLog, updated_at: now })
+    .eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function sendToRepair(
+  id: string,
+  shopName: string,
+  estimatedCost: number,
+  issue: string,
+  by = "admin",
+): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const now = new Date().toISOString();
+  const { data: current } = await supabase.from("stocks").select("status, status_log, audit_log").eq("id", id).single();
+  if (!current) return { success: false, error: "ไม่พบสินค้า" };
+  const newStatus: StockStatus = "ส่งซ่อม";
+  const detail = `ส่งซ่อมที่ ${shopName}${estimatedCost > 0 ? ` ค่าซ่อมประมาณ ฿${estimatedCost.toLocaleString("th-TH")}` : ""}${issue ? ` — ${issue}` : ""}`;
+  const newStatusLog = [...(current.status_log ?? []), { status: newStatus, timestamp: now, note: detail, by }];
+  const newAuditLog: AuditEntry[] = [...(current.audit_log ?? []), { action: "ส่งซ่อม", detail, timestamp: now, by }];
+  const { error } = await supabase.from("stocks")
+    .update({ status: newStatus, status_log: newStatusLog, audit_log: newAuditLog, updated_at: now })
+    .eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function receiveFromRepair(
+  id: string,
+  actualCost: number,
+  newGrade: string | null,
+  newSellingPrice: number | null,
+  notes: string,
+  by = "admin",
+): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const now = new Date().toISOString();
+  const { data: current } = await supabase.from("stocks").select("status, status_log, audit_log, other_cost, grade, selling_price").eq("id", id).single();
+  if (!current) return { success: false, error: "ไม่พบสินค้า" };
+  const newStatus: StockStatus = "พร้อมขาย";
+  const detail = `ซ่อมเสร็จ ค่าซ่อมจริง ฿${actualCost.toLocaleString("th-TH")}${newGrade ? ` เกรดใหม่ ${newGrade}` : ""}${newSellingPrice ? ` ราคาขายใหม่ ฿${newSellingPrice.toLocaleString("th-TH")}` : ""}${notes ? ` — ${notes}` : ""}`;
+  const newStatusLog = [...(current.status_log ?? []), { status: newStatus, timestamp: now, note: detail, by }];
+  const newAuditLog: AuditEntry[] = [...(current.audit_log ?? []), { action: "รับคืนจากซ่อม", detail, timestamp: now, by }];
+  const updates: Record<string, unknown> = {
+    status: newStatus,
+    status_log: newStatusLog,
+    audit_log: newAuditLog,
+    other_cost: (current.other_cost ?? 0) + actualCost,
+    updated_at: now,
+  };
+  if (newGrade) updates.grade = newGrade;
+  if (newSellingPrice && newSellingPrice > 0) updates.selling_price = newSellingPrice;
+  const { error } = await supabase.from("stocks").update(updates).eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
