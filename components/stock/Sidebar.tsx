@@ -6,7 +6,7 @@ import Image from "next/image";
 import {
   LayoutDashboard, Package, ShoppingCart, Users, BarChart2,
   Settings, Bell, TrendingUp, FileText, UserCog, Tag,
-  ChevronRight, ClipboardList, LineChart, Activity, Handshake,
+  ChevronRight, ClipboardList, LineChart, Activity, Handshake, ClipboardCheck,
 } from "lucide-react";
 import { useThemeColors } from "./ThemeContext";
 import { useStockRole } from "@/app/stock/role-context";
@@ -18,7 +18,8 @@ const NAV_BASE = [
   { icon: FileText,        label: "Requests",   href: "/stock/requests",  showBadge: true },
   { icon: Users,           label: "Customers",  href: "/stock/customers"  },
   { icon: Handshake,       label: "Partners",   href: "/stock/partners"   },
-  { icon: Package,         label: "Stock",      href: "/stock/inventory"  },
+  { icon: Package,         label: "Stock",      href: "/stock/inventory",  excludePrefix: "/stock/inventory/count" },
+  { icon: ClipboardCheck,  label: "นับสต็อค",   href: "/stock/inventory/count" },
   { icon: ShoppingCart,    label: "Sales",      href: "/stock/sales"      },
   { icon: TrendingUp,      label: "Finance",    href: "/stock/finance"    },
   { icon: Tag,             label: "Pricing",    href: "/stock/pricing"    },
@@ -90,8 +91,8 @@ export default function StockSidebar() {
 
       {/* Navigation */}
       <nav style={{ flex: 1, padding: "12px 8px", overflowY: "auto" }}>
-        {NAV_BASE.map(({ icon: Icon, label, href, showBadge }) => {
-          const active = pathname.startsWith(href);
+        {NAV_BASE.map(({ icon: Icon, label, href, showBadge, excludePrefix }) => {
+          const active = pathname.startsWith(href) && (!excludePrefix || !pathname.startsWith(excludePrefix));
           const badge = showBadge && pendingCount ? pendingCount : null;
           return (
             <button
