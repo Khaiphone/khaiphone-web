@@ -35,6 +35,7 @@ export default function SellModal({ item, onClose, onSuccess }: SellModalProps) 
   const [deliveryDone, setDeliveryDone] = useState(true);
   const [deliveryChannel, setDeliveryChannel] = useState<string>("หน้าร้าน");
   const [trackingNumber, setTrackingNumber] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
 
   // Slip upload
   const slipInputRef = useRef<HTMLInputElement>(null);
@@ -68,6 +69,7 @@ export default function SellModal({ item, onClose, onSuccess }: SellModalProps) 
       deliveryDone ? deliveryChannel : undefined,
       slipUrls.length > 0 ? slipUrls : undefined,
       deliveryDone && deliveryChannel === "ส่งพัสดุ" ? trackingNumber : undefined,
+      deliveryDone && deliveryChannel === "ส่งถึงที่" ? deliveryAddress : undefined,
     );
     if (res.success) {
       const effChannel = deliveryDone ? deliveryChannel : undefined;
@@ -222,6 +224,14 @@ export default function SellModal({ item, onClose, onSuccess }: SellModalProps) 
                 value={trackingNumber}
                 onChange={e => setTrackingNumber(e.target.value)}
                 placeholder="เลขพัสดุ (ถ้ามี)"
+                style={{ ...inputSt, marginTop: 8 }}
+              />
+            )}
+            {deliveryChannel === "ส่งถึงที่" && (
+              <input
+                value={deliveryAddress}
+                onChange={e => setDeliveryAddress(e.target.value)}
+                placeholder="สถานที่ส่ง เช่น บ้านลูกค้า / ออฟฟิศ (ไม่บังคับ)"
                 style={{ ...inputSt, marginTop: 8 }}
               />
             )}

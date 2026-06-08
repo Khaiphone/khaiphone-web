@@ -171,7 +171,7 @@ export async function verifyStockField(
 export async function markStockSold(
   id: string, soldPrice: number, buyerName: string, buyerPhone: string,
   soldAt?: string, soldBy?: string, saleType?: string, partnerName?: string,
-  deliveryChannel?: string, slipUrls?: string[], trackingNumber?: string,
+  deliveryChannel?: string, slipUrls?: string[], trackingNumber?: string, deliveryAddress?: string,
 ): Promise<{ success: boolean; error?: string }> {
   await requireAuth();
   const supabase = createServerClient();
@@ -188,6 +188,7 @@ export async function markStockSold(
     sold_by: soldBy ?? null, sale_type: saleType ?? "ขายปลีก", partner_name: partnerName ?? null,
     delivery_channel: deliveryChannel ?? null,
     delivery_status: autoDeliveryStatus,
+    delivery_address: deliveryAddress?.trim() || undefined,
     tracking_number: trackingNumber?.trim() || undefined,
     slip_urls: slipUrls && slipUrls.length > 0 ? slipUrls : undefined,
     status_log: newLog, updated_at: now,
