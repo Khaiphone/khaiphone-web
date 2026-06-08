@@ -180,8 +180,8 @@ export async function markStockSold(
   const { data: current } = await supabase.from("stocks").select("status_log, request_ref").eq("id", id).single();
   const note = saleType === "ขายส่ง" && partnerName ? `ขายส่งให้ ${partnerName}` : `ขายให้ ${buyerName}`;
   const newLog = [...(current?.status_log ?? []), { status: "ขายแล้ว", timestamp: now, note, by: soldBy ?? "admin" }];
-  const hasTracking = !!trackingNumber?.trim();
-  const autoDeliveryStatus = deliveryChannel === "หน้าร้าน" || hasTracking ? "จัดส่งแล้ว" : "รอจัดส่ง";
+  // deliveryChannel being set means user chose "จัดส่งแล้ว" — always mark as delivered
+  const autoDeliveryStatus = deliveryChannel ? "จัดส่งแล้ว" : "รอจัดส่ง";
   const { error } = await supabase.from("stocks").update({
     status: "ขายแล้ว", sold_at: soldAtTs, sold_price: soldPrice,
     buyer_name: buyerName, buyer_phone: buyerPhone,
