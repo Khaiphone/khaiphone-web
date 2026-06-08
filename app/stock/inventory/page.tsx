@@ -73,6 +73,8 @@ export default function StockInventoryPage() {
   const [deliveryChannelInput, setDeliveryChannelInput] = useState("หน้าร้าน");
   const [deliveryAddressInput, setDeliveryAddressInput] = useState("");
   const [confirmingDelivery, setConfirmingDelivery] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   const [filterModel, setFilterModel] = useState("");
   const [filterGrade, setFilterGrade] = useState("");
@@ -84,6 +86,13 @@ export default function StockInventoryPage() {
 
   useEffect(() => {
     fetchStockItems().then(data => { setStocks(data); setLoading(false); });
+  }, []);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
   }, []);
 
   // Close more menu on outside click
@@ -222,20 +231,22 @@ export default function StockInventoryPage() {
           onClick={() => router.push("/stock/inventory/add")}
           style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 10, background: c.gold, border: "none", color: "#000", fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
         >
-          <Plus size={16} /> เพิ่มสินค้าเข้าสต็อก
+          <Plus size={16} /> {isMobile ? "เพิ่ม" : "เพิ่มสินค้าเข้าสต็อก"}
         </button>
-        <button
-          onClick={() => exportCSV(filtered)}
-          style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 13, cursor: "pointer" }}
-        >
-          <Download size={15} /> Export CSV
-        </button>
-        <button
-          onClick={() => window.print()}
-          style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 13, cursor: "pointer" }}
-        >
-          <Printer size={15} /> พิมพ์รายงาน
-        </button>
+        <div className="hidden md:flex" style={{ gap: 8, display: "flex" }}>
+          <button
+            onClick={() => exportCSV(filtered)}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 13, cursor: "pointer" }}
+          >
+            <Download size={15} /> Export CSV
+          </button>
+          <button
+            onClick={() => window.print()}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 13, cursor: "pointer" }}
+          >
+            <Printer size={15} /> พิมพ์รายงาน
+          </button>
+        </div>
       </StockTopbar>
 
       <div style={{ padding: 24 }}>
@@ -274,45 +285,59 @@ export default function StockInventoryPage() {
         </AnimatePresence>
 
         {/* Filter Bar */}
-        <div style={{ background: c.card, borderRadius: 16, padding: "16px 20px", marginBottom: 16, border: `1px solid ${c.border}` }}>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
-            <div style={{ position: "relative", flex: "1 1 220px", minWidth: 180 }}>
+        <div style={{ background: c.card, borderRadius: 16, padding: "12px 16px", marginBottom: 16, border: `1px solid ${c.border}` }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: showFilters || !isMobile ? 10 : 0 }}>
+            <div style={{ position: "relative", flex: 1 }}>
               <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: c.text3 }} />
               <input value={query} onChange={e => { setQuery(e.target.value); setPage(1); }}
-                placeholder="ค้นหา IMEI, Serial, รุ่น, ลูกค้า..."
+                placeholder="ค้นหา IMEI, Serial, รุ่น..."
                 style={{ width: "100%", background: c.card2, border: `1px solid ${c.border}`, borderRadius: 10, padding: "9px 12px 9px 34px", color: c.text, fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
               />
             </div>
-            {[
-              { label: "รุ่น", value: filterModel, onChange: (v: string) => setFilterModel(v), options: models },
-              { label: "เกรด", value: filterGrade, onChange: (v: string) => setFilterGrade(v), options: ["A", "A-", "B+", "B", "B-", "C"] },
-              { label: "ช่องทาง", value: filterChannel, onChange: (v: string) => setFilterChannel(v), options: ["หน้าร้าน", "เว็บไซต์", "LINE OA", "Facebook", "Shopee", "โทรศัพท์"] },
-            ].map(({ label, value, onChange, options }) => (
-              <select key={label} value={value} onChange={e => { onChange(e.target.value); setPage(1); }}
-                style={{ flex: "0 1 160px", background: c.card2, border: `1px solid ${c.border}`, borderRadius: 10, padding: "9px 12px", color: value ? c.text : c.text3, fontSize: 13, cursor: "pointer", fontFamily: "inherit", outline: "none" }}
-              >
-                <option value="">{label}: ทั้งหมด</option>
-                {options.map(o => <option key={o} value={o}>{o}</option>)}
-              </select>
-            ))}
+            {isMobile && (
+              <button onClick={() => setShowFilters(f => !f)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "9px 14px", borderRadius: 10, background: showFilters ? c.goldBg : c.card2, border: `1px solid ${showFilters ? c.gold : c.border}`, color: showFilters ? c.gold : c.text2, fontSize: 13, cursor: "pointer", flexShrink: 0 }}>
+                กรอง {showFilters ? "▲" : "▼"}
+              </button>
+            )}
           </div>
-          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            <input value={filterPriceMin} onChange={e => setFilterPriceMin(e.target.value)} placeholder="ราคาต่ำสุด (฿)" type="number"
-              style={{ flex: "0 1 140px", background: c.card2, border: `1px solid ${c.border}`, borderRadius: 10, padding: "9px 12px", color: c.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
-            <input value={filterPriceMax} onChange={e => setFilterPriceMax(e.target.value)} placeholder="ราคาสูงสุด (฿)" type="number"
-              style={{ flex: "0 1 140px", background: c.card2, border: `1px solid ${c.border}`, borderRadius: 10, padding: "9px 12px", color: c.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
-            <div style={{ display: "flex", alignItems: "center", gap: 6, flex: "0 1 auto" }}>
-              <span style={{ color: c.text3, fontSize: 12, whiteSpace: "nowrap" }}>รับเข้า</span>
-              <input value={filterDateFrom} onChange={e => { setFilterDateFrom(e.target.value); setPage(1); }} type="date" max={filterDateTo || undefined}
-                style={{ background: c.card2, border: `1px solid ${filterDateFrom ? c.gold : c.border}`, borderRadius: 10, padding: "9px 10px", color: filterDateFrom ? c.text : c.text3, fontSize: 13, fontFamily: "inherit", outline: "none", cursor: "pointer", colorScheme: "dark" }} />
-              <span style={{ color: c.text3, fontSize: 12 }}>–</span>
-              <input value={filterDateTo} onChange={e => { setFilterDateTo(e.target.value); setPage(1); }} type="date" min={filterDateFrom || undefined}
-                style={{ background: c.card2, border: `1px solid ${filterDateTo ? c.gold : c.border}`, borderRadius: 10, padding: "9px 10px", color: filterDateTo ? c.text : c.text3, fontSize: 13, fontFamily: "inherit", outline: "none", cursor: "pointer", colorScheme: "dark" }} />
-            </div>
-            <button onClick={clearFilters} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 10, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 13, cursor: "pointer" }}>
-              <X size={14} /> ล้างตัวกรอง
-            </button>
-          </div>
+
+          {(!isMobile || showFilters) && (
+            <>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+                {[
+                  { label: "รุ่น", value: filterModel, onChange: (v: string) => setFilterModel(v), options: models },
+                  { label: "เกรด", value: filterGrade, onChange: (v: string) => setFilterGrade(v), options: ["A", "A-", "B+", "B", "B-", "C"] },
+                  { label: "ช่องทาง", value: filterChannel, onChange: (v: string) => setFilterChannel(v), options: ["หน้าร้าน", "เว็บไซต์", "LINE OA", "Facebook", "Shopee", "โทรศัพท์"] },
+                ].map(({ label, value, onChange, options }) => (
+                  <select key={label} value={value} onChange={e => { onChange(e.target.value); setPage(1); }}
+                    style={{ flex: "1 1 140px", background: c.card2, border: `1px solid ${c.border}`, borderRadius: 10, padding: "9px 12px", color: value ? c.text : c.text3, fontSize: 13, cursor: "pointer", fontFamily: "inherit", outline: "none" }}
+                  >
+                    <option value="">{label}: ทั้งหมด</option>
+                    {options.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                <input value={filterPriceMin} onChange={e => setFilterPriceMin(e.target.value)} placeholder="ราคาต่ำสุด (฿)" type="number"
+                  style={{ flex: "1 1 120px", background: c.card2, border: `1px solid ${c.border}`, borderRadius: 10, padding: "9px 12px", color: c.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+                <input value={filterPriceMax} onChange={e => setFilterPriceMax(e.target.value)} placeholder="ราคาสูงสุด (฿)" type="number"
+                  style={{ flex: "1 1 120px", background: c.card2, border: `1px solid ${c.border}`, borderRadius: 10, padding: "9px 12px", color: c.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+                {!isMobile && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ color: c.text3, fontSize: 12, whiteSpace: "nowrap" }}>รับเข้า</span>
+                    <input value={filterDateFrom} onChange={e => { setFilterDateFrom(e.target.value); setPage(1); }} type="date" max={filterDateTo || undefined}
+                      style={{ background: c.card2, border: `1px solid ${filterDateFrom ? c.gold : c.border}`, borderRadius: 10, padding: "9px 10px", color: filterDateFrom ? c.text : c.text3, fontSize: 13, fontFamily: "inherit", outline: "none", cursor: "pointer", colorScheme: "dark" }} />
+                    <span style={{ color: c.text3, fontSize: 12 }}>–</span>
+                    <input value={filterDateTo} onChange={e => { setFilterDateTo(e.target.value); setPage(1); }} type="date" min={filterDateFrom || undefined}
+                      style={{ background: c.card2, border: `1px solid ${filterDateTo ? c.gold : c.border}`, borderRadius: 10, padding: "9px 10px", color: filterDateTo ? c.text : c.text3, fontSize: 13, fontFamily: "inherit", outline: "none", cursor: "pointer", colorScheme: "dark" }} />
+                  </div>
+                )}
+                <button onClick={clearFilters} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 10, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 13, cursor: "pointer" }}>
+                  <X size={14} /> ล้างตัวกรอง
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Status Tabs */}
@@ -339,7 +364,7 @@ export default function StockInventoryPage() {
           })}
         </div>
 
-        {/* Table */}
+        {/* Table / Card list */}
         <div style={{ background: c.card, borderRadius: 16, border: `1px solid ${c.border}`, overflow: "hidden", marginBottom: 16 }}>
           {loading ? (
             <div style={{ padding: 40, textAlign: "center", color: c.text3 }}>กำลังโหลด...</div>
@@ -348,7 +373,70 @@ export default function StockInventoryPage() {
               <div style={{ fontSize: 40, marginBottom: 12 }}>📦</div>
               <p style={{ margin: 0 }}>ไม่พบสินค้าในสต็อก</p>
             </div>
+          ) : isMobile ? (
+            /* ── Mobile card list ── */
+            <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+              <AnimatePresence>
+                {paginated.map((s, i) => {
+                  const isSold = s.status === "ขายแล้ว";
+                  const displayPrice = isSold ? (s.soldPrice ?? s.sellingPrice) : s.sellingPrice;
+                  const src = s.photos[0] || getProductImage(s.model);
+                  return (
+                    <motion.div key={s.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
+                      style={{ background: c.bg, borderRadius: 14, border: `1px solid ${c.border}`, padding: 14, cursor: "pointer" }}
+                      onClick={() => setSelected(s)}
+                    >
+                      {/* Top row */}
+                      <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 10 }}>
+                        {src ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={src} alt="" style={{ width: 48, height: 48, objectFit: "contain", borderRadius: 10, background: c.card2, flexShrink: 0, padding: s.photos[0] ? 0 : 4 }} />
+                        ) : (
+                          <div style={{ width: 48, height: 48, background: c.card2, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>📱</div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginBottom: 2 }}>
+                            <span style={{ color: c.text, fontSize: 14, fontWeight: 700 }}>{s.model}</span>
+                            <GradeBadge grade={s.grade} />
+                            <StockStatusBadge status={s.status} />
+                          </div>
+                          <p style={{ color: c.text2, fontSize: 12, margin: "0 0 2px" }}>{s.storage} · {s.color}</p>
+                          {s.imei && <p style={{ color: c.text3, fontSize: 11, fontFamily: "monospace", margin: 0 }}>IMEI: {s.imei}</p>}
+                        </div>
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          {displayPrice > 0
+                            ? <p style={{ color: c.gold, fontSize: 15, fontWeight: 800, margin: 0 }}>฿{fmt(displayPrice)}</p>
+                            : <span style={{ color: "#f97316", fontSize: 11, fontWeight: 600, background: "rgba(249,115,22,0.1)", padding: "3px 8px", borderRadius: 6 }}>ยังไม่กำหนด</span>
+                          }
+                          <p style={{ color: c.text3, fontSize: 10, margin: "3px 0 0", fontFamily: "monospace" }}>{s.id}</p>
+                        </div>
+                      </div>
+                      {/* Actions */}
+                      <div style={{ display: "flex", gap: 8, borderTop: `1px solid ${c.border}`, paddingTop: 10 }} onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setSelected(s)} style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: `1px solid ${c.border}`, background: c.card, color: c.text2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                          <Eye size={13} /> ดูรายละเอียด
+                        </button>
+                        {!isSold && (
+                          <button onClick={() => openSellModal(s)} style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: "none", background: "rgba(34,197,94,0.12)", color: "#22c55e", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                            <ShoppingCart size={13} /> บันทึกขาย
+                          </button>
+                        )}
+                        {s.deliveryStatus === "รอจัดส่ง" && (
+                          <button onClick={() => openDeliveryConfirm(s)} style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: "none", background: "rgba(245,158,11,0.12)", color: "#f59e0b", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                            <Truck size={13} /> ยืนยันส่งของ
+                          </button>
+                        )}
+                        <button onClick={() => router.push(`/stock/inventory/${s.id}`)} style={{ padding: "8px 12px", borderRadius: 10, border: `1px solid ${c.border}`, background: c.card, color: c.text3, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}>
+                          <Edit2 size={13} />
+                        </button>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
           ) : (
+            /* ── Desktop table ── */
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
@@ -374,12 +462,7 @@ export default function StockInventoryPage() {
                           animate={{ opacity: isDeleting ? 0.4 : 1 }}
                           transition={{ delay: i * 0.02 }}
                           onClick={() => setSelected(s)}
-                          style={{
-                            borderBottom: `1px solid ${c.border}`,
-                            cursor: "pointer",
-                            background: isChecked ? c.goldBg : "transparent",
-                            transition: "background 150ms",
-                          }}
+                          style={{ borderBottom: `1px solid ${c.border}`, cursor: "pointer", background: isChecked ? c.goldBg : "transparent", transition: "background 150ms" }}
                         >
                           <td style={{ padding: "10px 14px" }} onClick={e => e.stopPropagation()}>
                             <input type="checkbox" checked={isChecked} onChange={e => {
@@ -423,21 +506,13 @@ export default function StockInventoryPage() {
                               : <span style={{ color: c.text3, fontSize: 12 }}>—</span>
                             }
                           </td>
-                          <td style={{ padding: "10px 14px" }}>
-                            <StockStatusBadge status={s.status} />
-                          </td>
+                          <td style={{ padding: "10px 14px" }}><StockStatusBadge status={s.status} /></td>
                           <td style={{ padding: "10px 14px" }}>
                             {s.status === "ขายแล้ว" && s.deliveryStatus ? (
-                              <span style={{
-                                fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 8, whiteSpace: "nowrap",
-                                color: s.deliveryStatus === "จัดส่งแล้ว" ? "#22c55e" : "#f59e0b",
-                                background: s.deliveryStatus === "จัดส่งแล้ว" ? "rgba(34,197,94,0.12)" : "rgba(245,158,11,0.12)",
-                              }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 8, whiteSpace: "nowrap", color: s.deliveryStatus === "จัดส่งแล้ว" ? "#22c55e" : "#f59e0b", background: s.deliveryStatus === "จัดส่งแล้ว" ? "rgba(34,197,94,0.12)" : "rgba(245,158,11,0.12)" }}>
                                 {s.deliveryStatus}
                               </span>
-                            ) : (
-                              <span style={{ color: c.text3, fontSize: 12 }}>—</span>
-                            )}
+                            ) : <span style={{ color: c.text3, fontSize: 12 }}>—</span>}
                           </td>
                           <td style={{ padding: "10px 14px", color: c.text2, fontSize: 12, whiteSpace: "nowrap" }}>{s.sourceChannel}</td>
                           <td style={{ padding: "10px 14px", whiteSpace: "nowrap" }}>
@@ -452,58 +527,24 @@ export default function StockInventoryPage() {
                           </td>
                           <td style={{ padding: "10px 14px" }} onClick={e => e.stopPropagation()}>
                             <div style={{ display: "flex", gap: 2, position: "relative" }} ref={moreMenuId === s.id ? moreMenuRef : null}>
-                              <button onClick={() => setSelected(s)} style={{ background: "none", border: "none", color: c.text3, cursor: "pointer", padding: 4, display: "flex", borderRadius: 6 }} title="ดูรายละเอียด">
-                                <Eye size={15} />
-                              </button>
-                              <button onClick={() => { setSelected(s); }} style={{ background: "none", border: "none", color: c.text3, cursor: "pointer", padding: 4, display: "flex", borderRadius: 6 }} title="แก้ไข">
-                                <Edit2 size={15} />
-                              </button>
-                              <button
-                                onClick={() => setMoreMenuId(moreMenuId === s.id ? null : s.id)}
-                                style={{ background: "none", border: "none", color: c.text3, cursor: "pointer", padding: 4, display: "flex", borderRadius: 6 }}
-                              >
+                              <button onClick={() => setSelected(s)} style={{ background: "none", border: "none", color: c.text3, cursor: "pointer", padding: 4, display: "flex", borderRadius: 6 }}><Eye size={15} /></button>
+                              <button onClick={() => { setSelected(s); }} style={{ background: "none", border: "none", color: c.text3, cursor: "pointer", padding: 4, display: "flex", borderRadius: 6 }}><Edit2 size={15} /></button>
+                              <button onClick={() => setMoreMenuId(moreMenuId === s.id ? null : s.id)} style={{ background: "none", border: "none", color: c.text3, cursor: "pointer", padding: 4, display: "flex", borderRadius: 6 }}>
                                 <MoreHorizontal size={15} />
                               </button>
                               {moreMenuId === s.id && (
-                                <div style={{
-                                  position: "absolute", right: 0, top: "100%", zIndex: 100,
-                                  background: c.card, border: `1px solid ${c.border}`, borderRadius: 10,
-                                  boxShadow: "0 8px 24px rgba(0,0,0,0.18)", minWidth: 180, overflow: "hidden",
-                                }}>
-                                  <button onClick={() => { router.push(`/stock/inventory/${s.id}`); setMoreMenuId(null); }} style={{ ...btnMenu }}>
-                                    <ExternalLink size={13} /> ดูรายละเอียดเต็ม
-                                  </button>
-                                  <button onClick={() => { copyToClipboard(s.imei, "IMEI"); setMoreMenuId(null); }} style={{ ...btnMenu }}>
-                                    <Copy size={13} /> คัดลอก IMEI
-                                  </button>
-                                  {s.serial && (
-                                    <button onClick={() => { copyToClipboard(s.serial, "Serial"); setMoreMenuId(null); }} style={{ ...btnMenu }}>
-                                      <Copy size={13} /> คัดลอก Serial
-                                    </button>
-                                  )}
+                                <div style={{ position: "absolute", right: 0, top: "100%", zIndex: 100, background: c.card, border: `1px solid ${c.border}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.18)", minWidth: 180, overflow: "hidden" }}>
+                                  <button onClick={() => { router.push(`/stock/inventory/${s.id}`); setMoreMenuId(null); }} style={{ ...btnMenu }}><ExternalLink size={13} /> ดูรายละเอียดเต็ม</button>
+                                  <button onClick={() => { copyToClipboard(s.imei, "IMEI"); setMoreMenuId(null); }} style={{ ...btnMenu }}><Copy size={13} /> คัดลอก IMEI</button>
+                                  {s.serial && <button onClick={() => { copyToClipboard(s.serial, "Serial"); setMoreMenuId(null); }} style={{ ...btnMenu }}><Copy size={13} /> คัดลอก Serial</button>}
                                   {s.status !== "ขายแล้ว" && (
-                                    <>
-                                      <div style={{ borderTop: `1px solid ${c.border}` }} />
-                                      <button onClick={() => openSellModal(s)} style={{ ...btnMenu, color: "#22c55e", fontWeight: 600 }}>
-                                        <ShoppingCart size={13} /> บันทึกการขาย
-                                      </button>
-                                    </>
+                                    <><div style={{ borderTop: `1px solid ${c.border}` }} /><button onClick={() => openSellModal(s)} style={{ ...btnMenu, color: "#22c55e", fontWeight: 600 }}><ShoppingCart size={13} /> บันทึกการขาย</button></>
                                   )}
                                   {s.deliveryStatus === "รอจัดส่ง" && (
-                                    <>
-                                      <div style={{ borderTop: `1px solid ${c.border}` }} />
-                                      <button onClick={() => openDeliveryConfirm(s)} style={{ ...btnMenu, color: "#f59e0b", fontWeight: 600 }}>
-                                        <Truck size={13} /> ยืนยันส่งของ
-                                      </button>
-                                    </>
+                                    <><div style={{ borderTop: `1px solid ${c.border}` }} /><button onClick={() => openDeliveryConfirm(s)} style={{ ...btnMenu, color: "#f59e0b", fontWeight: 600 }}><Truck size={13} /> ยืนยันส่งของ</button></>
                                   )}
                                   <div style={{ borderTop: `1px solid ${c.border}` }} />
-                                  <button
-                                    onClick={() => { handleDelete(s.id); setMoreMenuId(null); }}
-                                    style={{ ...btnMenu, color: "#ef4444" }}
-                                  >
-                                    <Trash2 size={13} /> ลบสินค้า
-                                  </button>
+                                  <button onClick={() => { handleDelete(s.id); setMoreMenuId(null); }} style={{ ...btnMenu, color: "#ef4444" }}><Trash2 size={13} /> ลบสินค้า</button>
                                 </div>
                               )}
                             </div>
