@@ -895,8 +895,9 @@ export async function updateStatus(
         phone: "โทรศัพท์", manual: "หน้าร้าน",
       };
       const year = new Date().getFullYear();
-      const { count: totalCount } = await supabase.from("stocks").select("*", { count: "exact", head: true });
-      const stockId = `STK-${year}-${String((totalCount ?? 0) + 1).padStart(5, "0")}`;
+      const { data: lastRow } = await supabase.from("stocks").select("id").like("id", `STK-${year}-%`).order("id", { ascending: false }).limit(1);
+      const lastSeq = lastRow?.[0]?.id ? parseInt(lastRow[0].id.split("-")[2], 10) : 0;
+      const stockId = `STK-${year}-${String(lastSeq + 1).padStart(5, "0")}`;
       const now = new Date().toISOString();
       const insp = current.inspection ?? {};
       const snapshot = {
