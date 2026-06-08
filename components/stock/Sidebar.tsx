@@ -6,7 +6,7 @@ import Image from "next/image";
 import {
   LayoutDashboard, Package, ShoppingCart, Users, BarChart2,
   Settings, Bell, TrendingUp, FileText, UserCog, Tag,
-  ChevronRight, ClipboardList, LineChart, Activity, Handshake, ClipboardCheck,
+  ChevronRight, ClipboardList, LineChart, Activity, Handshake, ClipboardCheck, ScrollText,
 } from "lucide-react";
 import { useThemeColors } from "./ThemeContext";
 import { useStockRole } from "@/app/stock/role-context";
@@ -20,7 +20,8 @@ const NAV_BASE = [
   { icon: Handshake,       label: "Partners",   href: "/stock/partners"   },
   { icon: Package,         label: "Stock",      href: "/stock/inventory",  excludePrefix: "/stock/inventory/count" },
   { icon: ClipboardCheck,  label: "นับสต็อค",   href: "/stock/inventory/count" },
-  { icon: ShoppingCart,    label: "Sales",      href: "/stock/sales"      },
+  { icon: ShoppingCart,    label: "Sales",      href: "/stock/sales",      excludePrefix: "/stock/sales/quote" },
+  { icon: ScrollText,      label: "Quotations", href: "/stock/sales/quote" },
   { icon: TrendingUp,      label: "Finance",    href: "/stock/finance"    },
   { icon: Tag,             label: "Pricing",    href: "/stock/pricing"    },
   { icon: BarChart2,       label: "Reports",    href: "/stock/reports"    },

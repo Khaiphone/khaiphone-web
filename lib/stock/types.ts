@@ -126,6 +126,45 @@ export interface StockMetrics {
   soldToday: number;
 }
 
+// ── Quotation ────────────────────────────────────────────────────────────────
+
+export type QuoteStatus = "draft" | "sent" | "accepted" | "rejected" | "expired" | "cancelled";
+
+export interface QuoteItem {
+  stockId: string;
+  description: string; // "iPhone 15 Pro 256GB Black เกรด A"
+  imei: string;
+  unitPrice: number;
+  discount: number;  // per-item discount (baht)
+  total: number;     // unitPrice - discount
+}
+
+export interface StockQuote {
+  id: string;           // QUO-2026-00001
+  status: QuoteStatus;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string;
+  customerAddress: string;
+  customerTaxId: string;
+  items: QuoteItem[];
+  subtotal: number;      // sum of item totals
+  discountAmount: number; // overall discount (baht)
+  vatRate: number;        // 0 or 7
+  vatAmount: number;
+  total: number;          // grand total
+  validUntil: string | null;
+  note: string;
+  terms: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  acceptedAt: string | null;
+  saleRef: string | null;
+}
+
+// ── Stock Count ───────────────────────────────────────────────────────────────
+
 export interface StockCountMissingItem {
   id: string;
   model: string;

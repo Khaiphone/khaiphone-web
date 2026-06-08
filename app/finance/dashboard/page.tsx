@@ -19,6 +19,8 @@ import {
 import KpiCard from '@/app/components/finance/KpiCard'
 import { fetchFinanceDashboard } from '@/app/actions/finance'
 import type { FinanceDashboard } from '@/app/actions/finance'
+import { fetchQuotePipeline } from '@/app/actions/quotes'
+import type { QuotePipeline } from '@/app/actions/quotes'
 import { useFinanceDate } from '@/app/components/finance/FinanceDateContext'
 
 const CARD = 'var(--f-card)'
@@ -42,12 +44,17 @@ function fmt(v: number) {
 export default function DashboardPage() {
   const [data, setData] = useState<FinanceDashboard | null>(null)
   const [loading, setLoading] = useState(true)
+  const [pipeline, setPipeline] = useState<QuotePipeline | null>(null)
   const { dateFrom, dateTo } = useFinanceDate()
 
   useEffect(() => {
     setLoading(true)
     fetchFinanceDashboard(dateFrom, dateTo).then((d) => { setData(d); setLoading(false) })
   }, [dateFrom, dateTo])
+
+  useEffect(() => {
+    fetchQuotePipeline().then(setPipeline)
+  }, [])
 
   if (loading || !data) {
     return (
@@ -235,6 +242,30 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+      {/* Quote Pipeline */}
+      {pipeline && (
+        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '20px 24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <p style={{ color: 'var(--f-text1)', fontWeight: 700, fontSize: 15, margin: 0 }}>
+              Quote Pipeline
+            </p>
+            <a href="/stock/sales/quote" style={{ fontSize: 12, color: GOLD, textDecoration: 'none' }}>ดูทั้งหมด →</a>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+            {[
+              { label: 'ใบเสนอราคาที่ส่งแล้ว',   value: `${pipeline.sentCount} ใบ`,          color: '#3b82f6' },
+              { label: 'มูลค่ารอปิดการขาย',       value: fmt(pipeline.sentValue),              color: GOLD },
+              { label: 'Conversion Rate (30 วัน)', value: pipeline.conversionRate !== null ? `${pipeline.conversionRate}%` : '—', color: '#22c55e' },
+              { label: 'หมดอายุใน 7 วัน',         value: `${pipeline.expiringSoon} ใบ`,        color: pipeline.expiringSoon > 0 ? '#ef4444' : TEXT3 },
+            ].map((m) => (
+              <div key={m.label} style={{ background: 'var(--f-bg)', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '14px 16px' }}>
+                <p style={{ margin: '0 0 6px', color: TEXT3, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1.4 }}>{m.label}</p>
+                <p style={{ margin: 0, color: m.color, fontSize: 20, fontWeight: 700 }}>{m.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </motion.div>
   )
 }
