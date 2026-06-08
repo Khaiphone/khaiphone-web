@@ -73,6 +73,8 @@ export default function StockInventoryPage() {
   const [filterChannel, setFilterChannel] = useState("");
   const [filterPriceMin, setFilterPriceMin] = useState("");
   const [filterPriceMax, setFilterPriceMax] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
 
   useEffect(() => {
     fetchStockItems().then(data => { setStocks(data); setLoading(false); });
@@ -106,15 +108,17 @@ export default function StockInventoryPage() {
       if (filterChannel && s.sourceChannel !== filterChannel) return false;
       if (filterPriceMin && s.sellingPrice < parseInt(filterPriceMin)) return false;
       if (filterPriceMax && s.sellingPrice > parseInt(filterPriceMax)) return false;
+      if (filterDateFrom && s.receivedAt.slice(0, 10) < filterDateFrom) return false;
+      if (filterDateTo   && s.receivedAt.slice(0, 10) > filterDateTo)   return false;
       return true;
     });
-  }, [stocks, tab, query, filterModel, filterGrade, filterChannel, filterPriceMin, filterPriceMax]);
+  }, [stocks, tab, query, filterModel, filterGrade, filterChannel, filterPriceMin, filterPriceMax, filterDateFrom, filterDateTo]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   function clearFilters() {
-    setQuery(""); setFilterModel(""); setFilterGrade(""); setFilterChannel(""); setFilterPriceMin(""); setFilterPriceMax("");
+    setQuery(""); setFilterModel(""); setFilterGrade(""); setFilterChannel(""); setFilterPriceMin(""); setFilterPriceMax(""); setFilterDateFrom(""); setFilterDateTo("");
   }
 
   const counts = useMemo(() => {
@@ -291,6 +295,14 @@ export default function StockInventoryPage() {
               style={{ flex: "0 1 140px", background: c.card2, border: `1px solid ${c.border}`, borderRadius: 10, padding: "9px 12px", color: c.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
             <input value={filterPriceMax} onChange={e => setFilterPriceMax(e.target.value)} placeholder="ราคาสูงสุด (฿)" type="number"
               style={{ flex: "0 1 140px", background: c.card2, border: `1px solid ${c.border}`, borderRadius: 10, padding: "9px 12px", color: c.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flex: "0 1 auto" }}>
+              <span style={{ color: c.text3, fontSize: 12, whiteSpace: "nowrap" }}>รับเข้า</span>
+              <input value={filterDateFrom} onChange={e => { setFilterDateFrom(e.target.value); setPage(1); }} type="date"
+                style={{ background: c.card2, border: `1px solid ${filterDateFrom ? c.gold : c.border}`, borderRadius: 10, padding: "9px 10px", color: filterDateFrom ? c.text : c.text3, fontSize: 13, fontFamily: "inherit", outline: "none", cursor: "pointer" }} />
+              <span style={{ color: c.text3, fontSize: 12 }}>–</span>
+              <input value={filterDateTo} onChange={e => { setFilterDateTo(e.target.value); setPage(1); }} type="date"
+                style={{ background: c.card2, border: `1px solid ${filterDateTo ? c.gold : c.border}`, borderRadius: 10, padding: "9px 10px", color: filterDateTo ? c.text : c.text3, fontSize: 13, fontFamily: "inherit", outline: "none", cursor: "pointer" }} />
+            </div>
             <button onClick={clearFilters} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 10, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 13, cursor: "pointer" }}>
               <X size={14} /> ล้างตัวกรอง
             </button>
