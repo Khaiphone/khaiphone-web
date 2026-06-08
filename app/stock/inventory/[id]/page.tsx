@@ -959,6 +959,8 @@ export default function StockDetailPage({ params }: { params: Promise<{ id: stri
                   ["ผู้ซื้อ", item.buyerName ?? "-"],
                   ["เบอร์โทร", item.buyerPhone ?? "-"],
                   ["วันที่ขาย", fmtDate(item.soldAt)],
+                  ["ช่องทางจัดส่ง", item.deliveryChannel ?? "-"],
+                  ...(item.deliveryAddress ? [["สถานที่ส่ง", item.deliveryAddress]] : []),
                   ["สถานะจัดส่ง", item.deliveryStatus ?? "-"],
                 ].map(([k, v]) => (
                   <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${c.border}` }}>

@@ -145,6 +145,8 @@ export interface AddStockForm {
   sellerPhone: string;
   sourceChannel: SourceChannel | "";
   receiveMethod: string;
+  receivedAt: string;
+  inspector: string;
   costPrice: string;
   shippingCost: string;
   otherCost: string;

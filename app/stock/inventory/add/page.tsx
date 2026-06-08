@@ -29,6 +29,7 @@ const INIT_FORM: AddStockForm = {
   icloudStatus: "ปลอดล็อกแล้ว", carrierLock: "ไม่มี (Unlocked)", accessories: "",
   physicalChecks: PHYSICAL_PARTS.map(label => ({ label, condition: "ปกติ" })),
   requestRef: "", sellerName: "", sellerPhone: "", sourceChannel: "", receiveMethod: "หน้าร้าน",
+  receivedAt: new Date().toISOString().slice(0, 10), inspector: "",
   costPrice: "", shippingCost: "80", otherCost: "0", sellingPrice: "",
   photos: [],
 };
@@ -78,7 +79,8 @@ export default function AddStockPage() {
       sourceChannel: (form.sourceChannel || "หน้าร้าน") as import("@/lib/stock/types").SourceChannel,
       requestRef: form.requestRef || undefined,
       sellerName: form.sellerName, sellerPhone: form.sellerPhone,
-      receivedAt: now, inspector: "",
+      receivedAt: form.receivedAt ? new Date(form.receivedAt).toISOString() : now,
+      inspector: form.inspector,
       soldAt: undefined, soldPrice: undefined, buyerName: undefined, buyerPhone: undefined,
     });
     setSaving(false);
@@ -265,6 +267,16 @@ export default function AddStockPage() {
                       <option value="">เลือกช่องทาง</option>
                       {["หน้าร้าน","เว็บไซต์","LINE OA","Facebook","Shopee","โทรศัพท์"].map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>วันที่รับเข้า *</label>
+                    <input type="date" value={form.receivedAt} onChange={e => set("receivedAt", e.target.value)}
+                      style={{ ...inputStyle, colorScheme: "dark", cursor: "pointer" }} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>ผู้รับ / ผู้ตรวจ</label>
+                    <input value={form.inspector} onChange={e => set("inspector", e.target.value)}
+                      placeholder="ชื่อพนักงาน (ถ้ามี)" style={inputStyle} />
                   </div>
                 </div>
               </div>
