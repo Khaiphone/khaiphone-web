@@ -188,7 +188,7 @@ export async function markStockSold(
     sold_by: soldBy ?? null, sale_type: saleType ?? "ขายปลีก", partner_name: partnerName ?? null,
     delivery_channel: deliveryChannel ?? null,
     delivery_status: autoDeliveryStatus,
-    tracking_number: hasTracking ? trackingNumber!.trim() : undefined,
+    tracking_number: trackingNumber?.trim() || undefined,
     slip_urls: slipUrls && slipUrls.length > 0 ? slipUrls : undefined,
     status_log: newLog, updated_at: now,
   }).eq("id", id);
