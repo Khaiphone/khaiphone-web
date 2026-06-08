@@ -126,6 +126,24 @@ export interface StockMetrics {
   soldToday: number;
 }
 
+export interface StockCountMissingItem {
+  id: string;
+  model: string;
+  imei: string;
+  status: string;
+}
+
+export interface StockCountSession {
+  id: string;
+  countedBy: string;
+  startedAt: string;
+  completedAt: string;
+  totalItems: number;
+  foundCount: number;
+  missingCount: number;
+  missingItems: StockCountMissingItem[];
+}
+
 // For Add Stock Wizard
 export interface AddStockForm {
   model: string;

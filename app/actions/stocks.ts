@@ -2,7 +2,7 @@
 
 import { createServerClient } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/require-auth";
-import type { StockItem, StockStatus, AuditEntry } from "@/lib/stock/types";
+import type { StockItem, StockStatus, AuditEntry, StockCountSession, StockCountMissingItem } from "@/lib/stock/types";
 import { thaiDateStr, thaiMonthStr, thaiDateOffset, startOfThaiDay } from "@/lib/thai-date";
 
 const FIELD_LABELS: Record<string, string> = {
@@ -821,4 +821,46 @@ export async function getStockDocumentSignedUrl(
     .createSignedUrl(storagePath, 60);
   if (error) { console.error("getStockDocumentSignedUrl:", error); return null; }
   return data.signedUrl;
+}
+
+export async function saveStockCountSession(input: {
+  startedAt: string;
+  completedAt: string;
+  totalItems: number;
+  foundCount: number;
+  missingItems: StockCountMissingItem[];
+}): Promise<{ success: boolean; error?: string }> {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+  const { error } = await supabase.from("stock_count_sessions").insert({
+    counted_by: user.email ?? user.id,
+    started_at: input.startedAt,
+    completed_at: input.completedAt,
+    total_items: input.totalItems,
+    found_count: input.foundCount,
+    missing_count: input.missingItems.length,
+    missing_items: input.missingItems,
+  });
+  if (error) { console.error("saveStockCountSession:", error); return { success: false, error: error.message }; }
+  return { success: true };
+}
+
+export async function fetchStockCountSessions(limit = 10): Promise<StockCountSession[]> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("stock_count_sessions")
+    .select("*")
+    .order("completed_at", { ascending: false })
+    .limit(limit);
+  return (data ?? []).map(r => ({
+    id: r.id,
+    countedBy: r.counted_by,
+    startedAt: r.started_at,
+    completedAt: r.completed_at,
+    totalItems: r.total_items,
+    foundCount: r.found_count,
+    missingCount: r.missing_count,
+    missingItems: r.missing_items ?? [],
+  }));
 }
