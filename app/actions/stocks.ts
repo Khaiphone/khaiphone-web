@@ -62,6 +62,15 @@ function mapRow(row: any): StockItem {
   };
 }
 
+export async function checkImeiExists(imei: string): Promise<{ exists: boolean; stockId?: string; model?: string; status?: string }> {
+  await requireAuth();
+  if (!imei || imei.length < 10) return { exists: false };
+  const supabase = createServerClient();
+  const { data } = await supabase.from("stocks").select("id, model, status").eq("imei", imei.trim()).maybeSingle();
+  if (!data) return { exists: false };
+  return { exists: true, stockId: data.id, model: data.model, status: data.status };
+}
+
 export async function fetchStockItems(): Promise<StockItem[]> {
   await requireAuth();
   const supabase = createServerClient();

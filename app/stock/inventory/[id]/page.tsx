@@ -830,6 +830,24 @@ export default function StockDetailPage({ params }: { params: Promise<{ id: stri
               );
             })()}
 
+            {/* Physical Checks from add-stock form */}
+            {(item.physicalChecks ?? []).length > 0 && (
+              <div style={{ background: c.card, borderRadius: 20, padding: 24, border: `1px solid ${c.border}`, marginBottom: 20 }}>
+                <p style={{ color: c.text3, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 16px" }}>สภาพกายภาพ</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {(item.physicalChecks ?? []).map((ch, i) => {
+                    const condColor = ch.condition === "ปกติ" ? "#22c55e" : ch.condition === "มีตำหนิเล็ก" ? "#facc15" : "#ef4444";
+                    return (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: c.card2, borderRadius: 10, border: `1px solid ${c.border}` }}>
+                        <span style={{ color: c.text, fontSize: 13 }}>{ch.label}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, padding: "3px 12px", borderRadius: 20, background: `${condColor}18`, color: condColor, border: `1px solid ${condColor}40` }}>{ch.condition}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Timeline */}
             <div style={{ background: c.card, borderRadius: 20, padding: 24, border: `1px solid ${c.border}` }}>
               <p style={{ color: c.text3, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 16px" }}>ประวัติสถานะ</p>

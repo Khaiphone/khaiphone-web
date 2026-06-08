@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Check, Camera, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import StockTopbar from "@/components/stock/Topbar";
 import { useThemeColors } from "@/components/stock/ThemeContext";
-import { createStockItem } from "@/app/actions/stocks";
+import { createStockItem, checkImeiExists } from "@/app/actions/stocks";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
 import type { AddStockForm, PhysicalCondition } from "@/lib/stock/types";
@@ -51,11 +51,29 @@ export default function AddStockPage() {
   const [photoPreview, setPhotoPreview] = useState<string[]>([]);
   const [uploadProgress, setUploadProgress] = useState("");
   const blobUrlsRef = useRef<string[]>([]);
+  const [imeiWarning, setImeiWarning] = useState<{ stockId: string; model: string; status: string } | null>(null);
+  const imeiCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Revoke blob URLs on unmount to prevent memory leaks
   useEffect(() => {
     return () => { blobUrlsRef.current.forEach(u => URL.revokeObjectURL(u)); };
   }, []);
+
+  // Debounced IMEI duplicate check
+  useEffect(() => {
+    if (imeiCheckRef.current) clearTimeout(imeiCheckRef.current);
+    if (form.imei.length < 10) { setImeiWarning(null); return; }
+    imeiCheckRef.current = setTimeout(async () => {
+      const result = await checkImeiExists(form.imei);
+      if (result.exists && result.stockId) {
+        setImeiWarning({ stockId: result.stockId, model: result.model ?? "", status: result.status ?? "" });
+      } else {
+        setImeiWarning(null);
+      }
+    }, 600);
+    return () => { if (imeiCheckRef.current) clearTimeout(imeiCheckRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.imei]);
 
   function set(field: keyof AddStockForm, value: unknown) {
     setForm(f => ({ ...f, [field]: value }));
@@ -221,7 +239,13 @@ export default function AddStockPage() {
                   ))}
                   <div>
                     <label style={labelStyle}>IMEI *</label>
-                    <input value={form.imei} onChange={e => set("imei", e.target.value)} placeholder="15 หลัก" style={{ ...inputStyle, fontFamily: "monospace" }} maxLength={15} />
+                    <input value={form.imei} onChange={e => set("imei", e.target.value)} placeholder="15 หลัก"
+                      style={{ ...inputStyle, fontFamily: "monospace", borderColor: imeiWarning ? "#f59e0b" : undefined }} maxLength={15} />
+                    {imeiWarning && (
+                      <div style={{ marginTop: 6, padding: "8px 12px", borderRadius: 8, background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.4)", fontSize: 12, color: "#b45309" }}>
+                        ⚠️ IMEI นี้มีในระบบแล้ว — <strong>{imeiWarning.stockId}</strong> · {imeiWarning.model} · {imeiWarning.status}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label style={labelStyle}>Serial Number</label>

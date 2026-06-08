@@ -706,6 +706,20 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                     </div>
                   </Section>
 
+                  {(item.physicalChecks ?? []).length > 0 && (
+                    <Section label="สภาพกายภาพ" c={c}>
+                      {(item.physicalChecks ?? []).map((ch, i) => {
+                        const condColor = ch.condition === "ปกติ" ? "#22c55e" : ch.condition === "มีตำหนิเล็ก" ? "#facc15" : "#ef4444";
+                        return (
+                          <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${c.border}` }}>
+                            <span style={{ color: c.text2, fontSize: 13 }}>{ch.label}</span>
+                            <span style={{ fontSize: 12, fontWeight: 700, padding: "2px 10px", borderRadius: 20, background: `${condColor}18`, color: condColor, border: `1px solid ${condColor}40` }}>{ch.condition}</span>
+                          </div>
+                        );
+                      })}
+                    </Section>
+                  )}
+
                   {(() => {
                     const snap = item.inspectionSnapshot;
                     const criteria = snap?.criteria ?? [];
