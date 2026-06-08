@@ -83,7 +83,7 @@ export default function SellModal({ item, onClose, onSuccess }: SellModalProps) 
         saleType,
         partnerName: isWholesale ? effectivePartner.trim() : undefined,
         deliveryChannel: effChannel,
-        deliveryStatus: !deliveryDone ? "รอจัดส่ง" : effChannel === "หน้าร้าน" ? "จัดส่งแล้ว" : "รอจัดส่ง",
+        deliveryStatus: deliveryDone ? "จัดส่งแล้ว" : "รอจัดส่ง",
       });
       onClose();
     }
