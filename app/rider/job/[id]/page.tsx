@@ -207,7 +207,7 @@ function DoneCard({ label, detail, c }: { label: string; detail: string; c: TC }
       <CheckCircle2 size={18} color={c.GREEN} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: c.GREEN }}>{label}</p>
-        <p style={{ margin: "2px 0 0", fontSize: 12, color: c.TEXT2 }}>{detail}</p>
+        <p style={{ margin: "2px 0 0", fontSize: 12, color: c.TEXT2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{detail}</p>
       </div>
     </div>
   );

@@ -568,7 +568,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   }
 
   return (
-    <div style={{ background: BG, minHeight: "100vh", paddingBottom: "calc(env(safe-area-inset-bottom) + 90px)" }}>
+    <div style={{ background: BG, minHeight: "100vh", paddingBottom: "calc(env(safe-area-inset-bottom) + 90px)", overflowX: "hidden" }}>
 
       {/* Sticky Header */}
       <div style={{ position: "sticky", top: 0, background: CARD, zIndex: 10, padding: "12px 16px", borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", gap: "10px" }}>
@@ -1549,19 +1549,19 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                     <p style={{ color: TEXT2, fontSize: "12px", margin: "3px 0 0" }}>{SELL_LABELS[request.appointment.method]}</p>
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                  <MapPin size={14} color={GOLD} style={{ flexShrink: 0 }} />
+                <div style={{ display: "flex", gap: "8px", alignItems: "flex-start", minWidth: 0 }}>
+                  <MapPin size={14} color={GOLD} style={{ marginTop: 2, flexShrink: 0 }} />
                   {request.appointment.method === "rider" ? (
                     <a
                       href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(request.appointment.location)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ color: GOLD, fontSize: "13px", margin: 0, fontWeight: 600 }}
+                      style={{ color: GOLD, fontSize: "13px", margin: 0, fontWeight: 600, wordBreak: "break-all", minWidth: 0, flex: 1 }}
                     >
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{request.appointment.location} <ExternalLink size={11} /></span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{request.appointment.location} <ExternalLink size={11} style={{ flexShrink: 0 }} /></span>
                     </a>
                   ) : (
-                    <p style={{ color: TEXT2, fontSize: "13px", margin: 0 }}>{request.appointment.location}</p>
+                    <p style={{ color: TEXT2, fontSize: "13px", margin: 0, wordBreak: "break-all" }}>{request.appointment.location}</p>
                   )}
                 </div>
               </>
