@@ -230,6 +230,8 @@ export default function StockDetailPage({ params }: { params: Promise<{ id: stri
   const [deliveryChannelDraft, setDeliveryChannelDraft] = useState("หน้าร้าน");
   const [deliveryAddressDraft, setDeliveryAddressDraft] = useState("");
   const [confirmingDelivery, setConfirmingDelivery] = useState(false);
+  const [editingTracking, setEditingTracking] = useState(false);
+  const [trackingEditDraft, setTrackingEditDraft] = useState("");
 
   // Lightbox
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -958,13 +960,52 @@ export default function StockDetailPage({ params }: { params: Promise<{ id: stri
                   ["เบอร์โทร", item.buyerPhone ?? "-"],
                   ["วันที่ขาย", fmtDate(item.soldAt)],
                   ["สถานะจัดส่ง", item.deliveryStatus ?? "-"],
-                  ...(item.trackingNumber ? [["เลข Tracking", item.trackingNumber]] : []),
                 ].map(([k, v]) => (
                   <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${c.border}` }}>
                     <span style={{ color: c.text2, fontSize: 13 }}>{k}</span>
                     <span style={{ color: c.text, fontSize: 13, fontWeight: k === "ราคาขายจริง" || k === "กำไรจริง" ? 700 : 400 }}>{v}</span>
                   </div>
                 ))}
+                {/* Tracking number — editable inline */}
+                <div style={{ padding: "8px 0" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ color: c.text2, fontSize: 13 }}>เลข Tracking</span>
+                    {!editingTracking && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ color: c.text, fontSize: 13 }}>{item.trackingNumber ?? "—"}</span>
+                        <button
+                          onClick={() => { setTrackingEditDraft(item.trackingNumber ?? ""); setEditingTracking(true); }}
+                          style={{ padding: "3px 10px", borderRadius: 6, border: `1px solid ${c.border}`, background: "transparent", color: c.text3, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
+                        >แก้ไข</button>
+                      </div>
+                    )}
+                  </div>
+                  {editingTracking && (
+                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                      <input
+                        value={trackingEditDraft}
+                        onChange={e => setTrackingEditDraft(e.target.value)}
+                        placeholder="TH123456789XX"
+                        autoFocus
+                        style={{ flex: 1, background: c.card2, border: `1px solid ${c.border}`, borderRadius: 8, padding: "8px 12px", color: c.text, fontSize: 13, fontFamily: "inherit", outline: "none" }}
+                      />
+                      <button
+                        disabled={confirmingDelivery}
+                        onClick={async () => {
+                          setConfirmingDelivery(true);
+                          const res = await confirmDelivery(item.id, trackingEditDraft.trim() || undefined, item.deliveryChannel ?? undefined, item.deliveryAddress ?? undefined);
+                          if (res.success) {
+                            setItem(prev => prev ? { ...prev, trackingNumber: trackingEditDraft.trim() || undefined } : prev);
+                            setEditingTracking(false);
+                          }
+                          setConfirmingDelivery(false);
+                        }}
+                        style={{ padding: "8px 16px", borderRadius: 8, background: "#22c55e", border: "none", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                      >{confirmingDelivery ? "..." : "บันทึก"}</button>
+                      <button onClick={() => setEditingTracking(false)} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${c.border}`, background: "transparent", color: c.text3, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>ยกเลิก</button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
