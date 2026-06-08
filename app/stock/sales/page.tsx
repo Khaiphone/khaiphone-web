@@ -83,7 +83,7 @@ export default function SalesPage() {
         </button>
       </StockTopbar>
 
-      <div style={{ padding: 24 }}>
+      <div style={{ paddingTop: 24, paddingBottom: 24 }} className="px-3 md:px-6">
         {/* Metrics */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14, marginBottom: 24 }}>
           <MetricCard icon={ShoppingBag} label="เครื่องที่ขายแล้ว"  value={`${filtered.length} เครื่อง`} iconColor={c.gold}    sub="ตามตัวกรองที่เลือก" />

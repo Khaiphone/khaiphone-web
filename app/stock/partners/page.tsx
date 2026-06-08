@@ -112,7 +112,7 @@ export default function PartnersPage() {
         </button>
       </StockTopbar>
 
-      <div style={{ padding: 24 }}>
+      <div style={{ paddingTop: 24, paddingBottom: 24 }} className="px-3 md:px-6">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }}>
           {METRICS.map(m => <MetricCard key={m.label} {...m} />)}
         </div>

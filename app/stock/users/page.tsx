@@ -34,7 +34,7 @@ export default function UsersPage() {
     <div style={{ background: c.bg, minHeight: "100vh", paddingBottom: 80 }}>
       <StockTopbar title="Users" subtitle="จัดการผู้ใช้งานระบบ" />
 
-      <div style={{ padding: 24 }}>
+      <div style={{ paddingTop: 24, paddingBottom: 24 }} className="px-3 md:px-6">
         {/* Metrics */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 14, marginBottom: 24 }}>
           <MetricCard icon={Users}   label="ผู้ใช้ทั้งหมด"  value={`${users.length} คน`}   iconColor={c.gold}    sub="รวมทุก role" />

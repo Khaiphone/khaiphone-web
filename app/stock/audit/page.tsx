@@ -53,7 +53,7 @@ export default function AuditLogPage() {
     <div style={{ minHeight: "100vh", background: c.bg }}>
       <StockTopbar title="Audit Log" subtitle="ประวัติการเปลี่ยนแปลงทุกรายการ" />
 
-      <div style={{ padding: "24px 28px" }}>
+      <div style={{ paddingTop: 24, paddingBottom: 24 }} className="px-3 md:px-7">
         {/* Filters */}
         <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
           <div style={{ position: "relative", flex: 1, minWidth: 200 }}>

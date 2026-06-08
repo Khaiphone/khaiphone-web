@@ -47,7 +47,7 @@ export default function ReportsPage() {
     <div style={{ background: c.bg, minHeight: "100vh", paddingBottom: 80 }}>
       <StockTopbar title="Reports" subtitle="รายงานและวิเคราะห์" />
 
-      <div style={{ padding: 24 }}>
+      <div style={{ paddingTop: 24, paddingBottom: 24 }} className="px-3 md:px-6">
         <motion.div {...fadeUp} style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           {/* Summary KPIs */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14 }}>

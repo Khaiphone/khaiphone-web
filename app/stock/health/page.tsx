@@ -40,7 +40,7 @@ export default function HealthPage() {
     <div style={{ minHeight: "100vh", background: c.bg }}>
       <StockTopbar title="Health Dashboard" subtitle="ตรวจสอบสถานะระบบ" />
 
-      <div style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ paddingTop: 24, paddingBottom: 24, display: "flex", flexDirection: "column", gap: 20 }} className="px-3 md:px-7">
 
         {/* Overall status banner */}
         <div style={{

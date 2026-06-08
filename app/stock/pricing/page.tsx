@@ -137,7 +137,7 @@ export default function PricingPage() {
         </button>
       </StockTopbar>
 
-      <div style={{ padding: 24 }}>
+      <div style={{ paddingTop: 24, paddingBottom: 24 }} className="px-3 md:px-6">
         {/* Form */}
         <AnimatePresence>
           {showForm && (

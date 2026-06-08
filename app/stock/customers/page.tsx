@@ -48,7 +48,7 @@ export default function CustomersPage() {
     <div style={{ background: c.bg, minHeight: "100vh", paddingBottom: 80 }}>
       <StockTopbar title="Customers" subtitle="ลูกค้าที่ขายเครื่องให้เรา" />
 
-      <div style={{ padding: 24 }}>
+      <div style={{ paddingTop: 24, paddingBottom: 24 }} className="px-3 md:px-6">
         {/* Metrics */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14, marginBottom: 24 }}>
           <MetricCard icon={Users}     label="ลูกค้าทั้งหมด"      value={`${filtered.length} คน`}       iconColor={c.gold}    sub="เฉพาะที่มีเบอร์โทร" />
