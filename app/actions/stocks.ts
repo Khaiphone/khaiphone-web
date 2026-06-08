@@ -943,5 +943,22 @@ export async function receiveFromRepair(
   if (newSellingPrice && newSellingPrice > 0) updates.selling_price = newSellingPrice;
   const { error } = await supabase.from("stocks").update(updates).eq("id", id);
   if (error) return { success: false, error: error.message };
+
+  // Auto-create expense record when repair cost > 0
+  if (actualCost > 0) {
+    const { data: stockRow } = await supabase.from("stocks").select("model, storage").eq("id", id).single();
+    const product = stockRow ? `ค่าซ่อม ${stockRow.model} ${stockRow.storage} (${id})` : `ค่าซ่อม (${id})`;
+    await supabase.from("expenses").insert({
+      date: now.slice(0, 10),
+      ref_number: `REP-${id}`,
+      product,
+      category: "ซ่อมบำรุง",
+      amount: actualCost,
+      status: "approved",
+      notes: notes || `ค่าซ่อม ${id}`,
+      updated_at: now,
+    });
+  }
+
   return { success: true };
 }
