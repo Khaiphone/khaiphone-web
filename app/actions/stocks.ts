@@ -86,8 +86,14 @@ export async function createStockItem(input: Omit<StockItem, "notes" | "statusLo
   const supabase = createServerClient();
   const now = new Date().toISOString();
   const year = new Date().getFullYear();
-  const { count } = await supabase.from("stocks").select("*", { count: "exact", head: true });
-  const id = `STK-${year}-${String((count ?? 0) + 1).padStart(5, "0")}`;
+  const { data: lastRow } = await supabase
+    .from("stocks")
+    .select("id")
+    .like("id", `STK-${year}-%`)
+    .order("id", { ascending: false })
+    .limit(1);
+  const lastSeq = lastRow?.[0]?.id ? parseInt(lastRow[0].id.split("-")[2], 10) : 0;
+  const id = `STK-${year}-${String(lastSeq + 1).padStart(5, "0")}`;
   const statusLog = [{ status: input.status, timestamp: now, note: "บันทึกเข้าสต็อก", by: "admin" }];
 
   const { error } = await supabase.from("stocks").insert({
