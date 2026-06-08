@@ -129,6 +129,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     // PWA install gate — bypass with ?dev=1 for development
     const searchParams = new URLSearchParams(window.location.search);
     const isDev = searchParams.get("dev") === "1";
@@ -141,6 +142,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
     }
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (cancelled) return;
       if (!session) { router.replace("/admin/login"); return; }
       const uid = session.user.id;
       const [profile, online, consent] = await Promise.all([
@@ -148,6 +150,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
         fetchRiderOnlineStatus(uid),
         fetchRiderConsent(),
       ]);
+      if (cancelled) return;
       if (!profile) { router.replace("/admin/login"); return; }
       if (profile.role !== "owner" && !profile.is_rider) {
         router.replace("/admin/login");
@@ -171,6 +174,8 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
       // Prefetch home data so first visit to home tab is instant
       fetchRiderHomeData(uid).then(d => cacheSet(`home:${uid}`, d));
     });
+
+    return () => { cancelled = true; };
   }, [router, loadNotifs, pathname]);
 
   useEffect(() => {
