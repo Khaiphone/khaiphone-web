@@ -12,7 +12,8 @@ export type RequestStatus =
   | "completed"
   | "cancelled"
   | "no_show"
-  | "rejected";
+  | "rejected"
+  | "merged";
 
 export const STATUS_LABELS: Record<RequestStatus, string> = {
   new:               "คำขอใหม่",
@@ -29,6 +30,7 @@ export const STATUS_LABELS: Record<RequestStatus, string> = {
   cancelled:         "ยกเลิก",
   no_show:           "ลูกค้าไม่อยู่",
   rejected:          "ไม่เข้าเงื่อนไข",
+  merged:            "รวมคำขอแล้ว",
 };
 
 export const STATUS_COLORS: Record<RequestStatus, { bg: string; text: string; border: string }> = {
@@ -46,6 +48,7 @@ export const STATUS_COLORS: Record<RequestStatus, { bg: string; text: string; bo
   cancelled:         { bg: "rgba(239,68,68,0.15)",   text: "#EF4444", border: "rgba(239,68,68,0.3)"   },
   no_show:           { bg: "rgba(249,115,22,0.15)",  text: "#F97316", border: "rgba(249,115,22,0.3)"  },
   rejected:          { bg: "rgba(107,114,128,0.15)", text: "#6B7280", border: "rgba(107,114,128,0.3)" },
+  merged:            { bg: "rgba(107,114,128,0.15)", text: "#6B7280", border: "rgba(107,114,128,0.3)" },
 };
 
 export type SellMethod = "branch" | "rider" | "parcel";

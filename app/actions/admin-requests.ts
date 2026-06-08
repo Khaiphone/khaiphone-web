@@ -1373,3 +1373,79 @@ export async function saveContractUrls(
   after(() => broadcastRequestUpdate(id));
   return { success: true as const };
 }
+
+// ─── Look up a request by order number for merge preview (admin only) ─────────
+export async function lookupRequestForMerge(orderNumber: string): Promise<{
+  id: string;
+  orderNumber: string;
+  customerName: string;
+  customerPhone: string;
+  deviceModel: string;
+  status: string;
+  createdAt: string;
+} | null> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from("requests")
+    .select("id, order_number, customer_name, customer_phone, device_model, status, created_at")
+    .ilike("order_number", orderNumber.trim())
+    .single();
+  if (error || !data) return null;
+  return {
+    id:            data.id,
+    orderNumber:   data.order_number,
+    customerName:  data.customer_name,
+    customerPhone: data.customer_phone,
+    deviceModel:   data.device_model,
+    status:        data.status,
+    createdAt:     data.created_at,
+  };
+}
+
+// ─── Merge duplicate request into primary ─────────────────────────────────────
+export async function mergeRequests(
+  primaryId: string,
+  duplicateId: string,
+): Promise<{ success: true } | { success: false; error: string }> {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+  const now = new Date().toISOString();
+
+  const [{ data: primary }, { data: duplicate }] = await Promise.all([
+    supabase.from("requests").select("id, order_number, status_log, status").eq("id", primaryId).single(),
+    supabase.from("requests").select("id, order_number, status_log, status").eq("id", duplicateId).single(),
+  ]);
+
+  if (!primary) return { success: false, error: "ไม่พบคำขอหลัก" };
+  if (!duplicate) return { success: false, error: "ไม่พบคำขอที่ต้องการรวม" };
+  if (primary.id === duplicate.id) return { success: false, error: "ไม่สามารถรวมคำขอเดียวกันได้" };
+  if (["completed", "merged"].includes(duplicate.status)) {
+    return { success: false, error: `คำขอ ${duplicate.order_number} มีสถานะ "${duplicate.status}" แล้ว` };
+  }
+
+  const dupNewLog = [
+    ...(duplicate.status_log ?? []),
+    { status: "merged", timestamp: now, note: `รวมเข้า ${primary.order_number}` },
+  ];
+  const primaryNewLog = [
+    ...(primary.status_log ?? []),
+    { status: primary.status, timestamp: now, note: `รวมจาก ${duplicate.order_number}` },
+  ];
+
+  const [dupRes, primaryRes] = await Promise.all([
+    supabase.from("requests").update({ status: "merged", status_log: dupNewLog, updated_at: now }).eq("id", duplicateId),
+    supabase.from("requests").update({ status_log: primaryNewLog, updated_at: now }).eq("id", primaryId),
+  ]);
+
+  if (dupRes.error) return { success: false, error: dupRes.error.message };
+  if (primaryRes.error) return { success: false, error: primaryRes.error.message };
+
+  await Promise.all([
+    logActivity({ requestId: primaryId, orderNumber: primary.order_number, action: "รวมคำขอ", detail: `รวมจาก ${duplicate.order_number}`, userId: user.id }),
+    logActivity({ requestId: duplicateId, orderNumber: duplicate.order_number, action: "รวมคำขอ", detail: `รวมเข้า ${primary.order_number}`, userId: user.id }),
+  ]);
+
+  after(() => { broadcastRequestUpdate(primaryId); broadcastRequestUpdate(duplicateId); });
+  return { success: true };
+}

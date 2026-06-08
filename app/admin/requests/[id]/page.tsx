@@ -13,6 +13,7 @@ import {
   markContractSigned, savePaymentSlip, updateDeviceColor,
   assignRequest, assignRider, deleteRequest, updateCustomer, updateDevice,
   adminReclaimJob, getDocumentSignedUrl, adminConfirmReturn,
+  lookupRequestForMerge, mergeRequests,
 } from "@/app/actions/admin-requests";
 import { fetchAdminUsers, fetchMyRole, fetchMyProfile } from "@/app/actions/admin-users";
 import type { AdminUserRow } from "@/app/actions/admin-users";
@@ -190,6 +191,15 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const [isOwner,       setIsOwner]       = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting,      setDeleting]      = useState(false);
+
+  // Merge duplicate requests (owner only)
+  type MergePreview = { id: string; orderNumber: string; customerName: string; customerPhone: string; deviceModel: string; status: string; createdAt: string };
+  const [showMerge,    setShowMerge]    = useState(false);
+  const [mergeInput,   setMergeInput]   = useState("");
+  const [mergePreview, setMergePreview] = useState<MergePreview | null>(null);
+  const [mergeLooking, setMergeLooking] = useState(false);
+  const [mergeBusy,    setMergeBusy]    = useState(false);
+  const [mergeError,   setMergeError]   = useState<string | null>(null);
 
   useEffect(() => {
     fetchRequest(id).then(data => {
@@ -588,13 +598,22 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         </button>
         <StatusBadge status={request.status} size="sm" />
         {isOwner && (
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            title="ลบคำขอ"
-            style={{ background: "none", border: "none", color: "#EF4444", cursor: "pointer", padding: "4px", display: "flex", touchAction: "manipulation" }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-          </button>
+          <>
+            <button
+              onClick={() => { setShowMerge(true); setMergeInput(""); setMergePreview(null); setMergeError(null); }}
+              title="รวมคำขอซ้ำ"
+              style={{ background: "none", border: "none", color: TEXT2, cursor: "pointer", padding: "4px", display: "flex", touchAction: "manipulation" }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 6H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/><path d="M16 6h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-3"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              title="ลบคำขอ"
+              style={{ background: "none", border: "none", color: "#EF4444", cursor: "pointer", padding: "4px", display: "flex", touchAction: "manipulation" }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            </button>
+          </>
         )}
       </div>
 
@@ -624,6 +643,80 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                 }}
                 style={{ flex: 1, padding: "12px", border: "none", borderRadius: "10px", background: "#EF4444", color: "#fff", cursor: deleting ? "not-allowed" : "pointer", fontFamily: "inherit", fontSize: "15px", fontWeight: 600, opacity: deleting ? 0.7 : 1 }}
               >{deleting ? "กำลังลบ..." : "ลบ"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Merge duplicate modal */}
+      {showMerge && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+          <div style={{ background: CARD, borderRadius: "16px", padding: "24px", width: "100%", maxWidth: "360px" }}>
+            <p style={{ color: TEXT, fontWeight: 700, fontSize: "16px", margin: "0 0 4px" }}>รวมคำขอซ้ำ</p>
+            <p style={{ color: TEXT2, fontSize: "13px", margin: "0 0 16px", lineHeight: 1.5 }}>
+              คำขอหลักคือ <strong style={{ color: GOLD }}>{request.orderNumber}</strong> — ระบุเลขคำขอที่ต้องการ<strong>ปิด</strong>
+            </p>
+
+            {/* Input row */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <input
+                value={mergeInput}
+                onChange={e => { setMergeInput(e.target.value.toUpperCase()); setMergePreview(null); setMergeError(null); }}
+                placeholder="KP-XXXXXX"
+                style={{ flex: 1, padding: "9px 12px", borderRadius: 10, border: `1px solid ${BORDER}`, fontSize: 14, fontFamily: "monospace", color: TEXT, background: BG, outline: "none", boxSizing: "border-box" }}
+              />
+              <button
+                disabled={mergeLooking || !mergeInput.trim()}
+                onClick={async () => {
+                  if (mergeInput.trim().toUpperCase() === request.orderNumber.toUpperCase()) {
+                    setMergeError("ไม่สามารถรวมคำขอเดียวกันได้"); return;
+                  }
+                  setMergeLooking(true); setMergeError(null); setMergePreview(null);
+                  const res = await lookupRequestForMerge(mergeInput.trim());
+                  setMergeLooking(false);
+                  if (!res) { setMergeError("ไม่พบคำขอนี้"); return; }
+                  setMergePreview(res);
+                }}
+                style={{ padding: "9px 14px", borderRadius: 10, border: "none", background: GOLD, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", opacity: (mergeLooking || !mergeInput.trim()) ? 0.5 : 1, whiteSpace: "nowrap" }}
+              >{mergeLooking ? "..." : "ค้นหา"}</button>
+            </div>
+
+            {mergeError && (
+              <p style={{ color: "#DC2626", fontSize: 12, margin: "0 0 12px", background: "#FEF2F2", padding: "7px 10px", borderRadius: 8 }}>{mergeError}</p>
+            )}
+
+            {/* Preview */}
+            {mergePreview && (
+              <div style={{ background: "#FFF8F0", border: "1px solid #FCD34D", borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
+                <p style={{ margin: "0 0 6px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>คำขอที่จะถูกปิด</p>
+                <p style={{ margin: "0 0 3px", fontSize: 14, fontWeight: 700, color: TEXT, fontFamily: "monospace" }}>{mergePreview.orderNumber}</p>
+                <p style={{ margin: "0 0 2px", fontSize: 13, color: TEXT2 }}>{mergePreview.customerName} · {mergePreview.customerPhone}</p>
+                <p style={{ margin: "0 0 4px", fontSize: 13, color: TEXT2 }}>{mergePreview.deviceModel}</p>
+                <p style={{ margin: 0, fontSize: 11, color: TEXT3 }}>สถานะ: {mergePreview.status} · {new Date(mergePreview.createdAt).toLocaleDateString("th-TH")}</p>
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                onClick={() => { setShowMerge(false); setMergePreview(null); setMergeError(null); }}
+                style={{ flex: 1, padding: "12px", border: `1px solid ${BORDER}`, borderRadius: "10px", background: "none", color: TEXT2, cursor: "pointer", fontFamily: "inherit", fontSize: "15px", fontWeight: 600 }}
+              >ยกเลิก</button>
+              <button
+                disabled={mergeBusy || !mergePreview}
+                onClick={async () => {
+                  if (!mergePreview) return;
+                  setMergeBusy(true);
+                  const res = await mergeRequests(request.id, mergePreview.id);
+                  setMergeBusy(false);
+                  if (!res.success) { setMergeError(res.error); return; }
+                  setShowMerge(false);
+                  setMergePreview(null);
+                  // Reload to show updated log
+                  const updated = await fetchRequest(id);
+                  if (updated) setRequest(updated);
+                }}
+                style={{ flex: 1, padding: "12px", border: "none", borderRadius: "10px", background: (!mergePreview || mergeBusy) ? "#D1D5DB" : "#1a1a2e", color: (!mergePreview || mergeBusy) ? "#6B7280" : GOLD, cursor: (!mergePreview || mergeBusy) ? "default" : "pointer", fontFamily: "inherit", fontSize: "14px", fontWeight: 700 }}
+              >{mergeBusy ? "กำลังรวม..." : "รวมและปิดใบซ้ำ"}</button>
             </div>
           </div>
         </div>
