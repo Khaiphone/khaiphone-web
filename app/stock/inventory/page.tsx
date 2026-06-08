@@ -34,8 +34,9 @@ function fmtDate(s: string) { return new Date(s).toLocaleDateString("th-TH", { m
 function exportCSV(items: StockItem[]) {
   const headers = ["รหัสสต็อก","รุ่น","ความจุ","สี","IMEI","Serial","เกรด","ต้นทุน","ราคาขาย","กำไร","สถานะ","ช่องทาง","ผู้ขาย","เบอร์โทร","วันรับเข้า"];
   const rows = items.map(s => {
-    const profit = s.sellingPrice > 0 ? s.sellingPrice - s.costPrice - s.shippingCost - s.otherCost : 0;
-    return [s.id, s.model, s.storage, s.color, s.imei, s.serial, s.grade, s.costPrice, s.sellingPrice, profit, s.status, s.sourceChannel, s.sellerName, s.sellerPhone, s.receivedAt].join(",");
+    const price = s.status === "ขายแล้ว" ? (s.soldPrice ?? s.sellingPrice) : s.sellingPrice;
+    const profit = price > 0 ? price - s.costPrice - s.shippingCost - s.otherCost : 0;
+    return [s.id, s.model, s.storage, s.color, s.imei, s.serial, s.grade, s.costPrice, price, profit, s.status, s.sourceChannel, s.sellerName, s.sellerPhone, s.receivedAt].join(",");
   });
   const csv = [headers.join(","), ...rows].join("\n");
   const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
@@ -355,8 +356,10 @@ export default function StockInventoryPage() {
                 <tbody>
                   <AnimatePresence>
                     {paginated.map((s, i) => {
-                      const hasPrice = s.sellingPrice > 0;
-                      const profit = hasPrice ? s.sellingPrice - s.costPrice - s.shippingCost - s.otherCost : null;
+                      const isSold = s.status === "ขายแล้ว";
+                      const displayPrice = isSold ? (s.soldPrice ?? s.sellingPrice) : s.sellingPrice;
+                      const hasPrice = displayPrice > 0;
+                      const profit = hasPrice ? displayPrice - s.costPrice - s.shippingCost - s.otherCost : null;
                       const isChecked = checked.has(s.id);
                       const isDeleting = deleting === s.id;
                       return (
@@ -405,7 +408,7 @@ export default function StockInventoryPage() {
                           <td style={{ padding: "10px 14px", color: c.text2, fontSize: 13, whiteSpace: "nowrap" }}>฿{fmt(s.costPrice)}</td>
                           <td style={{ padding: "10px 14px", whiteSpace: "nowrap" }}>
                             {hasPrice
-                              ? <span style={{ color: c.text, fontSize: 13, fontWeight: 600 }}>฿{fmt(s.sellingPrice)}</span>
+                              ? <span style={{ color: c.text, fontSize: 13, fontWeight: 600 }}>฿{fmt(displayPrice)}</span>
                               : <span style={{ color: "#f97316", fontSize: 11, fontWeight: 600, background: "rgba(249,115,22,0.1)", padding: "2px 8px", borderRadius: 6 }}>ยังไม่กำหนด</span>
                             }
                           </td>
