@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Check, Camera } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, Camera, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import StockTopbar from "@/components/stock/Topbar";
 import { useThemeColors } from "@/components/stock/ThemeContext";
 import { createStockItem } from "@/app/actions/stocks";
+import { supabase } from "@/lib/supabase";
+import { compressImage } from "@/lib/compress-image";
 import type { AddStockForm, PhysicalCondition } from "@/lib/stock/types";
 
 const STEPS = ["ข้อมูลเครื่อง", "สภาพกายภาพ", "ข้อมูลรับซื้อ", "ราคา", "อัปโหลดรูป", "ตรวจสอบ", "บันทึก"];
@@ -28,7 +30,7 @@ const INIT_FORM: AddStockForm = {
   grade: "", batteryHealth: "", cycleCount: "",
   icloudStatus: "ปลอดล็อกแล้ว", carrierLock: "ไม่มี (Unlocked)", accessories: "",
   physicalChecks: PHYSICAL_PARTS.map(label => ({ label, condition: "ปกติ" })),
-  requestRef: "", sellerName: "", sellerPhone: "", sourceChannel: "", receiveMethod: "หน้าร้าน",
+  requestRef: "", sellerName: "", sellerPhone: "", sourceChannel: "",
   receivedAt: new Date().toISOString().slice(0, 10), inspector: "",
   costPrice: "", shippingCost: "80", otherCost: "0", sellingPrice: "",
   photos: [],
@@ -47,9 +49,33 @@ export default function AddStockPage() {
   const [saveError, setSaveError] = useState("");
   const [savedId, setSavedId] = useState("");
   const [photoPreview, setPhotoPreview] = useState<string[]>([]);
+  const [uploadProgress, setUploadProgress] = useState("");
+  const blobUrlsRef = useRef<string[]>([]);
+
+  // Revoke blob URLs on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => { blobUrlsRef.current.forEach(u => URL.revokeObjectURL(u)); };
+  }, []);
 
   function set(field: keyof AddStockForm, value: unknown) {
     setForm(f => ({ ...f, [field]: value }));
+  }
+
+  function handlePhotoSelect(files: File[]) {
+    // Revoke previous blob URLs
+    blobUrlsRef.current.forEach(u => URL.revokeObjectURL(u));
+    const newUrls = files.map(f => URL.createObjectURL(f));
+    blobUrlsRef.current = newUrls;
+    set("photos", files);
+    setPhotoPreview(newUrls);
+  }
+
+  function removePhoto(index: number) {
+    const newFiles = (form.photos as File[]).filter((_, i) => i !== index);
+    URL.revokeObjectURL(blobUrlsRef.current[index]);
+    blobUrlsRef.current = blobUrlsRef.current.filter((_, i) => i !== index);
+    setPhotoPreview(prev => prev.filter((_, i) => i !== index));
+    set("photos", newFiles);
   }
 
   const costNum = parseInt(form.costPrice) || 0;
@@ -60,9 +86,30 @@ export default function AddStockPage() {
   const profit = sellNum - totalCost;
   const margin = totalCost > 0 ? ((profit / totalCost) * 100).toFixed(1) : "0";
 
+  async function uploadPhotos(stockId: string): Promise<string[]> {
+    const files = form.photos as File[];
+    if (!files.length) return [];
+    const urls: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      setUploadProgress(`อัปโหลดรูป ${i + 1}/${files.length}...`);
+      const compressed = await compressImage(files[i]);
+      const safeName = compressed.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const path = `stocks/${stockId}/${Date.now()}-${safeName}`;
+      const { data, error } = await supabase.storage.from("stock-photos").upload(path, compressed, { upsert: true });
+      if (error) { console.error("Photo upload error:", error.message); continue; }
+      if (data) {
+        const { data: { publicUrl } } = supabase.storage.from("stock-photos").getPublicUrl(data.path);
+        urls.push(publicUrl);
+      }
+    }
+    setUploadProgress("");
+    return urls;
+  }
+
   async function handleSave() {
     setSaving(true);
     setSaveError("");
+    setUploadProgress("กำลังบันทึก...");
     const now = new Date().toISOString();
     const result = await createStockItem({
       id: "",
@@ -83,13 +130,24 @@ export default function AddStockPage() {
       inspector: form.inspector,
       soldAt: undefined, soldPrice: undefined, buyerName: undefined, buyerPhone: undefined,
     });
-    setSaving(false);
-    if (result.success) {
-      setSavedId(result.id);
-      setStep(6);
-    } else {
+
+    if (!result.success) {
       setSaveError(result.error ?? "บันทึกไม่สำเร็จ กรุณาลองใหม่");
+      setSaving(false);
+      setUploadProgress("");
+      return;
     }
+
+    // Upload photos after stock is created (we now have the stock ID)
+    const photoUrls = await uploadPhotos(result.id);
+    if (photoUrls.length > 0) {
+      const { updateStockPhotos } = await import("@/app/actions/stocks");
+      await updateStockPhotos(result.id, photoUrls);
+    }
+
+    setSaving(false);
+    setSavedId(result.id);
+    setStep(6);
   }
 
   const inputStyle = { ...inp({ background: c.card2, border: `1px solid ${c.border}`, color: c.text }) };
@@ -256,12 +314,6 @@ export default function AddStockPage() {
                     <input value={form.sellerPhone} onChange={e => set("sellerPhone", e.target.value)} style={inputStyle} />
                   </div>
                   <div>
-                    <label style={labelStyle}>วิธีรับเครื่อง</label>
-                    <select value={form.receiveMethod} onChange={e => set("receiveMethod", e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
-                      {["หน้าร้าน","ไรเดอร์รับถึงที่","ส่งพัสดุ"].map(o => <option key={o} value={o}>{o}</option>)}
-                    </select>
-                  </div>
-                  <div>
                     <label style={labelStyle}>ช่องทางที่มา</label>
                     <select value={form.sourceChannel} onChange={e => set("sourceChannel", e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
                       <option value="">เลือกช่องทาง</option>
@@ -273,7 +325,7 @@ export default function AddStockPage() {
                     <input type="date" value={form.receivedAt} onChange={e => set("receivedAt", e.target.value)}
                       style={{ ...inputStyle, colorScheme: "dark", cursor: "pointer" }} />
                   </div>
-                  <div>
+                  <div style={{ gridColumn: "1 / -1" }}>
                     <label style={labelStyle}>ผู้รับ / ผู้ตรวจ</label>
                     <input value={form.inspector} onChange={e => set("inspector", e.target.value)}
                       placeholder="ชื่อพนักงาน (ถ้ามี)" style={inputStyle} />
@@ -325,8 +377,7 @@ export default function AddStockPage() {
                   <input type="file" accept="image/*" multiple style={{ display: "none" }}
                     onChange={e => {
                       const files = Array.from(e.target.files ?? []);
-                      set("photos", files);
-                      setPhotoPreview(files.map(f => URL.createObjectURL(f)));
+                      if (files.length) handlePhotoSelect(files);
                     }}
                   />
                   <Camera size={32} color={c.text3} style={{ margin: "0 auto 12px" }} />
@@ -336,10 +387,21 @@ export default function AddStockPage() {
                 {photoPreview.length > 0 && (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginTop: 16 }}>
                     {photoPreview.map((url, i) => (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img key={i} src={url} alt="" style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: 12, border: `1px solid ${c.border}` }} />
+                      <div key={i} style={{ position: "relative" }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt="" style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: 12, border: `1px solid ${c.border}`, display: "block" }} />
+                        <button
+                          onClick={() => removePhoto(i)}
+                          style={{ position: "absolute", top: 4, right: 4, width: 22, height: 22, borderRadius: "50%", background: "rgba(0,0,0,0.6)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}
+                        >
+                          <X size={12} color="#fff" />
+                        </button>
+                      </div>
                     ))}
                   </div>
+                )}
+                {photoPreview.length === 0 && (
+                  <p style={{ color: c.text3, fontSize: 12, textAlign: "center", marginTop: 12 }}>ไม่มีรูป — สามารถข้ามได้</p>
                 )}
               </div>
             )}
@@ -350,8 +412,9 @@ export default function AddStockPage() {
                 <h2 style={{ color: c.text, fontSize: 20, fontWeight: 700, margin: "0 0 20px" }}>ตรวจสอบข้อมูล</h2>
                 {[
                   { label: "ข้อมูลเครื่อง", items: [["รุ่น", form.model], ["ความจุ", form.storage], ["สี", form.color], ["IMEI", form.imei], ["Battery", `${form.batteryHealth}%`], ["เกรด", form.grade]] },
-                  { label: "ผู้ขาย", items: [["ชื่อ", form.sellerName], ["เบอร์", form.sellerPhone], ["ช่องทาง", form.sourceChannel]] },
+                  { label: "ผู้ขาย", items: [["ชื่อ", form.sellerName], ["เบอร์", form.sellerPhone], ["ช่องทาง", form.sourceChannel], ["วันรับเข้า", form.receivedAt], ["ผู้รับ", form.inspector]] },
                   { label: "ราคา", items: [["ต้นทุน", `฿${costNum.toLocaleString()}`], ["ราคาขาย", `฿${sellNum.toLocaleString()}`], ["กำไร", `฿${profit.toLocaleString()} (${margin}%)`]] },
+                  { label: "รูปภาพ", items: [["จำนวนรูป", photoPreview.length > 0 ? `${photoPreview.length} รูป` : "ไม่มีรูป"]] },
                 ].map(({ label, items }) => (
                   <div key={label} style={{ marginBottom: 16 }}>
                     <p style={{ color: c.text3, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 8px" }}>{label}</p>
@@ -381,7 +444,7 @@ export default function AddStockPage() {
                 {savedId && <p style={{ color: c.gold, fontFamily: "monospace", fontSize: 18, fontWeight: 700, margin: "0 0 24px" }}>{savedId}</p>}
                 <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
                   <button onClick={() => router.push("/stock/inventory")} style={{ padding: "12px 24px", borderRadius: 12, background: c.gold, border: "none", color: "#000", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>ดูสต็อก</button>
-                  <button onClick={() => { setStep(0); setForm(INIT_FORM); setPhotoPreview([]); setSavedId(""); }} style={{ padding: "12px 24px", borderRadius: 12, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 14, cursor: "pointer" }}>เพิ่มเครื่องใหม่</button>
+                  <button onClick={() => { setStep(0); setForm(INIT_FORM); blobUrlsRef.current.forEach(u => URL.revokeObjectURL(u)); blobUrlsRef.current = []; setPhotoPreview([]); setSavedId(""); }} style={{ padding: "12px 24px", borderRadius: 12, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 14, cursor: "pointer" }}>เพิ่มเครื่องใหม่</button>
                 </div>
               </div>
             )}
@@ -396,21 +459,22 @@ export default function AddStockPage() {
                 {saveError}
               </div>
             )}
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <button
-              onClick={() => step > 0 ? setStep(s => s - 1) : router.push("/stock/inventory")}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 20px", borderRadius: 12, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 14, cursor: "pointer" }}
-            >
-              <ChevronLeft size={16} /> {step === 0 ? "ยกเลิก" : "ย้อนกลับ"}
-            </button>
-            <button
-              onClick={() => step < 5 ? setStep(s => s + 1) : handleSave()}
-              disabled={saving}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 24px", borderRadius: 12, background: c.gold, border: "none", color: "#000", fontSize: 14, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}
-            >
-              {saving ? "กำลังบันทึก..." : step === 5 ? "บันทึก" : <>ถัดไป <ChevronRight size={16} /></>}
-            </button>
-          </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <button
+                onClick={() => step > 0 ? setStep(s => s - 1) : router.push("/stock/inventory")}
+                disabled={saving}
+                style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 20px", borderRadius: 12, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 14, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.5 : 1 }}
+              >
+                <ChevronLeft size={16} /> {step === 0 ? "ยกเลิก" : "ย้อนกลับ"}
+              </button>
+              <button
+                onClick={() => step < 5 ? setStep(s => s + 1) : handleSave()}
+                disabled={saving}
+                style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 24px", borderRadius: 12, background: c.gold, border: "none", color: "#000", fontSize: 14, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}
+              >
+                {saving ? (uploadProgress || "กำลังบันทึก...") : step === 5 ? "บันทึก" : <>ถัดไป <ChevronRight size={16} /></>}
+              </button>
+            </div>
           </div>
         )}
       </div>

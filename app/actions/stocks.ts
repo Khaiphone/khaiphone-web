@@ -703,7 +703,7 @@ export async function addStockSlips(id: string, newUrls: string[]): Promise<{ su
   const existing: string[] = current?.slip_urls ?? [];
   const merged = [...existing, ...newUrls];
   const now = new Date().toISOString();
-  const newAuditLog = [...(current?.audit_log ?? []), { ts: now, action: "เพิ่มสลิปการขาย", detail: `${newUrls.length} รูป`, by: "admin" }];
+  const newAuditLog: AuditEntry[] = [...(current?.audit_log ?? []), { timestamp: now, action: "เพิ่มสลิปการขาย", detail: `${newUrls.length} รูป`, by: "admin" }];
   const { error } = await supabase.from("stocks").update({ slip_urls: merged, audit_log: newAuditLog, updated_at: now }).eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };

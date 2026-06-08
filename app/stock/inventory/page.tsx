@@ -31,14 +31,19 @@ const PAGE_SIZE = 10;
 function fmt(n: number) { return n.toLocaleString("th-TH"); }
 function fmtDate(s: string) { return new Date(s).toLocaleDateString("th-TH", { month: "short", day: "numeric", year: "numeric" }); }
 
+function csvCell(v: string | number) {
+  const s = String(v);
+  return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
 function exportCSV(items: StockItem[]) {
   const headers = ["รหัสสต็อก","รุ่น","ความจุ","สี","IMEI","Serial","เกรด","ต้นทุน","ราคาขาย","กำไร","สถานะ","ช่องทาง","ผู้ขาย","เบอร์โทร","วันรับเข้า"];
   const rows = items.map(s => {
     const price = s.status === "ขายแล้ว" ? (s.soldPrice ?? s.sellingPrice) : s.sellingPrice;
     const profit = price > 0 ? price - s.costPrice - s.shippingCost - s.otherCost : 0;
-    return [s.id, s.model, s.storage, s.color, s.imei, s.serial, s.grade, s.costPrice, price, profit, s.status, s.sourceChannel, s.sellerName, s.sellerPhone, s.receivedAt].join(",");
+    return [s.id, s.model, s.storage, s.color, s.imei, s.serial, s.grade, s.costPrice, price, profit, s.status, s.sourceChannel, s.sellerName, s.sellerPhone, s.receivedAt].map(csvCell).join(",");
   });
-  const csv = [headers.join(","), ...rows].join("\n");
+  const csv = [headers.map(csvCell).join(","), ...rows].join("\n");
   const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -298,11 +303,11 @@ export default function StockInventoryPage() {
               style={{ flex: "0 1 140px", background: c.card2, border: `1px solid ${c.border}`, borderRadius: 10, padding: "9px 12px", color: c.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
             <div style={{ display: "flex", alignItems: "center", gap: 6, flex: "0 1 auto" }}>
               <span style={{ color: c.text3, fontSize: 12, whiteSpace: "nowrap" }}>รับเข้า</span>
-              <input value={filterDateFrom} onChange={e => { setFilterDateFrom(e.target.value); setPage(1); }} type="date"
-                style={{ background: c.card2, border: `1px solid ${filterDateFrom ? c.gold : c.border}`, borderRadius: 10, padding: "9px 10px", color: filterDateFrom ? c.text : c.text3, fontSize: 13, fontFamily: "inherit", outline: "none", cursor: "pointer" }} />
+              <input value={filterDateFrom} onChange={e => { setFilterDateFrom(e.target.value); setPage(1); }} type="date" max={filterDateTo || undefined}
+                style={{ background: c.card2, border: `1px solid ${filterDateFrom ? c.gold : c.border}`, borderRadius: 10, padding: "9px 10px", color: filterDateFrom ? c.text : c.text3, fontSize: 13, fontFamily: "inherit", outline: "none", cursor: "pointer", colorScheme: "dark" }} />
               <span style={{ color: c.text3, fontSize: 12 }}>–</span>
-              <input value={filterDateTo} onChange={e => { setFilterDateTo(e.target.value); setPage(1); }} type="date"
-                style={{ background: c.card2, border: `1px solid ${filterDateTo ? c.gold : c.border}`, borderRadius: 10, padding: "9px 10px", color: filterDateTo ? c.text : c.text3, fontSize: 13, fontFamily: "inherit", outline: "none", cursor: "pointer" }} />
+              <input value={filterDateTo} onChange={e => { setFilterDateTo(e.target.value); setPage(1); }} type="date" min={filterDateFrom || undefined}
+                style={{ background: c.card2, border: `1px solid ${filterDateTo ? c.gold : c.border}`, borderRadius: 10, padding: "9px 10px", color: filterDateTo ? c.text : c.text3, fontSize: 13, fontFamily: "inherit", outline: "none", cursor: "pointer", colorScheme: "dark" }} />
             </div>
             <button onClick={clearFilters} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 10, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 13, cursor: "pointer" }}>
               <X size={14} /> ล้างตัวกรอง
