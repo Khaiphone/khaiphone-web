@@ -16,15 +16,18 @@ export default function RepairSendModal({ item, onClose, onSuccess }: Props) {
   const [shopName, setShopName] = useState("");
   const [estimatedCost, setEstimatedCost] = useState("");
   const [issue, setIssue] = useState("");
+  const [customIssue, setCustomIssue] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const effectiveIssue = issue === "อื่นๆ" ? customIssue.trim() : issue;
 
   const ISSUES = ["จอแตก / ตาย", "แบตเตอรี่เสื่อม", "ปุ่มชำรุด", "กล้องมีปัญหา", "ลำโพง / ไมค์เสีย", "อื่นๆ"];
 
   async function handleSubmit() {
-    if (!shopName.trim() || !issue.trim()) return;
+    if (!shopName.trim() || !effectiveIssue) return;
     setSaving(true);
     const cost = Number(estimatedCost.replace(/,/g, "")) || 0;
-    const res = await sendToRepair(item.id, shopName.trim(), cost, issue.trim());
+    const res = await sendToRepair(item.id, shopName.trim(), cost, effectiveIssue);
     if (res.success) {
       onSuccess({ status: "ส่งซ่อม" });
     } else {
@@ -33,7 +36,7 @@ export default function RepairSendModal({ item, onClose, onSuccess }: Props) {
     }
   }
 
-  const canSubmit = !saving && !!shopName.trim() && !!issue.trim();
+  const canSubmit = !saving && !!shopName.trim() && !!effectiveIssue;
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
@@ -69,8 +72,10 @@ export default function RepairSendModal({ item, onClose, onSuccess }: Props) {
         </div>
         {issue === "อื่นๆ" && (
           <input
-            onChange={e => setIssue(e.target.value)}
+            value={customIssue}
+            onChange={e => setCustomIssue(e.target.value)}
             placeholder="ระบุปัญหา..."
+            autoFocus
             style={{ width: "100%", padding: "10px 12px", borderRadius: 10, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontSize: 13, fontFamily: "inherit", boxSizing: "border-box", outline: "none", marginBottom: 16 }}
           />
         )}

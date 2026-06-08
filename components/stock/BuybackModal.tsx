@@ -15,15 +15,17 @@ export default function BuybackModal({ item, onClose, onSuccess }: Props) {
   const c = useThemeColors();
   const [price, setPrice] = useState("");
   const [reason, setReason] = useState("");
+  const [customReason, setCustomReason] = useState("");
   const [saving, setSaving] = useState(false);
 
   const REASONS = ["สินค้ามีปัญหา / ชำรุด", "ลูกค้าเปลี่ยนใจ", "สินค้าไม่ตรงสเปค", "อื่นๆ"];
+  const effectiveReason = reason === "อื่นๆ" ? customReason.trim() : reason;
 
   async function handleSubmit() {
     const p = Number(price.replace(/,/g, ""));
-    if (!p || !reason.trim()) return;
+    if (!p || !effectiveReason) return;
     setSaving(true);
-    const res = await buybackStock(item.id, p, reason.trim());
+    const res = await buybackStock(item.id, p, effectiveReason);
     if (res.success) {
       onSuccess({ status: "รับคืนแล้ว" });
     } else {
@@ -32,7 +34,7 @@ export default function BuybackModal({ item, onClose, onSuccess }: Props) {
     }
   }
 
-  const canSubmit = !saving && !!price && !!reason.trim();
+  const canSubmit = !saving && !!price && !!effectiveReason;
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
@@ -60,9 +62,10 @@ export default function BuybackModal({ item, onClose, onSuccess }: Props) {
         </div>
         {reason === "อื่นๆ" && (
           <input
-            value={reason === "อื่นๆ" ? "" : reason}
-            onChange={e => setReason(e.target.value)}
+            value={customReason}
+            onChange={e => setCustomReason(e.target.value)}
             placeholder="ระบุเหตุผล..."
+            autoFocus
             style={{ width: "100%", padding: "10px 12px", borderRadius: 10, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontSize: 13, fontFamily: "inherit", boxSizing: "border-box", outline: "none", marginBottom: 16 }}
           />
         )}
