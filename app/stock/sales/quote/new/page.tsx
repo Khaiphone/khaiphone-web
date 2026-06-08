@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, Trash2, ChevronLeft, ChevronRight, Check, User, FileText } from "lucide-react";
+import { Search, Trash2, ChevronLeft, ChevronRight, Check, User, FileText } from "lucide-react";
 import StockTopbar from "@/components/stock/Topbar";
 import { useThemeColors } from "@/components/stock/ThemeContext";
 import { GradeBadge } from "@/components/stock/StatusBadge";
@@ -11,7 +11,7 @@ import { fetchStockItems } from "@/app/actions/stocks";
 import { createQuote, fetchQuote } from "@/app/actions/quotes";
 import type { StockItem, StockStatus, QuoteItem } from "@/lib/stock/types";
 
-const SELECTABLE_STATUSES = new Set<StockStatus>(["พร้อมขาย", "ลงขายแล้ว"]);
+const SELECTABLE_STATUSES = new Set<StockStatus>(["รอตรวจ", "พร้อมขาย", "ลงขายแล้ว", "จองแล้ว"]);
 
 const DEFAULT_TERMS = `1. ใบเสนอราคานี้มีอายุตามวันที่ระบุด้านบน
 2. ราคาที่เสนออาจเปลี่ยนแปลงได้ตามสภาพสินค้า ณ วันที่ชำระเงิน
@@ -235,128 +235,147 @@ function QuoteNewInner() {
         {/* ── STEP 1: เลือกสินค้า ── */}
         {step === 1 && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-            <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-
-              {/* Inventory picker */}
-              <div style={{ flex: "1 1 400px" }}>
-                <div style={cardSt}>
-                  <p style={{ color: c.text, fontSize: 15, fontWeight: 700, margin: "0 0 14px" }}>
-                    เลือกสินค้า <span style={{ color: c.text3, fontSize: 12, fontWeight: 400 }}>({inventory.length} รายการพร้อมขาย)</span>
-                  </p>
-                  <div style={{ position: "relative", marginBottom: 12 }}>
-                    <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: c.text3 }} />
-                    <input value={query} onChange={e => setQuery(e.target.value)} placeholder="ค้นหารุ่น, IMEI, รหัสสต็อก..." style={{ ...inputSt, paddingLeft: 30 }} />
+            <div style={cardSt}>
+              {/* Header row */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <p style={{ color: c.text, fontSize: 15, fontWeight: 700, margin: 0 }}>
+                  เลือกสินค้า
+                  <span style={{ color: c.text3, fontSize: 12, fontWeight: 400, marginLeft: 8 }}>
+                    {inventory.length} รายการในสต็อก
+                  </span>
+                </p>
+                {cart.length > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ color: "#22c55e", fontSize: 13, fontWeight: 700 }}>✓ เลือกแล้ว {cart.length} รายการ</span>
+                    <span style={{ color: c.gold, fontSize: 14, fontWeight: 800 }}>{fmt(subtotal)}</span>
                   </div>
-                  {loadingInv ? (
-                    <p style={{ color: c.text3, textAlign: "center", padding: 24 }}>กำลังโหลด...</p>
-                  ) : (
-                    <div style={{ maxHeight: 420, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
-                      {filteredInv.length === 0 && <p style={{ color: c.text3, textAlign: "center", padding: 20 }}>ไม่พบสินค้า</p>}
-                      {filteredInv.map(item => {
-                        const inCart = cartIds.has(item.id);
-                        return (
-                          <div
-                            key={item.id}
-                            onClick={() => !inCart && addToCart(item)}
-                            style={{
-                              display: "flex", justifyContent: "space-between", alignItems: "center",
-                              padding: "10px 12px", borderRadius: 10,
-                              border: `1px solid ${inCart ? "#22c55e40" : c.border}`,
-                              background: inCart ? "rgba(34,197,94,0.06)" : c.bg,
-                              cursor: inCart ? "default" : "pointer",
-                              opacity: inCart ? 0.7 : 1,
-                            }}
-                          >
-                            <div>
-                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-                                <span style={{ color: c.text, fontSize: 13, fontWeight: 700 }}>{item.model}</span>
-                                <GradeBadge grade={item.grade} />
-                              </div>
-                              <div style={{ display: "flex", gap: 8 }}>
-                                <span style={{ color: c.text3, fontSize: 11, fontFamily: "monospace" }}>{item.id}</span>
-                                {item.storage && <span style={{ color: c.text3, fontSize: 11 }}>{item.storage}</span>}
-                                {item.color && <span style={{ color: c.text3, fontSize: 11 }}>{item.color}</span>}
-                              </div>
-                              {item.imei && <span style={{ color: c.text3, fontSize: 10, fontFamily: "monospace" }}>IMEI: {item.imei}</span>}
-                            </div>
-                            <div style={{ textAlign: "right", flexShrink: 0 }}>
-                              <p style={{ color: c.gold, fontSize: 14, fontWeight: 700, margin: 0 }}>{fmt(item.sellingPrice)}</p>
-                              {inCart ? (
-                                <span style={{ fontSize: 10, color: "#22c55e", fontWeight: 600 }}>✓ เพิ่มแล้ว</span>
-                              ) : (
-                                <span style={{ fontSize: 10, color: c.text3 }}>
-                                  <Plus size={10} style={{ verticalAlign: "middle" }} /> เพิ่ม
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
 
-              {/* Cart */}
-              <div style={{ flex: "1 1 300px" }}>
-                <div style={cardSt}>
-                  <p style={{ color: c.text, fontSize: 15, fontWeight: 700, margin: "0 0 14px" }}>
-                    รายการที่เลือก <span style={{ color: c.text3, fontSize: 12, fontWeight: 400 }}>({cart.length})</span>
-                  </p>
-                  {cart.length === 0 ? (
-                    <p style={{ color: c.text3, textAlign: "center", padding: 32, fontSize: 13 }}>เลือกสินค้าจากรายการด้านซ้าย</p>
-                  ) : (
-                    <>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
-                        {cart.map(item => (
-                          <div key={item.stockId} style={{ padding: "10px 12px", borderRadius: 10, border: `1px solid ${c.border}`, background: c.bg }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                              <div>
-                                <p style={{ color: c.text, fontSize: 13, fontWeight: 700, margin: "0 0 2px" }}>{item.stockRef.model}</p>
-                                <p style={{ color: c.text3, fontSize: 11, margin: 0, fontFamily: "monospace" }}>{item.stockId}</p>
-                              </div>
-                              <button onClick={() => removeFromCart(item.stockId)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", padding: 2 }}>
-                                <Trash2 size={13} />
-                              </button>
-                            </div>
-                            <div style={{ display: "flex", gap: 8 }}>
-                              <div style={{ flex: 1 }}>
-                                <p style={{ color: c.text3, fontSize: 10, margin: "0 0 3px" }}>ราคา (฿)</p>
-                                <input
-                                  type="number"
-                                  value={item.unitPrice}
-                                  onChange={e => updateCartItem(item.stockId, "unitPrice", e.target.value)}
-                                  style={{ ...inputSt, padding: "6px 8px", fontSize: 12 }}
-                                />
-                              </div>
-                              <div style={{ flex: 1 }}>
-                                <p style={{ color: c.text3, fontSize: 10, margin: "0 0 3px" }}>ส่วนลด (฿)</p>
-                                <input
-                                  type="number"
-                                  value={item.discount}
-                                  onChange={e => updateCartItem(item.stockId, "discount", e.target.value)}
-                                  style={{ ...inputSt, padding: "6px 8px", fontSize: 12 }}
-                                />
-                              </div>
-                              <div style={{ flexShrink: 0, textAlign: "right" }}>
-                                <p style={{ color: c.text3, fontSize: 10, margin: "0 0 3px" }}>รวม</p>
-                                <p style={{ color: c.gold, fontSize: 13, fontWeight: 700, margin: 0 }}>{fmt(item.total)}</p>
-                              </div>
-                            </div>
+              {/* Search */}
+              <div style={{ position: "relative", marginBottom: 14 }}>
+                <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: c.text3 }} />
+                <input
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  placeholder="ค้นหารุ่น, IMEI, รหัสสต็อก, สี, ความจุ..."
+                  style={{ ...inputSt, paddingLeft: 36 }}
+                />
+              </div>
+
+              {/* Item list */}
+              {loadingInv ? (
+                <p style={{ color: c.text3, textAlign: "center", padding: 40 }}>กำลังโหลด...</p>
+              ) : filteredInv.length === 0 ? (
+                <p style={{ color: c.text3, textAlign: "center", padding: 40 }}>ไม่พบสินค้า</p>
+              ) : (
+                <div style={{ maxHeight: 500, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+                  {filteredInv.map(item => {
+                    const inCart = cartIds.has(item.id);
+                    const cartItem = cart.find(c => c.stockId === item.id);
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => inCart ? removeFromCart(item.id) : addToCart(item)}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 14,
+                          padding: "12px 14px", borderRadius: 12, cursor: "pointer",
+                          border: `1.5px solid ${inCart ? "#22c55e50" : c.border}`,
+                          background: inCart ? "rgba(34,197,94,0.06)" : c.bg,
+                          transition: "all 150ms",
+                        }}
+                      >
+                        {/* Checkbox */}
+                        <div style={{
+                          width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+                          border: `2px solid ${inCart ? "#22c55e" : c.border}`,
+                          background: inCart ? "#22c55e" : "transparent",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          transition: "all 150ms",
+                        }}>
+                          {inCart && <Check size={13} color="#fff" strokeWidth={3} />}
+                        </div>
+
+                        {/* Info */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                            <span style={{ color: c.text, fontSize: 14, fontWeight: 700 }}>{item.model}</span>
+                            <GradeBadge grade={item.grade} />
+                            <span style={{ fontSize: 11, padding: "1px 7px", borderRadius: 10, background: `${c.gold}20`, color: c.gold }}>{item.status}</span>
                           </div>
-                        ))}
-                      </div>
-                      <div style={{ borderTop: `1px solid ${c.border}`, paddingTop: 12 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between" }}>
-                          <span style={{ color: c.text2, fontSize: 13 }}>ยอดรวม</span>
-                          <span style={{ color: c.text, fontSize: 14, fontWeight: 700 }}>{fmt(subtotal)}</span>
+                          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                            <span style={{ color: c.text3, fontSize: 11, fontFamily: "monospace" }}>{item.id}</span>
+                            {item.storage && <span style={{ color: c.text3, fontSize: 11 }}>{item.storage}</span>}
+                            {item.color && <span style={{ color: c.text3, fontSize: 11 }}>{item.color}</span>}
+                            {item.imei && <span style={{ color: c.text3, fontSize: 11, fontFamily: "monospace" }}>IMEI: {item.imei}</span>}
+                          </div>
+                        </div>
+
+                        {/* Price */}
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          <p style={{ color: c.gold, fontSize: 15, fontWeight: 800, margin: 0 }}>{fmt(item.sellingPrice)}</p>
+                          {inCart && cartItem && cartItem.discount > 0 && (
+                            <p style={{ color: "#22c55e", fontSize: 11, margin: "2px 0 0" }}>-{fmt(cartItem.discount)}</p>
+                          )}
                         </div>
                       </div>
-                    </>
-                  )}
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Selected items — price/discount editing */}
+            {cart.length > 0 && (
+              <div style={{ ...cardSt, marginTop: 16 }}>
+                <p style={{ color: c.text, fontSize: 14, fontWeight: 700, margin: "0 0 14px" }}>
+                  ปรับราคา / ส่วนลดรายเครื่อง
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {cart.map(item => (
+                    <div key={item.stockId} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 10, border: `1px solid ${c.border}`, background: c.bg }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ color: c.text, fontSize: 13, fontWeight: 700, margin: "0 0 1px" }}>{item.stockRef.model}</p>
+                        <p style={{ color: c.text3, fontSize: 11, margin: 0, fontFamily: "monospace" }}>{item.stockId}</p>
+                      </div>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <div>
+                          <p style={{ color: c.text3, fontSize: 10, margin: "0 0 3px", textAlign: "center" }}>ราคา</p>
+                          <input
+                            type="number"
+                            value={item.unitPrice}
+                            onChange={e => updateCartItem(item.stockId, "unitPrice", e.target.value)}
+                            onClick={e => e.stopPropagation()}
+                            style={{ ...inputSt, width: 100, padding: "5px 8px", fontSize: 12, textAlign: "right" }}
+                          />
+                        </div>
+                        <div>
+                          <p style={{ color: c.text3, fontSize: 10, margin: "0 0 3px", textAlign: "center" }}>ส่วนลด</p>
+                          <input
+                            type="number"
+                            value={item.discount}
+                            onChange={e => updateCartItem(item.stockId, "discount", e.target.value)}
+                            onClick={e => e.stopPropagation()}
+                            style={{ ...inputSt, width: 90, padding: "5px 8px", fontSize: 12, textAlign: "right" }}
+                          />
+                        </div>
+                        <div style={{ textAlign: "right", minWidth: 72 }}>
+                          <p style={{ color: c.text3, fontSize: 10, margin: "0 0 3px" }}>รวม</p>
+                          <p style={{ color: c.gold, fontSize: 13, fontWeight: 700, margin: 0 }}>{fmt(item.total)}</p>
+                        </div>
+                        <button onClick={e => { e.stopPropagation(); removeFromCart(item.stockId); }} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", padding: 4, flexShrink: 0 }}>
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ borderTop: `1px solid ${c.border}`, paddingTop: 12, marginTop: 12, display: "flex", justifyContent: "flex-end", gap: 4, alignItems: "center" }}>
+                  <span style={{ color: c.text2, fontSize: 13 }}>ยอดรวมสินค้า</span>
+                  <span style={{ color: c.gold, fontSize: 16, fontWeight: 800, marginLeft: 16 }}>{fmt(subtotal)}</span>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Footer */}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
@@ -368,7 +387,7 @@ function QuoteNewInner() {
                 disabled={cart.length === 0}
                 style={{ ...btnSt, background: cart.length > 0 ? c.gold : c.border, color: "#000", opacity: cart.length === 0 ? 0.5 : 1 }}
               >
-                ถัดไป <ChevronRight size={15} />
+                ถัดไป ({cart.length}) <ChevronRight size={15} />
               </button>
             </div>
           </motion.div>
