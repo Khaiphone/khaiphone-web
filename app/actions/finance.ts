@@ -193,7 +193,8 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
     if (dateTo && e.date > dateTo) return false;
     return true;
   });
-  const totalExpenses = approvedExpenses.reduce((s, e) => s + (e.amount ?? 0), 0);
+  // Exclude "ซื้อคืน" — buyback cost is already captured in cost_price, deducting again would double-count
+  const totalExpenses = approvedExpenses.filter(e => e.category !== "ซื้อคืน").reduce((s, e) => s + (e.amount ?? 0), 0);
   const pendingExpensesCount = allExpenses.filter((e) => {
     if (e.status !== "pending") return false;
     if (dateFrom && e.date < dateFrom) return false;
@@ -1082,11 +1083,11 @@ export async function fetchBreakeven(months: 1 | 3 = 3): Promise<BreakevenResult
 
   const [{ data: stockData }, { data: expenseData }, { data: soldData }] = await Promise.all([
     supabase.from("stocks").select("model, cost_price, shipping_cost, other_cost, selling_price, sold_price, status"),
-    supabase.from("expenses").select("amount").gte("date", sinceStr),
+    supabase.from("expenses").select("amount, category").gte("date", sinceStr),
     supabase.from("stocks").select("id").eq("status", "ขายแล้ว").gte("sold_at", startOfThaiDay(sinceStr)),
   ]);
 
-  const totalExpenses = (expenseData ?? []).reduce((s, r) => s + (r.amount ?? 0), 0);
+  const totalExpenses = (expenseData ?? []).filter(r => r.category !== "ซื้อคืน").reduce((s, r) => s + (r.amount ?? 0), 0);
   const unitsSold = (soldData ?? []).length;
   const overheadPerUnit = unitsSold > 0 ? Math.round(totalExpenses / unitsSold) : 0;
 
@@ -1130,10 +1131,10 @@ export async function fetchOverheadPerUnit(months: 1 | 3 = 3): Promise<number> {
   while (sinceM2 <= 0) { sinceM2 += 12; sinceY2--; }
   const sinceStr2 = `${sinceY2}-${String(sinceM2).padStart(2, "0")}-01`;
   const [{ data: expenseData }, { data: soldData }] = await Promise.all([
-    supabase.from("expenses").select("amount").gte("date", sinceStr2),
+    supabase.from("expenses").select("amount, category").gte("date", sinceStr2),
     supabase.from("stocks").select("id").eq("status", "ขายแล้ว").gte("sold_at", startOfThaiDay(sinceStr2)),
   ]);
-  const totalExpenses = (expenseData ?? []).reduce((s, r) => s + (r.amount ?? 0), 0);
+  const totalExpenses = (expenseData ?? []).filter(r => r.category !== "ซื้อคืน").reduce((s, r) => s + (r.amount ?? 0), 0);
   const unitsSold = (soldData ?? []).length;
   return unitsSold > 0 ? Math.round(totalExpenses / unitsSold) : 0;
 }
