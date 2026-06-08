@@ -5,6 +5,27 @@ import { useParams } from 'next/navigation'
 import { fetchSaleDocument } from '@/app/actions/finance'
 import type { SaleDocument } from '@/app/actions/finance'
 
+function getLoginUrl() {
+  const { hostname, protocol } = window.location
+  if (hostname === 'localhost' || hostname === '127.0.0.1') return '/admin/login'
+  return `${protocol}//stock.${hostname.replace(/^stock\./, '')}/admin/login`
+}
+
+function AuthError() {
+  return (
+    <div style={{ padding: 60, textAlign: 'center', fontFamily: 'sans-serif' }}>
+      <p style={{ fontSize: 18, color: '#111', fontWeight: 700, margin: '0 0 8px' }}>ไม่ได้รับอนุญาต</p>
+      <p style={{ fontSize: 13, color: '#888', margin: '0 0 24px' }}>กรุณาเข้าสู่ระบบก่อนเปิดเอกสาร</p>
+      <button
+        onClick={() => { window.location.href = getLoginUrl() }}
+        style={{ padding: '10px 24px', background: '#B8860B', border: 'none', color: '#fff', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+      >
+        เข้าสู่ระบบ
+      </button>
+    </div>
+  )
+}
+
 function fmt(n: number) { return '฿' + n.toLocaleString('th-TH') }
 function thDate(s: string) {
   if (!s) return ''
@@ -16,12 +37,16 @@ export default function TaxInvoicePage() {
   const { id } = useParams<{ id: string }>()
   const [doc, setDoc] = useState<SaleDocument | null>(null)
   const [loading, setLoading] = useState(true)
+  const [unauthorized, setUnauthorized] = useState(false)
 
   useEffect(() => {
-    fetchSaleDocument(id).then(d => { setDoc(d); setLoading(false) })
+    fetchSaleDocument(id)
+      .then(d => { setDoc(d); setLoading(false) })
+      .catch(() => { setLoading(false); setUnauthorized(true) })
   }, [id])
 
   if (loading) return <div style={{ padding: 60, textAlign: 'center', fontFamily: 'sans-serif', color: '#666' }}>กำลังโหลด...</div>
+  if (unauthorized) return <AuthError />
   if (!doc) return <div style={{ padding: 60, textAlign: 'center', fontFamily: 'sans-serif', color: '#ef4444' }}>ไม่พบข้อมูล</div>
 
   const docNumber = `TAX-${doc.refNumber}`
