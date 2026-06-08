@@ -30,9 +30,12 @@ export default function StockLayout({ children }: { children: React.ReactNode })
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (cancelled) return;
       if (!session) { router.replace("/admin/login"); return; }
       const profile = await fetchMyProfile(session.user.id);
+      if (cancelled) return;
       const canAccess = profile?.role === "owner" || (profile?.permissions ?? []).includes("view_stock");
       if (!canAccess) {
         const host = window.location.host;
@@ -42,6 +45,7 @@ export default function StockLayout({ children }: { children: React.ReactNode })
       }
       setReady(true);
     });
+    return () => { cancelled = true; };
   }, [router]);
 
   if (!ready) return <div style={{ minHeight: "100vh", background: "#050505" }} />;

@@ -101,6 +101,8 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLogin) { setReady(true); return; }
 
+    let cancelled = false;
+
     // Optimistic: use cached role to skip black-screen flash on return visits
     const cached = localStorage.getItem("kp_admin_role") as AdminRole | null;
     if (cached) {
@@ -109,6 +111,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     }
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (cancelled) return;
       if (!session) {
         localStorage.removeItem("kp_admin_role");
         router.replace("/admin/login");
@@ -116,13 +119,15 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       }
 
       const r = await fetchMyRole(session.user.id);
+      if (cancelled) return;
       if (r) localStorage.setItem("kp_admin_role", r);
       setRole(r);
 
-      fetchMyProfile(session.user.id).then(p => { if (p) { setProfileName(p.name); setProfileAvatar(p.avatar_url ?? null); } });
+      fetchMyProfile(session.user.id).then(p => { if (p && !cancelled) { setProfileName(p.name); setProfileAvatar(p.avatar_url ?? null); } });
 
       if (r === "staff") {
         const profile = await fetchMyProfile(session.user.id);
+        if (cancelled) return;
         const perms = profile?.permissions ?? [];
         const allowed =
           STAFF_ALLOWED_PREFIXES.some(p => pathname.startsWith(p)) ||
@@ -135,6 +140,8 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
       if (!cached) setReady(true);
     });
+
+    return () => { cancelled = true; };
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!ready) return <div suppressHydrationWarning style={{ minHeight: "100vh", background: "#0F0F11" }} />;
