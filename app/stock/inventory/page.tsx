@@ -433,11 +433,6 @@ export default function StockInventoryPage() {
                             <ShoppingCart size={13} /> บันทึกขาย
                           </button>
                         )}
-                        {s.status === "ขายแล้ว" && (
-                          <button onClick={() => openBuyback(s)} style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: "none", background: "rgba(245,158,11,0.12)", color: "#f59e0b", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
-                            ซื้อคืน
-                          </button>
-                        )}
                         {s.status === "รับคืนแล้ว" && (
                           <button onClick={() => openRepairSend(s)} style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: "none", background: "rgba(236,72,153,0.12)", color: "#ec4899", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
                             ส่งซ่อม
@@ -453,9 +448,27 @@ export default function StockInventoryPage() {
                             <Truck size={13} /> ยืนยันส่งของ
                           </button>
                         )}
-                        <button onClick={() => router.push(`/stock/inventory/${s.id}`)} style={{ padding: "8px 12px", borderRadius: 10, border: `1px solid ${c.border}`, background: c.card, color: c.text3, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}>
-                          <Edit2 size={13} />
-                        </button>
+                        {/* ⋯ more menu — rare actions like ซื้อคืน */}
+                        <div style={{ position: "relative" }} ref={moreMenuId === `mob-${s.id}` ? moreMenuRef : null}>
+                          <button onClick={() => setMoreMenuId(moreMenuId === `mob-${s.id}` ? null : `mob-${s.id}`)} style={{ padding: "8px 12px", borderRadius: 10, border: `1px solid ${c.border}`, background: c.card, color: c.text3, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}>
+                            <MoreHorizontal size={13} />
+                          </button>
+                          {moreMenuId === `mob-${s.id}` && (
+                            <div style={{ position: "absolute", right: 0, bottom: "calc(100% + 6px)", zIndex: 100, background: c.card, border: `1px solid ${c.border}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.18)", minWidth: 160, overflow: "hidden" }}>
+                              <button onClick={() => { router.push(`/stock/inventory/${s.id}`); setMoreMenuId(null); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: "none", border: "none", color: c.text2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+                                <Edit2 size={13} /> แก้ไข
+                              </button>
+                              {s.status === "ขายแล้ว" && (
+                                <>
+                                  <div style={{ borderTop: `1px solid ${c.border}` }} />
+                                  <button onClick={() => openBuyback(s)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: "none", border: "none", color: "#f59e0b", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                                    ↩ ซื้อคืน
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </motion.div>
                   );
