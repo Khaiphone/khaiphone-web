@@ -21,6 +21,7 @@ function mapRow(r: any): StockQuote {
     vatAmount: r.vat_amount ?? 0,
     total: r.total ?? 0,
     validUntil: r.valid_until ?? null,
+    paymentTerms: r.payment_terms ?? "",
     note: r.note ?? "",
     terms: r.terms ?? "",
     createdBy: r.created_by,
@@ -44,6 +45,7 @@ export async function createQuote(input: {
   vatAmount: number;
   total: number;
   validUntil: string | null;
+  paymentTerms: string;
   note: string;
   terms: string;
   status: QuoteStatus;
@@ -75,6 +77,7 @@ export async function createQuote(input: {
     vat_amount: input.vatAmount,
     total: input.total,
     valid_until: input.validUntil || null,
+    payment_terms: input.paymentTerms || null,
     note: input.note || null,
     terms: input.terms || null,
     created_by: user.email ?? user.id,
@@ -179,6 +182,7 @@ export type QuoteDocument = {
   vatRate: number;
   vatAmount: number;
   total: number;
+  paymentTerms: string;
   note: string;
   terms: string;
   createdBy: string;
@@ -186,6 +190,7 @@ export type QuoteDocument = {
   businessTaxId: string;
   businessAddress: string;
   businessPhone: string;
+  businessEmail: string;
 };
 
 export async function fetchQuoteDocument(id: string): Promise<QuoteDocument | null> {
@@ -193,7 +198,7 @@ export async function fetchQuoteDocument(id: string): Promise<QuoteDocument | nu
   const supabase = createServerClient();
   const [{ data: quote }, { data: settings }] = await Promise.all([
     supabase.from("stock_quotes").select("*").eq("id", id).single(),
-    supabase.from("finance_settings").select("business_name, tax_id, address, phone").eq("id", 1).single(),
+    supabase.from("finance_settings").select("business_name, tax_id, address, phone, email").eq("id", 1).single(),
   ]);
   if (!quote) return null;
   return {
@@ -212,6 +217,7 @@ export async function fetchQuoteDocument(id: string): Promise<QuoteDocument | nu
     vatRate: quote.vat_rate ?? 0,
     vatAmount: quote.vat_amount ?? 0,
     total: quote.total ?? 0,
+    paymentTerms: quote.payment_terms ?? "",
     note: quote.note ?? "",
     terms: quote.terms ?? "",
     createdBy: quote.created_by,
@@ -219,6 +225,7 @@ export async function fetchQuoteDocument(id: string): Promise<QuoteDocument | nu
     businessTaxId: settings?.tax_id ?? "",
     businessAddress: settings?.address ?? "",
     businessPhone: settings?.phone ?? "",
+    businessEmail: settings?.email ?? "",
   };
 }
 

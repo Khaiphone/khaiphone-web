@@ -32,13 +32,22 @@ interface CartItem extends QuoteItem {
   stockRef: StockItem;
 }
 
+const PAYMENT_TERMS_OPTIONS = [
+  "ชำระทันที",
+  "เครดิต 7 วัน",
+  "เครดิต 15 วัน",
+  "เครดิต 30 วัน",
+  "มัดจำ 50% ก่อนส่งสินค้า",
+  "โอนก่อนส่ง",
+];
+
 interface CustomerForm {
   name: string;
   phone: string;
   email: string;
   address: string;
   taxId: string;
-  overallDiscount: string;
+  paymentTerms: string;
   vatEnabled: boolean;
   validUntil: string;
   note: string;
@@ -47,7 +56,7 @@ interface CustomerForm {
 
 const INIT_CUSTOMER: CustomerForm = {
   name: "", phone: "", email: "", address: "", taxId: "",
-  overallDiscount: "0", vatEnabled: false,
+  paymentTerms: "ชำระทันที", vatEnabled: false,
   validUntil: defaultValidUntil(),
   note: "", terms: DEFAULT_TERMS,
 };
@@ -82,7 +91,7 @@ function QuoteNewInner() {
         ...prev,
         name: q.customerName, phone: q.customerPhone, email: q.customerEmail,
         address: q.customerAddress, taxId: q.customerTaxId,
-        overallDiscount: String(q.discountAmount),
+        paymentTerms: q.paymentTerms || "ชำระทันที",
         vatEnabled: q.vatRate > 0,
         note: q.note, terms: q.terms || DEFAULT_TERMS,
       }));
@@ -130,10 +139,8 @@ function QuoteNewInner() {
   }
 
   const subtotal = cart.reduce((s, c) => s + c.total, 0);
-  const overallDiscount = Number(customer.overallDiscount) || 0;
-  const afterDiscount = Math.max(0, subtotal - overallDiscount);
-  const vatAmount = customer.vatEnabled ? Math.round(afterDiscount * 0.07) : 0;
-  const grandTotal = afterDiscount + vatAmount;
+  const vatAmount = customer.vatEnabled ? Math.round(subtotal * 0.07) : 0;
+  const grandTotal = subtotal + vatAmount;
 
   function setCustomerField<K extends keyof CustomerForm>(k: K, v: CustomerForm[K]) {
     setCustomer(prev => ({ ...prev, [k]: v }));
@@ -151,11 +158,12 @@ function QuoteNewInner() {
       customerTaxId: customer.taxId.trim(),
       items: cart.map(({ stockRef: _, ...rest }) => rest),
       subtotal,
-      discountAmount: overallDiscount,
+      discountAmount: 0,
       vatRate: customer.vatEnabled ? 7 : 0,
       vatAmount,
       total: grandTotal,
       validUntil: customer.validUntil || null,
+      paymentTerms: customer.paymentTerms.trim(),
       note: customer.note.trim(),
       terms: customer.terms.trim(),
       status,
@@ -457,19 +465,51 @@ function QuoteNewInner() {
                       <label style={{ color: c.text2, fontSize: 12, fontWeight: 600, display: "block", marginBottom: 5 }}>ใบเสนอราคามีอายุถึง</label>
                       <input type="date" value={customer.validUntil} onChange={e => setCustomerField("validUntil", e.target.value)} style={inputSt} />
                     </div>
+                    <div>
+                      <label style={{ color: c.text2, fontSize: 12, fontWeight: 600, display: "block", marginBottom: 5 }}>เงื่อนไขการชำระเงิน</label>
+                      {PAYMENT_TERMS_OPTIONS.includes(customer.paymentTerms) ? (
+                        <select
+                          value={customer.paymentTerms}
+                          onChange={e => setCustomerField("paymentTerms", e.target.value === "other" ? "" : e.target.value)}
+                          style={{ ...inputSt, appearance: "none" }}
+                        >
+                          {PAYMENT_TERMS_OPTIONS.map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                          <option value="other">อื่นๆ (กรอกเอง)</option>
+                        </select>
+                      ) : (
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <input
+                            value={customer.paymentTerms}
+                            onChange={e => setCustomerField("paymentTerms", e.target.value)}
+                            placeholder="ระบุเงื่อนไขการชำระเงิน"
+                            style={{ ...inputSt, flex: 1 }}
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => setCustomerField("paymentTerms", "ชำระทันที")}
+                            style={{ padding: "0 12px", borderRadius: 10, border: `1px solid ${c.border}`, background: c.bg, color: c.text3, cursor: "pointer", fontSize: 12, flexShrink: 0 }}
+                          >
+                            ↩
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Summary */}
                   <div style={{ marginTop: 16, borderTop: `1px solid ${c.border}`, paddingTop: 14, display: "flex", flexDirection: "column", gap: 6 }}>
-                    {[
-                      { label: "ยอดรวมสินค้า", value: fmt(subtotal) },
-                      ...(customer.vatEnabled ? [{ label: "VAT 7%", value: `+${fmt(vatAmount)}` }] : []),
-                    ].map(r => (
-                      <div key={r.label} style={{ display: "flex", justifyContent: "space-between" }}>
-                        <span style={{ color: c.text3, fontSize: 12 }}>{r.label}</span>
-                        <span style={{ color: (r as { color?: string }).color ?? c.text2, fontSize: 12 }}>{r.value}</span>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: c.text3, fontSize: 12 }}>ยอดรวมสินค้า</span>
+                      <span style={{ color: c.text2, fontSize: 12 }}>{fmt(subtotal)}</span>
+                    </div>
+                    {customer.vatEnabled && (
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ color: c.text3, fontSize: 12 }}>VAT 7%</span>
+                        <span style={{ color: c.text2, fontSize: 12 }}>+{fmt(vatAmount)}</span>
                       </div>
-                    ))}
+                    )}
                     <div style={{ display: "flex", justifyContent: "space-between", borderTop: `1px solid ${c.border}`, paddingTop: 8, marginTop: 2 }}>
                       <span style={{ color: c.text, fontSize: 14, fontWeight: 700 }}>ยอดรวมสุทธิ</span>
                       <span style={{ color: c.gold, fontSize: 16, fontWeight: 800 }}>{fmt(grandTotal)}</span>
@@ -570,16 +610,20 @@ function QuoteNewInner() {
               {/* Totals */}
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
                 <div style={{ minWidth: 240 }}>
-                  {[
-                    { label: "ยอดรวมสินค้า", value: fmt(subtotal) },
-                    ...(customer.vatEnabled ? [{ label: "VAT 7%", value: `+${fmt(vatAmount)}`, bold: false, green: false }] : []),
-                    { label: "ยอดรวมสุทธิ", value: fmt(grandTotal), bold: true, green: false },
-                  ].map(r => (
-                    <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: r.label === "ยอดรวมสุทธิ" ? `2px solid ${c.border}` : `1px solid ${c.border}` }}>
-                      <span style={{ fontSize: r.bold ? 14 : 12, fontWeight: r.bold ? 700 : 400, color: c.text2 }}>{r.label}</span>
-                      <span style={{ fontSize: r.bold ? 16 : 13, fontWeight: r.bold ? 800 : 400, color: r.bold ? c.gold : (r as { green?: boolean }).green ? "#22c55e" : c.text2 }}>{r.value}</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: `1px solid ${c.border}` }}>
+                    <span style={{ fontSize: 12, color: c.text2 }}>ยอดรวมสินค้า</span>
+                    <span style={{ fontSize: 13, color: c.text2 }}>{fmt(subtotal)}</span>
+                  </div>
+                  {customer.vatEnabled && (
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: `1px solid ${c.border}` }}>
+                      <span style={{ fontSize: 12, color: c.text2 }}>VAT 7%</span>
+                      <span style={{ fontSize: 13, color: c.text2 }}>+{fmt(vatAmount)}</span>
                     </div>
-                  ))}
+                  )}
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: `2px solid ${c.border}` }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: c.text2 }}>ยอดรวมสุทธิ</span>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: c.gold }}>{fmt(grandTotal)}</span>
+                  </div>
                 </div>
               </div>
 

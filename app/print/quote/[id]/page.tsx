@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
+import Image from 'next/image'
 import { fetchQuoteDocument } from '@/app/actions/quotes'
 import type { QuoteDocument } from '@/app/actions/quotes'
 
@@ -55,15 +56,29 @@ export default function QuotePrintPage() {
 
           {/* ── Header ── */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32, paddingBottom: 24, borderBottom: '2px solid #111' }}>
-            <div>
-              <h1 style={{ margin: '0 0 4px', fontSize: 24, fontWeight: 800, color: '#111', letterSpacing: '-0.5px' }}>{doc.businessName}</h1>
-              {doc.businessAddress && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>{doc.businessAddress}</p>}
-              {doc.businessPhone && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>โทร {doc.businessPhone}</p>}
-              {doc.businessTaxId && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>เลขที่ผู้เสียภาษี {doc.businessTaxId}</p>}
+            {/* Left: logo + company info */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+              <Image
+                src="/logo-icon.webp"
+                alt={doc.businessName}
+                width={56}
+                height={56}
+                style={{ borderRadius: 12, flexShrink: 0, objectFit: 'cover' }}
+              />
+              <div>
+                <h1 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 800, color: '#111', letterSpacing: '-0.5px' }}>{doc.businessName}</h1>
+                {doc.businessAddress && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>{doc.businessAddress}</p>}
+                {doc.businessPhone && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>โทร {doc.businessPhone}</p>}
+                {doc.businessEmail && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>{doc.businessEmail}</p>}
+                {doc.businessTaxId && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>เลขที่ผู้เสียภาษี {doc.businessTaxId}</p>}
+              </div>
             </div>
+
+            {/* Right: document title + meta */}
             <div style={{ textAlign: 'right' }}>
               <h2 style={{ margin: '0 0 8px', fontSize: 22, fontWeight: 700, color: '#111' }}>ใบเสนอราคา</h2>
-              <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>เลขที่ <strong style={{ color: '#111' }}>{doc.id}</strong></p>
+              <p style={{ margin: '0 0 2px', fontSize: 11, color: '#999', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Quotation</p>
+              <p style={{ margin: '6px 0 2px', fontSize: 12, color: '#555' }}>เลขที่ <strong style={{ color: '#111' }}>{doc.id}</strong></p>
               <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>วันที่ <strong style={{ color: '#111' }}>{thDate(doc.date)}</strong></p>
               {doc.validUntil && (
                 <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>
@@ -87,12 +102,16 @@ export default function QuotePrintPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 24 }}>
             <thead>
               <tr style={{ background: '#111', color: '#fff' }}>
-                {['#', 'รายละเอียดสินค้า', 'IMEI / Serial', 'ราคา/หน่วย', 'ส่วนลด', 'จำนวนเงิน'].map((h, i) => (
-                  <th key={h} style={{
-                    padding: '10px 12px',
-                    textAlign: i >= 3 ? 'right' : 'left',
-                    fontSize: 12, fontWeight: 600, letterSpacing: '0.04em',
-                  }}>
+                {[
+                  { h: '#', align: 'left' as const, w: '4%' },
+                  { h: 'รายละเอียดสินค้า', align: 'left' as const, w: 'auto' },
+                  { h: 'IMEI / Serial', align: 'left' as const, w: '18%' },
+                  { h: 'จำนวน', align: 'center' as const, w: '6%' },
+                  { h: 'ราคา/หน่วย', align: 'right' as const, w: '12%' },
+                  { h: 'ส่วนลด', align: 'right' as const, w: '10%' },
+                  { h: 'จำนวนเงิน', align: 'right' as const, w: '12%' },
+                ].map(({ h, align, w }) => (
+                  <th key={h} style={{ padding: '10px 12px', textAlign: align, fontSize: 12, fontWeight: 600, letterSpacing: '0.04em', width: w }}>
                     {h}
                   </th>
                 ))}
@@ -109,6 +128,7 @@ export default function QuotePrintPage() {
                   <td style={{ padding: '12px 12px', fontSize: 11, color: '#888', fontFamily: 'monospace', verticalAlign: 'top' }}>
                     {item.imei || '—'}
                   </td>
+                  <td style={{ padding: '12px 12px', textAlign: 'center', fontSize: 13, color: '#333', verticalAlign: 'top' }}>1</td>
                   <td style={{ padding: '12px 12px', textAlign: 'right', fontSize: 13, color: '#333', verticalAlign: 'top' }}>{fmt(item.unitPrice)}</td>
                   <td style={{ padding: '12px 12px', textAlign: 'right', fontSize: 13, color: item.discount > 0 ? '#16a34a' : '#aaa', verticalAlign: 'top' }}>
                     {item.discount > 0 ? `-${fmt(item.discount)}` : '—'}
@@ -120,7 +140,7 @@ export default function QuotePrintPage() {
           </table>
 
           {/* ── Totals ── */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 40 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 36 }}>
             <div style={{ width: 280 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #e5e5e5' }}>
                 <span style={{ fontSize: 13, color: '#555' }}>ยอดรวมสินค้า</span>
@@ -155,6 +175,14 @@ export default function QuotePrintPage() {
               )}
             </div>
           </div>
+
+          {/* ── Payment Terms ── */}
+          {doc.paymentTerms && (
+            <div style={{ marginBottom: 20, display: 'flex', alignItems: 'baseline', gap: 8, padding: '10px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#92400e', whiteSpace: 'nowrap' }}>เงื่อนไขการชำระเงิน</span>
+              <span style={{ fontSize: 13, color: '#111', fontWeight: 600 }}>{doc.paymentTerms}</span>
+            </div>
+          )}
 
           {/* ── Note ── */}
           {doc.note && (

@@ -154,6 +154,7 @@ export interface StockQuote {
   vatAmount: number;
   total: number;          // grand total
   validUntil: string | null;
+  paymentTerms: string;
   note: string;
   terms: string;
   createdBy: string;
