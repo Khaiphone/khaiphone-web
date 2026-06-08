@@ -30,6 +30,14 @@ export default function StockLayout({ children }: { children: React.ReactNode })
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    const link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+    if (link) link.href = "/stock-manifest.json";
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (cancelled) return;

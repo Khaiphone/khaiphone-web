@@ -1,3 +1,7 @@
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
+self.addEventListener("fetch", () => {});
+
 self.addEventListener("push", (event) => {
   const data = event.data?.json() ?? {};
   const title = data.title ?? "Khaiphone Admin";
