@@ -7,6 +7,7 @@ import { fetchMyProfile } from "@/app/actions/admin-users";
 import { StockThemeProvider, useThemeColors } from "@/components/stock/ThemeContext";
 import StockSidebar from "@/components/stock/Sidebar";
 import MobileBottomNav from "@/components/stock/MobileBottomNav";
+import { StockRoleProvider } from "./role-context";
 
 function StockLayoutInner({ children }: { children: React.ReactNode }) {
   const c = useThemeColors();
@@ -47,7 +48,9 @@ export default function StockLayout({ children }: { children: React.ReactNode })
 
   return (
     <StockThemeProvider>
-      <StockLayoutInner>{children}</StockLayoutInner>
+      <StockRoleProvider>
+        <StockLayoutInner>{children}</StockLayoutInner>
+      </StockRoleProvider>
     </StockThemeProvider>
   );
 }

@@ -9,6 +9,7 @@ import {
   ChevronRight, ClipboardList, LineChart, Activity, Handshake,
 } from "lucide-react";
 import { useThemeColors } from "./ThemeContext";
+import { useStockRole } from "@/app/stock/role-context";
 import { fetchRequestStats, fetchStockSummary } from "@/app/actions/stock-requests";
 import { supabase } from "@/lib/supabase";
 
@@ -35,6 +36,7 @@ export default function StockSidebar() {
   const c = useThemeColors();
   const pathname = usePathname();
   const router = useRouter();
+  const { canViewFinance } = useStockRole();
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [summary, setSummary] = useState<{ todayRevenue: number; todayProfit: number } | null>(null);
   const [userInfo, setUserInfo] = useState<{ name: string; email: string } | null>(null);
@@ -122,8 +124,10 @@ export default function StockSidebar() {
       <div style={{ padding: "16px", borderTop: `1px solid ${c.border}` }}>
         <p style={{ color: c.text3, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 10px" }}>Quick Summary</p>
         {[
-          { label: "ยอดวันนี้",   value: summary ? `฿${fmt(summary.todayRevenue)}` : "—", color: c.gold },
-          { label: "กำไรวันนี้",  value: summary ? `฿${fmt(summary.todayProfit)}` : "—", color: summary && summary.todayProfit >= 0 ? "#22c55e" : "#ef4444" },
+          ...(canViewFinance ? [
+            { label: "ยอดวันนี้",  value: summary ? `฿${fmt(summary.todayRevenue)}` : "—", color: c.gold },
+            { label: "กำไรวันนี้", value: summary ? `฿${fmt(summary.todayProfit)}` : "—",  color: summary && summary.todayProfit >= 0 ? "#22c55e" : "#ef4444" },
+          ] : []),
           { label: "รอดำเนินการ", value: pendingCount !== null ? `${pendingCount} คำขอ` : "—", color: pendingCount ? "#f97316" : c.text3 },
         ].map(({ label, value, color }) => (
           <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>

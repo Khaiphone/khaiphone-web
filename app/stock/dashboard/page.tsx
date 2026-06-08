@@ -9,6 +9,7 @@ import StockTopbar from "@/components/stock/Topbar";
 import MetricCard from "@/components/stock/MetricCard";
 import StockStatusBadge from "@/components/stock/StatusBadge";
 import { useThemeColors } from "@/components/stock/ThemeContext";
+import { useStockRole } from "@/app/stock/role-context";
 import { fetchStockItems, fetchRevenueData, fetchCategoryData } from "@/app/actions/stocks";
 import type { StockItem, } from "@/lib/stock/types";
 import type { RevenuePoint, CategoryPoint } from "@/app/actions/stocks";
@@ -19,6 +20,7 @@ function fmtDate(s: string) { return new Date(s).toLocaleDateString("th-TH", { m
 export default function StockDashboard() {
   const c = useThemeColors();
   const router = useRouter();
+  const { canViewFinance } = useStockRole();
   const [stocks, setStocks] = useState<StockItem[]>([]);
   const [revenueData, setRevenueData] = useState<RevenuePoint[]>([]);
   const [categoryData, setCategoryData] = useState<CategoryPoint[]>([]);
@@ -57,15 +59,19 @@ export default function StockDashboard() {
   const recentActivity = stocks.slice(0, 8);
 
   const METRICS = [
-    { icon: DollarSign,       label: "มูลค่าสต็อกรวม",     value: `฿${fmt(totalValue)}`,            iconColor: c.gold,    sub: "เฉพาะเครื่องที่กำหนดราคาแล้ว" },
-    { icon: Wallet,           label: "ต้นทุนสต็อกรวม",     value: `฿${fmt(totalStockCost)}`,        iconColor: "#ef4444", sub: "ต้นทุน + ค่าส่ง + ค่าอื่นๆ" },
-    { icon: Package,          label: "จำนวนเครื่องในสต็อก", value: `${activeStocks.length} เครื่อง`,  iconColor: c.info,    sub: noPricedCount > 0 ? `ยังไม่กำหนดราคา ${noPricedCount} เครื่อง` : "ไม่รวมที่ขายแล้ว" },
-    { icon: TrendingUp,       label: "กำไรคาดการณ์",        value: `฿${fmt(totalCostProfit)}`,       iconColor: "#22c55e", sub: "เฉพาะเครื่องที่กำหนดราคาแล้ว" },
-    { icon: BadgeDollarSign,  label: "กำไรจริงสะสม",        value: `฿${fmt(realizedProfit)}`,        iconColor: "#a78bfa", sub: `รายได้รวม ฿${fmt(realizedRevenue)}` },
-    { icon: CheckCircle,      label: "เครื่องพร้อมขาย",     value: `${readyToSell} เครื่อง`,         iconColor: "#22c55e", sub: "สถานะ: พร้อมขาย" },
-    { icon: Clock,            label: "เครื่องรอตรวจ",        value: `${inspecting} เครื่อง`,         iconColor: c.orange,  sub: "สถานะ: รอตรวจ" },
-    { icon: ShoppingBag,      label: "เครื่องขายแล้ววันนี้", value: `${soldToday} เครื่อง`,          iconColor: c.info,    sub: soldToday > 0 ? `ยอดรวม ฿${fmt(revenueToday)}` : "เฉพาะวันนี้" },
-    { icon: Truck,            label: "รอจัดส่ง",             value: `${pendingDelivery} เครื่อง`,    iconColor: "#f59e0b", sub: "ขายแล้วยังไม่ได้ส่ง" },
+    ...(canViewFinance ? [
+      { icon: DollarSign,      label: "มูลค่าสต็อกรวม",  value: `฿${fmt(totalValue)}`,       iconColor: c.gold,    sub: "เฉพาะเครื่องที่กำหนดราคาแล้ว" },
+      { icon: Wallet,          label: "ต้นทุนสต็อกรวม",  value: `฿${fmt(totalStockCost)}`,   iconColor: "#ef4444", sub: "ต้นทุน + ค่าส่ง + ค่าอื่นๆ" },
+    ] : []),
+    { icon: Package,           label: "จำนวนเครื่องในสต็อก", value: `${activeStocks.length} เครื่อง`, iconColor: c.info,   sub: noPricedCount > 0 ? `ยังไม่กำหนดราคา ${noPricedCount} เครื่อง` : "ไม่รวมที่ขายแล้ว" },
+    ...(canViewFinance ? [
+      { icon: TrendingUp,      label: "กำไรคาดการณ์",    value: `฿${fmt(totalCostProfit)}`,  iconColor: "#22c55e", sub: "เฉพาะเครื่องที่กำหนดราคาแล้ว" },
+      { icon: BadgeDollarSign, label: "กำไรจริงสะสม",    value: `฿${fmt(realizedProfit)}`,   iconColor: "#a78bfa", sub: `รายได้รวม ฿${fmt(realizedRevenue)}` },
+    ] : []),
+    { icon: CheckCircle,       label: "เครื่องพร้อมขาย", value: `${readyToSell} เครื่อง`,    iconColor: "#22c55e", sub: "สถานะ: พร้อมขาย" },
+    { icon: Clock,             label: "เครื่องรอตรวจ",   value: `${inspecting} เครื่อง`,    iconColor: c.orange,  sub: "สถานะ: รอตรวจ" },
+    { icon: ShoppingBag,       label: "เครื่องขายแล้ววันนี้", value: `${soldToday} เครื่อง`, iconColor: c.info,   sub: soldToday > 0 && canViewFinance ? `ยอดรวม ฿${fmt(revenueToday)}` : "เฉพาะวันนี้" },
+    { icon: Truck,             label: "รอจัดส่ง",         value: `${pendingDelivery} เครื่อง`, iconColor: "#f59e0b", sub: "ขายแล้วยังไม่ได้ส่ง" },
   ];
 
   return (
@@ -79,8 +85,9 @@ export default function StockDashboard() {
         </div>
 
         {/* Charts Row */}
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, marginBottom: 24 }}>
-          {/* Revenue Chart */}
+        <div style={{ display: "grid", gridTemplateColumns: canViewFinance ? "2fr 1fr" : "1fr", gap: 16, marginBottom: 24 }}>
+          {/* Revenue Chart — owner / finance only */}
+          {canViewFinance && (
           <div style={{ background: c.card, borderRadius: 16, padding: 20, border: `1px solid ${c.border}` }}>
             <p style={{ color: c.text, fontSize: 15, fontWeight: 700, margin: "0 0 4px" }}>รายรับ 30 วัน</p>
             <p style={{ color: c.text3, fontSize: 12, margin: "0 0 20px" }}>Revenue vs Profit</p>
@@ -105,6 +112,7 @@ export default function StockDashboard() {
               </AreaChart>
             </ResponsiveContainer>
           </div>
+          )}
 
           {/* Category Bar */}
           <div style={{ background: c.card, borderRadius: 16, padding: 20, border: `1px solid ${c.border}` }}>
@@ -136,7 +144,7 @@ export default function StockDashboard() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr>
-                    {["รหัส", "รุ่น · ความจุ", "เกรด", "ราคา", "กำไร", "สถานะ", "วันที่"].map(h => (
+                    {["รหัส", "รุ่น · ความจุ", "เกรด", "ราคา", ...(canViewFinance ? ["กำไร"] : []), "สถานะ", "วันที่"].map(h => (
                       <th key={h} style={{ textAlign: "left", padding: "8px 12px", color: c.text3, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", borderBottom: `1px solid ${c.border}` }}>{h}</th>
                     ))}
                   </tr>
@@ -171,9 +179,11 @@ export default function StockDashboard() {
                           {price > 0 ? `฿${fmt(price)}` : <span style={{ color: c.text3 }}>—</span>}
                           {isSold && <span style={{ color: c.text3, fontSize: 10, display: "block", fontWeight: 400 }}>ราคาขายจริง</span>}
                         </td>
+                        {canViewFinance && (
                         <td style={{ padding: "12px 12px", fontSize: 13, fontWeight: 600, color: profit == null ? c.text3 : profit >= 0 ? "#22c55e" : "#ef4444" }}>
                           {profit == null ? <span style={{ color: c.text3 }}>—</span> : `฿${fmt(profit)}`}
                         </td>
+                        )}
                         <td style={{ padding: "12px 12px" }}><StockStatusBadge status={s.status} /></td>
                         <td style={{ padding: "12px 12px", color: c.text3, fontSize: 12, whiteSpace: "nowrap" }}>{dateLabel}</td>
                       </motion.tr>
