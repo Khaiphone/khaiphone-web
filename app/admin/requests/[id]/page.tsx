@@ -722,6 +722,32 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
+      {/* Merged banner — locks the request */}
+      {request.status === "merged" && (() => {
+        const mergedLog = [...request.statusLog].reverse().find(l => l.status === "merged" && l.note?.startsWith("รวมเข้า"));
+        const primaryOrderNo = mergedLog?.note?.replace("รวมเข้า ", "") ?? null;
+        return (
+          <div style={{ background: "#FFF8E1", borderBottom: "2px solid #F59E0B", padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#92400E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M8 6H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/><path d="M16 6h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-3"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#92400E" }}>คำขอนี้ถูกรวมแล้ว — อ่านอย่างเดียว</p>
+              {primaryOrderNo && (
+                <p style={{ margin: "2px 0 0", fontSize: 12, color: "#B45309" }}>
+                  รวมเข้า{" "}
+                  <button
+                    onClick={async () => {
+                      const { data } = await (await import("@/lib/supabase")).supabase.from("requests" as never).select("id").ilike("order_number", primaryOrderNo).single() as { data: { id: string } | null };
+                      if (data?.id) router.push(`/admin/requests/${data.id}`);
+                    }}
+                    style={{ background: "none", border: "none", color: GOLD, fontWeight: 700, cursor: "pointer", padding: 0, fontFamily: "inherit", fontSize: 12, textDecoration: "underline" }}
+                  >{primaryOrderNo}</button>
+                </p>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {saveError && (
         <div style={{ background: "#FEF2F2", borderBottom: "1px solid #FECACA", padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <p style={{ color: "#DC2626", fontSize: "13px", fontWeight: 500, margin: 0 }}>{saveError}</p>
@@ -2018,8 +2044,8 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         )}
       </div>
 
-      {/* Bottom Action Bar */}
-      <div className="left-0 md:left-[220px]" style={{ position: "fixed", bottom: 0, right: 0, background: CARD, borderTop: `1px solid ${BORDER}`, padding: "10px 16px", paddingBottom: "calc(env(safe-area-inset-bottom) + 10px)", zIndex: 20, display: "grid", gridTemplateColumns: "1fr 2fr", gap: "8px" }}>
+      {/* Bottom Action Bar — hidden for merged/closed requests */}
+      {request.status !== "merged" && <div className="left-0 md:left-[220px]" style={{ position: "fixed", bottom: 0, right: 0, background: CARD, borderTop: `1px solid ${BORDER}`, padding: "10px 16px", paddingBottom: "calc(env(safe-area-inset-bottom) + 10px)", zIndex: 20, display: "grid", gridTemplateColumns: "1fr 2fr", gap: "8px" }}>
         <a
           href={tel}
           onClick={e => {
@@ -2041,7 +2067,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         >
           {saving === "status" ? "กำลังบันทึก..." : "เปลี่ยนสถานะ"}
         </button>
-      </div>
+      </div>}
 
       {showStatus && (
         <StatusBottomSheet currentStatus={request.status} onSave={handleStatusSave} onClose={() => setShowStatus(false)} />
