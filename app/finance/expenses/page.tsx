@@ -20,7 +20,7 @@ const TEXT3 = 'var(--f-text3)'
 
 const fadeUp = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.25 } }
 
-const CATEGORIES = ['Ads', 'ขนส่ง', 'สำนักงาน', 'ซอฟต์แวร์', 'บุคคล', 'สื่อสาร', 'ซ่อมบำรุง', 'อื่นๆ']
+const CATEGORIES = ['Ads', 'ขนส่ง', 'สำนักงาน', 'ซอฟต์แวร์', 'บุคคล', 'สื่อสาร', 'ซ่อมบำรุง', 'ซื้อคืน', 'อื่นๆ']
 const STATUSES: ExpenseStatus[] = ['pending', 'approved', 'rejected']
 const STATUS_LABELS: Record<ExpenseStatus, string> = { pending: 'รออนุมัติ', approved: 'อนุมัติแล้ว', rejected: 'ปฏิเสธ' }
 const STATUS_COLORS: Record<ExpenseStatus, { bg: string; text: string }> = {

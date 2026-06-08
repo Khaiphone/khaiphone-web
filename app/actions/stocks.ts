@@ -879,16 +879,46 @@ export async function buybackStock(
   const { data: current } = await supabase.from("stocks").select("status, status_log, audit_log, model, storage").eq("id", id).single();
   if (!current) return { success: false, error: "ไม่พบสินค้า" };
   const newStatus: StockStatus = "รับคืนแล้ว";
-  const newStatusLog = [...(current.status_log ?? []), { status: newStatus, timestamp: now, note: `ซื้อคืน ฿${buybackPrice.toLocaleString("th-TH")}${reason ? ` — ${reason}` : ""}`, by }];
-  const newAuditLog: AuditEntry[] = [...(current.audit_log ?? []), {
-    action: "ซื้อคืน",
-    detail: `ซื้อคืนในราคา ฿${buybackPrice.toLocaleString("th-TH")}${reason ? ` เหตุผล: ${reason}` : ""}`,
-    timestamp: now, by,
-  }];
-  const { error } = await supabase.from("stocks")
-    .update({ status: newStatus, status_log: newStatusLog, audit_log: newAuditLog, updated_at: now })
-    .eq("id", id);
+  const detail = `ซื้อคืนในราคา ฿${buybackPrice.toLocaleString("th-TH")}${reason ? ` เหตุผล: ${reason}` : ""}`;
+  const newStatusLog = [...(current.status_log ?? []), { status: newStatus, timestamp: now, note: detail, by }];
+  const newAuditLog: AuditEntry[] = [...(current.audit_log ?? []), { action: "ซื้อคืน", detail, timestamp: now, by }];
+
+  // Update cost_price to buyback price — this is now the new cost basis
+  // Also clear sold-state fields so the item is treated as fresh stock
+  const { error } = await supabase.from("stocks").update({
+    status: newStatus,
+    cost_price: buybackPrice,
+    shipping_cost: 0,
+    other_cost: 0,
+    sold_price: null,
+    sold_at: null,
+    buyer_name: null,
+    buyer_phone: null,
+    sold_by: null,
+    sale_type: null,
+    partner_name: null,
+    delivery_status: null,
+    delivery_channel: null,
+    tracking_number: null,
+    status_log: newStatusLog,
+    audit_log: newAuditLog,
+    updated_at: now,
+  }).eq("id", id);
   if (error) return { success: false, error: error.message };
+
+  // Record buyback as Finance expense so cashflow shows the outflow
+  const product = `ซื้อคืน ${current.model} ${current.storage} (${id})`;
+  await supabase.from("expenses").insert({
+    date: now.slice(0, 10),
+    ref_number: `BUY-${id}`,
+    product,
+    category: "ซื้อคืน",
+    amount: buybackPrice,
+    status: "approved",
+    notes: reason || `ซื้อคืน ${id}`,
+    updated_at: now,
+  });
+
   return { success: true };
 }
 
