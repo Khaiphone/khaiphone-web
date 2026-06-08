@@ -1,22 +1,35 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { fetchMyProfile } from "@/app/actions/admin-users";
 import { StockThemeProvider, useThemeColors } from "@/components/stock/ThemeContext";
 import StockSidebar from "@/components/stock/Sidebar";
 import MobileBottomNav from "@/components/stock/MobileBottomNav";
+import { MobileMenuProvider, useMobileMenu } from "@/components/stock/MobileMenuContext";
 import { StockRoleProvider } from "./role-context";
 
 function StockLayoutInner({ children }: { children: React.ReactNode }) {
   const c = useThemeColors();
+  const { isOpen, close } = useMobileMenu();
+  const pathname = usePathname();
+
+  useEffect(() => { close(); }, [pathname]);
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: c.bg }}>
+      {/* Desktop sidebar */}
       <div className="hidden md:block" style={{ width: 240, flexShrink: 0 }}>
         <StockSidebar />
       </div>
+      {/* Mobile sidebar overlay */}
+      {isOpen && (
+        <div className="md:hidden">
+          <div onClick={close} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 39 }} />
+          <StockSidebar />
+        </div>
+      )}
       <div style={{ flex: 1, minWidth: 0 }} className="md:ml-0">
         {children}
       </div>
@@ -61,7 +74,9 @@ export default function StockLayout({ children }: { children: React.ReactNode })
   return (
     <StockThemeProvider>
       <StockRoleProvider>
-        <StockLayoutInner>{children}</StockLayoutInner>
+        <MobileMenuProvider>
+          <StockLayoutInner>{children}</StockLayoutInner>
+        </MobileMenuProvider>
       </StockRoleProvider>
     </StockThemeProvider>
   );

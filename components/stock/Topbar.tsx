@@ -1,7 +1,9 @@
 "use client";
 
 import { Bell, Sun, Moon, Search, Menu } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useStockTheme, useThemeColors } from "./ThemeContext";
+import { useMobileMenu } from "./MobileMenuContext";
 
 interface TopbarProps {
   title: string;
@@ -13,6 +15,8 @@ interface TopbarProps {
 export default function StockTopbar({ title, subtitle, children, onMenuClick }: TopbarProps) {
   const { theme, toggle } = useStockTheme();
   const c = useThemeColors();
+  const { toggle: toggleMenu } = useMobileMenu();
+  const router = useRouter();
 
   return (
     <div style={{
@@ -22,7 +26,7 @@ export default function StockTopbar({ title, subtitle, children, onMenuClick }: 
       position: "sticky", top: 0, zIndex: 30,
     }}>
       {/* Mobile menu */}
-      <button onClick={onMenuClick} className="md:hidden" style={{ background: "none", border: "none", color: c.text2, cursor: "pointer", padding: 4, display: "flex" }}>
+      <button onClick={onMenuClick ?? toggleMenu} className="md:hidden" style={{ background: "none", border: "none", color: c.text2, cursor: "pointer", padding: 4, display: "flex" }}>
         <Menu size={22} />
       </button>
 
@@ -57,7 +61,7 @@ export default function StockTopbar({ title, subtitle, children, onMenuClick }: 
       </button>
 
       {/* Bell */}
-      <button style={{ background: "none", border: "none", cursor: "pointer", color: c.text2, position: "relative", display: "flex", padding: 4 }}>
+      <button onClick={() => router.push("/stock/requests")} style={{ background: "none", border: "none", cursor: "pointer", color: c.text2, position: "relative", display: "flex", padding: 4 }}>
         <Bell size={20} />
         <span style={{ position: "absolute", top: 0, right: 0, width: 8, height: 8, background: "#ef4444", borderRadius: "50%" }} />
       </button>
