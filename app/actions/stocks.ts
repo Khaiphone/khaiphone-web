@@ -936,7 +936,6 @@ export async function receiveFromRepair(
     status: newStatus,
     status_log: newStatusLog,
     audit_log: newAuditLog,
-    other_cost: (current.other_cost ?? 0) + actualCost,
     updated_at: now,
   };
   if (newGrade) updates.grade = newGrade;

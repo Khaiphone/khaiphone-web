@@ -32,7 +32,6 @@ export default function RepairReceiveModal({ item, onClose, onSuccess }: Props) 
         status: "พร้อมขาย",
         grade: (newGrade || item.grade) as StockGrade,
         sellingPrice: price ?? item.sellingPrice,
-        otherCost: item.otherCost + cost,
       });
     } else {
       alert(res.error ?? "เกิดข้อผิดพลาด");
