@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Package, FileText, Users, MoreHorizontal } from "lucide-react";
+import { LayoutDashboard, Package, FileText, Users, ScanSearch } from "lucide-react";
 import { useThemeColors } from "./ThemeContext";
 
 const TABS = [
@@ -9,7 +9,7 @@ const TABS = [
   { icon: Package,         label: "Stock",     href: "/stock/inventory"  },
   { icon: FileText,        label: "Requests",  href: "/stock/requests"   },
   { icon: Users,           label: "Customers", href: "/stock/customers"  },
-  { icon: MoreHorizontal,  label: "More",      href: "/stock/settings"   },
+  { icon: ScanSearch,      label: "Check",     href: "/stock/check"      },
 ];
 
 export default function MobileBottomNav() {
