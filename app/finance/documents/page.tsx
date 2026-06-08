@@ -101,14 +101,14 @@ export default function DocumentsPage() {
                     <td style={{ padding: '12px 16px', color: '#22c55e', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>฿{r.sellPrice.toLocaleString('th-TH')}</td>
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <a href={`/print/receipt/${r.id}`} target="_blank" rel="noopener noreferrer"
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, background: 'var(--f-hover)', border: `1px solid ${BORDER}`, color: TEXT1, fontSize: 11, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                        <button onClick={() => window.open(`${window.location.origin.replace(/^(https?:\/\/)stock\./, '$1')}/print/receipt/${r.id}`, '_blank')}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, background: 'var(--f-hover)', border: `1px solid ${BORDER}`, color: TEXT1, fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                           <Receipt size={11} /> ใบเสร็จ
-                        </a>
-                        <a href={`/print/tax-invoice/${r.id}`} target="_blank" rel="noopener noreferrer"
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, background: 'rgba(184,134,11,0.12)', border: `1px solid rgba(184,134,11,0.3)`, color: GOLD, fontSize: 11, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                        </button>
+                        <button onClick={() => window.open(`${window.location.origin.replace(/^(https?:\/\/)stock\./, '$1')}/print/tax-invoice/${r.id}`, '_blank')}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, background: 'rgba(184,134,11,0.12)', border: `1px solid rgba(184,134,11,0.3)`, color: GOLD, fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                           <FileText size={11} /> ใบกำกับภาษี
-                        </a>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -142,10 +142,10 @@ export default function DocumentsPage() {
                     <td style={{ padding: '12px 16px', color: TEXT2, fontSize: 13 }}>{r.customerName || '—'}</td>
                     <td style={{ padding: '12px 16px', color: '#ef4444', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>฿{r.costPrice.toLocaleString('th-TH')}</td>
                     <td style={{ padding: '12px 16px' }}>
-                      <a href={`/print/purchase/${r.id}`} target="_blank" rel="noopener noreferrer"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: '#3b82f6', fontSize: 11, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                      <button onClick={() => window.open(`${window.location.origin.replace(/^(https?:\/\/)stock\./, '$1')}/print/purchase/${r.id}`, '_blank')}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: '#3b82f6', fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                         <ShoppingCart size={11} /> ใบรับสินค้า
-                      </a>
+                      </button>
                     </td>
                   </tr>
                 ))}

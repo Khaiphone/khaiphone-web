@@ -90,7 +90,7 @@ export default function QuoteDetailPage() {
       <StockTopbar title={quote.id} subtitle="ใบเสนอราคา">
         <div style={{ display: "flex", gap: 8 }}>
           <button
-            onClick={() => window.open(`/print/quote/${id}`, "_blank")}
+            onClick={() => window.open(`${window.location.origin.replace(/^(https?:\/\/)stock\./, '$1')}/print/quote/${id}`, "_blank")}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${c.border}`, background: "none", color: c.text2, fontSize: 13, cursor: "pointer" }}
           >
             <Printer size={14} /> พิมพ์ / PDF

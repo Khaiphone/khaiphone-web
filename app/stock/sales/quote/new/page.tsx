@@ -200,7 +200,7 @@ function QuoteNewInner() {
           <h2 style={{ color: c.text, fontSize: 22, fontWeight: 800, margin: "0 0 8px" }}>บันทึกสำเร็จ</h2>
           <p style={{ color: c.text3, margin: "0 0 28px" }}>ใบเสนอราคา <strong style={{ color: c.gold }}>{savedId}</strong></p>
           <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-            <button onClick={() => window.open(`/print/quote/${savedId}`, "_blank")} style={{ ...btnSt, background: c.gold, color: "#000" }}>
+            <button onClick={() => window.open(`${window.location.origin.replace(/^(https?:\/\/)stock\./, '$1')}/print/quote/${savedId}`, "_blank")} style={{ ...btnSt, background: c.gold, color: "#000" }}>
               <FileText size={14} /> พิมพ์ / PDF
             </button>
             <button onClick={() => router.push(`/stock/sales/quote/${savedId}`)} style={{ ...btnSt, background: c.card2, border: `1px solid ${c.border}`, color: c.text }}>

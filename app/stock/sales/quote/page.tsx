@@ -187,7 +187,7 @@ export default function QuoteListPage() {
                         ดูรายละเอียด
                       </button>
                       <button
-                        onClick={() => window.open(`/print/quote/${q.id}`, "_blank")}
+                        onClick={() => window.open(`${window.location.origin.replace(/^(https?:\/\/)stock\./, '$1')}/print/quote/${q.id}`, "_blank")}
                         title="พิมพ์"
                         style={{ padding: "6px 10px", borderRadius: 8, border: `1px solid ${c.border}`, background: "none", color: c.text3, cursor: "pointer" }}
                       >
