@@ -921,21 +921,24 @@ export async function receiveFromRepair(
   newGrade: string | null,
   newSellingPrice: number | null,
   notes: string,
+  receiptUrls: string[] = [],
   by = "admin",
 ): Promise<{ success: boolean; error?: string }> {
   await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
-  const { data: current } = await supabase.from("stocks").select("status, status_log, audit_log, other_cost, grade, selling_price").eq("id", id).single();
+  const { data: current } = await supabase.from("stocks").select("status, status_log, audit_log, grade, selling_price, documents").eq("id", id).single();
   if (!current) return { success: false, error: "ไม่พบสินค้า" };
   const newStatus: StockStatus = "พร้อมขาย";
-  const detail = `ซ่อมเสร็จ ค่าซ่อมจริง ฿${actualCost.toLocaleString("th-TH")}${newGrade ? ` เกรดใหม่ ${newGrade}` : ""}${newSellingPrice ? ` ราคาขายใหม่ ฿${newSellingPrice.toLocaleString("th-TH")}` : ""}${notes ? ` — ${notes}` : ""}`;
+  const detail = `ซ่อมเสร็จ ค่าซ่อมจริง ฿${actualCost.toLocaleString("th-TH")}${newGrade ? ` เกรดใหม่ ${newGrade}` : ""}${newSellingPrice ? ` ราคาขายใหม่ ฿${newSellingPrice.toLocaleString("th-TH")}` : ""}${notes ? ` — ${notes}` : ""}${receiptUrls.length > 0 ? ` (แนบใบเสร็จ ${receiptUrls.length} ใบ)` : ""}`;
   const newStatusLog = [...(current.status_log ?? []), { status: newStatus, timestamp: now, note: detail, by }];
   const newAuditLog: AuditEntry[] = [...(current.audit_log ?? []), { action: "รับคืนจากซ่อม", detail, timestamp: now, by }];
+  const newDocuments = [...(current.documents ?? []), ...receiptUrls];
   const updates: Record<string, unknown> = {
     status: newStatus,
     status_log: newStatusLog,
     audit_log: newAuditLog,
+    documents: newDocuments,
     updated_at: now,
   };
   if (newGrade) updates.grade = newGrade;
