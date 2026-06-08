@@ -1630,6 +1630,9 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                     <div style={{ textAlign: "center", padding: "10px 0", color: TEXT3, fontSize: 13 }}>งานถูกปิด — ปฏิเสธการรับซื้อ</div>
                   )}
                 </div>
+              ) : request.status === "rejected" ? (
+                /* Walk-in: rejected before inspection — don't show form */
+                <div style={{ textAlign: "center", padding: "10px 0", color: TEXT3, fontSize: 13 }}>ปิดคำขอแล้ว — ไม่ได้ตรวจสภาพ</div>
               ) : (
                 /* Walk-in: no inspection yet — show form */
                 <InspectionForm
