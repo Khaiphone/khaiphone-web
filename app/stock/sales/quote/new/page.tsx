@@ -439,10 +439,6 @@ function QuoteNewInner() {
                 <div style={cardSt}>
                   <p style={{ color: c.text, fontSize: 15, fontWeight: 700, margin: "0 0 16px" }}>เงื่อนไขทางการเงิน</p>
                   <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                    <div>
-                      <label style={{ color: c.text2, fontSize: 12, fontWeight: 600, display: "block", marginBottom: 5 }}>ส่วนลดรวม (฿)</label>
-                      <input type="number" value={customer.overallDiscount} onChange={e => setCustomerField("overallDiscount", e.target.value)} placeholder="0" style={inputSt} />
-                    </div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div>
                         <p style={{ color: c.text2, fontSize: 12, fontWeight: 600, margin: "0 0 2px" }}>ภาษีมูลค่าเพิ่ม (VAT 7%)</p>
@@ -467,7 +463,6 @@ function QuoteNewInner() {
                   <div style={{ marginTop: 16, borderTop: `1px solid ${c.border}`, paddingTop: 14, display: "flex", flexDirection: "column", gap: 6 }}>
                     {[
                       { label: "ยอดรวมสินค้า", value: fmt(subtotal) },
-                      ...(overallDiscount > 0 ? [{ label: "ส่วนลดรวม", value: `-${fmt(overallDiscount)}`, color: "#22c55e" }] : []),
                       ...(customer.vatEnabled ? [{ label: "VAT 7%", value: `+${fmt(vatAmount)}` }] : []),
                     ].map(r => (
                       <div key={r.label} style={{ display: "flex", justifyContent: "space-between" }}>
@@ -577,7 +572,6 @@ function QuoteNewInner() {
                 <div style={{ minWidth: 240 }}>
                   {[
                     { label: "ยอดรวมสินค้า", value: fmt(subtotal) },
-                    ...(overallDiscount > 0 ? [{ label: "ส่วนลดรวม", value: `-${fmt(overallDiscount)}`, bold: false, green: true }] : []),
                     ...(customer.vatEnabled ? [{ label: "VAT 7%", value: `+${fmt(vatAmount)}`, bold: false, green: false }] : []),
                     { label: "ยอดรวมสุทธิ", value: fmt(grandTotal), bold: true, green: false },
                   ].map(r => (
