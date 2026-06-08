@@ -431,12 +431,14 @@ export async function fetchSoldItems(): Promise<SoldItem[]> {
   const supabase = createServerClient();
   const { data } = await supabase
     .from("stocks")
-    .select("id, model, storage, color, grade, cost_price, shipping_cost, other_cost, sold_price, sold_at, buyer_name, buyer_phone, source_channel, request_ref")
-    .eq("status", "ขายแล้ว")
+    .select("id, model, storage, color, grade, cost_price, shipping_cost, other_cost, sold_price, sold_at, buyer_name, buyer_phone, source_channel, request_ref, sold_cost_snapshot")
+    .in("status", ["ขายแล้ว", "รับคืนแล้ว", "ส่งซ่อม"])
+    .not("sold_price", "is", null)
+    .not("sold_at", "is", null)
     .order("sold_at", { ascending: false });
 
   return (data ?? []).map(row => {
-    const cost = (row.cost_price ?? 0) + (row.shipping_cost ?? 0) + (row.other_cost ?? 0);
+    const cost = row.sold_cost_snapshot ?? ((row.cost_price ?? 0) + (row.shipping_cost ?? 0) + (row.other_cost ?? 0));
     return {
       id: row.id,
       model: row.model ?? "",
