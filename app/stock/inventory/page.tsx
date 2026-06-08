@@ -245,7 +245,7 @@ export default function StockInventoryPage() {
         >
           <Plus size={16} /> {isMobile ? "เพิ่ม" : "เพิ่มสินค้าเข้าสต็อก"}
         </button>
-        <div className="hidden md:flex" style={{ gap: 8, display: "flex" }}>
+        <div className="hidden md:flex" style={{ gap: 8 }}>
           <button
             onClick={() => exportCSV(filtered)}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 13, cursor: "pointer" }}
