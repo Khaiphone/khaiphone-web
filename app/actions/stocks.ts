@@ -192,13 +192,15 @@ export async function markStockSold(
   const supabase = createServerClient();
   const now = new Date().toISOString();
   const soldAtTs = soldAt ?? now.slice(0, 10);
-  const { data: current } = await supabase.from("stocks").select("status_log, request_ref").eq("id", id).single();
+  const { data: current } = await supabase.from("stocks").select("status_log, request_ref, cost_price, shipping_cost, other_cost").eq("id", id).single();
   const note = saleType === "ขายส่ง" && partnerName ? `ขายส่งให้ ${partnerName}` : `ขายให้ ${buyerName}`;
   const newLog = [...(current?.status_log ?? []), { status: "ขายแล้ว", timestamp: now, note, by: soldBy ?? "admin" }];
   // deliveryChannel being set means user chose "จัดส่งแล้ว" — always mark as delivered
   const autoDeliveryStatus = deliveryChannel ? "จัดส่งแล้ว" : "รอจัดส่ง";
   const { error } = await supabase.from("stocks").update({
     status: "ขายแล้ว", sold_at: soldAtTs, sold_price: soldPrice,
+    // snapshot COGS at time of sale — used for historical P&L accuracy after any future cost changes
+    sold_cost_snapshot: (current?.cost_price ?? 0) + (current?.shipping_cost ?? 0) + (current?.other_cost ?? 0),
     buyer_name: buyerName, buyer_phone: buyerPhone,
     sold_by: soldBy ?? null, sale_type: saleType ?? "ขายปลีก", partner_name: partnerName ?? null,
     delivery_channel: deliveryChannel ?? null,
@@ -883,15 +885,14 @@ export async function buybackStock(
   const newStatusLog = [...(current.status_log ?? []), { status: newStatus, timestamp: now, note: detail, by }];
   const newAuditLog: AuditEntry[] = [...(current.audit_log ?? []), { action: "ซื้อคืน", detail, timestamp: now, by }];
 
-  // Update cost_price to buyback price — this is now the new cost basis
-  // Also clear sold-state fields so the item is treated as fresh stock
+  // Update cost_price to buyback price — this is now the new cost basis for any future re-sale
+  // Keep sold_price/sold_at as historical facts so Finance can show Month A's revenue correctly
+  // Clear delivery/buyer fields (no longer relevant) but preserve financial history
   const { error } = await supabase.from("stocks").update({
     status: newStatus,
     cost_price: buybackPrice,
     shipping_cost: 0,
     other_cost: 0,
-    sold_price: null,
-    sold_at: null,
     buyer_name: null,
     buyer_phone: null,
     sold_by: null,

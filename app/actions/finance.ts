@@ -135,8 +135,9 @@ function normFromRequest(r: { sell_price: number; sell_date: string; actual_pric
   return { sell_price: r.sell_price, sell_date: r.sell_date, cost: r.actual_price ?? r.estimated_price ?? 0, model: r.device_model ?? "Unknown" };
 }
 
-function normFromStock(s: { sold_price: number; sold_at: string; cost_price?: number; shipping_cost?: number; other_cost?: number; model?: string }): NormSoldItem {
-  return { sell_price: s.sold_price, sell_date: s.sold_at.slice(0, 10), cost: (s.cost_price ?? 0) + (s.shipping_cost ?? 0) + (s.other_cost ?? 0), model: s.model ?? "Unknown" };
+function normFromStock(s: { sold_price: number; sold_at: string; cost_price?: number; shipping_cost?: number; other_cost?: number; sold_cost_snapshot?: number | null; model?: string }): NormSoldItem {
+  const cost = s.sold_cost_snapshot ?? ((s.cost_price ?? 0) + (s.shipping_cost ?? 0) + (s.other_cost ?? 0));
+  return { sell_price: s.sold_price, sell_date: s.sold_at.slice(0, 10), cost, model: s.model ?? "Unknown" };
 }
 
 export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string): Promise<FinanceDashboard> {
@@ -152,8 +153,8 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
       .select("amount, category, status, date"),
     supabase
       .from("stocks")
-      .select("id, model, cost_price, shipping_cost, other_cost, sold_price, sold_at")
-      .eq("status", "ขายแล้ว")
+      .select("id, model, cost_price, shipping_cost, other_cost, sold_price, sold_at, sold_cost_snapshot")
+      .in("status", ["ขายแล้ว", "รับคืนแล้ว", "ส่งซ่อม"])
       .is("request_ref", null)
       .not("sold_price", "is", null)
       .not("sold_at", "is", null),
@@ -279,8 +280,8 @@ export async function fetchFinanceIncome(dateFrom = "", dateTo = ""): Promise<Fi
     (() => {
       let q = supabase
         .from("stocks")
-        .select("id, model, storage, cost_price, shipping_cost, other_cost, sold_price, sold_at, buyer_name, sale_type")
-        .eq("status", "ขายแล้ว")
+        .select("id, model, storage, cost_price, shipping_cost, other_cost, sold_price, sold_at, buyer_name, sale_type, sold_cost_snapshot")
+        .in("status", ["ขายแล้ว", "รับคืนแล้ว", "ส่งซ่อม"])
         .is("request_ref", null)
         .not("sold_price", "is", null)
         .not("sold_at", "is", null);
@@ -314,7 +315,7 @@ export async function fetchFinanceIncome(dateFrom = "", dateTo = ""): Promise<Fi
   });
 
   const fromStocks: FinanceIncome[] = (directData ?? []).map((s) => {
-    const cost = (s.cost_price ?? 0) + (s.shipping_cost ?? 0) + (s.other_cost ?? 0);
+    const cost = s.sold_cost_snapshot ?? ((s.cost_price ?? 0) + (s.shipping_cost ?? 0) + (s.other_cost ?? 0));
     const sell = s.sold_price ?? 0;
     return {
       id: s.id,
@@ -378,8 +379,8 @@ export async function fetchFinanceProfitByModel(dateFrom = "", dateTo = ""): Pro
     (() => {
       let q = supabase
         .from("stocks")
-        .select("model, cost_price, shipping_cost, other_cost, sold_price")
-        .eq("status", "ขายแล้ว")
+        .select("model, cost_price, shipping_cost, other_cost, sold_price, sold_cost_snapshot")
+        .in("status", ["ขายแล้ว", "รับคืนแล้ว", "ส่งซ่อม"])
         .is("request_ref", null)
         .not("sold_price", "is", null);
       if (dateFilter) q = q.gte("sold_at", dateFrom).lte("sold_at", endOfThaiDay(dateTo));
@@ -390,7 +391,7 @@ export async function fetchFinanceProfitByModel(dateFrom = "", dateTo = ""): Pro
   type Entry = { model: string; cost: number; sell: number };
   const entries: Entry[] = [
     ...(data ?? []).map((r) => ({ model: r.device_model ?? "Unknown", cost: r.actual_price ?? r.estimated_price ?? 0, sell: r.sell_price ?? 0 })),
-    ...(directData ?? []).map((s) => ({ model: s.model ?? "Unknown", cost: (s.cost_price ?? 0) + (s.shipping_cost ?? 0) + (s.other_cost ?? 0), sell: s.sold_price ?? 0 })),
+    ...(directData ?? []).map((s) => ({ model: s.model ?? "Unknown", cost: s.sold_cost_snapshot ?? ((s.cost_price ?? 0) + (s.shipping_cost ?? 0) + (s.other_cost ?? 0)), sell: s.sold_price ?? 0 })),
   ];
 
   const modelMap = new Map<string, { costs: number[]; sells: number[] }>();
@@ -462,7 +463,7 @@ export async function fetchFinanceCashFlow(dateFrom = "", dateTo = ""): Promise<
       let q = supabase
         .from("stocks")
         .select("id, model, sold_price, sold_at")
-        .eq("status", "ขายแล้ว")
+        .in("status", ["ขายแล้ว", "รับคืนแล้ว", "ส่งซ่อม"])
         .is("request_ref", null)
         .not("sold_price", "is", null)
         .not("sold_at", "is", null);
@@ -961,8 +962,10 @@ export async function fetchStaffPerformance(dateFrom?: string, dateTo?: string):
   const supabase = createServerClient();
   const { data } = await supabase
     .from("stocks")
-    .select("sold_by, sold_price, cost_price, shipping_cost, other_cost, sold_at")
-    .eq("status", "ขายแล้ว");
+    .select("sold_by, sold_price, cost_price, shipping_cost, other_cost, sold_at, sold_cost_snapshot")
+    .in("status", ["ขายแล้ว", "รับคืนแล้ว", "ส่งซ่อม"])
+    .not("sold_price", "is", null)
+    .not("sold_at", "is", null);
 
   const rows = (data ?? []).filter((r) => {
     if (!r.sold_at) return false;
@@ -976,7 +979,8 @@ export async function fetchStaffPerformance(dateFrom?: string, dateTo?: string):
   for (const r of rows) {
     const name = r.sold_by ?? "ไม่ระบุ";
     const revenue = r.sold_price ?? 0;
-    const profit = revenue - (r.cost_price ?? 0) - (r.shipping_cost ?? 0) - (r.other_cost ?? 0);
+    const cost = r.sold_cost_snapshot ?? ((r.cost_price ?? 0) + (r.shipping_cost ?? 0) + (r.other_cost ?? 0));
+    const profit = revenue - cost;
     const prev = map.get(name) ?? { revenue: 0, profit: 0, count: 0 };
     map.set(name, { revenue: prev.revenue + revenue, profit: prev.profit + profit, count: prev.count + 1 });
   }
@@ -1008,7 +1012,7 @@ export async function fetchTaxSummary(dateFrom?: string, dateTo?: string): Promi
   await requireAuth();
   const supabase = createServerClient();
   const [{ data: soldStocks }, { data: settings }] = await Promise.all([
-    supabase.from("stocks").select("sold_price, sold_at").eq("status", "ขายแล้ว").not("sold_at", "is", null),
+    supabase.from("stocks").select("sold_price, sold_at").in("status", ["ขายแล้ว", "รับคืนแล้ว", "ส่งซ่อม"]).not("sold_price", "is", null).not("sold_at", "is", null),
     supabase.from("finance_settings").select("vat_enabled, vat_rate, withholding_tax").eq("id", 1).single(),
   ]);
 
@@ -1084,7 +1088,7 @@ export async function fetchBreakeven(months: 1 | 3 = 3): Promise<BreakevenResult
   const [{ data: stockData }, { data: expenseData }, { data: soldData }] = await Promise.all([
     supabase.from("stocks").select("model, cost_price, shipping_cost, other_cost, selling_price, sold_price, status"),
     supabase.from("expenses").select("amount, category").gte("date", sinceStr),
-    supabase.from("stocks").select("id").eq("status", "ขายแล้ว").gte("sold_at", startOfThaiDay(sinceStr)),
+    supabase.from("stocks").select("id").in("status", ["ขายแล้ว", "รับคืนแล้ว", "ส่งซ่อม"]).not("sold_at", "is", null).gte("sold_at", startOfThaiDay(sinceStr)),
   ]);
 
   const totalExpenses = (expenseData ?? []).filter(r => r.category !== "ซื้อคืน").reduce((s, r) => s + (r.amount ?? 0), 0);
@@ -1132,7 +1136,7 @@ export async function fetchOverheadPerUnit(months: 1 | 3 = 3): Promise<number> {
   const sinceStr2 = `${sinceY2}-${String(sinceM2).padStart(2, "0")}-01`;
   const [{ data: expenseData }, { data: soldData }] = await Promise.all([
     supabase.from("expenses").select("amount, category").gte("date", sinceStr2),
-    supabase.from("stocks").select("id").eq("status", "ขายแล้ว").gte("sold_at", startOfThaiDay(sinceStr2)),
+    supabase.from("stocks").select("id").in("status", ["ขายแล้ว", "รับคืนแล้ว", "ส่งซ่อม"]).not("sold_at", "is", null).gte("sold_at", startOfThaiDay(sinceStr2)),
   ]);
   const totalExpenses = (expenseData ?? []).filter(r => r.category !== "ซื้อคืน").reduce((s, r) => s + (r.amount ?? 0), 0);
   const unitsSold = (soldData ?? []).length;
