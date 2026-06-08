@@ -15,6 +15,7 @@ import {
   adminReclaimJob, getDocumentSignedUrl, adminConfirmReturn,
   lookupRequestForMerge, mergeRequests,
 } from "@/app/actions/admin-requests";
+import { getCustomerHistory, addToBlacklist, removeFromBlacklist, type CustomerHistory } from "@/app/actions/customer-blacklist";
 import { fetchAdminUsers, fetchMyRole, fetchMyProfile } from "@/app/actions/admin-users";
 import type { AdminUserRow } from "@/app/actions/admin-users";
 import { saveInspection, respondToNegotiation, adminApproveInspection } from "@/app/actions/inspection";
@@ -192,8 +193,15 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting,      setDeleting]      = useState(false);
 
+  // Customer history & blacklist
+  const [customerHistory, setCustomerHistory] = useState<CustomerHistory | null>(null);
+  const [showBlacklistForm, setShowBlacklistForm] = useState(false);
+  const [blReason, setBlReason] = useState("");
+  const [blNotes, setBlNotes] = useState("");
+  const [blSaving, setBlSaving] = useState(false);
+
   // Merge duplicate requests (owner only)
-  type MergePreview = { id: string; orderNumber: string; customerName: string; customerPhone: string; deviceModel: string; status: string; createdAt: string };
+  type MergePreview ={ id: string; orderNumber: string; customerName: string; customerPhone: string; deviceModel: string; status: string; createdAt: string };
   const [showMerge,    setShowMerge]    = useState(false);
   const [mergeInput,   setMergeInput]   = useState("");
   const [mergePreview, setMergePreview] = useState<MergePreview | null>(null);
@@ -205,6 +213,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
     fetchRequest(id).then(data => {
       setRequest(data);
       if (data) {
+        getCustomerHistory(data.customer.phone).then(setCustomerHistory);
         setEstPrice(String(data.device.estimatedPrice));
         setActualPrice(String(data.device.actualPrice ?? ""));
         setApptDraft({ date: data.appointment.date, time: data.appointment.time, location: data.appointment.location, method: data.appointment.method });
@@ -747,6 +756,91 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
           </div>
         );
       })()}
+
+      {/* Customer blacklist / no-show warning */}
+      {customerHistory && (customerHistory.blacklist || customerHistory.noShowCount > 0) && (
+        <div style={{
+          background: customerHistory.blacklist ? "#FFF1F2" : "#FFFBEB",
+          borderBottom: `2px solid ${customerHistory.blacklist ? "#FDA4AF" : "#FDE68A"}`,
+          padding: "10px 16px",
+        }}>
+          {customerHistory.blacklist ? (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+              <span style={{ fontSize: 16, flexShrink: 0 }}>🚫</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#9F1239" }}>ลูกค้าอยู่ใน Blacklist</p>
+                <p style={{ margin: "2px 0 0", fontSize: 12, color: "#BE123C" }}>{customerHistory.blacklist.reason}</p>
+                {customerHistory.blacklist.notes && <p style={{ margin: "1px 0 0", fontSize: 11, color: "#9F1239" }}>{customerHistory.blacklist.notes}</p>}
+                <p style={{ margin: "3px 0 0", fontSize: 11, color: "#BE123C", opacity: 0.7 }}>
+                  โดย {customerHistory.blacklist.blacklistedBy} · {new Date(customerHistory.blacklist.blacklistedAt).toLocaleDateString("th-TH")}
+                </p>
+              </div>
+              {isOwner && (
+                <button
+                  onClick={async () => {
+                    if (!customerHistory.blacklist) return;
+                    const res = await removeFromBlacklist(customerHistory.blacklist.id);
+                    if (res.success) setCustomerHistory(h => h ? { ...h, blacklist: null } : h);
+                  }}
+                  style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 6, border: "1px solid #FDA4AF", background: "transparent", color: "#BE123C", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
+                >นำออก</button>
+              )}
+            </div>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 15, flexShrink: 0 }}>⚠️</span>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#92400E", flex: 1 }}>
+                เคย no_show {customerHistory.noShowCount} ครั้ง จาก {customerHistory.totalRequests} คำขอ
+              </p>
+              {isOwner && !showBlacklistForm && (
+                <button
+                  onClick={() => { setShowBlacklistForm(true); setBlReason(""); setBlNotes(""); }}
+                  style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 6, border: "1px solid #FDE68A", background: "transparent", color: "#92400E", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
+                >+ Blacklist</button>
+              )}
+            </div>
+          )}
+
+          {/* Inline blacklist form */}
+          {showBlacklistForm && !customerHistory.blacklist && (
+            <div style={{ marginTop: 10, padding: "10px 12px", background: "#fff", borderRadius: 10, border: "1px solid #FDE68A", display: "flex", flexDirection: "column", gap: 7 }}>
+              <input
+                value={blReason}
+                onChange={e => setBlReason(e.target.value)}
+                placeholder="เหตุผล (เช่น นัดแล้วหาย 2 ครั้ง)"
+                style={{ padding: "7px 10px", borderRadius: 8, border: "1px solid #E5E7EB", fontSize: 13, fontFamily: "inherit", outline: "none" }}
+              />
+              <input
+                value={blNotes}
+                onChange={e => setBlNotes(e.target.value)}
+                placeholder="หมายเหตุเพิ่มเติม (ไม่บังคับ)"
+                style={{ padding: "7px 10px", borderRadius: 8, border: "1px solid #E5E7EB", fontSize: 13, fontFamily: "inherit", outline: "none" }}
+              />
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  disabled={blSaving || !blReason.trim()}
+                  onClick={async () => {
+                    if (!blReason.trim()) return;
+                    setBlSaving(true);
+                    const res = await addToBlacklist(request.customer.phone, request.customer.name, blReason, blNotes);
+                    setBlSaving(false);
+                    if (res.success) {
+                      setShowBlacklistForm(false);
+                      const updated = await getCustomerHistory(request.customer.phone);
+                      setCustomerHistory(updated);
+                    }
+                  }}
+                  style={{ flex: 1, padding: "8px", borderRadius: 8, border: "none", background: blReason.trim() && !blSaving ? "#9F1239" : "#D1D5DB", color: "#fff", fontSize: 13, fontWeight: 700, cursor: blReason.trim() && !blSaving ? "pointer" : "default", fontFamily: "inherit" }}
+                >{blSaving ? "กำลังบันทึก..." : "บันทึก Blacklist"}</button>
+                <button
+                  onClick={() => setShowBlacklistForm(false)}
+                  style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid #E5E7EB", background: "none", fontSize: 13, cursor: "pointer", fontFamily: "inherit", color: TEXT2 }}
+                >ยกเลิก</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {saveError && (
         <div style={{ background: "#FEF2F2", borderBottom: "1px solid #FECACA", padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
