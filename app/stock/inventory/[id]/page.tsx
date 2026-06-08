@@ -665,16 +665,96 @@ export default function StockDetailPage({ params }: { params: Promise<{ id: stri
               const recheckCrit = snap?.recheckCriteria ?? [];
               const recheckFn = snap?.recheckFunctionalTests ?? [];
               const issues = snap?.issues ?? [];
-              if (criteria.length === 0 && functionalTests.length === 0) return null;
+              const hasExtra = !!(snap?.conditionGrade || snap?.sickw_report || (snap?.accessories ?? []).length > 0);
+              if (criteria.length === 0 && functionalTests.length === 0 && !hasExtra) return null;
               const recheckMap = new Map(recheckCrit.map(r => [r.label, r]));
               const recheckFnMap = new Map(recheckFn.map(r => [r.label, r]));
               const thBase: React.CSSProperties = { padding: "8px 12px", fontSize: 11, fontWeight: 700, color: c.text3, textAlign: "left" as const, borderBottom: `1px solid ${c.border}`, background: "transparent" };
               const tdBase: React.CSSProperties = { padding: "10px 12px", fontSize: 12, borderBottom: `1px solid ${c.border}`, verticalAlign: "middle" as const };
+              const gradeColorMap: Record<string, string> = { A: "#22c55e", "A-": "#84cc16", "B+": "#eab308", B: "#f97316", "B-": "#fb923c", C: "#ef4444" };
               return (
                 <div style={{ background: c.card, borderRadius: 20, padding: 24, border: `1px solid ${c.border}`, marginBottom: 20 }}>
                   <p style={{ color: c.text3, fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.06em", margin: "0 0 16px" }}>
                     ผลการตรวจสภาพ
                   </p>
+
+                  {/* Grade + Condition from rider */}
+                  {(snap?.conditionGrade || snap?.conditionLabel) && (() => {
+                    const grade = snap?.conditionGrade ?? null;
+                    const label = snap?.conditionLabel ?? null;
+                    const color = grade ? (gradeColorMap[grade] ?? "#888") : "#888";
+                    return (
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, padding: "10px 14px", borderRadius: 10, border: `1.5px solid ${color}40`, background: `${color}0d` }}>
+                        {grade && (
+                          <div style={{ width: 44, height: 44, borderRadius: 10, background: `${color}22`, border: `2px solid ${color}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <span style={{ fontSize: 16, fontWeight: 800, color, fontFamily: "monospace" }}>{grade}</span>
+                          </div>
+                        )}
+                        <div>
+                          <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.07em", color: c.text3 }}>เกรด/สภาพจากหน้างาน</p>
+                          {label && <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: c.text }}>{label}</p>}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* SICKW Apple Check */}
+                  {snap?.sickw_report && (() => {
+                    const raw = snap.sickw_report;
+                    const map: Record<string, string> = {};
+                    for (const line of raw.split("\n")) {
+                      const idx = line.indexOf(": ");
+                      if (idx > 0) map[line.slice(0, idx).trim()] = line.slice(idx + 2).trim();
+                    }
+                    const icloudLock   = (map["iCloud Lock"]   ?? "").toLowerCase();
+                    const icloudStatus = (map["iCloud Status"] ?? "").toLowerCase();
+                    const mdm          = (map["MDM Lock"]       ?? "").toLowerCase();
+                    const issues2: string[] = [];
+                    if (icloudLock === "on")   issues2.push("iCloud Lock เปิดอยู่");
+                    if (icloudStatus === "on") issues2.push("ยังไม่ Sign Out iCloud");
+                    if (icloudLock.includes("lost") || icloudStatus.includes("lost")) issues2.push("Lost Mode");
+                    if (mdm === "on")          issues2.push("MDM Lock เปิดอยู่");
+                    const passed = issues2.length === 0;
+                    return (
+                      <div style={{ marginBottom: 16 }}>
+                        <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.07em", color: c.text3 }}>ผลตรวจสอบ Apple (SICKW)</p>
+                        <div style={{ borderRadius: 10, border: `1px solid ${passed ? "#86efac" : "#fca5a5"}`, background: passed ? "#F0FDF4" : "#FFF5F5", padding: "10px 12px", marginBottom: 6 }}>
+                          <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: passed ? "#166534" : "#991b1b" }}>
+                            {passed ? "✅ ผ่านการตรวจสอบ" : `🚫 ไม่ผ่าน — ${issues2.join(", ")}`}
+                          </p>
+                          {[
+                            ["รุ่น",        map["Device Configuration"] || map["Model Name"]],
+                            ["iCloud",      map["iCloud Lock"] ?? map["iCloud Status"]],
+                            ["MDM Lock",    map["MDM Lock"]],
+                            ["Carrier Lock",map["Unlock Status"] ?? map["Sim-Lock"]],
+                            ["ประกัน",      map["Limited Warranty"]],
+                            ["หมดประกัน",   map["Coverage End Date"] ?? map["Coverage End"]],
+                          ].filter(([, v]) => v).map(([lbl, val]) => (
+                            <div key={lbl as string} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginTop: 4 }}>
+                              <span style={{ color: "#6B7280" }}>{lbl}</span>
+                              <span style={{ fontWeight: 500 }}>{val}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <details style={{ fontSize: 12 }}>
+                          <summary style={{ cursor: "pointer", color: "#0369A1", userSelect: "none" as const }}>ดูรายงานเต็ม</summary>
+                          <pre style={{ margin: "6px 0 0", padding: "10px 12px", borderRadius: 8, background: "#F8F8FA", fontSize: 11, lineHeight: 1.6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{raw}</pre>
+                        </details>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Accessories from rider */}
+                  {(snap?.accessories ?? []).length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <p style={{ margin: "0 0 8px", fontSize: 10, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.07em", color: c.text3 }}>อุปกรณ์ที่มากับเครื่อง</p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {(snap?.accessories ?? []).map((acc: string, i: number) => (
+                          <span key={i} style={{ fontSize: 12, padding: "4px 10px", borderRadius: 20, background: "rgba(59,130,246,0.1)", color: "#1d4ed8", border: "1px solid rgba(59,130,246,0.2)", fontWeight: 500 }}>{acc}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {criteria.length > 0 && (
                     <div style={{ overflowX: "auto", marginBottom: 20 }}>

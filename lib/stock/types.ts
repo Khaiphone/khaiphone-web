@@ -110,6 +110,10 @@ export interface StockItem {
     recheckFunctionalTests?: { label: string; pass: boolean }[];
     recheckBy?: string;
     recheckAt?: string;
+    conditionGrade?: string | null;
+    conditionLabel?: string | null;
+    sickw_report?: string | null;
+    accessories?: string[];
   };
 }
 

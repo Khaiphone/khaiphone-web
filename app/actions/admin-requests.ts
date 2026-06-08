@@ -913,6 +913,10 @@ export async function updateStatus(
         criteria:        insp.criteria        ?? [],
         functionalTests: insp.functionalTests ?? [],
         issues:          insp.issues          ?? [],
+        conditionGrade:  insp.conditionGrade  ?? null,
+        conditionLabel:  insp.conditionLabel  ?? null,
+        sickw_report:    insp.sickw_report    ?? null,
+        accessories:     insp.accessories     ?? [],
       };
       await supabase.from("stocks").insert({
         id: stockId,
