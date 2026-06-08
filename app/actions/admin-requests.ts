@@ -900,6 +900,13 @@ export async function updateStatus(
       const stockId = `STK-${year}-${String(lastSeq + 1).padStart(5, "0")}`;
       const now = new Date().toISOString();
       const insp = current.inspection ?? {};
+      const sickwMap: Record<string, string> = {};
+      for (const line of (insp.sickw_report ?? "").split("\n")) {
+        const idx = line.indexOf(": ");
+        if (idx > 0) sickwMap[line.slice(0, idx).trim()] = line.slice(idx + 2).trim();
+      }
+      const parsedCarrierLock  = sickwMap["Unlock Status"] ?? sickwMap["Sim-Lock"] ?? "";
+      const parsedIcloudStatus = [sickwMap["iCloud Lock"], sickwMap["iCloud Status"]].filter(Boolean).join(" / ");
       const snapshot = {
         imei:           insp.imei    ?? null,
         serial:         insp.serial  ?? null,
@@ -929,7 +936,9 @@ export async function updateStatus(
         grade:          insp.conditionGrade ?? (insp.result === "matched" ? "A" : insp.result === "adjusted" ? "B" : "A"),
         battery_health: insp.batteryHealth ?? 0,
         cycle_count:    insp.batteryCycles ?? 0,
-        icloud_status:  "", carrier_lock:  "", accessories:  "",
+        icloud_status:  parsedIcloudStatus,
+        carrier_lock:   parsedCarrierLock,
+        accessories:    Array.isArray(insp.accessories) ? insp.accessories.join(", ") : "",
         physical_checks: [
           ...(insp.criteria ?? []).map((c: { label: string; pass: boolean; actual?: string }) => ({ label: c.label, condition: c.pass ? "ปกติ" : (c.actual?.trim() || "มีตำหนิ") })),
           ...(insp.functionalTests ?? []).map((t: { label: string; pass: boolean }) => ({ label: t.label, condition: t.pass ? "ปกติ" : "มีปัญหา" })),
