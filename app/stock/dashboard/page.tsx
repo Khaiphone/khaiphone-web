@@ -135,7 +135,7 @@ export default function StockDashboard() {
     <div style={{ background: c.bg, minHeight: "100vh", paddingBottom: 80 }}>
       <StockTopbar title="Dashboard" subtitle="ภาพรวมสต็อก" />
 
-      <div style={{ padding: "24px 24px 0" }}>
+      <div style={{ padding: "24px 24px 0", overflowX: "hidden" }}>
 
         {/* Date Preset Bar */}
         <div style={{ background: c.card, borderRadius: 16, padding: "12px 16px", marginBottom: 20, border: `1px solid ${c.border}`, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -179,14 +179,14 @@ export default function StockDashboard() {
         </div>
 
         {/* Metric Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }}>
+        <div style={{ display: "grid", gap: 16, marginBottom: 24 }} className="grid-cols-2 md:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]">
           {METRICS.map(m => <MetricCard key={m.label} {...m} />)}
         </div>
 
         {/* Charts Row */}
-        <div style={{ display: "grid", gridTemplateColumns: canViewFinance ? "2fr 1fr" : "1fr", gap: 16, marginBottom: 24 }}>
+        <div style={{ display: "grid", gap: 16, marginBottom: 24 }} className={canViewFinance ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1"}>
           {canViewFinance && (
-          <div style={{ background: c.card, borderRadius: 16, padding: 20, border: `1px solid ${c.border}` }}>
+          <div className="md:col-span-2" style={{ background: c.card, borderRadius: 16, padding: 20, border: `1px solid ${c.border}` }}>
             <p style={{ color: c.text, fontSize: 15, fontWeight: 700, margin: "0 0 4px" }}>รายรับ {isFiltered ? "ในช่วงที่เลือก" : "30 วัน"}</p>
             <p style={{ color: c.text3, fontSize: 12, margin: "0 0 20px" }}>Revenue vs Profit</p>
             {chartData.length === 0 ? (

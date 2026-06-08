@@ -145,9 +145,9 @@ export default function StockRequestsPage() {
         </button>
       </StockTopbar>
 
-      <div style={{ padding: "24px 24px 0" }}>
+      <div style={{ padding: "24px 24px 0", overflowX: "hidden" }}>
         {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
+        <div style={{ display: "grid", gap: 12, marginBottom: 24 }} className="grid-cols-2 md:grid-cols-4">
           {[
             { label: "คำขอทั้งหมด",   value: stats.total,     color: c.gold,    bg: c.goldBg },
             { label: "รอดำเนินการ",    value: stats.pending,   color: "#f97316", bg: "rgba(249,115,22,0.1)" },
