@@ -43,6 +43,7 @@ export default function AddStockPage() {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<AddStockForm>(INIT_FORM);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [savedId, setSavedId] = useState("");
   const [photoPreview, setPhotoPreview] = useState<string[]>([]);
 
@@ -60,6 +61,7 @@ export default function AddStockPage() {
 
   async function handleSave() {
     setSaving(true);
+    setSaveError("");
     const now = new Date().toISOString();
     const result = await createStockItem({
       id: "",
@@ -83,6 +85,8 @@ export default function AddStockPage() {
     if (result.success) {
       setSavedId(result.id);
       setStep(6);
+    } else {
+      setSaveError(result.error ?? "บันทึกไม่สำเร็จ กรุณาลองใหม่");
     }
   }
 
@@ -374,7 +378,13 @@ export default function AddStockPage() {
 
         {/* Navigation */}
         {step < 6 && (
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16 }}>
+          <div style={{ marginTop: 16 }}>
+            {saveError && (
+              <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, padding: "10px 14px", marginBottom: 12, color: "#ef4444", fontSize: 13 }}>
+                {saveError}
+              </div>
+            )}
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
             <button
               onClick={() => step > 0 ? setStep(s => s - 1) : router.push("/stock/inventory")}
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 20px", borderRadius: 12, background: "none", border: `1px solid ${c.border}`, color: c.text2, fontSize: 14, cursor: "pointer" }}
@@ -388,6 +398,7 @@ export default function AddStockPage() {
             >
               {saving ? "กำลังบันทึก..." : step === 5 ? "บันทึก" : <>ถัดไป <ChevronRight size={16} /></>}
             </button>
+          </div>
           </div>
         )}
       </div>
