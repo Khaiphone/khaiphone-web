@@ -235,7 +235,7 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
   const prevRevenue = prevSold.reduce((s, r) => s + r.sell_price, 0);
   const prevCost = prevSold.reduce((s, r) => s + r.cost, 0);
   const prevApprovedExp = allExpenses.filter((e) => e.status === "approved" && e.date >= prevFrom && e.date <= prevTo);
-  const prevExpenses = prevApprovedExp.reduce((s, e) => s + (e.amount ?? 0), 0);
+  const prevExpenses = prevApprovedExp.filter(e => e.category !== "ซื้อคืน").reduce((s, e) => s + (e.amount ?? 0), 0);
   const prevTrueNetProfit = (prevRevenue - prevCost) - prevExpenses;
 
   return {
