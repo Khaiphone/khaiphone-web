@@ -171,7 +171,7 @@ export async function verifyStockField(
 export async function markStockSold(
   id: string, soldPrice: number, buyerName: string, buyerPhone: string,
   soldAt?: string, soldBy?: string, saleType?: string, partnerName?: string,
-  deliveryChannel?: string, slipUrls?: string[],
+  deliveryChannel?: string, slipUrls?: string[], trackingNumber?: string,
 ): Promise<{ success: boolean; error?: string }> {
   await requireAuth();
   const supabase = createServerClient();
@@ -180,13 +180,15 @@ export async function markStockSold(
   const { data: current } = await supabase.from("stocks").select("status_log, request_ref").eq("id", id).single();
   const note = saleType === "ขายส่ง" && partnerName ? `ขายส่งให้ ${partnerName}` : `ขายให้ ${buyerName}`;
   const newLog = [...(current?.status_log ?? []), { status: "ขายแล้ว", timestamp: now, note, by: soldBy ?? "admin" }];
-  const autoDeliveryStatus = deliveryChannel === "หน้าร้าน" ? "จัดส่งแล้ว" : "รอจัดส่ง";
+  const hasTracking = !!trackingNumber?.trim();
+  const autoDeliveryStatus = deliveryChannel === "หน้าร้าน" || hasTracking ? "จัดส่งแล้ว" : "รอจัดส่ง";
   const { error } = await supabase.from("stocks").update({
     status: "ขายแล้ว", sold_at: soldAtTs, sold_price: soldPrice,
     buyer_name: buyerName, buyer_phone: buyerPhone,
     sold_by: soldBy ?? null, sale_type: saleType ?? "ขายปลีก", partner_name: partnerName ?? null,
     delivery_channel: deliveryChannel ?? null,
     delivery_status: autoDeliveryStatus,
+    tracking_number: hasTracking ? trackingNumber!.trim() : undefined,
     slip_urls: slipUrls && slipUrls.length > 0 ? slipUrls : undefined,
     status_log: newLog, updated_at: now,
   }).eq("id", id);
