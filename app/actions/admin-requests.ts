@@ -1229,17 +1229,18 @@ export async function updateCustomer(id: string, data: { name: string; phone: st
 }
 
 // ─── Update device info ───────────────────────────────────────────────────────
-export async function updateDevice(id: string, data: { model: string; storage: string; color?: string; condition: string; estimatedPrice?: number }) {
+export async function updateDevice(id: string, data: { model: string; storage: string; color?: string; condition: string; estimatedPrice?: number; conditionDetails?: string[] }) {
   await requireAuth();
   const supabase = createServerClient();
   const { error } = await supabase
     .from("requests")
     .update({
-      device_model:     data.model.trim(),
-      device_storage:   data.storage.trim(),
-      device_color:     data.color?.trim() || null,
-      device_condition: data.condition.trim(),
-      ...(data.estimatedPrice !== undefined ? { estimated_price: data.estimatedPrice } : {}),
+      device_model:              data.model.trim(),
+      device_storage:            data.storage.trim(),
+      device_color:              data.color?.trim() || null,
+      device_condition:          data.condition.trim(),
+      ...(data.conditionDetails !== undefined ? { device_condition_details: data.conditionDetails } : {}),
+      ...(data.estimatedPrice   !== undefined ? { estimated_price: data.estimatedPrice } : {}),
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);

@@ -134,7 +134,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
 
   // Editable: device
   const [editDevice, setEditDevice] = useState(false);
-  const [devDraft, setDevDraft] = useState({ model: "", storage: "", color: "", condition: "", estimatedPrice: "" });
+  const [devDraft, setDevDraft] = useState({ model: "", storage: "", color: "", condition: "", estimatedPrice: "", conditionDetails: "" });
 
   // Inspection
   const [inspSaving, setInspSaving] = useState(false);
@@ -219,7 +219,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         setApptDraft({ date: data.appointment.date, time: data.appointment.time, location: data.appointment.location, method: data.appointment.method });
         setPayDraft({ method: data.payment.method, bankName: data.payment.bankName ?? "", accountName: data.payment.accountName ?? "", accountNumber: data.payment.accountNumber ?? "" });
         setCustDraft({ name: data.customer.name, phone: data.customer.phone, email: data.customer.email ?? "" });
-        setDevDraft({ model: data.device.model, storage: data.device.storage, color: data.device.color ?? "", condition: data.device.condition, estimatedPrice: String(data.device.estimatedPrice) });
+        setDevDraft({ model: data.device.model, storage: data.device.storage, color: data.device.color ?? "", condition: data.device.condition, estimatedPrice: String(data.device.estimatedPrice), conditionDetails: (data.device.conditionDetails ?? []).join("\n") });
         setAssignDraft(data.assignedTo ?? "");
         setRiderDraft(data.riderId ?? "");
         // Seed ref so Realtime knows what was already inspected when page loaded
@@ -386,9 +386,10 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
     setSaving("device");
     setSaveError(null);
     const estNum = Number(devDraft.estimatedPrice) || request!.device.estimatedPrice;
-    const result = await updateDevice(id, { model: devDraft.model, storage: devDraft.storage, color: devDraft.color || undefined, condition: devDraft.condition, estimatedPrice: estNum });
+    const newCondDetails = devDraft.conditionDetails.split("\n").map(l => l.trim()).filter(Boolean);
+    const result = await updateDevice(id, { model: devDraft.model, storage: devDraft.storage, color: devDraft.color || undefined, condition: devDraft.condition, estimatedPrice: estNum, conditionDetails: newCondDetails });
     if (result.success) {
-      setRequest(prev => prev ? { ...prev, device: { ...prev.device, model: devDraft.model, storage: devDraft.storage, color: devDraft.color || undefined, condition: devDraft.condition, estimatedPrice: estNum } } : prev);
+      setRequest(prev => prev ? { ...prev, device: { ...prev.device, model: devDraft.model, storage: devDraft.storage, color: devDraft.color || undefined, condition: devDraft.condition, estimatedPrice: estNum, conditionDetails: newCondDetails } } : prev);
       setEstPrice(String(estNum));
     } else {
       setSaveError("บันทึกข้อมูลเครื่องไม่สำเร็จ");
@@ -857,7 +858,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
               <SectionLabel>ข้อมูลเครื่อง</SectionLabel>
               {!editDevice
-                ? <button onClick={() => { setDevDraft({ model: request.device.model, storage: request.device.storage, color: request.device.color ?? "", condition: request.device.condition, estimatedPrice: String(request.device.estimatedPrice) }); setEditDevice(true); }} style={{ background: "none", border: "none", color: TEXT2, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", padding: 0, fontFamily: "inherit", marginTop: "-10px" }}><Pencil size={13} /> แก้ไข</button>
+                ? <button onClick={() => { setDevDraft({ model: request.device.model, storage: request.device.storage, color: request.device.color ?? "", condition: request.device.condition, estimatedPrice: String(request.device.estimatedPrice), conditionDetails: (request.device.conditionDetails ?? []).join("\n") }); setEditDevice(true); }} style={{ background: "none", border: "none", color: TEXT2, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", padding: 0, fontFamily: "inherit", marginTop: "-10px" }}><Pencil size={13} /> แก้ไข</button>
                 : <EditBar onSave={saveDevice} onCancel={() => setEditDevice(false)} isSaving={saving === "device"} />
               }
             </div>
@@ -905,6 +906,13 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                   <option value="สภาพพอใช้">สภาพพอใช้</option>
                   <option value="สภาพปานกลาง">สภาพปานกลาง</option>
                 </select>
+                <label style={{ color: TEXT2, fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>รายละเอียดสภาพเครื่อง (แต่ละบรรทัด = 1 bullet)</label>
+                <textarea
+                  value={devDraft.conditionDetails}
+                  onChange={e => setDevDraft(p => ({ ...p, conditionDetails: e.target.value }))}
+                  rows={6}
+                  style={{ ...inputSt, resize: "vertical" as const }}
+                />
                 <label style={{ color: TEXT2, fontSize: "12px", fontWeight: 600, display: "block", marginBottom: "4px" }}>ราคาประเมิน (บาท)</label>
                 <input type="number" value={devDraft.estimatedPrice} onChange={e => setDevDraft(p => ({ ...p, estimatedPrice: e.target.value }))} style={{ ...inputSt, marginBottom: 0 }} />
               </>
