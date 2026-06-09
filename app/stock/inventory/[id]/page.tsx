@@ -128,7 +128,8 @@ function CrossCheckSection({
         )}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr 80px 120px", gap: 0, fontSize: 11, color: c.text3, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.04em", padding: "0 0 8px", borderBottom: `1px solid ${c.border}` }}>
+      <div style={{ overflowX: "auto" }}>
+      <div style={{ minWidth: 500, display: "grid", gridTemplateColumns: "100px 1fr 1fr 80px 120px", gap: 0, fontSize: 11, color: c.text3, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.04em", padding: "0 0 8px", borderBottom: `1px solid ${c.border}` }}>
         <span>ฟิลด์</span>
         <span>ค่าจากตรวจ (หน้างาน)</span>
         <span>ค่าในสต็อก (ทีมสต็อก)</span>
@@ -193,6 +194,7 @@ function CrossCheckSection({
           </div>
         );
       })}
+      </div>
 
       <p style={{ color: c.text3, fontSize: 11, margin: "12px 0 0" }}>
         ข้อมูลจากตรวจ: เจ้าหน้าที่หน้างาน · ข้อมูลสต็อก: ทีมสต็อก
@@ -413,8 +415,8 @@ export default function StockDetailPage({ params }: { params: Promise<{ id: stri
         onChange={e => e.target.files && handlePhotoUpload(e.target.files)}
       />
 
-      <div style={{ maxWidth: 960, margin: "0 auto", padding: 24 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 20 }}>
+      <div style={{ maxWidth: 960, margin: "0 auto", paddingTop: 24, paddingBottom: 24 }} className="px-3 md:px-6">
+        <div style={{ display: "grid", gap: 20 }} className="grid-cols-1 md:grid-cols-[1fr_360px]">
 
           {/* ─── Main column ─── */}
           <div>
