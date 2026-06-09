@@ -761,14 +761,17 @@ export default function StockDetailPage({ params }: { params: Promise<{ id: stri
                   )}
 
                   {criteria.length > 0 && (
-                    <div style={{ overflowX: "auto", marginBottom: 20 }}>
-                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <>
+                    <div style={{ overflowX: "auto", marginBottom: recheckCrit.length === 0 ? 8 : 20 }}>
+                      <table style={{ minWidth: recheckCrit.length > 0 ? 520 : 360, width: "100%", borderCollapse: "collapse" }}>
                         <thead>
                           <tr>
                             <th style={thBase}>รายการ</th>
                             <th style={{ ...thBase, color: "#6b7280" }}>ลูกค้าแจ้ง</th>
                             <th style={{ ...thBase, color: "#2563eb" }}>เจ้าหน้าที่หน้างาน</th>
-                            <th style={{ ...thBase, color: "#16a34a" }}>ทีมสต็อค</th>
+                            {recheckCrit.length > 0 && (
+                              <th style={{ ...thBase, color: "#16a34a" }}>ทีมสต็อค</th>
+                            )}
                           </tr>
                         </thead>
                         <tbody>
@@ -783,15 +786,23 @@ export default function StockDetailPage({ params }: { params: Promise<{ id: stri
                                   {cr.actual || "—"}
                                   {!cr.pass && <span style={{ marginLeft: 6, fontSize: 10, background: "rgba(245,158,11,0.12)", color: "#b45309", padding: "1px 6px", borderRadius: 4 }}>ตำหนิ</span>}
                                 </td>
-                                <td style={{ ...tdBase, color: !rc ? c.text3 : rc.pass ? "#16a34a" : "#dc2626", fontWeight: rc && !rc.pass ? 700 : 400 }}>
-                                  {rc ? (rc.stockActual || (rc.pass ? "✓ ผ่าน" : "✗ ไม่ผ่าน")) : <em style={{ color: c.text3 }}>รอตรวจ</em>}
-                                </td>
+                                {recheckCrit.length > 0 && (
+                                  <td style={{ ...tdBase, color: !rc ? c.text3 : rc.pass ? "#16a34a" : "#dc2626", fontWeight: rc && !rc.pass ? 700 : 400 }}>
+                                    {rc ? (rc.stockActual || (rc.pass ? "✓ ผ่าน" : "✗ ไม่ผ่าน")) : <em style={{ color: c.text3 }}>รอตรวจ</em>}
+                                  </td>
+                                )}
                               </tr>
                             );
                           })}
                         </tbody>
                       </table>
                     </div>
+                    {recheckCrit.length === 0 && (
+                      <p style={{ color: c.text3, fontSize: 11, margin: "0 0 20px", padding: "6px 10px", background: c.card2, borderRadius: 8, display: "inline-block" }}>
+                        ยังไม่มีผลตรวจจากทีมสต็อค
+                      </p>
+                    )}
+                    </>
                   )}
 
                   {issues.length > 0 && (
