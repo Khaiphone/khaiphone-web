@@ -389,7 +389,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
     const newCondDetails = devDraft.conditionDetails.split("\n").map(l => l.trim()).filter(Boolean);
     const result = await updateDevice(id, { model: devDraft.model, storage: devDraft.storage, color: devDraft.color || undefined, condition: devDraft.condition, estimatedPrice: estNum, conditionDetails: newCondDetails });
     if (result.success) {
-      setRequest(prev => prev ? { ...prev, device: { ...prev.device, model: devDraft.model, storage: devDraft.storage, color: devDraft.color || undefined, condition: devDraft.condition, estimatedPrice: estNum, conditionDetails: newCondDetails } } : prev);
+      setRequest(prev => prev ? { ...prev, device: { ...prev.device, model: devDraft.model, storage: devDraft.storage, color: devDraft.color || undefined, condition: devDraft.condition, estimatedPrice: estNum, conditionDetails: newCondDetails, selections: { ...(prev.device.selections ?? {}), storage: devDraft.storage } } } : prev);
       setEstPrice(String(estNum));
     } else {
       setSaveError("บันทึกข้อมูลเครื่องไม่สำเร็จ");
