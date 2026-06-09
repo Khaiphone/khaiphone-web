@@ -157,6 +157,7 @@ function statusToDoneUpTo(status: string): number {
     case "en_route":          return 3;
     case "pickup_scheduled":
     case "confirmed":         return 3;
+    case "contacted":         return 2;
     case "pending":           return 1;
     default:                  return 0;
   }
@@ -421,7 +422,7 @@ function RequestDetailInner() {
       if (["completed", "cancelled", "no_show", "rejected"].includes(dbReq.status)) {
         try { localStorage.removeItem("khaiphone_submission"); } catch {}
       }
-      const statusToStep: Record<string, number> = { pending: 1, confirmed: 3, pickup_scheduled: 3, en_route: 4, inspecting: 5, price_negotiation: 5, contracting: 6, awaiting_transfer: 7, completed: 7 };
+      const statusToStep: Record<string, number> = { pending: 1, contacted: 2, confirmed: 3, pickup_scheduled: 3, en_route: 4, inspecting: 5, price_negotiation: 5, contracting: 6, awaiting_transfer: 7, completed: 7 };
       const ts: (string | null)[] = [dbReq.createdAt, null, null, null, null, null, null, null];
       dbReq.statusLog.forEach(log => {
         const step = statusToStep[log.status];
