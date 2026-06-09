@@ -6,14 +6,14 @@ const serviceLinks = [
   { label: "หน้าหลัก",      href: "/"         },
   { label: "ประเมินราคา",   href: "/sell"      },
   { label: "รายการรับซื้อ", href: "/trade-in"  },
-  { label: "วิธีการขาย",   href: "/#how-to"   },
+  { label: "วิธีการขาย",   href: "/how-to-sell" },
   { label: "รีวิวลูกค้า",   href: "/reviews"   },
   { label: "บทความ",        href: "/blog"      },
 ];
 
 const helpLinks = [
   { label: "เกี่ยวกับเรา",          href: "/about"   },
-  { label: "คำถามที่พบบ่อย",       href: "/#faq"    },
+  { label: "คำถามที่พบบ่อย",       href: "/faq"     },
   { label: "เงื่อนไขการรับซื้อ",    href: "/terms"   },
   { label: "นโยบายความเป็นส่วนตัว", href: "/privacy" },
   { label: "ติดต่อเรา",             href: "/contact" },
@@ -129,7 +129,7 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
           <p className="text-xs" style={{ color: "#9CA3AF" }}>
-            © 2025 Khaiphone.com สงวนลิขสิทธิ์
+            © {new Date().getFullYear()} Khaiphone.com สงวนลิขสิทธิ์
           </p>
           <div className="flex items-center gap-5">
             {bottomLinks.map(({ label, href }) => (

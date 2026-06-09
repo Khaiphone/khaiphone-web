@@ -138,7 +138,7 @@ const CONTENT: Record<string, Section[]> = {
   ],
 
   "iphone-price-may-2024": [
-    { type: "paragraph", text: "ราคารับซื้อ iPhone เดือนพฤษภาคม 2567 อัปเดตล่าสุด — ราคาเหล่านี้เป็นราคาประเมินเบื้องต้นสำหรับเครื่องสภาพดี ออก iCloud แล้ว มีกล่อง" },
+    { type: "paragraph", text: "ราคารับซื้อ iPhone เดือนพฤษภาคม 2569 อัปเดตล่าสุด — ราคาเหล่านี้เป็นราคาประเมินเบื้องต้นสำหรับเครื่องสภาพดี ออก iCloud แล้ว มีกล่อง" },
     { type: "heading", text: "ราคารับซื้อ iPhone Series 17" },
     { type: "table", headers: ["รุ่น", "ความจุ", "ราคาสูงสุด"], rows: [
       ["iPhone 17 Pro Max", "256GB", "฿38,000"],
@@ -188,7 +188,7 @@ const CONTENT: Record<string, Section[]> = {
   ],
 
   "macbook-buyback-2024": [
-    { type: "paragraph", text: "ปี 2024 เรารับซื้อ MacBook ทุกรุ่นที่ใช้ชิป Apple Silicon (M1 ขึ้นไป) รวมถึง Intel รุ่นใหม่ๆ ด้วย ราคาดี ประเมินไว จ่ายเงินสดทันที" },
+    { type: "paragraph", text: "ปี 2569 เรารับซื้อ MacBook ทุกรุ่นที่ใช้ชิป Apple Silicon (M1 ขึ้นไป) รวมถึง Intel รุ่นใหม่ๆ ด้วย ราคาดี ประเมินไว จ่ายเงินสดทันที" },
     { type: "heading", text: "MacBook รุ่นที่รับซื้อและราคาประมาณ" },
     { type: "table", headers: ["รุ่น", "ชิป", "ราคาสูงสุด"], rows: [
       ["MacBook Pro 16\" M3 Max", "M3 Max", "฿75,000"],
