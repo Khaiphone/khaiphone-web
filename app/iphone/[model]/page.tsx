@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -7,8 +8,12 @@ import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import { iphones } from "@/lib/products";
 import { iphonePageData, iphoneImages, iphoneNarratives } from "@/lib/iphoneData";
+import { fetchPublicActiveProducts } from "@/app/actions/products";
+
+export const revalidate = 3600;
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://khaiphone.com";
+const getDbProducts = cache(fetchPublicActiveProducts);
 const UPDATED_DATE_ISO  = "2026-06-10";
 const UPDATED_DATE_THAI = "10 มิ.ย. 2569";
 
@@ -31,9 +36,13 @@ export async function generateMetadata({
   const product = iphones.find((p) => toSlug(p.model) === slug);
   if (!product) return { title: "ไม่พบรุ่น | Khaiphone.com" };
 
+  const allDbProducts = await getDbProducts();
+  const dbProduct = allDbProducts.find((p) => toSlug(p.model) === slug);
+  const priceGood = dbProduct?.price_good ?? product.priceGood;
+
   const canonical = `${SITE_URL}/iphone/${slug}`;
   const image = iphoneImages[slug] ?? "/product-iphone.webp";
-  const priceText = product.priceGood.toLocaleString("th-TH");
+  const priceText = priceGood.toLocaleString("th-TH");
   const title = `ขาย ${product.model} ราคาสูงสุด ${priceText} บาท | Khaiphone.com`;
   const description = `รับซื้อ ${product.model} สภาพดีราคาสูงสุด ${priceText} บาท ประเมินราคาออนไลน์ฟรีภายใน 1 นาที จ่ายเงินสดทันที รับถึงที่ทั่วไทย — Khaiphone.com`;
 
@@ -83,12 +92,18 @@ export default async function IphonePage({
   const product = iphones.find((p) => toSlug(p.model) === slug);
   if (!product) notFound();
 
+  const allDbProducts = await getDbProducts();
+  const dbProduct = allDbProducts.find((p) => toSlug(p.model) === slug);
+  const priceGood = dbProduct?.price_good ?? product.priceGood;
+  const priceFair = Math.round((priceGood * 0.85) / 500) * 500;
+  const pricePoor = Math.round((priceGood * 0.60) / 500) * 500;
+
   const data = iphonePageData[slug];
   const narrative = iphoneNarratives[slug] ?? null;
   const image = iphoneImages[slug] ?? "/product-iphone.webp";
   const canonical = `${SITE_URL}/iphone/${slug}`;
   const sellHref = `/sell/${slug}`;
-  const priceText = product.priceGood.toLocaleString("th-TH");
+  const priceText = priceGood.toLocaleString("th-TH");
   const storages = product.storage.split(" / ");
 
   const seriesMatch = slug.match(/^iphone-(\d+)/);
@@ -112,8 +127,8 @@ export default async function IphonePage({
     offers: {
       "@type": "AggregateOffer",
       priceCurrency: "THB",
-      lowPrice: product.pricePoor,
-      highPrice: product.priceGood,
+      lowPrice: pricePoor,
+      highPrice: priceGood,
       offerCount: storages.length * 3,
       seller: {
         "@type": "LocalBusiness",
@@ -282,19 +297,19 @@ export default async function IphonePage({
                   {
                     label: "สภาพดีมาก",
                     criteria: "ออก iCloud แล้ว · ไม่มีรอย · แบต 80%+",
-                    price: product.priceGood,
+                    price: priceGood,
                     highlight: true,
                   },
                   {
                     label: "สภาพพอใช้",
                     criteria: "มีรอยเล็กน้อย · ไม่มีกล่อง",
-                    price: product.priceFair,
+                    price: priceFair,
                     highlight: false,
                   },
                   {
                     label: "มีตำหนิ",
                     criteria: "รอยมาก · จอแตก · แบตต่ำ",
-                    price: product.pricePoor,
+                    price: pricePoor,
                     highlight: false,
                   },
                 ].map(({ label, criteria, price, highlight }, i) => (
