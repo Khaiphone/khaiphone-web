@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { fetchPublicActiveProducts } from "@/app/actions/products";
 import { blogPosts } from "@/lib/blogData";
+import { iphones } from "@/lib/products";
 
 function toSlug(model: string) {
   return model.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -56,5 +57,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.75,
   }));
 
-  return [...staticPages, ...blogPages, ...locationPages, ...productPages];
+  const iphonePages: MetadataRoute.Sitemap = iphones
+    .filter((p) => !p.discontinued)
+    .map((p) => ({
+      url: `${base}/iphone/${toSlug(p.model)}`,
+      lastModified: now,
+      changeFrequency: "weekly" as const,
+      priority: 0.85,
+    }));
+
+  return [...staticPages, ...blogPages, ...locationPages, ...iphonePages, ...productPages];
 }
