@@ -880,7 +880,7 @@ export async function updateStatus(
   // Get current status_log + request data (needed for auto-stock on completion)
   const { data: current } = await supabase
     .from("requests")
-    .select("status_log, order_number, source, device_model, device_storage, device_color, actual_price, estimated_price, customer_name, customer_phone, inspection, assigned_to")
+    .select("status_log, order_number, source, device_model, device_storage, device_color, actual_price, estimated_price, customer_name, customer_phone, inspection, assigned_to, rider_id")
     .eq("id", id)
     .single();
 
@@ -905,6 +905,14 @@ export async function updateStatus(
   }
 
   await logActivity({ requestId: id, orderNumber: current?.order_number, action: "เปลี่ยนสถานะ", detail: status, userId: user.id });
+
+  // Clear rider's current_job_id when job is completed via contract flow
+  if (status === "completed" && current?.rider_id) {
+    await supabase.from("rider_locations")
+      .update({ current_job_id: null, tracking_mode: "idle", updated_at: new Date().toISOString() })
+      .eq("rider_id", current.rider_id)
+      .eq("current_job_id", id);
+  }
 
   // Auto-create stocks entry when request is completed
   if (status === "completed" && current) {
