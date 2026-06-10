@@ -215,13 +215,13 @@ const CONTENT: Record<string, Section[]> = {
     { type: "paragraph", text: "ลูกค้าที่มาขาย iPhone 14 Pro Max กับเราเมื่อต้นปีได้ไป 17,000 บาท คนที่ขายเครื่องเดียวกันเมื่อปลายปีก่อนได้ 19,500 บาท ต่างกัน 2,500 บาท แค่เพราะถือไว้นานกว่า 6 เดือน เรื่องนี้เกิดขึ้นทุกรุ่น ทุกปี — iPhone ราคาตกไม่ใช่แค่ตามอายุ แต่ตามช่วงเวลาของปีด้วย" },
     { type: "heading", text: "ตัวเลขจริงจากราคารับซื้อวันนี้" },
     { type: "paragraph", text: "ดูจาก Pro Max lineup ที่เราจ่ายอยู่ตอนนี้ เทียบกับราคาเปิดตัว จะเห็นภาพชัดขึ้นว่าเงินหายไปเท่าไหร่ในแต่ละปี" },
-    { type: "table", headers: ["รุ่น", "ราคาเปิดตัว (ประมาณ)", "ราคารับซื้อวันนี้", "เหลือ %"], rows: [
-      ["iPhone 17 Pro Max", "~52,900 บาท", "39,000 บาท", "74%"],
-      ["iPhone 16 Pro Max", "~49,900 บาท", "28,500 บาท", "57%"],
-      ["iPhone 15 Pro Max", "~47,900 บาท", "22,200 บาท", "46%"],
-      ["iPhone 14 Pro Max", "~43,900 บาท", "17,000 บาท", "39%"],
-      ["iPhone 13 Pro Max", "~44,900 บาท", "13,000 บาท", "29%"],
-      ["iPhone 11 Pro Max", "~42,900 บาท", "4,800 บาท",  "11%"],
+    { type: "table", headers: ["รุ่น", "ราคาเปิดตัว 256GB", "ราคารับซื้อวันนี้", "เหลือ %"], rows: [
+      ["iPhone 17 Pro Max", "48,900 บาท", "39,000 บาท", "80%"],
+      ["iPhone 16 Pro Max", "48,900 บาท", "28,500 บาท", "58%"],
+      ["iPhone 15 Pro Max", "48,900 บาท", "22,200 บาท", "45%"],
+      ["iPhone 14 Pro Max", "44,900 บาท", "17,000 บาท", "38%"],
+      ["iPhone 13 Pro Max", "46,900 บาท", "13,000 บาท", "28%"],
+      ["iPhone 11 Pro Max", "45,900 บาท", "4,800 บาท",  "10%"],
     ]},
     { type: "paragraph", text: "การตกที่หนักที่สุดอยู่ในช่วงปีแรกถึงปีที่สอง iPhone 16 Pro Max อายุยังไม่ครบปีแต่ราคาหายไปแล้วกว่า 20,000 บาท หลังจากนั้นราคาตกช้าลงเรื่อยๆ แต่ไม่หยุด iPhone 11 Pro Max อายุหกปียังขายได้อยู่ เพราะยังใช้งานได้จริง ยังรับ iOS ล่าสุดได้ และยังมีคนต้องการ" },
     { type: "heading", text: "สามช่วงที่ราคาตกเร็วกว่าปกติ" },
@@ -352,7 +352,7 @@ export default async function BlogPostPage({
       <div className="px-4 pb-2" style={{ background: "#f9f9f7" }}>
         <div className="max-w-3xl mx-auto">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={post.image} alt={post.title} className="w-full object-cover rounded-2xl" style={{ aspectRatio: "16/7", maxHeight: 340 }} />
+          <img src={post.image} alt={post.title} className="w-full rounded-2xl" style={{ display: "block", maxHeight: 480, objectFit: "contain" }} />
         </div>
       </div>
 
