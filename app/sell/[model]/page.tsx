@@ -413,10 +413,16 @@ function getAvailableTimeSlots(selectedDate: string): string[] {
   const dd = (n: number) => String(n).padStart(2, "0");
   const today = `${now.getFullYear()}-${dd(now.getMonth() + 1)}-${dd(now.getDate())}`;
   const slots: string[] = [];
-  for (let h = 9; h <= 23; h++) slots.push(`${dd(h)}:00`);
+  for (let h = 9; h <= 23; h++) {
+    slots.push(`${dd(h)}:00`);
+    if (h < 23) slots.push(`${dd(h)}:30`);
+  }
   if (selectedDate !== today) return slots;
-  const minHour = now.getHours() + 1;
-  return slots.filter(s => parseInt(s) >= minHour);
+  const minMinutes = now.getHours() * 60 + now.getMinutes() + 60;
+  return slots.filter(s => {
+    const [h, m] = s.split(":").map(Number);
+    return h * 60 + m >= minMinutes;
+  });
 }
 
 const STEP_TITLES = [
@@ -950,7 +956,13 @@ function SellModelPageContent() {
     const dd = (n: number) => String(n).padStart(2, "0");
     return `${d.getFullYear()}-${dd(d.getMonth() + 1)}-${dd(d.getDate())}`;
   });
-  const [appointTime, setAppointTime] = useState("14:00");
+  const [appointTime, setAppointTime] = useState(() => {
+    const now = new Date();
+    const dd = (n: number) => String(n).padStart(2, "0");
+    const today = `${now.getFullYear()}-${dd(now.getMonth() + 1)}-${dd(now.getDate())}`;
+    const slots = getAvailableTimeSlots(today);
+    return slots[0] ?? "14:00";
+  });
   const [notes, setNotes] = useState("");
   const [riderAddress, setRiderAddress] = useState("");
   const [pinAddress, setPinAddress] = useState("");
