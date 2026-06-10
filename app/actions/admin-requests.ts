@@ -504,6 +504,16 @@ export async function adminConfirmReturn(id: string) {
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
 
+  // Guard: skip if stock already exists for this request (e.g. created by updateStatus "completed")
+  const { count: existingCount } = await supabase
+    .from("stocks")
+    .select("*", { count: "exact", head: true })
+    .eq("request_ref", req.order_number);
+  if ((existingCount ?? 0) > 0) {
+    after(() => broadcastRequestUpdate(id).catch(console.error));
+    return { success: true as const, stockItemId: null };
+  }
+
   // Auto-create stock item from request data
   const stockResult = await createStockItem({
     id:            "",                                              // generated inside createStockItem
