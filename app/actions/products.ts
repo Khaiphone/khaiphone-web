@@ -185,7 +185,7 @@ export async function syncProductsFromLib() {
         toInsert.push({
           model: p.model,
           storage: p.storage,
-          price_good: p.priceGood,
+          price_good: 0,
           category: key,
           active: true,
           updated_at: new Date().toISOString(),

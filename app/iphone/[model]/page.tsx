@@ -38,7 +38,7 @@ export async function generateMetadata({
 
   const allDbProducts = await getDbProducts();
   const dbProduct = allDbProducts.find((p) => toSlug(p.model) === slug);
-  const priceGood = dbProduct?.price_good ?? product.priceGood;
+  const priceGood = dbProduct?.price_good ?? 0;
 
   const canonical = `${SITE_URL}/iphone/${slug}`;
   const image = iphoneImages[slug] ?? "/product-iphone.webp";
@@ -94,7 +94,7 @@ export default async function IphonePage({
 
   const allDbProducts = await getDbProducts();
   const dbProduct = allDbProducts.find((p) => toSlug(p.model) === slug);
-  const priceGood = dbProduct?.price_good ?? product.priceGood;
+  const priceGood = dbProduct?.price_good ?? 0;
   const priceFair = Math.round((priceGood * 0.85) / 500) * 500;
   const pricePoor = Math.round((priceGood * 0.60) / 500) * 500;
 
@@ -445,10 +445,7 @@ export default async function IphonePage({
                     style={{ border: "1px solid #E5E7EB" }}
                   >
                     <p className="font-bold text-black text-sm leading-snug">{p.model}</p>
-                    <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>รับซื้อสูงสุด</p>
-                    <p className="text-lg font-bold" style={{ color: "#B8860B" }}>
-                      ฿{p.priceGood.toLocaleString("th-TH")}
-                    </p>
+                    <p className="text-xs mt-2" style={{ color: "#B8860B" }}>ดูราคา →</p>
                   </Link>
                 );
               })}
