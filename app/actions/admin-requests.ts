@@ -504,14 +504,25 @@ export async function adminConfirmReturn(id: string) {
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
 
-  // Guard: skip if stock already exists for this request (e.g. created by updateStatus "completed")
-  const { count: existingCount } = await supabase
+  // If stock already exists (created by updateStatus "completed"), patch the fields
+  // that adminConfirmReturn knows better: inspector name and inspection color.
+  // Keep everything else (inspection_snapshot, icloud_status, physical_checks) from the
+  // updateStatus entry which is more complete.
+  const { data: existingStock } = await supabase
     .from("stocks")
-    .select("*", { count: "exact", head: true })
-    .eq("request_ref", req.order_number);
-  if ((existingCount ?? 0) > 0) {
+    .select("id")
+    .eq("request_ref", req.order_number)
+    .maybeSingle();
+  if (existingStock) {
+    const patch: Record<string, unknown> = { inspector: confirmedByName, updated_at: now };
+    const inspectionColor = inspection.color ?? null;
+    if (inspectionColor) patch.color = inspectionColor;
+    await supabase.from("stocks").update(patch).eq("id", existingStock.id);
+    await supabase.from("requests")
+      .update({ stock_item_id: existingStock.id, updated_at: now })
+      .eq("id", id);
     after(() => broadcastRequestUpdate(id).catch(console.error));
-    return { success: true as const, stockItemId: null };
+    return { success: true as const, stockItemId: existingStock.id };
   }
 
   // Auto-create stock item from request data
