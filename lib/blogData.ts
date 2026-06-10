@@ -20,7 +20,7 @@ export const blogPosts: BlogPost[] = [
     readTime: "5 นาที",
     title: "ราคา iPhone ตกเร็วแค่ไหน และควรขายตอนไหนถึงจะได้ราคาดีที่สุด",
     excerpt: "ดูตัวเลขจริงจากราคารับซื้อวันนี้ — iPhone แต่ละรุ่นเหลือกี่เปอร์เซ็นต์ของราคาเปิดตัว และช่วงเวลาไหนที่ราคาตกเร็วที่สุดในรอบปี",
-    image: "/blog_iphone-price.webp",
+    image: "/blog_iphone-depreciation.webp",
     slug: "when-to-sell-iphone-best-price",
     keywords: ["ราคา iPhone ตก", "ควรขาย iPhone ตอนไหน", "iPhone มือสองราคาเท่าไหร่", "ขาย iPhone ได้เงินเท่าไหร่"],
   },
