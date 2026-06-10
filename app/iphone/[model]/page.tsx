@@ -91,6 +91,16 @@ export default async function IphonePage({
   const priceText = product.priceGood.toLocaleString("th-TH");
   const storages = product.storage.split(" / ");
 
+  const seriesMatch = slug.match(/^iphone-(\d+)/);
+  const seriesNum = seriesMatch?.[1];
+  const relatedProducts = seriesNum
+    ? iphones.filter((p) => {
+        if (p.discontinued) return false;
+        const s = toSlug(p.model);
+        return s !== slug && new RegExp(`^iphone-${seriesNum}(-|e|$)`).test(s);
+      })
+    : [];
+
   // ── JSON-LD schemas ──────────────────────────────────────────────────────────
 
   const productSchema = {
@@ -398,6 +408,35 @@ export default async function IphonePage({
                   <p className="px-6 pb-5 text-sm leading-relaxed" style={{ color: "#6B7280" }}>{a}</p>
                 </details>
               ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Related models ──────────────────────────────────────────────────────── */}
+      {relatedProducts.length > 0 && (
+        <section className="px-4 py-12 md:py-16">
+          <div className="max-w-5xl mx-auto">
+            <h2 className="text-xl md:text-2xl font-bold text-black mb-2">รุ่นที่เกี่ยวข้อง</h2>
+            <p className="text-sm mb-8" style={{ color: "#6B7280" }}>iPhone ซีรีส์เดียวกันที่รับซื้ออยู่</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {relatedProducts.map((p) => {
+                const s = toSlug(p.model);
+                return (
+                  <Link
+                    key={s}
+                    href={`/iphone/${s}`}
+                    className="bg-white rounded-2xl p-5 flex flex-col gap-1.5 transition-shadow hover:shadow-md"
+                    style={{ border: "1px solid #E5E7EB" }}
+                  >
+                    <p className="font-bold text-black text-sm leading-snug">{p.model}</p>
+                    <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>รับซื้อสูงสุด</p>
+                    <p className="text-lg font-bold" style={{ color: "#B8860B" }}>
+                      ฿{p.priceGood.toLocaleString("th-TH")}
+                    </p>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </section>
