@@ -6,7 +6,7 @@ import { ChevronRight } from "lucide-react";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import { iphones } from "@/lib/products";
-import { iphonePageData, iphoneImages } from "@/lib/iphoneData";
+import { iphonePageData, iphoneImages, iphoneNarratives } from "@/lib/iphoneData";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://khaiphone.com";
 const UPDATED_DATE_ISO  = "2026-06-10";
@@ -84,6 +84,7 @@ export default async function IphonePage({
   if (!product) notFound();
 
   const data = iphonePageData[slug];
+  const narrative = iphoneNarratives[slug] ?? null;
   const image = iphoneImages[slug] ?? "/product-iphone.webp";
   const canonical = `${SITE_URL}/iphone/${slug}`;
   const sellHref = `/sell/${slug}`;
@@ -311,6 +312,22 @@ export default async function IphonePage({
           </p>
         </div>
       </section>
+
+      {/* ── Narrative ───────────────────────────────────────────────────────────── */}
+      {narrative && (
+        <section className="px-4 py-12 md:py-16" style={{ borderTop: "1px solid #F3F4F6" }}>
+          <div className="max-w-5xl mx-auto">
+            <h2 className="text-xl md:text-2xl font-bold text-black mb-4">เกี่ยวกับ {product.model}</h2>
+            <div className="space-y-3 max-w-3xl">
+              {narrative.map((para, i) => (
+                <p key={i} className="text-sm md:text-base leading-relaxed" style={{ color: "#374151" }}>
+                  {para}
+                </p>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── Price factors ────────────────────────────────────────────────────────── */}
       <section className="px-4 py-12 md:py-16" style={{ background: "#f9f9f7" }}>
