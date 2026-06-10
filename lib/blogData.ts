@@ -13,6 +13,18 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    id: 6,
+    category: "ราคาล่าสุด",
+    date: "2026-06-10",
+    displayDate: "10 มิ.ย. 2569",
+    readTime: "5 นาที",
+    title: "ราคา iPhone ตกเร็วแค่ไหน และควรขายตอนไหนถึงจะได้ราคาดีที่สุด",
+    excerpt: "ดูตัวเลขจริงจากราคารับซื้อวันนี้ — iPhone แต่ละรุ่นเหลือกี่เปอร์เซ็นต์ของราคาเปิดตัว และช่วงเวลาไหนที่ราคาตกเร็วที่สุดในรอบปี",
+    image: "/blog_iphone-price.webp",
+    slug: "when-to-sell-iphone-best-price",
+    keywords: ["ราคา iPhone ตก", "ควรขาย iPhone ตอนไหน", "iPhone มือสองราคาเท่าไหร่", "ขาย iPhone ได้เงินเท่าไหร่"],
+  },
+  {
     id: 5,
     category: "วิธีขาย",
     date: "2026-05-27",
