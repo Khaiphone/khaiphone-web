@@ -729,6 +729,8 @@ export async function deleteStockItem(id: string): Promise<{ success: boolean; e
   const isOwner = profile?.role === "owner";
   const canDelete = (profile?.permissions as string[] | null)?.includes("delete_stock") ?? false;
   if (!isOwner && !canDelete) return { success: false, error: "ไม่มีสิทธิ์ลบสินค้า" };
+  // Clear FK reference in requests before deleting to avoid constraint violations
+  await supabase.from("requests").update({ stock_item_id: null }).eq("stock_item_id", id);
   const { error } = await supabase.from("stocks").delete().eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };

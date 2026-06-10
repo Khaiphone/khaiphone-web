@@ -182,11 +182,17 @@ export default function StockInventoryPage() {
 
   async function handleBulkDelete() {
     if (!confirm(`ลบ ${checked.size} รายการที่เลือก?`)) return;
+    const failed: string[] = [];
     for (const id of checked) {
-      await deleteStockItem(id);
-      setStocks(prev => prev.filter(s => s.id !== id));
+      const res = await deleteStockItem(id);
+      if (res.success) {
+        setStocks(prev => prev.filter(s => s.id !== id));
+      } else {
+        failed.push(`${id}: ${res.error}`);
+      }
     }
     setChecked(new Set());
+    if (failed.length > 0) alert(`ลบไม่สำเร็จ:\n${failed.join("\n")}`);
   }
 
   function openSellModal(item: StockItem) {
