@@ -817,6 +817,7 @@ function SellModelPageContent() {
   const modalSearchRef   = useRef<HTMLInputElement>(null);
   const bankSectionRef   = useRef<HTMLDivElement>(null);
   const termsSectionRef  = useRef<HTMLDivElement>(null);
+  const appointSectionRef = useRef<HTMLDivElement>(null);
 
   const WIZARD_KEY = `khaiphone_wizard_${params.model}`;
 
@@ -1191,6 +1192,15 @@ function SellModelPageContent() {
         (newErrors.bankName || newErrors.bankAccount || newErrors.bankAccountName) ? bankSectionRef.current :
         newErrors.terms           ? termsSectionRef.current : null;
       firstEl?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    // Validate appointment time is still at least 1 hour in the future
+    const validSlots = getAvailableTimeSlots(appointDate);
+    if (validSlots.length === 0 || !validSlots.includes(appointTime)) {
+      const corrected = validSlots[0];
+      if (corrected) setAppointTime(corrected);
+      appointSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      alert("เวลานัดหมายที่เลือกผ่านไปแล้ว กรุณาเลือกเวลาใหม่");
       return;
     }
     setSubmitting(true);
@@ -1716,7 +1726,7 @@ function SellModelPageContent() {
                           </div>
                           <h3 className="font-bold text-black">นัดหมาย</h3>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div ref={appointSectionRef} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                           <div>
                             <label className="block text-xs font-semibold mb-1.5" style={{ color: "#374151" }}>
                               สาขาที่ต้องการนัดหมาย <span style={{ color: "#EF4444" }}>*</span>
@@ -1809,7 +1819,7 @@ function SellModelPageContent() {
                           <p className="text-xs mt-1.5" style={{ color: "#6B7280" }}>เจ้าหน้าที่จะโทรยืนยันก่อนเดินทาง</p>
                         </div>
                         {/* Date + Time */}
-                        <div className="grid grid-cols-1 gap-3">
+                        <div ref={appointSectionRef} className="grid grid-cols-1 gap-3">
                           <div>
                             <label className="block text-xs font-semibold mb-1.5" style={{ color: "#374151" }}>
                               วันที่นัดหมาย <span style={{ color: "#EF4444" }}>*</span>
