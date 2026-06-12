@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 
 export default function FloatingLineButton() {
   const pathname = usePathname();
-  const hidden = pathname.startsWith("/sell/") || pathname.startsWith("/stock") || pathname.startsWith("/admin") || pathname.startsWith("/rider");
+  const hidden = pathname.startsWith("/sell") || pathname.startsWith("/stock") || pathname.startsWith("/admin") || pathname.startsWith("/rider");
   if (hidden) return null;
 
   return (
