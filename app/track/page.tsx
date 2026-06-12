@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, AlertCircle, Loader2 } from "lucide-react";
 import Header from "../components/Header";
-import { fetchRequestByOrderNumber, checkOrderExists } from "@/app/actions/admin-requests";
+import { fetchRequestByOrderNumber } from "@/app/actions/admin-requests";
 
 function normalizePhone(p: string) {
   return p.replace(/\D/g, "");
@@ -53,14 +53,6 @@ export default function TrackPage() {
       const found = await fetchRequestByOrderNumber(normalizedOrder, normalizedPhone);
       if (found) {
         router.push(`/request/${found.orderNumber}?phone=${encodeURIComponent(normalizedPhone)}`);
-        return;
-      }
-
-      // Intentionally show generic error (not revealing whether order exists)
-      const exists = await checkOrderExists(normalizedOrder);
-      if (exists) {
-        setLoading(false);
-        setError("ไม่พบข้อมูลที่ตรงกัน กรุณาตรวจสอบเลขคำขอและเบอร์โทรอีกครั้ง");
         return;
       }
     } catch (err) {

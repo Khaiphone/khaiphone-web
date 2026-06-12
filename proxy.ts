@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 const store = new Map<string, number[]>();
-const WINDOW_MS    = 60_000;
-const MAX_REQUESTS = 30;
 
 function getIp(req: NextRequest): string {
   return (
@@ -13,12 +11,12 @@ function getIp(req: NextRequest): string {
   );
 }
 
-function isRateLimited(ip: string): boolean {
+function isRateLimited(key: string, windowMs: number, max: number): boolean {
   const now        = Date.now();
-  const timestamps = (store.get(ip) ?? []).filter(t => now - t < WINDOW_MS);
+  const timestamps = (store.get(key) ?? []).filter(t => now - t < windowMs);
   timestamps.push(now);
-  store.set(ip, timestamps);
-  return timestamps.length > MAX_REQUESTS;
+  store.set(key, timestamps);
+  return timestamps.length > max;
 }
 
 // ── Subdomain → internal path map ────────────────────────────────────────────
@@ -68,7 +66,15 @@ export function proxy(req: NextRequest) {
   // ── Rate limit POST requests ──────────────────────────────────────
   if (req.method === "POST") {
     const ip = getIp(req);
-    if (isRateLimited(ip)) {
+    // Stricter limit for track lookup (brute-force protection)
+    if (pathname === "/track") {
+      if (isRateLimited(`track:${ip}`, 15 * 60_000, 5)) {
+        return new NextResponse(
+          JSON.stringify({ error: "Too many attempts. Please try again later." }),
+          { status: 429, headers: { "Content-Type": "application/json" } },
+        );
+      }
+    } else if (isRateLimited(`post:${ip}`, 60_000, 30)) {
       return new NextResponse(
         JSON.stringify({ error: "Too many requests. Please slow down." }),
         { status: 429, headers: { "Content-Type": "application/json" } },
