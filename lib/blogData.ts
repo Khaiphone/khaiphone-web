@@ -13,6 +13,18 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    id: 7,
+    category: "วิธีขาย",
+    date: "2026-06-12",
+    displayDate: "12 มิ.ย. 2569",
+    readTime: "4 นาที",
+    title: "แบตต่ำกว่า 80% ราคาตกจริงไหม?",
+    excerpt: "ดูตัวเลขจริงจากระบบประเมินราคาของเรา — แบตแต่ละระดับหักเท่าไหร่ และควรเปลี่ยนแบตก่อนขายไหม",
+    image: "/blog_iphone-battery.webp",
+    slug: "battery-health-iphone-price",
+    keywords: ["แบต iPhone ต่ำกว่า 80%", "เปลี่ยนแบตก่อนขาย iPhone", "แบตเสื่อม ราคาตก"],
+  },
+  {
     id: 6,
     category: "ราคาล่าสุด",
     date: "2026-06-10",
