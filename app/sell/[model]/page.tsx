@@ -1503,122 +1503,151 @@ function SellModelPageContent() {
                     </div>
                   </div>
 
-                  {/* Device card — hidden on desktop (sidebar handles this) */}
+                  {/* Device card — mobile only; tabs when multiple devices */}
                   <div className="md:hidden bg-white rounded-2xl p-5" style={{ border: "1px solid #E5E7EB" }}>
                     <h3 className="font-bold text-black mb-4">ข้อมูลเครื่องที่ประเมิน</h3>
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="relative flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center" style={{ width: 72, height: 72, background: "#F5F5F7" }}>
-                        {getProductImage(product.model)
-                          ? <Image src={getProductImage(product.model)!} alt={product.model} fill className="object-contain p-1.5" sizes="72px" />
-                          : <IconApple className="w-10 h-10 opacity-20" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-black text-base leading-snug">{product.model}</p>
-                        <p className="text-sm mt-0.5" style={{ color: "#6B7280" }}>
-                          {picks[0] !== null ? storages[picks[0]] : ""}
-                          {picks[3] !== null ? ` • ${BODY_OPTS[picks[3]]?.sub ?? ""}` : ""}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={goBackToWizard}
-                      className="flex items-center justify-center w-full py-2.5 rounded-full font-semibold text-sm mb-4"
-                      style={{ border: "1px solid #B8860B", color: "#B8860B" }}
-                    >
-                      แก้ไขข้อมูลเครื่อง
-                    </button>
-                    <div className="flex flex-col" style={{ borderTop: "1px solid #F9FAFB" }}>
-                      {summaryRows.map(({ title, value }) => (
-                        <div key={title} className="flex items-center justify-between py-2.5" style={{ borderBottom: "1px solid #F9FAFB" }}>
-                          <span className="text-sm" style={{ color: "#6B7280" }}>{title}</span>
-                          <span className="text-sm font-medium text-black text-right">{value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
 
-                  {/* Bundle: สินค้าในรายการนี้ — hidden on desktop (sidebar handles this) */}
-                  <div className="md:hidden bg-white rounded-2xl p-5" style={{ border: "1px solid #E5E7EB" }}>
-                    <h3 className="font-bold text-black mb-3">สินค้าที่จะขายในครั้งนี้</h3>
-                    <div className="flex flex-col gap-2 mb-3">
-                      {/* Current device (primary) — no delete button, shows "หลัก" badge */}
-                      <div className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: "rgba(184,134,11,0.06)", border: "1px solid rgba(184,134,11,0.2)" }}>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <p className="text-sm font-semibold text-black leading-snug">{product?.model}</p>
-                            <span className="text-xs font-medium px-1.5 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.15)", color: "#B8860B" }}>หลัก</span>
-                          </div>
-                          <p className="text-xs" style={{ color: "#6B7280" }}>
-                            {picks[0] !== null ? storages[picks[0]] : ""}
-                            {picks[3] !== null ? ` • ${BODY_OPTS[picks[3]]?.sub ?? ""}` : ""}
-                          </p>
-                        </div>
-                        {pricesLoaded
-                          ? <p className="text-sm font-bold flex-shrink-0" style={{ color: "#B8860B" }}>฿{price.toLocaleString("th-TH")}</p>
-                          : <p className="text-xs font-medium flex-shrink-0" style={{ color: "#B8860B" }}>คำนวณอยู่…</p>}
+                    {/* Tabs — only when extra devices exist */}
+                    {extraDevices.length > 0 && (
+                      <div className="flex gap-1 rounded-xl p-1 mb-4" style={{ background: "#F3F4F6" }}>
+                        {[product.model, ...extraDevices.map(d => d.model)].map((label, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => setSidebarDeviceTab(i)}
+                            className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all truncate"
+                            style={{
+                              background: sidebarDeviceTab === i ? "#fff" : "transparent",
+                              color: sidebarDeviceTab === i ? "#111" : "#6B7280",
+                              boxShadow: sidebarDeviceTab === i ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                              border: "none", cursor: "pointer",
+                            }}
+                          >
+                            เครื่องที่ {i + 1}
+                          </button>
+                        ))}
                       </div>
-                      {/* Extra devices */}
-                      {extraDevices.map((d, i) => (
-                        <div key={i} className="rounded-xl overflow-hidden" style={{ border: "1px solid #E5E7EB" }}>
-                          {/* Header row */}
-                          <div className="flex items-center gap-3 px-3 py-2.5" style={{ background: "#F9FAFB" }}>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-black leading-snug">{d.model}</p>
-                              <p className="text-xs" style={{ color: "#6B7280" }}>{d.storage || "—"}</p>
+                    )}
+
+                    {/* Main device (tab 0) */}
+                    {sidebarDeviceTab === 0 ? (
+                      <>
+                        <div className="flex items-center gap-4 mb-4">
+                          <div className="relative flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center" style={{ width: 72, height: 72, background: "#F5F5F7" }}>
+                            {getProductImage(product.model)
+                              ? <Image src={getProductImage(product.model)!} alt={product.model} fill className="object-contain p-1.5" sizes="72px" />
+                              : <IconApple className="w-10 h-10 opacity-20" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-black text-base leading-snug">{product.model}</p>
+                            <p className="text-sm mt-0.5" style={{ color: "#6B7280" }}>
+                              {picks[0] !== null ? storages[picks[0]] : ""}
+                              {picks[3] !== null ? ` • ${BODY_OPTS[picks[3]]?.sub ?? ""}` : ""}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={goBackToWizard}
+                          className="flex items-center justify-center w-full py-2.5 rounded-full font-semibold text-sm mb-4"
+                          style={{ border: "1px solid #B8860B", color: "#B8860B" }}
+                        >
+                          แก้ไขข้อมูลเครื่อง
+                        </button>
+                        <div className="flex flex-col" style={{ borderTop: "1px solid #F9FAFB" }}>
+                          {summaryRows.map(({ title, value }) => (
+                            <div key={title} className="flex items-center justify-between py-2.5" style={{ borderBottom: "1px solid #F9FAFB" }}>
+                              <span className="text-sm" style={{ color: "#6B7280" }}>{title}</span>
+                              <span className="text-sm font-medium text-black text-right">{value}</span>
                             </div>
-                            <p className="text-sm font-bold flex-shrink-0" style={{ color: "#6B7280" }}>฿{d.estimatedPrice.toLocaleString("th-TH")}</p>
+                          ))}
+                        </div>
+                        {pricesLoaded && (
+                          <div className="flex items-center justify-between pt-3">
+                            <span className="text-sm font-semibold" style={{ color: "#6B7280" }}>ราคาประเมิน</span>
+                            <span className="text-sm font-bold" style={{ color: "#B8860B" }}>฿{price.toLocaleString("th-TH")}</span>
+                          </div>
+                        )}
+                      </>
+                    ) : (() => {
+                      const d = extraDevices[sidebarDeviceTab - 1];
+                      if (!d) return null;
+                      const extraIdx = sidebarDeviceTab - 1;
+                      return (
+                        <>
+                          <div className="flex items-center gap-4 mb-4">
+                            <div className="relative flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center" style={{ width: 72, height: 72, background: "#F5F5F7" }}>
+                              {getProductImage(d.model)
+                                ? <Image src={getProductImage(d.model)!} alt={d.model} fill className="object-contain p-1.5" sizes="72px" />
+                                : <IconApple className="w-10 h-10 opacity-20" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-black text-base leading-snug">{d.model}</p>
+                              <p className="text-sm mt-0.5" style={{ color: "#6B7280" }}>{d.storage || "—"}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 mb-4">
                             <button
                               type="button"
                               onClick={() => {
                                 try {
                                   const stored: ExtraDevice[] = JSON.parse(localStorage.getItem(BUNDLE_KEY) ?? "[]");
-                                  const updated = stored.filter((_, j) => j !== i);
+                                  const updated = stored.filter((_, j) => j !== extraIdx);
                                   localStorage.setItem(BUNDLE_KEY, JSON.stringify(updated));
                                   localStorage.setItem(BUNDLE_RETURN_KEY, window.location.href);
                                   localStorage.removeItem(`khaiphone_wizard_${toSlug(d.model)}`);
                                 } catch {}
                                 window.location.href = `/sell/${toSlug(d.model)}`;
                               }}
-                              className="flex-shrink-0 ml-1 text-xs font-semibold"
-                              style={{ color: "#B8860B", background: "none", border: "none", padding: "2px 4px", cursor: "pointer" }}
+                              className="flex-1 py-2.5 rounded-full font-semibold text-sm"
+                              style={{ border: "1px solid #B8860B", color: "#B8860B", background: "none", cursor: "pointer" }}
                             >
-                              แก้ไข
+                              แก้ไขข้อมูลเครื่อง
                             </button>
-                            <button type="button" onClick={() => handleRemoveExtra(i)} className="flex-shrink-0 p-1 rounded-full hover:bg-gray-100">
-                              <X size={13} style={{ color: "#6B7280" }} />
+                            <button
+                              type="button"
+                              onClick={() => { handleRemoveExtra(extraIdx); setSidebarDeviceTab(0); }}
+                              className="py-2.5 px-4 rounded-full font-semibold text-sm"
+                              style={{ border: "1px solid #E5E7EB", color: "#6B7280", background: "none", cursor: "pointer" }}
+                            >
+                              ลบ
                             </button>
                           </div>
-                          {/* Condition details */}
                           {d.details && d.details.length > 0 && (
-                            <div className="px-3 pb-2" style={{ borderTop: "1px solid #F3F4F6", background: "#fff" }}>
+                            <div className="flex flex-col" style={{ borderTop: "1px solid #F9FAFB" }}>
                               {d.details.map(({ title, value }) => (
-                                <div key={title} className="flex items-center justify-between py-1.5" style={{ borderBottom: "1px solid #F9FAFB" }}>
-                                  <span className="text-xs" style={{ color: "#6B7280" }}>{title}</span>
-                                  <span className="text-xs font-medium text-black text-right">{value}</span>
+                                <div key={title} className="flex items-center justify-between py-2.5" style={{ borderBottom: "1px solid #F9FAFB" }}>
+                                  <span className="text-sm" style={{ color: "#6B7280" }}>{title}</span>
+                                  <span className="text-sm font-medium text-black text-right">{value}</span>
                                 </div>
                               ))}
                             </div>
                           )}
-                        </div>
-                      ))}
-                      {/* Total row — only shown when there are extra devices */}
-                      {extraDevices.length > 0 && (
-                        <div className="flex items-center justify-between px-3 pt-2" style={{ borderTop: "1px dashed #E5E7EB" }}>
-                          <p className="text-xs font-semibold" style={{ color: "#6B7280" }}>รวมทั้งหมด ({extraDevices.length + 1} เครื่อง)</p>
-                          {pricesLoaded
-                            ? <p className="text-sm font-bold" style={{ color: "#B8860B" }}>฿{totalBundlePrice.toLocaleString("th-TH")}</p>
-                            : <p className="text-xs font-medium" style={{ color: "#B8860B" }}>คำนวณอยู่…</p>}
-                        </div>
-                      )}
-                    </div>
-                    {/* Use <a> tag to avoid form validation / beforeunload dialog */}
+                          <div className="flex items-center justify-between pt-3">
+                            <span className="text-sm font-semibold" style={{ color: "#6B7280" }}>ราคาประเมิน</span>
+                            <span className="text-sm font-bold" style={{ color: "#6B7280" }}>฿{d.estimatedPrice.toLocaleString("th-TH")}</span>
+                          </div>
+                        </>
+                      );
+                    })()}
+
+                    {/* Total row */}
+                    {extraDevices.length > 0 && (
+                      <div className="flex items-center justify-between pt-3 mt-1" style={{ borderTop: "1px dashed #E5E7EB" }}>
+                        <p className="text-xs font-semibold" style={{ color: "#6B7280" }}>รวมทั้งหมด ({extraDevices.length + 1} เครื่อง)</p>
+                        {pricesLoaded
+                          ? <p className="text-sm font-bold" style={{ color: "#B8860B" }}>฿{totalBundlePrice.toLocaleString("th-TH")}</p>
+                          : <p className="text-xs font-medium" style={{ color: "#B8860B" }}>คำนวณอยู่…</p>}
+                      </div>
+                    )}
+
+                    {/* Add more devices */}
                     <a
                       href="/sell"
                       onClick={() => {
                         try { localStorage.setItem(BUNDLE_RETURN_KEY, window.location.href); } catch {}
                       }}
-                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold"
+                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold mt-3"
                       style={{ border: "1.5px dashed #D1D5DB", color: "#6B7280", textDecoration: "none" }}
                     >
                       <Plus size={14} /> ประเมินสินค้าเพิ่ม
