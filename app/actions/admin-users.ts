@@ -45,7 +45,17 @@ export type RiderVehicleInfo = {
   vehicle_tax_expiry: string | null;
 };
 
+async function requireOwner() {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+  const { data } = await supabase.from("admin_users").select("role").eq("user_id", user.id).single();
+  if (data?.role !== "owner") throw new Error("Forbidden");
+  return user;
+}
+
 export async function fetchMyProfile(userId: string): Promise<{ name: string; role: AdminRole; email: string; permissions: Permission[]; is_rider: boolean; avatar_url: string | null } | null> {
+  const user = await requireAuth();
+  if (user.id !== userId) throw new Error("Forbidden");
   const supabase = createServerClient();
   const { data } = await supabase
     .from("admin_users")
@@ -64,6 +74,8 @@ export async function fetchMyProfile(userId: string): Promise<{ name: string; ro
 }
 
 export async function fetchMyRole(userId: string): Promise<AdminRole> {
+  const authedUser = await requireAuth();
+  if (authedUser.id !== userId) throw new Error("Forbidden");
   const supabase = createServerClient();
 
   // If table is empty (first-time / migration) — treat current user as owner
@@ -93,7 +105,7 @@ export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
 }
 
 export async function updateAdminPermissions(id: string, permissions: Permission[]) {
-  await requireAuth();
+  await requireOwner();
   const supabase = createServerClient();
   const { error } = await supabase.from("admin_users").update({ permissions }).eq("id", id);
   if (error) return { success: false as const, error: error.message };
@@ -162,7 +174,7 @@ export async function updateAdminUser(
   id: string,
   updates: { name?: string; role?: AdminRole; active?: boolean; is_rider?: boolean },
 ) {
-  await requireAuth();
+  await requireOwner();
   const supabase = createServerClient();
   const { error } = await supabase
     .from("admin_users")
@@ -173,7 +185,7 @@ export async function updateAdminUser(
 }
 
 export async function resetPasswordDirect(userId: string): Promise<{ success: true; tempPassword: string } | { success: false; error: string }> {
-  await requireAuth();
+  await requireOwner();
   const supabase = createServerClient();
   const tempPassword = generateTempPassword();
   const { error } = await supabase.auth.admin.updateUserById(userId, { password: tempPassword });
@@ -182,6 +194,7 @@ export async function resetPasswordDirect(userId: string): Promise<{ success: tr
 }
 
 export async function sendPasswordReset(email: string): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
   const supabase = createServerClient();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -192,6 +205,8 @@ export async function sendPasswordReset(email: string): Promise<{ success: boole
 }
 
 export async function updateRiderAvatar(userId: string, avatarUrl: string | null) {
+  const user = await requireAuth();
+  if (user.id !== userId) return { success: false as const, error: "Forbidden" };
   const supabase = createServerClient();
   const { error } = await supabase
     .from("admin_users")

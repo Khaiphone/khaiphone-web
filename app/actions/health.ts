@@ -1,6 +1,7 @@
 "use server";
 
 import { createServerClient } from "@/lib/supabase-server";
+import { requireAuth } from "@/lib/require-auth";
 import { thaiDateStr, startOfThaiDay } from "@/lib/thai-date";
 
 export interface HealthCheck {
@@ -23,6 +24,7 @@ export interface HealthReport {
 }
 
 export async function fetchHealthReport(): Promise<HealthReport> {
+  await requireAuth();
   const supabase = createServerClient();
   const checks: HealthCheck[] = [];
 

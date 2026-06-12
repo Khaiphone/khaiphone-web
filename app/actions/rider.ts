@@ -296,6 +296,8 @@ export async function riderStartJob(id: string) {
   const { data: req } = await supabase
     .from("requests").select("status_log, order_number, device_model, rider_id").eq("id", id).single();
 
+  if (req?.rider_id !== user.id) return { success: false as const, error: "ไม่ใช่งานของคุณ" };
+
   // Block if rider already has an active job (en_route or further)
   const { data: activeJobs } = await supabase
     .from("requests")
@@ -346,7 +348,8 @@ export async function riderArriveJob(id: string, gps?: { lat: number; lng: numbe
   const user = await requireAuth();
   const supabase = createServerClient();
   const { data: req } = await supabase
-    .from("requests").select("status_log, order_number, device_model, appt_lat, appt_lng").eq("id", id).single();
+    .from("requests").select("status_log, order_number, device_model, appt_lat, appt_lng, rider_id").eq("id", id).single();
+  if (req?.rider_id !== user.id) return { success: false as const, error: "ไม่ใช่งานของคุณ" };
   const now = new Date().toISOString();
   const logEntry: Record<string, unknown> = { status: "inspecting", timestamp: now, note: "ไรเดอร์ถึงที่แล้ว เริ่มตรวจเครื่อง" };
   if (gps) { logEntry.lat = gps.lat; logEntry.lng = gps.lng; }
@@ -377,9 +380,10 @@ export async function riderAutoSaveSickw(
   id: string,
   data: { serial?: string; sickw_report: string }
 ): Promise<{ success: boolean; error?: string }> {
-  await requireAuth();
+  const user = await requireAuth();
   const supabase = createServerClient();
-  const { data: req } = await supabase.from("requests").select("inspection").eq("id", id).single();
+  const { data: req } = await supabase.from("requests").select("inspection, rider_id").eq("id", id).single();
+  if (req?.rider_id !== user.id) return { success: false, error: "ไม่ใช่งานของคุณ" };
   const { error } = await supabase
     .from("requests")
     .update({
@@ -414,13 +418,14 @@ export async function riderSaveInspection(id: string, inspection: {
   conditionGrade?: string;
   conditionLabel?: string;
 }) {
-  await requireAuth();
+  const user = await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
   const { color, ...inspectionRest } = inspection;
 
   const { data: req } = await supabase
-    .from("requests").select("order_number, device_model, estimated_price").eq("id", id).single();
+    .from("requests").select("order_number, device_model, estimated_price, rider_id").eq("id", id).single();
+  if (req?.rider_id !== user.id) return { success: false as const, error: "ไม่ใช่งานของคุณ" };
 
   const estimatedPrice = req?.estimated_price ?? 0;
 
@@ -465,7 +470,8 @@ export async function riderConfirmPrice(id: string, actualPrice: number) {
   const now = new Date().toISOString();
 
   const { data: req } = await supabase
-    .from("requests").select("inspection, status_log").eq("id", id).single();
+    .from("requests").select("inspection, status_log, rider_id").eq("id", id).single();
+  if (req?.rider_id !== user.id) return { success: false as const, error: "ไม่ใช่งานของคุณ" };
 
   const updatedInspection = {
     ...(req?.inspection ?? {}),
@@ -506,8 +512,9 @@ export async function riderAdjustPrice(id: string, newPrice: number, reason: str
 
   const { data: req } = await supabase
     .from("requests")
-    .select("inspection, status_log, order_number, device_model, estimated_price")
+    .select("inspection, status_log, order_number, device_model, estimated_price, rider_id")
     .eq("id", id).single();
+  if (req?.rider_id !== user.id) return { success: false as const, error: "ไม่ใช่งานของคุณ" };
 
   const updatedInspection = {
     ...(req?.inspection ?? {}),
@@ -551,8 +558,9 @@ export async function riderCustomerAccepted(id: string) {
   const now = new Date().toISOString();
 
   const { data: req } = await supabase
-    .from("requests").select("inspection, status_log, status, order_number, device_model").eq("id", id).single();
+    .from("requests").select("inspection, status_log, status, order_number, device_model, rider_id").eq("id", id).single();
 
+  if (req?.rider_id !== user.id) return { success: false as const, error: "ไม่ใช่งานของคุณ" };
   if (req?.status !== "price_negotiation") return { success: false as const, error: "สถานะไม่ถูกต้อง — อาจมีคนยืนยันไปแล้ว" };
 
   const updatedInspection = {
@@ -591,8 +599,9 @@ export async function riderCustomerRejected(id: string) {
   const now = new Date().toISOString();
 
   const { data: req } = await supabase
-    .from("requests").select("inspection, status_log, status, order_number, device_model").eq("id", id).single();
+    .from("requests").select("inspection, status_log, status, order_number, device_model, rider_id").eq("id", id).single();
 
+  if (req?.rider_id !== user.id) return { success: false as const, error: "ไม่ใช่งานของคุณ" };
   if (req?.status !== "price_negotiation") return { success: false as const, error: "สถานะไม่ถูกต้อง — อาจมีคนยืนยันไปแล้ว" };
 
   const updatedInspection = {
@@ -670,7 +679,8 @@ export async function riderCompleteCash(id: string, cashPhotoUrl: string) {
   const now = new Date().toISOString();
 
   const { data: req } = await supabase
-    .from("requests").select("status_log, order_number, device_model, actual_price").eq("id", id).single();
+    .from("requests").select("status_log, order_number, device_model, actual_price, rider_id").eq("id", id).single();
+  if (req?.rider_id !== user.id) return { success: false as const, error: "ไม่ใช่งานของคุณ" };
 
   const newLog = [
     ...(req?.status_log ?? []),
@@ -701,14 +711,15 @@ export async function riderCompleteCash(id: string, cashPhotoUrl: string) {
 
 // ─── Request finance transfer ─────────────────────────────────────────────────
 export async function riderRequestTransfer(id: string) {
-  await requireAuth();
+  const user = await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
 
   const { data: req } = await supabase
     .from("requests")
-    .select("order_number, device_model, actual_price, customer_name, payment_account_number, payment_account_name, payment_bank, assigned_to")
+    .select("order_number, device_model, actual_price, customer_name, payment_account_number, payment_account_name, payment_bank, assigned_to, rider_id")
     .eq("id", id).single();
+  if (req?.rider_id !== user.id) return { success: false as const, error: "ไม่ใช่งานของคุณ" };
 
   // Find finance team members to notify
   const { data: financeUsers } = await supabase
@@ -746,7 +757,8 @@ export async function riderCompleteTransfer(id: string, slipUrl?: string) {
   const now = new Date().toISOString();
 
   const { data: req } = await supabase
-    .from("requests").select("status_log, order_number, device_model, actual_price").eq("id", id).single();
+    .from("requests").select("status_log, order_number, device_model, actual_price, rider_id").eq("id", id).single();
+  if (req?.rider_id !== user.id) return { success: false as const, error: "ไม่ใช่งานของคุณ" };
 
   const newLog = [
     ...(req?.status_log ?? []),
@@ -785,7 +797,8 @@ export async function riderNoShow(id: string) {
   const now = new Date().toISOString();
 
   const { data: req } = await supabase
-    .from("requests").select("status_log, order_number, device_model").eq("id", id).single();
+    .from("requests").select("status_log, order_number, device_model, rider_id").eq("id", id).single();
+  if (req?.rider_id !== user.id) return { success: false as const, error: "ไม่ใช่งานของคุณ" };
 
   const newLog = [
     ...(req?.status_log ?? []),

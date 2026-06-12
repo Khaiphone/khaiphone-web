@@ -2,6 +2,7 @@
 
 import webpush from "web-push";
 import { createServerClient } from "@/lib/supabase-server";
+import { requireAuth } from "@/lib/require-auth";
 
 type PushPayload = { title: string; body: string; url?: string; tag?: string };
 type SubRow = { endpoint: string; p256dh: string; auth: string };
@@ -40,13 +41,14 @@ export async function saveSubscription(subscription: {
   keys: { p256dh: string; auth: string };
   userId?: string;
 }) {
+  const user = await requireAuth();
   const supabase = createServerClient();
   await supabase.from("push_subscriptions").upsert(
     {
       endpoint:  subscription.endpoint,
       p256dh:    subscription.keys.p256dh,
       auth:      subscription.keys.auth,
-      user_id:   subscription.userId ?? null,
+      user_id:   user.id,
     },
     { onConflict: "endpoint" },
   );

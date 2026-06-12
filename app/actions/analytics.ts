@@ -3,6 +3,8 @@
 import { createServerClient } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/require-auth";
 
+const VALID_EVENTS = new Set(["start", "step_reached", "price_seen", "submit"]);
+
 export async function trackEstimateEvent(params: {
   sessionId: string;
   event: "start" | "step_reached" | "price_seen" | "submit";
@@ -12,6 +14,10 @@ export async function trackEstimateEvent(params: {
   storage?: string;
   price?: number;
 }): Promise<void> {
+  if (!VALID_EVENTS.has(params.event)) return;
+  if (typeof params.sessionId !== "string" || params.sessionId.length > 64) return;
+  if (params.model && params.model.length > 100) return;
+  if (params.price !== undefined && (typeof params.price !== "number" || params.price < 0 || params.price > 10_000_000)) return;
   const supabase = createServerClient();
   await supabase.from("estimate_events").insert({
     session_id: params.sessionId,
