@@ -182,6 +182,16 @@ export default function Header() {
             <a href="tel:0955535167" aria-label="โทรหาเรา" className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50">
               <Phone size={16} className="text-black" />
             </a>
+            <a
+              href="https://line.me/R/ti/p/@khaiphone"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="ติดต่อผ่าน LINE"
+              className="w-9 h-9 rounded-full flex items-center justify-center"
+              style={{ background: "#06C755" }}
+            >
+              <IconLine className="w-[18px] h-[18px] text-white" />
+            </a>
             <label
               htmlFor="menu-toggle"
               className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center cursor-pointer"

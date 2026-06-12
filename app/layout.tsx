@@ -5,7 +5,6 @@ import "./globals.css";
 import MobileNav from "./components/MobileNav";
 import CookieConsent from "./components/CookieConsent";
 import GoogleAnalytics from "./components/GoogleAnalytics";
-import FloatingLineButton from "./components/FloatingLineButton";
 
 const prompt = Prompt({
   weight: ["400", "500", "600", "700", "800"],
@@ -117,7 +116,6 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
         />
         <main>{children}</main>
-        <FloatingLineButton />
         <MobileNav />
         <CookieConsent />
         <GoogleAnalytics />
