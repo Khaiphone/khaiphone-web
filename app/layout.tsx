@@ -10,6 +10,7 @@ const prompt = Prompt({
   weight: ["400", "500", "600", "700", "800"],
   subsets: ["latin", "thai"],
   variable: "--font-prompt",
+  display: "swap",
 });
 
 export const viewport: Viewport = {

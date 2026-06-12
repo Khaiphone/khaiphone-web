@@ -2,7 +2,7 @@ import { fetchPublicActiveProducts } from "@/app/actions/products";
 import { allProducts } from "@/lib/products";
 import TradeInClient, { type TradeInCategory } from "./TradeInClient";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 const NEW_MODELS = new Set(allProducts.filter(p => p.isNew).map(p => p.model));
 
