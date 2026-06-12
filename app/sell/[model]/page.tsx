@@ -950,8 +950,8 @@ function SellModelPageContent() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [errors, setErrors] = useState({ name: false, phone: false, terms: false, riderAddress: false, bankName: false, bankAccount: false, bankAccountName: false });
   const [submitting, setSubmitting] = useState(false);
-  const [sellMethod, setSellMethod] = useState<"branch" | "rider" | "parcel">("branch");
-  const [payMethod, setPayMethod] = useState<"cash" | "transfer">("cash");
+  const [sellMethod, setSellMethod] = useState<"branch" | "rider" | "parcel">("rider");
+  const [payMethod, setPayMethod] = useState<"cash" | "transfer">("transfer");
   const [appointDate, setAppointDate] = useState(() => {
     const d = new Date();
     const dd = (n: number) => String(n).padStart(2, "0");
