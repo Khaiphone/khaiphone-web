@@ -125,7 +125,7 @@ export default function BlogSearch({ posts }: { posts: BlogPost[] }) {
                 >
                   <div
                     className="relative rounded-xl overflow-hidden"
-                    style={{ aspectRatio: "3/2" }}
+                    style={{ aspectRatio: "16/9" }}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
