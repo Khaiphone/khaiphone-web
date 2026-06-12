@@ -90,7 +90,7 @@ export default function Header() {
           </div>
           <div className="flex gap-4 items-center text-gray-300">
             <span>📞 095-553-5167</span>
-            <span>💬 @khaiphone</span>
+            <a href="https://line.me/R/ti/p/@khaiphone" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">💬 @khaiphone</a>
           </div>
         </div>
       </div>
