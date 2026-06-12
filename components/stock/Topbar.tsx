@@ -20,10 +20,14 @@ export default function StockTopbar({ title, subtitle, children, onMenuClick }: 
 
   return (
     <div style={{
-      height: 64, display: "flex", alignItems: "center", gap: 16,
-      padding: "0 24px", background: c.card,
+      background: c.card,
       borderBottom: `1px solid ${c.border}`,
       position: "sticky", top: 0, zIndex: 30,
+      paddingTop: "env(safe-area-inset-top)",
+    }}>
+    <div style={{
+      height: 64, display: "flex", alignItems: "center", gap: 16,
+      padding: "0 24px",
     }}>
       {/* Mobile menu */}
       <button onClick={onMenuClick ?? toggleMenu} className="md:hidden" style={{ background: "none", border: "none", color: c.text2, cursor: "pointer", padding: 4, display: "flex" }}>
@@ -65,6 +69,7 @@ export default function StockTopbar({ title, subtitle, children, onMenuClick }: 
         <Bell size={20} />
         <span style={{ position: "absolute", top: 0, right: 0, width: 8, height: 8, background: "#ef4444", borderRadius: "50%" }} />
       </button>
+    </div>
     </div>
   );
 }
