@@ -17,9 +17,6 @@ function IconApple({ className, style }: IconProps) {
   );
 }
 
-function toSlug(model: string) {
-  return model.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-}
 
 export type SellProduct = {
   slug: string;
@@ -99,45 +96,6 @@ function SellPageContent({ categories }: { categories: SellCategory[] }) {
   const step2Ref = useRef<HTMLDivElement>(null);
   const [resumeModal, setResumeModal] = useState<{ slug: string; name: string; step: number } | null>(null);
 
-  function slugToModelName(slug: string): string {
-    for (const cat of categories) {
-      const p = cat.products.find(p => p.slug === slug);
-      if (p) return p.model;
-    }
-    return slug.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-  }
-
-  function checkWizardProgress() {
-    const wizardKeys = Object.keys(window.localStorage).filter(k => k.startsWith("khaiphone_wizard_"));
-    const entries: { slug: string; step: number; savedAt: number }[] = [];
-    try {
-      for (const key of wizardKeys) {
-        const raw = window.localStorage.getItem(key);
-        if (!raw) continue;
-        const saved = JSON.parse(raw) as { step: number; picks: (number | null)[]; savedAt?: number };
-        const hasProgress = saved.step > 0 || saved.picks?.some(p => p !== null);
-        if (!hasProgress) continue;
-        const slug = key.replace("khaiphone_wizard_", "");
-        entries.push({ slug, step: saved.step, savedAt: saved.savedAt ?? 0 });
-      }
-    } catch {}
-    if (entries.length === 0) return;
-    entries.sort((a, b) => b.savedAt - a.savedAt);
-    const { slug, step } = entries[0];
-    setResumeModal({ slug, name: slugToModelName(slug), step });
-  }
-
-  useEffect(() => {
-    const timer = setTimeout(checkWizardProgress, 100);
-    function onPageShow(e: PageTransitionEvent) {
-      if (e.persisted) checkWizardProgress();
-    }
-    window.addEventListener("pageshow", onPageShow);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("pageshow", onPageShow);
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleCTA(e: React.MouseEvent, slug: string, name: string) {
     e.preventDefault();
