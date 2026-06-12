@@ -20,7 +20,7 @@ export const blogPosts: BlogPost[] = [
     readTime: "5 นาที",
     title: "เทรดอิน iPhone ได้เงินเท่าไหร่ เทียบกับขายที่ร้านรับซื้อ",
     excerpt: "เปรียบเทียบราคาเทรดอินที่ศูนย์ตัวแทน Apple vs ร้านรับซื้อทุกรุ่น iPhone 13–17 พร้อมตัวเลขส่วนต่างที่ต่างกันสูงสุด 5,500 บาท",
-    image: "/blog_iphone-price.webp",
+    image: "/blog_iphone-tradein.webp",
     slug: "trade-in-vs-sell-iphone",
     keywords: ["เทรดอิน iPhone", "เทรดอิน vs ขายเอง", "เทรดอิน iPhone ได้เงินเท่าไหร่", "ขาย iPhone ได้เงินมากกว่า"],
   },
