@@ -15,8 +15,8 @@ export const blogPosts: BlogPost[] = [
   {
     id: 8,
     category: "ราคาล่าสุด",
-    date: "2026-06-19",
-    displayDate: "19 มิ.ย. 2569",
+    date: "2026-06-15",
+    displayDate: "15 มิ.ย. 2569",
     readTime: "5 นาที",
     title: "เทรดอิน iPhone กับศูนย์ Apple ได้คุ้มจริงไหม? เทียบตัวเลขก่อนตัดสินใจ",
     excerpt: "เปรียบเทียบราคาเทรดอิน Studio7 vs ร้านรับซื้อทุกรุ่น iPhone 13–17 พร้อมตัวเลขส่วนต่างที่ต่างกันสูงสุด 5,500 บาท",
