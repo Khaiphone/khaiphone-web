@@ -21,7 +21,7 @@ export const STATUS_LABELS: Record<RequestStatus, string> = {
   contacted:         "เจ้าหน้าที่ติดต่อกลับแล้ว",
   inspecting:        "กำลังตรวจเครื่อง",
   confirmed:         "ยืนยันนัดหมาย",
-  pickup_scheduled:  "นัดรับเครื่อง",
+  pickup_scheduled:  "ไรเดอร์รับงานแล้ว",
   en_route:          "ไรเดอร์กำลังเดินทาง",
   price_negotiation: "รอยืนยันราคา",
   contracting:       "กำลังทำสัญญา",
