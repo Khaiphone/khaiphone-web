@@ -157,7 +157,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <AdminRoleProvider>
-      <div style={{ minHeight: "100vh", background: dark ? "#0F0F11" : "#F5F5F7", display: "flex", "--admin-sidebar-w": `${sidebarW}px`, ...adminCssVars(dark) } as React.CSSProperties}>
+      <div className="admin-shell" style={{ minHeight: "100vh", background: dark ? "#0F0F11" : "#F5F5F7", display: "flex", "--admin-sidebar-w": `${sidebarW}px`, ...adminCssVars(dark) } as React.CSSProperties}>
 
         {/* ── Desktop Sidebar (md+) ── */}
         <aside
@@ -348,16 +348,18 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
           })()}
         </aside>
 
-        {/* ── Main Content ── */}
-        <main
-          className="md:block admin-main-content"
-          style={{ flex: 1, minHeight: "100vh", paddingBottom: hideBottomNav ? 0 : "calc(env(safe-area-inset-bottom) + 72px)", transition: "margin-left 0.2s ease" }}
-        >
-          {children}
-        </main>
+        {/* ── Content column (mobile: flex col filling remaining height) ── */}
+        <div className="admin-content-col" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+          <main
+            className="md:block admin-main-content"
+            style={{ flex: 1, minHeight: "100vh", paddingBottom: 0, transition: "margin-left 0.2s ease" }}
+          >
+            {children}
+          </main>
 
-        {/* ── Mobile Bottom Nav ── */}
-        {!hideBottomNav && <BottomTabNav />}
+          {/* ── Mobile Bottom Nav (in normal flow — not fixed) ── */}
+          {!hideBottomNav && <BottomTabNav />}
+        </div>
       </div>
     </AdminRoleProvider>
   );

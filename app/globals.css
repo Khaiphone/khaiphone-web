@@ -17,6 +17,28 @@
   }
 }
 
+/* Mobile admin app shell — fixes bottom nav jumping on iOS PWA.
+   The outer shell is constrained to 100dvh with overflow:hidden so the body
+   never scrolls. Content scrolls inside admin-main-content instead.
+   Bottom nav lives in normal flow at the bottom of the flex column. */
+@media (max-width: 767px) {
+  .admin-shell {
+    height: 100dvh !important;
+    min-height: unset !important;
+    overflow: hidden;
+  }
+  .admin-content-col {
+    height: 100%;
+    overflow: hidden;
+  }
+  .admin-main-content {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 /* Sell-page sticky CTA: sits above MobileNav + Chrome Android's browser bar */
 .sell-sticky-cta {
   bottom: calc(4rem + var(--browser-bar-h));

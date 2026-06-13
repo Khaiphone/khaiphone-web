@@ -35,15 +35,10 @@ export default function BottomTabNav() {
     <nav
       className="md:hidden"
       style={{
-        position: "fixed",
-        bottom: 0,
-        left: 0,
-        right: 0,
+        flexShrink: 0,
         background: BG,
         borderTop: `1px solid ${BORDER}`,
         paddingBottom: "env(safe-area-inset-bottom)",
-        zIndex: 50,
-        WebkitTransform: "translateZ(0)",
       }}
     >
       <div style={{ display: "flex", height: "56px" }}>
