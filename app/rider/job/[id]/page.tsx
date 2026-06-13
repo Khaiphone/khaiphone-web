@@ -338,6 +338,8 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   const [isEditingInspection, setIsEditingInspection] = useState(false);
 
   const photoSlotsRef  = useRef<HTMLDivElement>(null);
+  const serialRef      = useRef<HTMLDivElement>(null);
+  const colorRef       = useRef<HTMLDivElement>(null);
   const batteryRef     = useRef<HTMLDivElement>(null);
   const warrantyRef    = useRef<HTMLDivElement>(null);
   const functionalRef  = useRef<HTMLDivElement>(null);
@@ -684,7 +686,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
             onChange={e => { const f = e.target.files?.[0]; if (f) handleScan(f); }} />
         </div>
         <Card c={c}>
-          <div style={{ padding: "12px 16px", borderBottom: `1px solid ${c.BORDER}` }}>
+          <div ref={serialRef} style={{ padding: "12px 16px", borderBottom: `1px solid ${c.BORDER}` }}>
             <p style={{ margin: "0 0 4px", fontSize: 11, color: c.TEXT2 }}>Serial Number</p>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <input value={serial} onChange={e => { setSerial(e.target.value.toUpperCase()); setSickwResult(null); setSickwError(""); }} placeholder="กรอก Serial"
@@ -787,7 +789,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
               )}
             </div>
           )}
-          <div style={{ padding: "12px 16px", borderBottom: `1px solid ${c.BORDER}` }}>
+          <div ref={colorRef} style={{ padding: "12px 16px", borderBottom: `1px solid ${c.BORDER}` }}>
             <p style={{ margin: "0 0 4px", fontSize: 11, color: c.TEXT2 }}>สีตัวเครื่อง</p>
             <input value={color} onChange={e => setColor(e.target.value)} placeholder="เช่น Black Titanium, Midnight"
               style={{ width: "100%", background: "none", border: "none", color: c.TEXT, fontSize: 15, fontFamily: "inherit", outline: "none" }} />
@@ -937,6 +939,8 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
 
         const missing: Array<{ label: string; ref: React.RefObject<HTMLDivElement | null> }> = [];
         if (!isEditingInspection && !PHOTO_SLOTS.every(s => !!slotPhotos[s.key])) missing.push({ label: "รูปภาพครบทุกด้าน", ref: photoSlotsRef });
+        if (!serial.trim())                          missing.push({ label: "Serial Number",                         ref: serialRef });
+        if (!color.trim())                           missing.push({ label: "สีตัวเครื่อง",                         ref: colorRef });
         if (!battery.trim())                         missing.push({ label: "Battery Health",                        ref: batteryRef });
         if (!warrantyStatus)                         missing.push({ label: "สถานะประกัน",                          ref: warrantyRef });
         if (functional.some(t => t.pass === null))   missing.push({ label: "ฟังก์ชันการใช้งาน (ยังมีที่ไม่ได้เลือก)", ref: functionalRef });
