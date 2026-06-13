@@ -33,7 +33,7 @@ export default function StockLoginPage() {
     <div style={{ minHeight: "100dvh", background: BG, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px 20px" }}>
 
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, marginBottom: 36 }}>
-        <Image src="/icon-192.png" alt="KP Stock" width={72} height={72} style={{ borderRadius: 18 }} unoptimized />
+        <Image src="/stock-apple-touch-icon.png" alt="KP Stock" width={72} height={72} style={{ borderRadius: 18 }} unoptimized />
         <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: ACCENT }}>KP Stock</p>
         <p style={{ margin: 0, fontSize: 13, color: TEXT2 }}>เข้าสู่ระบบสต็อค Khaiphone</p>
       </div>
