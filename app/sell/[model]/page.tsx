@@ -516,6 +516,7 @@ function buildSummaryRows(picks: (number | null)[], storages: string[], modelTyp
     { title: "แบตเตอรี่",  value: picks[6] !== null ? (BATTERY_OPTS[picks[6]]?.label ?? null) : null },
     { title: "อุปกรณ์",    value: picks[7] !== null ? (ACCESSORY_OPTS[picks[7]]?.label ?? null) : null },
     { title: "iCloud",     value: picks[8] !== null ? (ICLOUD_OPTS[picks[8]]?.label ?? null) : null },
+    { title: "ฟังก์ชัน",   value: picks[9] !== null ? (FUNCTIONAL_OPTS[picks[9]]?.label ?? null) : null },
   ].filter((r): r is { title: string; value: string } => r.value !== null);
 }
 
@@ -1273,6 +1274,7 @@ function SellModelPageContent() {
         battery:     picks[6] !== null ? BATTERY_OPTS[picks[6]]?.label ?? "" : "",
         accessories: picks[7] !== null ? ACCESSORY_OPTS[picks[7]]?.label ?? "" : "",
         icloud:      picks[8] !== null ? ICLOUD_OPTS[picks[8]]?.label ?? "" : "",
+        functional:  picks[9] !== null ? FUNCTIONAL_OPTS[picks[9]]?.label ?? "" : "",
       },
       estimatedPrice: price,
       priceMin,
