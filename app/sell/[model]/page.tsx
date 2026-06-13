@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { ChevronLeft, Check, Lock, ChevronRight, User, Truck, Calendar, Banknote, ShieldCheck, MapPin, Building2, Clock, Phone, Plus, X } from "lucide-react";
 import Header from "../../components/Header";
-import { submitRequest } from "@/app/actions/submit-request";
+import { submitRequest, submitFunctionalIssueRequest } from "@/app/actions/submit-request";
 import { trackEstimateEvent } from "@/app/actions/analytics";
 import { fetchPublicActiveProducts } from "@/app/actions/products";
 import { fetchPublicPricingConfig } from "@/app/actions/pricing-config";
@@ -435,6 +435,24 @@ const STEP_TITLES = [
   "สุขภาพแบตเตอรี่",
   "อุปกรณ์เสริม",
   "iCloud / Activation Lock",
+  "การทำงานของฟังก์ชัน",
+];
+
+const FUNCTIONAL_ISSUES = [
+  "ปุ่ม Power / Side ไม่ทำงาน",
+  "ปุ่ม Volume ค้าง / เสีย",
+  "ลำโพงเสียงแตก / ไม่มีเสียง",
+  "ไมโครโฟนมีปัญหา",
+  "Face ID / Touch ID ไม่ทำงาน",
+  "กล้องมีปัญหา (ภาพมัว / ค้าง)",
+  "พอร์ตชาร์จหลวม / ชาร์จไม่เข้า",
+  "WiFi หรือ Bluetooth มีปัญหา",
+  "เครื่องร้อนผิดปกติ / รีสตาร์ทเองบ่อย",
+];
+
+const FUNCTIONAL_OPTS: Opt[] = [
+  { label: "ปกติทุกฟังก์ชัน", sub: "ทุกปุ่ม ลำโพง กล้อง และฟังก์ชันอื่นๆ ทำงานปกติ", ded: 0 },
+  { label: "มีปัญหาการใช้งาน", sub: "บางฟังก์ชันไม่ทำงาน หรือมีความผิดปกติ", ded: 0 },
 ];
 
 const STEP_OPTS: (Opt[] | null)[] = [
@@ -447,10 +465,13 @@ const STEP_OPTS: (Opt[] | null)[] = [
   BATTERY_OPTS,
   ACCESSORY_OPTS,
   ICLOUD_OPTS,
+  FUNCTIONAL_OPTS,
 ];
 
-const TOTAL_STEPS = 9;
-const TOTAL_MAIN_STEPS = 8;
+const TOTAL_STEPS = 10;
+const TOTAL_MAIN_STEPS = 9;
+const ICLOUD_STEP = 8;
+const FUNCTIONAL_STEP = 9;
 
 // ─── Price calc ───────────────────────────────────────────────────────────────
 
@@ -584,7 +605,7 @@ function FocusHeader({ backHref }: { backHref: string }) {
 
 // ─── Progress Bar Premium ─────────────────────────────────────────────────────
 
-const STEP_LABELS = ["ความจุ", "Model", "ประกัน", "ตัวเครื่อง", "หน้าจอ", "แบต", "อุปกรณ์", "iCloud"];
+const STEP_LABELS = ["ความจุ", "Model", "ประกัน", "ตัวเครื่อง", "หน้าจอ", "แบต", "อุปกรณ์", "iCloud", "ฟังก์ชัน"];
 
 function ProgressBarPremium({ step }: { step: number }) {
   const raw = step <= 5 ? Math.min(step, 4) : step - 1;
@@ -977,6 +998,11 @@ function SellModelPageContent() {
   const [extraDevices, setExtraDevices] = useState<ExtraDevice[]>([]);
   const [bundleReturn, setBundleReturn] = useState<string | null>(null);
   const [sidebarDeviceTab, setSidebarDeviceTab] = useState(0);
+  const [functionalIssues, setFunctionalIssues] = useState<string[]>([]);
+  const [functionalOther, setFunctionalOther] = useState("");
+  const [issueContact, setIssueContact] = useState({ name: "", phone: "" });
+  const [issueSubmitting, setIssueSubmitting] = useState(false);
+  const [issueSubmitDone, setIssueSubmitDone] = useState(false);
 
   // Sync appointment time when date changes — auto-select first valid slot
   useEffect(() => {
@@ -1325,6 +1351,8 @@ function SellModelPageContent() {
 
   const stepOpts: PricingOption[] = isWizard && step === 0
     ? storages.map(s => ({ label: s, ded: 0 }))
+    : step === FUNCTIONAL_STEP
+    ? FUNCTIONAL_OPTS
     : (effectiveGroupOptions[step - 1] ?? []);
 
   return (
@@ -1373,10 +1401,11 @@ function SellModelPageContent() {
                           const newPicks = [...picks];
                           newPicks[step] = i;
                           saveWizard(step, newPicks);
-                          // iCloud locked or bundle last step — don't auto-advance
-                          const isICloudLocked = step === TOTAL_STEPS - 1 && i === 1;
-                          const isBundleLastStep = step === TOTAL_STEPS - 1 && !!bundleReturn;
-                          if (!isICloudLocked && !isBundleLastStep) {
+                          // iCloud locked, functional issue path, or bundle last step — don't auto-advance
+                          const isICloudLocked    = step === ICLOUD_STEP    && i === 1;
+                          const isFunctionalIssue = step === FUNCTIONAL_STEP && i === 1;
+                          const isBundleLastStep  = step === TOTAL_STEPS - 1 && !!bundleReturn;
+                          if (!isICloudLocked && !isFunctionalIssue && !isBundleLastStep) {
                             if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
                             autoAdvanceTimerRef.current = setTimeout(() => { goNext(i); }, 400);
                           }
@@ -1407,9 +1436,9 @@ function SellModelPageContent() {
                   })}
                 </div>
 
-                {/* Next / back / iCloud-locked */}
+                {/* Next / back / iCloud-locked / functional-issues */}
                 <div className="mt-5">
-                  {step === TOTAL_STEPS - 1 && localPick === 1 ? (
+                  {step === ICLOUD_STEP && localPick === 1 ? (
                     <>
                       {step > 0 && (
                         <button
@@ -1449,6 +1478,161 @@ function SellModelPageContent() {
                           ประเมินใหม่
                         </a>
                       </div>
+                    </>
+                  ) : step === FUNCTIONAL_STEP && localPick === 1 ? (
+                    <>
+                      {step > 0 && (
+                        <button
+                          type="button"
+                          onClick={goBack}
+                          className="flex items-center justify-center gap-1 w-full py-3 rounded-full font-semibold text-sm mb-3"
+                          style={{ background: "#fff", border: "1px solid #E5E7EB", color: "#6B7280" }}
+                        >
+                          <ChevronLeft size={15} /> ย้อนกลับ
+                        </button>
+                      )}
+                      {issueSubmitDone ? (
+                        <div className="rounded-2xl border-2 p-5 text-center" style={{ borderColor: "#86EFAC", background: "rgba(34,197,94,0.05)" }}>
+                          <div className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center" style={{ background: "rgba(34,197,94,0.12)" }}>
+                            <Check size={22} color="#16A34A" strokeWidth={2.5} />
+                          </div>
+                          <p className="font-bold text-black mb-1">ส่งข้อมูลเรียบร้อยแล้ว</p>
+                          <p className="text-xs leading-relaxed mb-4" style={{ color: "#6B7280" }}>
+                            ทีมงานได้รับข้อมูลแล้ว จะติดต่อกลับภายใน 24 ชั่วโมง<br />
+                            เพื่อนัดประเมินพิเศษและแจ้งราคารับซื้อ
+                          </p>
+                          <a
+                            href="https://line.me/R/ti/p/@khaiphone"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 w-full py-3 rounded-full font-bold text-white text-sm mb-2"
+                            style={{ background: "#06C755" }}
+                          >
+                            <IconLine className="w-4 h-4" />ติดตามผ่าน LINE @khaiphone
+                          </a>
+                          <a
+                            href={`/sell/${params.model}`}
+                            className="block w-full py-2.5 rounded-full border font-semibold text-sm text-center"
+                            style={{ borderColor: "#D1D5DB", color: "#6B7280" }}
+                          >
+                            ประเมินใหม่
+                          </a>
+                        </div>
+                      ) : (
+                        <div className="rounded-2xl border border-gray-200 p-4" style={{ background: "#FAFAFA" }}>
+                          <p className="font-semibold text-sm text-black mb-1">กรุณาเลือกปัญหาที่พบ</p>
+                          <p className="text-xs mb-3" style={{ color: "#6B7280" }}>
+                            ทีมงานจะติดต่อกลับเพื่อนัดตรวจประเมินพิเศษ ไม่โชว์ราคาทันที
+                          </p>
+                          <div className="flex flex-col gap-2 mb-3">
+                            {FUNCTIONAL_ISSUES.map(issue => {
+                              const checked = functionalIssues.includes(issue);
+                              return (
+                                <label key={issue} className="flex items-center gap-2.5 cursor-pointer">
+                                  <div
+                                    className="w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0"
+                                    style={{
+                                      borderColor: checked ? "#B8860B" : "#D1D5DB",
+                                      background:  checked ? "#B8860B" : "#fff",
+                                    }}
+                                    onClick={() => setFunctionalIssues(prev =>
+                                      prev.includes(issue) ? prev.filter(x => x !== issue) : [...prev, issue]
+                                    )}
+                                  >
+                                    {checked && <Check size={11} color="#fff" strokeWidth={3} />}
+                                  </div>
+                                  <span
+                                    className="text-sm"
+                                    style={{ color: "#374151" }}
+                                    onClick={() => setFunctionalIssues(prev =>
+                                      prev.includes(issue) ? prev.filter(x => x !== issue) : [...prev, issue]
+                                    )}
+                                  >
+                                    {issue}
+                                  </span>
+                                </label>
+                              );
+                            })}
+                            <label className="flex items-start gap-2.5 cursor-pointer">
+                              <div
+                                className="w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5"
+                                style={{
+                                  borderColor: functionalOther.trim() ? "#B8860B" : "#D1D5DB",
+                                  background:  functionalOther.trim() ? "#B8860B" : "#fff",
+                                }}
+                              >
+                                {functionalOther.trim() && <Check size={11} color="#fff" strokeWidth={3} />}
+                              </div>
+                              <div className="flex-1">
+                                <span className="text-sm" style={{ color: "#374151" }}>อื่นๆ</span>
+                                <input
+                                  type="text"
+                                  placeholder="ระบุปัญหาเพิ่มเติม..."
+                                  value={functionalOther}
+                                  onChange={e => setFunctionalOther(e.target.value)}
+                                  className="mt-1 w-full text-sm px-3 py-1.5 rounded-lg border outline-none"
+                                  style={{ borderColor: "#E5E7EB", color: "#111" }}
+                                  maxLength={200}
+                                />
+                              </div>
+                            </label>
+                          </div>
+
+                          <div className="border-t border-gray-100 pt-3 mb-3">
+                            <p className="text-xs font-semibold text-black mb-2">ข้อมูลติดต่อ (เพื่อให้ทีมงานโทรกลับ)</p>
+                            <div className="flex flex-col gap-2">
+                              <input
+                                type="text"
+                                placeholder="ชื่อ-นามสกุล"
+                                value={issueContact.name}
+                                onChange={e => setIssueContact(c => ({ ...c, name: e.target.value }))}
+                                className="w-full text-sm px-3 py-2.5 rounded-xl border outline-none"
+                                style={{ borderColor: "#E5E7EB", color: "#111" }}
+                                maxLength={100}
+                              />
+                              <input
+                                type="tel"
+                                placeholder="เบอร์โทรศัพท์"
+                                value={issueContact.phone}
+                                onChange={e => setIssueContact(c => ({ ...c, phone: e.target.value }))}
+                                className="w-full text-sm px-3 py-2.5 rounded-xl border outline-none"
+                                style={{ borderColor: "#E5E7EB", color: "#111" }}
+                                maxLength={20}
+                              />
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            disabled={issueSubmitting || (functionalIssues.length === 0 && !functionalOther.trim()) || !issueContact.name.trim() || !issueContact.phone.trim()}
+                            onClick={async () => {
+                              setIssueSubmitting(true);
+                              const orderNumber = `ISS${Date.now()}`;
+                              const storage = product ? product.storage.split(" / ")[picks[0] ?? 0] ?? product.storage : "";
+                              const result = await submitFunctionalIssueRequest({
+                                orderNumber,
+                                model:        product?.model ?? params.model,
+                                storage,
+                                issues:       functionalIssues,
+                                otherIssue:   functionalOther,
+                                contactName:  issueContact.name.trim(),
+                                contactPhone: issueContact.phone.trim(),
+                              });
+                              setIssueSubmitting(false);
+                              if (result.success) setIssueSubmitDone(true);
+                            }}
+                            className="flex items-center justify-center w-full py-3.5 rounded-full font-bold text-sm text-white"
+                            style={{
+                              background: issueSubmitting || (functionalIssues.length === 0 && !functionalOther.trim()) || !issueContact.name.trim() || !issueContact.phone.trim()
+                                ? "#D1D5DB" : "#B8860B",
+                              cursor: issueSubmitting || (functionalIssues.length === 0 && !functionalOther.trim()) || !issueContact.name.trim() || !issueContact.phone.trim()
+                                ? "not-allowed" : "pointer",
+                            }}
+                          >
+                            {issueSubmitting ? "กำลังส่ง..." : "ส่งข้อมูลให้ทีมงาน"}
+                          </button>
+                        </div>
+                      )}
                     </>
                   ) : (
                     <div className="flex gap-3">

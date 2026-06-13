@@ -206,6 +206,71 @@ async function sendNotificationEmail(data: SubmissionData, uuid?: string) {
   });
 }
 
+interface FunctionalIssueData {
+  orderNumber: string;
+  model: string;
+  storage: string;
+  issues: string[];
+  otherIssue: string;
+  contactName: string;
+  contactPhone: string;
+}
+
+export async function submitFunctionalIssueRequest(data: FunctionalIssueData) {
+  if (data.contactName.length > 100) return { success: false, error: "ชื่อยาวเกินไป" };
+  if (data.contactPhone.length > 20) return { success: false, error: "เบอร์โทรไม่ถูกต้อง" };
+  if (data.model.length > 100)       return { success: false, error: "ชื่อรุ่นยาวเกินไป" };
+  if (data.issues.length === 0 && !data.otherIssue.trim())
+    return { success: false, error: "กรุณาระบุปัญหาอย่างน้อยหนึ่งรายการ" };
+
+  const supabase = createServerClient();
+
+  const { count: existingCount } = await supabase
+    .from("requests")
+    .select("*", { count: "exact", head: true })
+    .eq("order_number", data.orderNumber);
+  if ((existingCount ?? 0) > 0) return { success: true };
+
+  const issueList = [
+    ...data.issues,
+    ...(data.otherIssue.trim() ? [`อื่นๆ: ${data.otherIssue.trim()}`] : []),
+  ];
+  const notesText = `🔧 ลูกค้าแจ้งปัญหาการใช้งาน:\n${issueList.map(i => `• ${i}`).join("\n")}`;
+
+  const { data: inserted, error } = await supabase.from("requests").insert({
+    order_number:     data.orderNumber,
+    customer_name:    data.contactName,
+    customer_phone:   data.contactPhone,
+    device_model:     data.model,
+    device_storage:   data.storage,
+    device_condition: "มีปัญหาการใช้งาน",
+    estimated_price:  0,
+    appt_date:        "",
+    appt_time:        "",
+    appt_location:    "",
+    appt_method:      "rider",
+    payment_method:   "cash",
+    status:     "new",
+    status_log: [{ status: "new", timestamp: new Date().toISOString(), note: "แจ้งปัญหาฟังก์ชัน — รอแอดมินติดต่อกลับ" }],
+    source:          "website",
+    customer_notes:  notesText,
+  }).select("id").single();
+
+  if (error) {
+    console.error("submitFunctionalIssueRequest error:", error);
+    return { success: false, error: error.message };
+  }
+
+  after(() => sendPushToNewRequestReceivers({
+    title: `🔧 เครื่องมีปัญหา — ${data.model}`,
+    body:  `${data.contactName} · ${issueList.slice(0, 2).join(", ")}`,
+    url:   `/admin/requests/${inserted?.id ?? ""}`,
+    tag:   "new-request",
+  }).catch(e => console.error("push error:", e)));
+
+  return { success: true };
+}
+
 export async function checkOrderExists(orderNumber: string): Promise<boolean> {
   const supabase = createServerClient();
   const { count } = await supabase
