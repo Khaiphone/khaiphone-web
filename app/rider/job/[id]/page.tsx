@@ -338,6 +338,11 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   const revisionNote = (job.inspection as { revisionNote?: string } | undefined)?.revisionNote ?? "";
   const [isEditingInspection, setIsEditingInspection] = useState(!!revisionNote);
 
+  // เมื่อ admin ส่ง revisionNote ขณะไรเดอร์อยู่หน้านี้ → เปิด edit mode ทันที
+  useEffect(() => {
+    if (revisionNote) setIsEditingInspection(true);
+  }, [revisionNote]);
+
   const photoSlotsRef  = useRef<HTMLDivElement>(null);
   const serialRef      = useRef<HTMLDivElement>(null);
   const colorRef       = useRef<HTMLDivElement>(null);
