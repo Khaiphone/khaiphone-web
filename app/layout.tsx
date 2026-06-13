@@ -68,13 +68,13 @@ export const metadata: Metadata = {
     siteName: "Khaiphone.com",
     title: "Khaiphone.com — รับซื้อ iPhone, iPad, MacBook ให้ราคาสูง",
     description: "ประเมินราคาออนไลน์ฟรี ไม่ผูกมัด รับซื้อ iPhone, iPad, MacBook, Apple Watch ทุกรุ่น จ่ายเงินสดทันที",
-    images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: "Khaiphone.com" }],
+    images: [{ url: `${SITE_URL}/og-image.jpg`, width: 1200, height: 630, alt: "Khaiphone.com" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Khaiphone.com — รับซื้อ iPhone ให้ราคาสูง",
     description: "ประเมินราคาออนไลน์ฟรี ไม่ผูกมัด จ่ายเงินสดทันที",
-    images: ["/og-image.jpg"],
+    images: [`${SITE_URL}/og-image.jpg`],
   },
 };
 
