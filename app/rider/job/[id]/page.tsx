@@ -337,6 +337,12 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   const [error, setError] = useState("");
   const [isEditingInspection, setIsEditingInspection] = useState(false);
 
+  const photoSlotsRef  = useRef<HTMLDivElement>(null);
+  const batteryRef     = useRef<HTMLDivElement>(null);
+  const warrantyRef    = useRef<HTMLDivElement>(null);
+  const functionalRef  = useRef<HTMLDivElement>(null);
+  const gradeRef       = useRef<HTMLDivElement>(null);
+
   // Restore full SickwResult (including form auto-fill) from saved raw text on mount
   useEffect(() => {
     if (!sickwRaw || sickwResult) return;
@@ -639,7 +645,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {/* Photos */}
-      <div>
+      <div ref={photoSlotsRef}>
         <SectionLabel c={c}>รูปสภาพเครื่อง</SectionLabel>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
           {PHOTO_SLOTS.map(slot => (
@@ -791,7 +797,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
             <input value={imei} onChange={e => setImei(e.target.value)} placeholder="กรอก IMEI (ไม่บังคับ)"
               style={{ width: "100%", background: "none", border: "none", color: c.TEXT, fontSize: 15, fontFamily: "inherit", outline: "none" }} />
           </div>
-          <div style={{ padding: "12px 16px", borderBottom: `1px solid ${c.BORDER}` }}>
+          <div ref={batteryRef} style={{ padding: "12px 16px", borderBottom: `1px solid ${c.BORDER}` }}>
             <p style={{ margin: "0 0 4px", fontSize: 11, color: c.TEXT2 }}>Battery Health</p>
             <select value={battery} onChange={e => setBattery(e.target.value)}
               style={{ width: "100%", background: "none", border: "none", color: battery ? c.TEXT : c.TEXT2, fontSize: 15, fontFamily: "inherit", outline: "none", appearance: "none" }}>
@@ -799,7 +805,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
               {Array.from({ length: 51 }, (_, i) => 100 - i).map(v => <option key={v} value={String(v)}>{v}%</option>)}
             </select>
           </div>
-          <div style={{ padding: "12px 16px" }}>
+          <div ref={warrantyRef} style={{ padding: "12px 16px" }}>
             <p style={{ margin: "0 0 8px", fontSize: 11, color: c.TEXT2 }}>การรับประกัน</p>
             <div style={{ display: "flex", gap: 8, marginBottom: warrantyStatus === "valid" ? 10 : 0 }}>
               {(["valid", "expired"] as const).map(s => (
@@ -832,7 +838,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
       </div>
 
       {/* Functional tests */}
-      <div>
+      <div ref={functionalRef}>
         <SectionLabel c={c}>ฟังก์ชันการใช้งาน</SectionLabel>
         <Card c={c}>
           <div style={{ padding: "0 16px" }}>
@@ -859,6 +865,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
       </Card>
 
       {/* Overall Assessment */}
+      <div ref={gradeRef}>
       <Card c={c}>
         <CardHead icon={null} title="สรุปการประเมิน" c={c} />
         <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 16 }}>
@@ -904,6 +911,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
           )}
         </div>
       </Card>
+      </div>
 
       {error && <p style={{ margin: 0, fontSize: 13, color: c.RED }}>{error}</p>}
       {uploading && <p style={{ margin: 0, fontSize: 13, color: c.ACCENT, textAlign: "center" }}>กำลังอัปโหลดรูป...</p>}
@@ -927,20 +935,27 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
           return false;
         })() : false;
 
-        const missing: string[] = [];
-        if (!battery.trim()) missing.push("Battery Health");
-        if (!warrantyStatus) missing.push("สถานะประกัน");
-        if (!conditionGrade) missing.push("เกรดสภาพ");
-        if (functional.some(t => t.pass === null)) missing.push("ฟังก์ชันการใช้งาน (ยังมีที่ไม่ได้เลือก)");
-        if (!isEditingInspection && !PHOTO_SLOTS.every(s => !!slotPhotos[s.key])) missing.push("รูปภาพครบทุกด้าน");
+        const missing: Array<{ label: string; ref: React.RefObject<HTMLDivElement | null> }> = [];
+        if (!isEditingInspection && !PHOTO_SLOTS.every(s => !!slotPhotos[s.key])) missing.push({ label: "รูปภาพครบทุกด้าน", ref: photoSlotsRef });
+        if (!battery.trim())                         missing.push({ label: "Battery Health",                        ref: batteryRef });
+        if (!warrantyStatus)                         missing.push({ label: "สถานะประกัน",                          ref: warrantyRef });
+        if (functional.some(t => t.pass === null))   missing.push({ label: "ฟังก์ชันการใช้งาน (ยังมีที่ไม่ได้เลือก)", ref: functionalRef });
+        if (!conditionGrade)                         missing.push({ label: "เกรดสภาพ",                             ref: gradeRef });
+
+        function scrollToFirst() {
+          const first = missing[0];
+          if (first?.ref.current) first.ref.current.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
 
         return (
           <>
             {missing.length > 0 && (
-              <p style={{ margin: 0, fontSize: 12, color: c.TEXT2 }}>ยังไม่ครบ: {missing.join(", ")}</p>
+              <p style={{ margin: 0, fontSize: 12, color: c.TEXT2 }}>ยังไม่ครบ: {missing.map(m => m.label).join(", ")}</p>
             )}
-            <BigBtn label={uploading ? "กำลังอัปโหลดรูป..." : saving ? "กำลังบันทึก..." : "บันทึกผลตรวจ →"}
-              loading={saving} disabled={uploading || sickwBlocked || missing.length > 0} onClick={handleSave} />
+            <div onClick={() => { if (missing.length > 0 || sickwBlocked) scrollToFirst(); }}>
+              <BigBtn label={uploading ? "กำลังอัปโหลดรูป..." : saving ? "กำลังบันทึก..." : "บันทึกผลตรวจ →"}
+                loading={saving} disabled={uploading || sickwBlocked || missing.length > 0} onClick={handleSave} />
+            </div>
           </>
         );
       })()}
