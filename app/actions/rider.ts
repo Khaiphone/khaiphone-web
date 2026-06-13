@@ -424,10 +424,11 @@ export async function riderSaveInspection(id: string, inspection: {
   const { color, ...inspectionRest } = inspection;
 
   const { data: req } = await supabase
-    .from("requests").select("order_number, device_model, estimated_price, rider_id").eq("id", id).single();
+    .from("requests").select("order_number, device_model, estimated_price, rider_id, inspection").eq("id", id).single();
   if (req?.rider_id !== user.id) return { success: false as const, error: "ไม่ใช่งานของคุณ" };
 
   const estimatedPrice = req?.estimated_price ?? 0;
+  const isRevision = !!(req?.inspection as { revisionNote?: string } | null)?.revisionNote;
 
   const { error } = await supabase
     .from("requests")
@@ -454,10 +455,10 @@ export async function riderSaveInspection(id: string, inspection: {
   after(async () => {
     await broadcastRequestUpdate(id);
     await sendPushToOwners({
-      title: "📋 ผลตรวจสภาพเครื่อง — รออนุมัติ",
+      title: isRevision ? "🔄 ผลตรวจแก้ไขแล้ว — รออนุมัติ" : "📋 ผลตรวจสภาพเครื่อง — รออนุมัติ",
       body: `#${req?.order_number ?? "?"} · ${req?.device_model ?? "เครื่อง"} — กดเพื่อตรวจสอบและอนุมัติ`,
       url: `/admin/requests/${id}`,
-      tag: `inspection-${id}`,
+      tag: isRevision ? `inspection-revised-${id}` : `inspection-${id}`,
     });
   });
   return { success: true as const };
