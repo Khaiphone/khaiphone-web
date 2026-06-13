@@ -12,7 +12,7 @@ import {
   riderSaveInspection, riderAutoSaveSickw, riderConfirmPrice, riderAdjustPrice,
   riderCustomerAccepted, riderCustomerRejected,
   riderCompleteCash, riderCompleteTransfer, riderRequestTransfer,
-  riderRequestHelp, riderChainToNext,
+  riderRequestHelp, riderChainToNext, riderCancelAtInspection,
 } from "@/app/actions/rider";
 import { uploadContractFiles, saveContractUrls, markContractSigned, savePaymentSlip, getDocumentSignedUrl, patchReceiptWithSlip } from "@/app/actions/admin-requests";
 import { supabase } from "@/lib/supabase";
@@ -1625,6 +1625,10 @@ export default function JobWizardPage() {
   const [helpBusy, setHelpBusy]       = useState(false);
   const [nextJobId,  setNextJobId]  = useState<string | null>(null);
   const [chainBusy,  setChainBusy]  = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason,    setCancelReason]    = useState("");
+  const [cancelOther,     setCancelOther]     = useState("");
+  const [cancelBusy,      setCancelBusy]      = useState(false);
   const [currentUserId, setCurrentUserId]         = useState<string | null>(null);
   const [reclaimed, setReclaimed]                 = useState(false);
 
@@ -1879,6 +1883,10 @@ export default function JobWizardPage() {
                 <p style={{ margin:0, fontSize:14, fontWeight:700, color:TEXT }}>ตรวจสภาพ: {job.device.model}</p>
               </div>
               <InspectStep job={job} reload={reload} c={c} />
+              {job.status === "inspecting" && (
+                <BigBtn label="ยกเลิกงาน / ไม่เข้าเงื่อนไข" color={RED} textColor="#fff" outline
+                  onClick={() => { setCancelReason(""); setCancelOther(""); setShowCancelModal(true); }} />
+              )}
             </div>
           ) : step < 2 ? (
             <LockedStepRow label="ตรวจเครื่อง" c={c} />
@@ -1958,6 +1966,60 @@ export default function JobWizardPage() {
 
         </div>
       </div>
+
+      {/* Cancel at inspection modal */}
+      {showCancelModal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"flex-end", zIndex:50 }}
+          onClick={() => setShowCancelModal(false)}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ width:"100%", background:CARD, borderRadius:"20px 20px 0 0", padding:"24px 20px", paddingBottom:"calc(24px + env(safe-area-inset-bottom))", display:"flex", flexDirection:"column", gap:12 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
+              <AlertTriangle size={20} color={RED} />
+              <p style={{ margin:0, fontSize:16, fontWeight:700, color:TEXT }}>ยกเลิกงาน / ไม่เข้าเงื่อนไข</p>
+            </div>
+            <p style={{ margin:0, fontSize:13, color:TEXT2 }}>เลือกเหตุผลที่ยกเลิก:</p>
+            {[
+              "เครื่องติด iCloud / Activation Lock",
+              "เครื่องมีความเสียหายมากกว่าที่ระบุ",
+              "เครื่องไม่ตรงรุ่น / สเปคที่แจ้ง",
+              "ลูกค้าเปลี่ยนใจไม่ขาย",
+              "อื่นๆ",
+            ].map(r => (
+              <button key={r} onClick={() => setCancelReason(r)}
+                style={{ padding:"12px 14px", borderRadius:12, border:`2px solid ${cancelReason === r ? RED : BORDER}`, background: cancelReason === r ? "rgba(255,69,58,0.1)" : CARD, color: cancelReason === r ? RED : TEXT, fontWeight: cancelReason === r ? 700 : 400, fontSize:14, cursor:"pointer", fontFamily:"inherit", textAlign:"left" }}>
+                {r}
+              </button>
+            ))}
+            {cancelReason === "อื่นๆ" && (
+              <textarea value={cancelOther} onChange={e => setCancelOther(e.target.value)}
+                placeholder="ระบุเหตุผล..." rows={2} maxLength={200}
+                style={{ width:"100%", padding:"10px 12px", borderRadius:10, border:`1px solid ${BORDER}`, background:CARD2, color:TEXT, fontSize:14, fontFamily:"inherit", outline:"none", resize:"none", boxSizing:"border-box" }} />
+            )}
+            <BigBtn
+              label={cancelBusy ? "กำลังยกเลิก..." : "ยืนยันยกเลิกงาน"}
+              color={RED} textColor="#fff"
+              loading={cancelBusy}
+              disabled={!cancelReason || (cancelReason === "อื่นๆ" && !cancelOther.trim())}
+              onClick={async () => {
+                setCancelBusy(true);
+                const reason = cancelReason === "อื่นๆ" ? cancelOther.trim() : cancelReason;
+                const result = await riderCancelAtInspection(id, reason);
+                setCancelBusy(false);
+                if (result.success) {
+                  setTrackingMode("idle");
+                  router.replace("/rider");
+                } else {
+                  alert((result as { success: false; error?: string }).error ?? "เกิดข้อผิดพลาด");
+                }
+              }}
+            />
+            <button onClick={() => setShowCancelModal(false)}
+              style={{ background:"none", border:"none", color:TEXT2, fontSize:14, cursor:"pointer", fontFamily:"inherit", padding:"4px 0" }}>
+              ย้อนกลับ
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Reclaimed overlay */}
       {reclaimed && (

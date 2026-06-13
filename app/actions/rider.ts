@@ -826,6 +826,43 @@ export async function riderNoShow(id: string) {
   return { success: true as const };
 }
 
+export async function riderCancelAtInspection(id: string, reason: string) {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+  const now = new Date().toISOString();
+
+  const { data: req } = await supabase
+    .from("requests").select("status_log, order_number, device_model, rider_id, status").eq("id", id).single();
+  if (req?.rider_id !== user.id) return { success: false as const, error: "ไม่ใช่งานของคุณ" };
+  if (req?.status !== "inspecting") return { success: false as const, error: "ไม่อยู่ในสถานะที่ยกเลิกได้" };
+
+  const safeReason = reason.trim().slice(0, 200) || "ไม่ระบุเหตุผล";
+  const newLog = [
+    ...(req.status_log ?? []),
+    { status: "cancelled", timestamp: now, note: `ยกเลิกระหว่างตรวจเครื่อง: ${safeReason}` },
+  ];
+
+  const { error } = await supabase
+    .from("requests")
+    .update({ status: "cancelled", status_log: newLog, updated_at: now })
+    .eq("id", id);
+  if (error) return { success: false as const, error: error.message };
+
+  await finishJobCleanup(supabase, user.id, now, false);
+
+  after(async () => {
+    await broadcastRequestUpdate(id);
+    await sendPushToOwners({
+      title: `ยกเลิกระหว่างตรวจ — ${req.order_number ?? ""}`,
+      body:  `${req.device_model ?? ""} · ${safeReason}`,
+      url:   `/admin/requests/${id}`,
+      tag:   `cancel-${id}`,
+    }).catch(console.error);
+  });
+
+  return { success: true as const };
+}
+
 // ─── Rider requests help from owner ──────────────────────────────────────────
 export async function riderRequestHelp(id: string, message: string) {
   const user = await requireAuth();
