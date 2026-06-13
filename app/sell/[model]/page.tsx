@@ -1194,6 +1194,16 @@ function SellModelPageContent() {
     try { localStorage.setItem(BUNDLE_KEY, JSON.stringify(updated)); } catch {}
   }
 
+  function handleRemoveMain() {
+    if (extraDevices.length === 0) return;
+    const [newMain, ...remaining] = extraDevices;
+    try {
+      localStorage.setItem(BUNDLE_KEY, JSON.stringify(remaining));
+      if (remaining.length === 0) localStorage.removeItem(BUNDLE_RETURN_KEY);
+    } catch {}
+    window.location.href = `/sell/${toSlug(newMain.model)}`;
+  }
+
   async function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (submitting) return;
@@ -1730,14 +1740,35 @@ function SellModelPageContent() {
                             </p>
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={goBackToWizard}
-                          className="flex items-center justify-center w-full py-2.5 rounded-full font-semibold text-sm mb-4"
-                          style={{ border: "1px solid #B8860B", color: "#B8860B" }}
-                        >
-                          แก้ไขข้อมูลเครื่อง
-                        </button>
+                        {extraDevices.length > 0 ? (
+                          <div className="flex gap-2 mb-4">
+                            <button
+                              type="button"
+                              onClick={goBackToWizard}
+                              className="flex-1 py-2.5 rounded-full font-semibold text-sm"
+                              style={{ border: "1px solid #B8860B", color: "#B8860B", background: "none", cursor: "pointer" }}
+                            >
+                              แก้ไขข้อมูลเครื่อง
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleRemoveMain}
+                              className="py-2.5 px-4 rounded-full font-semibold text-sm"
+                              style={{ border: "1px solid #FECACA", color: "#EF4444", background: "none", cursor: "pointer" }}
+                            >
+                              ลบ
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={goBackToWizard}
+                            className="flex items-center justify-center w-full py-2.5 rounded-full font-semibold text-sm mb-4"
+                            style={{ border: "1px solid #B8860B", color: "#B8860B" }}
+                          >
+                            แก้ไขข้อมูลเครื่อง
+                          </button>
+                        )}
                         <div className="flex flex-col" style={{ borderTop: "1px solid #F9FAFB" }}>
                           {summaryRows.map(({ title, value }) => (
                             <div key={title} className="flex items-center justify-between py-2.5" style={{ borderBottom: "1px solid #F9FAFB" }}>
@@ -2358,21 +2389,29 @@ function SellModelPageContent() {
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-xs font-semibold text-black">ข้อมูลเครื่อง</span>
                         {sidebarDeviceTab === 0 ? (
-                          <button type="button" onClick={goBackToWizard} className="text-xs font-semibold" style={{ color: "#B8860B", background: "none", border: "none", padding: 0, cursor: "pointer" }}>แก้ไข</button>
+                          <div className="flex items-center gap-3">
+                            <button type="button" onClick={goBackToWizard} className="text-xs font-semibold" style={{ color: "#B8860B", background: "none", border: "none", padding: 0, cursor: "pointer" }}>แก้ไข</button>
+                            {extraDevices.length > 0 && (
+                              <button type="button" onClick={handleRemoveMain} className="text-xs font-semibold" style={{ color: "#EF4444", background: "none", border: "none", padding: 0, cursor: "pointer" }}>ลบ</button>
+                            )}
+                          </div>
                         ) : (
-                          <button type="button" onClick={() => {
-                            const extraIdx = sidebarDeviceTab - 1;
-                            const d = extraDevices[extraIdx];
-                            if (!d) return;
-                            try {
-                              const stored: ExtraDevice[] = JSON.parse(localStorage.getItem(BUNDLE_KEY) ?? "[]");
-                              const updated = stored.filter((_, j) => j !== extraIdx);
-                              localStorage.setItem(BUNDLE_KEY, JSON.stringify(updated));
-                              localStorage.setItem(BUNDLE_RETURN_KEY, window.location.href);
-                              localStorage.removeItem(`khaiphone_wizard_${toSlug(d.model)}`);
-                            } catch {}
-                            window.location.href = `/sell/${toSlug(d.model)}`;
-                          }} className="text-xs font-semibold" style={{ color: "#B8860B", background: "none", border: "none", padding: 0, cursor: "pointer" }}>แก้ไข</button>
+                          <div className="flex items-center gap-3">
+                            <button type="button" onClick={() => {
+                              const extraIdx = sidebarDeviceTab - 1;
+                              const d = extraDevices[extraIdx];
+                              if (!d) return;
+                              try {
+                                const stored: ExtraDevice[] = JSON.parse(localStorage.getItem(BUNDLE_KEY) ?? "[]");
+                                const updated = stored.filter((_, j) => j !== extraIdx);
+                                localStorage.setItem(BUNDLE_KEY, JSON.stringify(updated));
+                                localStorage.setItem(BUNDLE_RETURN_KEY, window.location.href);
+                                localStorage.removeItem(`khaiphone_wizard_${toSlug(d.model)}`);
+                              } catch {}
+                              window.location.href = `/sell/${toSlug(d.model)}`;
+                            }} className="text-xs font-semibold" style={{ color: "#B8860B", background: "none", border: "none", padding: 0, cursor: "pointer" }}>แก้ไข</button>
+                            <button type="button" onClick={() => { handleRemoveExtra(sidebarDeviceTab - 1); setSidebarDeviceTab(0); }} className="text-xs font-semibold" style={{ color: "#EF4444", background: "none", border: "none", padding: 0, cursor: "pointer" }}>ลบ</button>
+                          </div>
                         )}
                       </div>
 
