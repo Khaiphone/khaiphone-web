@@ -1449,8 +1449,26 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                       )}
                     </div>
                     {request.status === "inspecting" && (() => {
-                      const insp = request.inspection as { adminApprovedAt?: string; adminPriceGuidance?: { priceMin?: number | null; priceMax?: number | null; note?: string | null } };
+                      const insp = request.inspection as { adminApprovedAt?: string; revisionNote?: string; adminPriceGuidance?: { priceMin?: number | null; priceMax?: number | null; note?: string | null } };
                       const approved = !!insp.adminApprovedAt;
+                      const pendingRevision = !!insp.revisionNote && !insp.adminApprovedAt;
+                      if (pendingRevision) {
+                        return (
+                          <div style={{ borderRadius: 10, background: "#FFFBEB", border: "1.5px solid #FCD34D", padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+                            <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                              <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
+                              <div>
+                                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#92400E" }}>รอไรเดอร์แก้ไขผลตรวจ</p>
+                                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#B45309" }}>หน้านี้จะอัปเดตอัตโนมัติเมื่อไรเดอร์ส่งผลตรวจใหม่</p>
+                              </div>
+                            </div>
+                            <div style={{ background: "#FEF3C7", borderRadius: 8, padding: "8px 10px" }}>
+                              <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, color: "#92400E", textTransform: "uppercase", letterSpacing: "0.05em" }}>ข้อความที่ส่งให้ไรเดอร์</p>
+                              <p style={{ margin: 0, fontSize: 13, color: "#78350F" }}>{insp.revisionNote}</p>
+                            </div>
+                          </div>
+                        );
+                      }
                       if (approved) {
                         const g = insp.adminPriceGuidance;
                         return (
