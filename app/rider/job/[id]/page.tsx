@@ -537,7 +537,8 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   const inspectionSaved = inspectionFullySaved && job.status === "inspecting";
 
   // Intermediate state: inspection saved, admin reviewing, price not yet proposed
-  if (inspectionSaved && !showPrice && !isEditingInspection) {
+  // If revisionNote is set (admin requested revision), bypass this screen and show the form directly
+  if (inspectionSaved && !showPrice && !isEditingInspection && !revisionNote) {
     const insp = job.inspection!;
     const passed = (insp.criteria ?? []).filter(c => c.pass).length;
     const total  = (insp.criteria ?? []).length;
