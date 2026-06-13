@@ -944,6 +944,13 @@ function SellModelPageContent() {
     window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
   }
 
+  function goToWizardStart() {
+    if (autoAdvanceTimerRef.current) { clearTimeout(autoAdvanceTimerRef.current); autoAdvanceTimerRef.current = null; }
+    setStep(0);
+    syncUrl(0, picks);
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }
+
   function handleSelect(fn: () => void) {
     scrollYRef.current = window.scrollY;
     fn();
@@ -1741,7 +1748,7 @@ function SellModelPageContent() {
                           </div>
                         </div>
                         {extraDevices.length > 0 ? (
-                          <div className="flex gap-2 mb-4">
+                          <div className="flex gap-2 mb-2">
                             <button
                               type="button"
                               onClick={goBackToWizard}
@@ -1763,12 +1770,20 @@ function SellModelPageContent() {
                           <button
                             type="button"
                             onClick={goBackToWizard}
-                            className="flex items-center justify-center w-full py-2.5 rounded-full font-semibold text-sm mb-4"
+                            className="flex items-center justify-center w-full py-2.5 rounded-full font-semibold text-sm mb-2"
                             style={{ border: "1px solid #B8860B", color: "#B8860B" }}
                           >
                             แก้ไขข้อมูลเครื่อง
                           </button>
                         )}
+                        <button
+                          type="button"
+                          onClick={goToWizardStart}
+                          className="flex items-center justify-center w-full py-2 rounded-full text-sm mb-4"
+                          style={{ background: "none", border: "none", color: "#6B7280", cursor: "pointer" }}
+                        >
+                          ประเมินใหม่ตั้งแต่ต้น (ค้างค่าเดิม)
+                        </button>
                         <div className="flex flex-col" style={{ borderTop: "1px solid #F9FAFB" }}>
                           {summaryRows.map(({ title, value }) => (
                             <div key={title} className="flex items-center justify-between py-2.5" style={{ borderBottom: "1px solid #F9FAFB" }}>
@@ -2391,6 +2406,7 @@ function SellModelPageContent() {
                         {sidebarDeviceTab === 0 ? (
                           <div className="flex items-center gap-3">
                             <button type="button" onClick={goBackToWizard} className="text-xs font-semibold" style={{ color: "#B8860B", background: "none", border: "none", padding: 0, cursor: "pointer" }}>แก้ไข</button>
+                            <button type="button" onClick={goToWizardStart} className="text-xs font-semibold" style={{ color: "#6B7280", background: "none", border: "none", padding: 0, cursor: "pointer" }}>ประเมินใหม่</button>
                             {extraDevices.length > 0 && (
                               <button type="button" onClick={handleRemoveMain} className="text-xs font-semibold" style={{ color: "#EF4444", background: "none", border: "none", padding: 0, cursor: "pointer" }}>ลบ</button>
                             )}
