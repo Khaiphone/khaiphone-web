@@ -7,7 +7,7 @@ const STATUS_OPTIONS: Array<{ value: RequestStatus; label: string }> = [
   { value: "new",              label: "คำขอใหม่"      },
   { value: "pending",          label: "รอดำเนินการ"   },
   { value: "confirmed",        label: "ยืนยันนัดหมาย" },
-  { value: "pickup_scheduled", label: "นัดรับเครื่อง" },
+  { value: "pickup_scheduled", label: "ไรเดอร์รับงานแล้ว" },
   { value: "inspecting",       label: "กำลังตรวจสอบ"  },
   { value: "awaiting_transfer", label: "รอโอนเงิน"    },
   { value: "completed",        label: "เสร็จสิ้น"     },

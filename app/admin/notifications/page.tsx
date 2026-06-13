@@ -27,7 +27,7 @@ const STATUS_LABELS: Record<string, string> = {
   no_show:           "ลูกค้าไม่อยู่",
   rejected:          "ปฏิเสธ",
   awaiting_transfer: "รอโอนเงิน",
-  pickup_scheduled:  "นัดรับเครื่อง",
+  pickup_scheduled:  "ไรเดอร์รับงานแล้ว",
 };
 
 const FILTER_TABS: Array<{ value: NotificationType | "all"; label: string }> = [

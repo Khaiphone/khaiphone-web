@@ -17,7 +17,7 @@ const STATUS_LABEL: Record<string, string> = {
   pending:           "รอดำเนินการ",
   contacted:         "เจ้าหน้าที่ติดต่อกลับแล้ว",
   confirmed:         "ยืนยันนัดหมาย",
-  pickup_scheduled:  "นัดรับเครื่อง",
+  pickup_scheduled:  "ไรเดอร์รับงานแล้ว",
   en_route:          "ไรเดอร์กำลังเดินทาง",
   inspecting:        "กำลังตรวจเครื่อง",
   price_negotiation: "รอยืนยันราคา",
