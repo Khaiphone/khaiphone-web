@@ -1,8 +1,10 @@
 "use server";
 
+import { after } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/require-auth";
 import { broadcastRequestUpdate } from "@/lib/broadcast";
+import { sendPushToUser } from "@/app/actions/push";
 import type { InspectionData, RequestStatus } from "@/lib/types/admin";
 
 // ─── Admin: บันทึกเวลาถึง ─────────────────────────────────────────────────────
@@ -198,6 +200,102 @@ export async function adminApproveInspection(
 
   if (error) return { success: false, error: error.message };
   broadcastRequestUpdate(id);
+  return { success: true };
+}
+
+// ─── Admin: ขอให้ไรเดอร์แก้ไขผลตรวจ ─────────────────────────────────────────
+export async function adminRequestInspectionRevision(
+  id: string,
+  note: string,
+): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
+  const supabase = createServerClient();
+
+  const { data: req } = await supabase
+    .from("requests")
+    .select("inspection, status, rider_id, order_number, device_model")
+    .eq("id", id).single();
+
+  if (!req || req.status !== "inspecting") return { success: false, error: "ไม่อยู่ในสถานะตรวจสภาพ" };
+  if (!(req.inspection as { inspectedAt?: string } | null)?.inspectedAt) return { success: false, error: "ยังไม่มีผลตรวจจากไรเดอร์" };
+
+  const { error } = await supabase
+    .from("requests")
+    .update({
+      inspection: {
+        ...(req.inspection as object),
+        revisionNote: note.trim(),
+        revisionRequestedAt: new Date().toISOString(),
+        adminApprovedAt: null,
+      },
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) return { success: false, error: error.message };
+
+  after(async () => {
+    await broadcastRequestUpdate(id);
+    if (req.rider_id) {
+      await sendPushToUser(req.rider_id as string, {
+        title: "⚠️ ขอให้แก้ไขผลตรวจ",
+        body: `${req.device_model ?? ""} · ${note.trim().slice(0, 100)}`,
+        url: `/rider/job/${id}`,
+        tag: `revision-${id}`,
+      }).catch(console.error);
+    }
+  });
+
+  return { success: true };
+}
+
+// ─── Admin: ยกเลิกงานหลังตรวจสภาพ ────────────────────────────────────────────
+export async function adminCancelAtInspection(
+  id: string,
+  reason: string,
+): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const now = new Date().toISOString();
+
+  const { data: req } = await supabase
+    .from("requests")
+    .select("status, rider_id, order_number, device_model, status_log")
+    .eq("id", id).single();
+
+  if (!req || req.status !== "inspecting") return { success: false, error: "ไม่อยู่ในสถานะตรวจสภาพ" };
+
+  const safeReason = reason.trim() || "Admin ยกเลิก";
+  const newLog = [
+    ...(req.status_log ?? []),
+    { status: "cancelled", timestamp: now, note: `Admin ยกเลิกหลังตรวจ: ${safeReason}` },
+  ];
+
+  const { error } = await supabase
+    .from("requests")
+    .update({ status: "cancelled", status_log: newLog, updated_at: now })
+    .eq("id", id);
+
+  if (error) return { success: false, error: error.message };
+
+  if (req.rider_id) {
+    await supabase.from("rider_locations")
+      .update({ current_job_id: null, tracking_mode: "idle", updated_at: now })
+      .eq("rider_id", req.rider_id);
+  }
+
+  after(async () => {
+    await broadcastRequestUpdate(id);
+    if (req.rider_id) {
+      await sendPushToUser(req.rider_id as string, {
+        title: "งานถูกยกเลิก",
+        body: `${req.device_model ?? ""} · ${safeReason}`,
+        url: "/rider",
+        tag: `cancelled-${id}`,
+      }).catch(console.error);
+    }
+  });
+
   return { success: true };
 }
 

@@ -18,7 +18,7 @@ import {
 import { getCustomerHistory, addToBlacklist, removeFromBlacklist, type CustomerHistory } from "@/app/actions/customer-blacklist";
 import { fetchAdminUsers, fetchMyRole, fetchMyProfile } from "@/app/actions/admin-users";
 import type { AdminUserRow } from "@/app/actions/admin-users";
-import { saveInspection, respondToNegotiation, adminApproveInspection } from "@/app/actions/inspection";
+import { saveInspection, respondToNegotiation, adminApproveInspection, adminRequestInspectionRevision, adminCancelAtInspection } from "@/app/actions/inspection";
 import { fetchRiderSuggestionsForRequest } from "@/app/actions/rider-tracking";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
@@ -160,6 +160,12 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const [guidanceMin,        setGuidanceMin]        = useState("");
   const [guidanceMax,        setGuidanceMax]        = useState("");
   const [guidanceNote,       setGuidanceNote]       = useState("");
+  const [showRevisionInput,  setShowRevisionInput]  = useState(false);
+  const [revisionNote,       setRevisionNote]       = useState("");
+  const [submittingRevision, setSubmittingRevision] = useState(false);
+  const [showCancelInput,    setShowCancelInput]    = useState(false);
+  const [cancelReason,       setCancelReason]       = useState("");
+  const [cancellingJob,      setCancellingJob]      = useState(false);
 
   // Smart rider suggestions
   type RiderSuggestion = { rider_id: string; name: string; tracking_mode: string; battery_pct: number | null; distanceKm: number; etaMinutes: number; jobs_completed: number };
@@ -1516,6 +1522,70 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                           >
                             {approvingInspection ? "กำลังอนุมัติ..." : "✓ อนุมัติผลตรวจ — ให้ไรเดอร์เสนอราคาได้"}
                           </button>
+
+                          {/* ขอให้แก้ไขผลตรวจ */}
+                          {!showRevisionInput ? (
+                            <button onClick={() => { setShowRevisionInput(true); setShowCancelInput(false); }}
+                              style={{ width: "100%", padding: "9px 0", borderRadius: 8, border: "1.5px solid #F59E0B", background: "transparent", color: "#92400E", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 8 }}>
+                              ⚠️ ขอให้แก้ไขผลตรวจ
+                            </button>
+                          ) : (
+                            <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                              <textarea value={revisionNote} onChange={e => setRevisionNote(e.target.value)}
+                                placeholder="ระบุสิ่งที่ต้องแก้ไข เช่น รูปภาพไม่ชัด, Battery Health ไม่ตรง"
+                                rows={2} maxLength={300}
+                                style={{ width: "100%", padding: "8px 10px", borderRadius: 7, border: "1px solid #FCD34D", background: "#FFFBEB", fontSize: 13, fontFamily: "inherit", outline: "none", resize: "none", boxSizing: "border-box" }} />
+                              <div style={{ display: "flex", gap: 6 }}>
+                                <button onClick={() => setShowRevisionInput(false)}
+                                  style={{ flex: 1, padding: "8px 0", borderRadius: 7, border: "1px solid #D1D5DB", background: "transparent", color: "#6B7280", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+                                  ยกเลิก
+                                </button>
+                                <button disabled={!revisionNote.trim() || submittingRevision}
+                                  onClick={async () => {
+                                    setSubmittingRevision(true);
+                                    const res = await adminRequestInspectionRevision(id, revisionNote);
+                                    setSubmittingRevision(false);
+                                    if (!res.success) { alert(res.error ?? "เกิดข้อผิดพลาด"); return; }
+                                    setShowRevisionInput(false); setRevisionNote("");
+                                  }}
+                                  style={{ flex: 2, padding: "8px 0", borderRadius: 7, border: "none", background: submittingRevision || !revisionNote.trim() ? "#D1D5DB" : "#F59E0B", color: "#fff", fontSize: 13, fontWeight: 700, cursor: submittingRevision || !revisionNote.trim() ? "default" : "pointer", fontFamily: "inherit" }}>
+                                  {submittingRevision ? "กำลังส่ง..." : "ส่งให้ไรเดอร์แก้ไข"}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* ยกเลิกงาน */}
+                          {!showCancelInput ? (
+                            <button onClick={() => { setShowCancelInput(true); setShowRevisionInput(false); }}
+                              style={{ width: "100%", padding: "9px 0", borderRadius: 8, border: "1.5px solid #EF4444", background: "transparent", color: "#991B1B", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 6 }}>
+                              ✕ ยกเลิกงานนี้
+                            </button>
+                          ) : (
+                            <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 6 }}>
+                              <input value={cancelReason} onChange={e => setCancelReason(e.target.value)}
+                                placeholder="ระบุเหตุผล เช่น เครื่องไม่เข้าเงื่อนไข"
+                                maxLength={200}
+                                style={{ width: "100%", padding: "8px 10px", borderRadius: 7, border: "1px solid #FCA5A5", background: "#FEF2F2", fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+                              <div style={{ display: "flex", gap: 6 }}>
+                                <button onClick={() => setShowCancelInput(false)}
+                                  style={{ flex: 1, padding: "8px 0", borderRadius: 7, border: "1px solid #D1D5DB", background: "transparent", color: "#6B7280", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+                                  ยกเลิก
+                                </button>
+                                <button disabled={!cancelReason.trim() || cancellingJob}
+                                  onClick={async () => {
+                                    setCancellingJob(true);
+                                    const res = await adminCancelAtInspection(id, cancelReason);
+                                    setCancellingJob(false);
+                                    if (!res.success) { alert(res.error ?? "เกิดข้อผิดพลาด"); return; }
+                                    setShowCancelInput(false); setCancelReason("");
+                                  }}
+                                  style={{ flex: 2, padding: "8px 0", borderRadius: 7, border: "none", background: cancellingJob || !cancelReason.trim() ? "#D1D5DB" : "#EF4444", color: "#fff", fontSize: 13, fontWeight: 700, cursor: cancellingJob || !cancelReason.trim() ? "default" : "pointer", fontFamily: "inherit" }}>
+                                  {cancellingJob ? "กำลังยกเลิก..." : "ยืนยันยกเลิกงาน"}
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })()}

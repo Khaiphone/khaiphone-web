@@ -335,7 +335,8 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   const [conditionLabel, setConditionLabel] = useState<string>((job.inspection as { conditionLabel?: string } | undefined)?.conditionLabel ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [isEditingInspection, setIsEditingInspection] = useState(false);
+  const revisionNote = (job.inspection as { revisionNote?: string } | undefined)?.revisionNote ?? "";
+  const [isEditingInspection, setIsEditingInspection] = useState(!!revisionNote);
 
   const photoSlotsRef  = useRef<HTMLDivElement>(null);
   const serialRef      = useRef<HTMLDivElement>(null);
@@ -646,6 +647,16 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* Revision request banner */}
+      {revisionNote && (
+        <div style={{ background: "rgba(245,158,11,0.12)", border: "1.5px solid #F59E0B", borderRadius: 12, padding: "12px 14px", display: "flex", gap: 10, alignItems: "flex-start" }}>
+          <AlertTriangle size={18} color="#92400E" style={{ flexShrink: 0, marginTop: 1 }} />
+          <div>
+            <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: "#92400E" }}>Admin ขอให้แก้ไขผลตรวจ</p>
+            <p style={{ margin: 0, fontSize: 13, color: "#92400E" }}>{revisionNote}</p>
+          </div>
+        </div>
+      )}
       {/* Photos */}
       <div ref={photoSlotsRef}>
         <SectionLabel c={c}>รูปสภาพเครื่อง</SectionLabel>
