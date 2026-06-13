@@ -39,7 +39,8 @@ function StockLayoutInner({ children }: { children: React.ReactNode }) {
 }
 
 export default function StockLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
+  const router   = useRouter();
+  const pathname = usePathname();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -52,9 +53,11 @@ export default function StockLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     let cancelled = false;
+    const isLoginPage = pathname === "/stock/login";
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (cancelled) return;
-      if (!session) { router.replace("/admin/login"); return; }
+      if (!session) { if (!isLoginPage) router.replace("/stock/login"); return; }
+      if (isLoginPage) { router.replace("/stock/dashboard"); return; }
       const profile = await fetchMyProfile(session.user.id);
       if (cancelled) return;
       const canAccess = profile?.role === "owner" || (profile?.permissions ?? []).includes("view_stock");
@@ -67,8 +70,9 @@ export default function StockLayout({ children }: { children: React.ReactNode })
       setReady(true);
     });
     return () => { cancelled = true; };
-  }, [router]);
+  }, [router, pathname]);
 
+  if (pathname === "/stock/login") return <>{children}</>;
   if (!ready) return <div style={{ minHeight: "100vh", background: "#050505" }} />;
 
   return (

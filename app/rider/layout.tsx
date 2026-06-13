@@ -135,15 +135,17 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
     const isDev = searchParams.get("dev") === "1";
     const isInstallPage = pathname === "/rider/install";
     const isConsentPage = pathname === "/rider/consent";
+    const isLoginPage   = pathname === "/rider/login";
 
-    if (!isDev && !isStandalone() && !isInstallPage) {
+    if (!isDev && !isStandalone() && !isInstallPage && !isLoginPage) {
       router.replace("/rider/install");
       return;
     }
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (cancelled) return;
-      if (!session) { router.replace("/admin/login"); return; }
+      if (!session) { if (!isLoginPage) router.replace("/rider/login"); return; }
+      if (isLoginPage) { router.replace("/rider"); return; }
       const uid = session.user.id;
       const [profile, online, consent] = await Promise.all([
         fetchMyProfile(uid),
@@ -151,9 +153,9 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
         fetchRiderConsent(),
       ]);
       if (cancelled) return;
-      if (!profile) { router.replace("/admin/login"); return; }
+      if (!profile) { router.replace("/rider/login"); return; }
       if (profile.role !== "owner" && !profile.is_rider) {
-        router.replace("/admin/login");
+        router.replace("/rider/login");
         return;
       }
 
@@ -197,6 +199,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
     setShowNotifs(true);
   }
 
+  if (pathname === "/rider/login") return <>{children}</>;
   if (!ready) return (
     <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ width: 36, height: 36, borderRadius: "50%", border: `3px solid ${BORDER}`, borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
