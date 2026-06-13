@@ -294,8 +294,18 @@ function CheckRow({ label, pass, onToggle, c }: { label: string; pass: boolean |
 
 // ── Inspect Step (stateful component) ─────────────────────────────────────────
 function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void; c: TC }) {
-  const [slotPhotos, setSlotPhotos] = useState<Partial<Record<string, string>>>({});
-  const [defectPhotos, setDefectPhotos] = useState<string[]>([]);
+  const [slotPhotos, setSlotPhotos] = useState<Partial<Record<string, string>>>(() => {
+    const existing = (job.inspection as { photos?: string[] } | undefined)?.photos ?? [];
+    const slots: Partial<Record<string, string>> = {};
+    for (const url of existing)
+      for (const s of PHOTO_SLOTS)
+        if (url.includes(`/slot-${s.key}-`)) { slots[s.key] = url; break; }
+    return slots;
+  });
+  const [defectPhotos, setDefectPhotos] = useState<string[]>(() => {
+    const existing = (job.inspection as { photos?: string[] } | undefined)?.photos ?? [];
+    return existing.filter(url => !PHOTO_SLOTS.some(s => url.includes(`/slot-${s.key}-`)));
+  });
   const defectRef = useRef<HTMLInputElement>(null!);
   const [uploading, setUploading] = useState(false);
   const [imei,   setImei]   = useState(job.inspection?.imei ?? "");
@@ -954,7 +964,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
         })() : false;
 
         const missing: Array<{ label: string; ref: React.RefObject<HTMLDivElement | null> }> = [];
-        if (!isEditingInspection && !PHOTO_SLOTS.every(s => !!slotPhotos[s.key])) missing.push({ label: "รูปภาพครบทุกด้าน", ref: photoSlotsRef });
+        if (!PHOTO_SLOTS.every(s => !!slotPhotos[s.key])) missing.push({ label: "รูปภาพครบทุกด้าน", ref: photoSlotsRef });
         if (!serial.trim())                          missing.push({ label: "Serial Number",                         ref: serialRef });
         if (!color.trim())                           missing.push({ label: "สีตัวเครื่อง",                         ref: colorRef });
         if (!battery.trim())                         missing.push({ label: "Battery Health",                        ref: batteryRef });
