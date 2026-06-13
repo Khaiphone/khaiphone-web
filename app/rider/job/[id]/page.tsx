@@ -280,13 +280,13 @@ function CompareRow({ label, stated, actual, onActualChange, c }: {
   );
 }
 
-function CheckRow({ label, pass, onToggle, c }: { label: string; pass: boolean; onToggle: (v: boolean) => void; c: TC }) {
+function CheckRow({ label, pass, onToggle, c }: { label: string; pass: boolean | null; onToggle: (v: boolean) => void; c: TC }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${c.BORDER}` }}>
-      <span style={{ fontSize: 13, color: c.TEXT, flex: 1 }}>{label}</span>
+      <span style={{ fontSize: 13, color: pass === null ? c.TEXT2 : c.TEXT, flex: 1 }}>{label}{pass === null && <span style={{ marginLeft: 6, fontSize: 11, color: c.RED }}>*</span>}</span>
       <div style={{ display: "flex", gap: 6 }}>
-        <button onClick={() => onToggle(true)} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", background: pass ? "rgba(48,209,88,0.2)" : c.CARD2, color: pass ? c.GREEN : c.TEXT2, fontWeight: 600, fontSize: 12 }}>ปกติ</button>
-        <button onClick={() => onToggle(false)} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", background: !pass ? "rgba(255,69,58,0.2)" : c.CARD2, color: !pass ? c.RED : c.TEXT2, fontWeight: 600, fontSize: 12 }}>มีปัญหา</button>
+        <button onClick={() => onToggle(true)} style={{ padding: "5px 12px", borderRadius: 8, border: pass === true ? "none" : `1px solid ${c.BORDER}`, cursor: "pointer", fontFamily: "inherit", background: pass === true ? "rgba(48,209,88,0.2)" : c.CARD2, color: pass === true ? c.GREEN : c.TEXT2, fontWeight: 600, fontSize: 12 }}>ปกติ</button>
+        <button onClick={() => onToggle(false)} style={{ padding: "5px 12px", borderRadius: 8, border: pass === false ? "none" : `1px solid ${c.BORDER}`, cursor: "pointer", fontFamily: "inherit", background: pass === false ? "rgba(255,69,58,0.2)" : c.CARD2, color: pass === false ? c.RED : c.TEXT2, fontWeight: 600, fontSize: 12 }}>มีปัญหา</button>
       </div>
     </div>
   );
@@ -314,9 +314,11 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
     INSPECT_KEYS.forEach(k => { if (sels[k]) init[k] = { stated: sels[k], actual: sels[k] }; });
     return init;
   });
-  const [functional, setFunctional] = useState<FunctionalTest[]>(() => {
-    const list = FUNCTIONAL_DEFAULTS.map(t => ({ ...t }));
-    if (/iPhone\s+1[67]/i.test(job.device.model ?? "")) list.push({ label: "ปุ่ม Camera Control", pass: true });
+  const [functional, setFunctional] = useState<Array<{ label: string; pass: boolean | null }>>(() => {
+    const saved = (job.inspection as { functionalTests?: FunctionalTest[] } | undefined)?.functionalTests;
+    if (saved?.length) return saved.map(t => ({ label: t.label, pass: t.pass }));
+    const list: Array<{ label: string; pass: boolean | null }> = FUNCTIONAL_DEFAULTS.map(t => ({ label: t.label, pass: null }));
+    if (/iPhone\s+1[67]/i.test(job.device.model ?? "")) list.push({ label: "ปุ่ม Camera Control", pass: null });
     return list;
   });
   const scanRef = useRef<HTMLInputElement>(null!);
@@ -333,6 +335,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   const [conditionLabel, setConditionLabel] = useState<string>((job.inspection as { conditionLabel?: string } | undefined)?.conditionLabel ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [isEditingInspection, setIsEditingInspection] = useState(false);
 
   // Restore full SickwResult (including form auto-fill) from saved raw text on mount
   useEffect(() => {
@@ -475,13 +478,16 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
         imei, serial, color: color.trim() || undefined,
         batteryHealth: battery ? parseInt(battery) : undefined,
         warrantyExpiry: warrantyValue,
-        criteria: criteriaArr, functionalTests: functional, photos,
+        criteria: criteriaArr,
+        functionalTests: functional.map(t => ({ label: t.label, pass: t.pass ?? true })),
+        photos,
         sickw_report: sickwRaw || undefined,
         accessories: accList.length ? accList : undefined,
         conditionGrade: conditionGrade || undefined,
         conditionLabel: conditionLabel || undefined,
       });
       if (!result.success) { setError((result as { success: false; error?: string }).error ?? "เกิดข้อผิดพลาด"); return; }
+      setIsEditingInspection(false);
       reload(); // admin sees inspection via realtime; rider stays on intermediate state
     } catch (e) { setError(e instanceof Error ? e.message : "เกิดข้อผิดพลาด"); }
     finally { setSaving(false); }
@@ -507,7 +513,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   const inspectionSaved = inspectionFullySaved && job.status === "inspecting";
 
   // Intermediate state: inspection saved, admin reviewing, price not yet proposed
-  if (inspectionSaved && !showPrice) {
+  if (inspectionSaved && !showPrice && !isEditingInspection) {
     const insp = job.inspection!;
     const passed = (insp.criteria ?? []).filter(c => c.pass).length;
     const total  = (insp.criteria ?? []).length;
@@ -550,7 +556,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
             <p style={{ margin: 0, fontSize: 12, color: "#B45309" }}>หน้าจะอัปเดตอัตโนมัติเมื่ออนุมัติแล้ว</p>
           </div>
         )}
-        <button onClick={() => {}} style={{ background: "none", border: "none", color: c.TEXT2, fontSize: 13, cursor: "pointer", padding: "2px 0", fontFamily: "inherit", textDecoration: "underline" }}>
+        <button onClick={() => setIsEditingInspection(true)} style={{ background: "none", border: "none", color: c.TEXT2, fontSize: 13, cursor: "pointer", padding: "2px 0", fontFamily: "inherit", textDecoration: "underline" }}>
           ← แก้ไขผลการตรวจ
         </button>
       </div>
@@ -903,7 +909,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
       {uploading && <p style={{ margin: 0, fontSize: 13, color: c.ACCENT, textAlign: "center" }}>กำลังอัปโหลดรูป...</p>}
 
       {(() => {
-        const blocked = sickwResult ? (() => {
+        const sickwBlocked = sickwResult ? (() => {
           const getSickwLine = (key: string) => {
             const line = sickwRaw.split("\n").find(l => new RegExp(`^${key}:`, "i").test(l.trim()));
             const idx = line?.indexOf(": ");
@@ -911,18 +917,31 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
           };
           const icloudLock = getSickwLine("iCloud Lock");
           const icloudAcct = getSickwLine("iCloud Status");
-          if (icloudLock === "on")                                return true; // activation locked
-          if (icloudAcct === "on")                                return true; // still signed into iCloud
-          if (icloudLock.includes("lost") || icloudAcct.includes("lost")) return true; // lost mode
+          if (icloudLock === "on")                                return true;
+          if (icloudAcct === "on")                                return true;
+          if (icloudLock.includes("lost") || icloudAcct.includes("lost")) return true;
           const mdmLine = sickwRaw.split("\n").find(l => /^MDM Lock:/i.test(l));
-          if (mdmLine?.toLowerCase().includes(": on"))            return true; // MDM locked
+          if (mdmLine?.toLowerCase().includes(": on"))            return true;
           const bl = sickwResult.blacklist?.toLowerCase() ?? "";
           if (bl && !["clean", "ok", "no", "clear", "not"].some(s => bl.includes(s))) return true;
           return false;
         })() : false;
+
+        const missing: string[] = [];
+        if (!battery.trim()) missing.push("Battery Health");
+        if (!warrantyStatus) missing.push("สถานะประกัน");
+        if (!conditionGrade) missing.push("เกรดสภาพ");
+        if (functional.some(t => t.pass === null)) missing.push("ฟังก์ชันการใช้งาน (ยังมีที่ไม่ได้เลือก)");
+        if (!isEditingInspection && !PHOTO_SLOTS.every(s => !!slotPhotos[s.key])) missing.push("รูปภาพครบทุกด้าน");
+
         return (
-          <BigBtn label={uploading ? "กำลังอัปโหลดรูป..." : saving ? "กำลังบันทึก..." : "บันทึกผลตรวจ →"}
-            loading={saving} disabled={uploading || blocked} onClick={handleSave} />
+          <>
+            {missing.length > 0 && (
+              <p style={{ margin: 0, fontSize: 12, color: c.TEXT2 }}>ยังไม่ครบ: {missing.join(", ")}</p>
+            )}
+            <BigBtn label={uploading ? "กำลังอัปโหลดรูป..." : saving ? "กำลังบันทึก..." : "บันทึกผลตรวจ →"}
+              loading={saving} disabled={uploading || sickwBlocked || missing.length > 0} onClick={handleSave} />
+          </>
         );
       })()}
     </div>
