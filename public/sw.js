@@ -22,11 +22,11 @@ self.addEventListener("notificationclick", (event) => {
   const url = event.notification.data?.url ?? "/admin/dashboard";
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
-      for (const client of list) {
-        if (client.url.includes(self.location.origin) && "focus" in client) {
-          client.navigate(url);
-          return client.focus();
-        }
+      const existing = list.find(c => c.url.startsWith(self.location.origin));
+      if (existing) {
+        // Let Next.js router handle navigation so history stays intact
+        existing.postMessage({ type: "NAVIGATE", url });
+        return existing.focus();
       }
       return clients.openWindow(url);
     })

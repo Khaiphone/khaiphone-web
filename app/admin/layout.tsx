@@ -48,6 +48,17 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const { dark, toggle }              = useAdminTheme();
   const sidebarW = collapsed ? 64 : 220;
 
+  // Handle notification tap: SW sends postMessage → router.push keeps history intact
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === "NAVIGATE" && typeof e.data.url === "string") {
+        router.push(e.data.url);
+      }
+    };
+    navigator.serviceWorker?.addEventListener("message", handler);
+    return () => navigator.serviceWorker?.removeEventListener("message", handler);
+  }, [router]);
+
   useEffect(() => {
     // PWA: swap manifest + add iOS meta tags for admin.khaiphone.com
     const link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
