@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   icons: {
     apple: [{ url: "/rider-apple-touch-icon.png", sizes: "180x180" }],
   },
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+  },
 };
 
 export default function RiderLayout({ children }: { children: React.ReactNode }) {
