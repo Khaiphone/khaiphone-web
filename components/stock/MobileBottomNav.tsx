@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { LayoutDashboard, Package, FileText, Users, ScanSearch } from "lucide-react";
 import { useThemeColors } from "./ThemeContext";
 
@@ -15,7 +16,6 @@ const TABS = [
 export default function MobileBottomNav() {
   const c = useThemeColors();
   const pathname = usePathname();
-  const router = useRouter();
 
   return (
     <div className="flex md:hidden" style={{
@@ -26,18 +26,18 @@ export default function MobileBottomNav() {
       {TABS.map(({ icon: Icon, label, href }) => {
         const active = pathname.startsWith(href);
         return (
-          <button
+          <Link
             key={href}
-            onClick={() => router.push(href)}
+            href={href}
             style={{
               flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
-              gap: 3, padding: "10px 0", background: "none", border: "none",
+              gap: 3, padding: "10px 0", background: "none", border: "none", textDecoration: "none",
               color: active ? c.gold : c.text3, cursor: "pointer", fontFamily: "inherit",
             }}
           >
             <Icon size={22} />
             <span style={{ fontSize: 10, fontWeight: active ? 700 : 400 }}>{label}</span>
-          </button>
+          </Link>
         );
       })}
     </div>

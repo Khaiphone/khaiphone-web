@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Home, ClipboardList, CalendarDays, Bell, MoreHorizontal } from "lucide-react";
 import { fetchRequests } from "@/app/actions/admin-requests";
 import { useAdminTheme } from "@/lib/admin-theme";
@@ -16,7 +17,6 @@ const TABS = [
 
 export default function BottomTabNav() {
   const pathname  = usePathname();
-  const router    = useRouter();
   const { dark }  = useAdminTheme();
   const [newCount, setNewCount] = useState(0);
 
@@ -48,9 +48,9 @@ export default function BottomTabNav() {
             href === "/admin/requests" ? newCount : 0;
 
           return (
-            <button
+            <Link
               key={href}
-              onClick={() => router.push(href)}
+              href={href}
               style={{
                 flex: 1,
                 display: "flex",
@@ -66,6 +66,7 @@ export default function BottomTabNav() {
                 position: "relative",
                 minHeight: "44px",
                 padding: 0,
+                textDecoration: "none",
               }}
             >
               <div style={{ position: "relative" }}>
@@ -94,7 +95,7 @@ export default function BottomTabNav() {
               <span style={{ fontSize: "10px", fontWeight: active ? 700 : 400, lineHeight: 1, color: active ? GOLD : INACTIVE }}>
                 {label}
               </span>
-            </button>
+            </Link>
           );
         })}
       </div>
