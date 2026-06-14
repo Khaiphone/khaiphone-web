@@ -163,15 +163,46 @@ async function reclaimTimedOutJobs(supabase: ReturnType<typeof createServerClien
 
 // ─── Fetch all requests (owner) or assigned-only (staff) ─────────────────────
 export async function fetchRequests(assignedToUserId?: string): Promise<AdminRequest[]> {
-  await requireAuth();
+  const user = await requireAuth();
   const supabase = createServerClient();
   after(() => reclaimTimedOutJobs(supabase).catch(console.error));
+  // Enforce scoping server-side: staff without "receive_new_requests" are
+  // always restricted to their own assigned requests, regardless of the param.
+  const { data: profile } = await supabase
+    .from("admin_users").select("role, permissions").eq("user_id", user.id).single();
+  const role = (profile?.role ?? "owner") as AdminRole;
+  const perms = (profile?.permissions ?? []) as Permission[];
+  const canSeeAll = role !== "staff" || perms.includes("receive_new_requests");
   let query = supabase.from("requests").select("*")
     .neq("source", "manual")
     .order("created_at", { ascending: false });
-  if (assignedToUserId) query = query.eq("assigned_to", assignedToUserId);
+  if (!canSeeAll) {
+    query = query.eq("assigned_to", user.id);          // forced floor for staff
+  } else if (assignedToUserId) {
+    query = query.eq("assigned_to", assignedToUserId);  // optional filter for privileged users
+  }
   const { data, error } = await query;
   if (error) { console.error("fetchRequests:", error); return []; }
+  return (data ?? []).map(mapRow);
+}
+
+// ─── Fetch requests scoped to the caller (identity from session, not param) ──
+// Owner / staff with "receive_new_requests" → all; other staff → assigned-only.
+// Used by the notifications page so each user only sees their own notifications.
+export async function fetchMyRequests(): Promise<AdminRequest[]> {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+  const { data: profile } = await supabase
+    .from("admin_users").select("role, permissions").eq("user_id", user.id).single();
+  const role = (profile?.role ?? "owner") as AdminRole;
+  const perms = (profile?.permissions ?? []) as Permission[];
+  const canSeeAll = role !== "staff" || perms.includes("receive_new_requests");
+  let query = supabase.from("requests").select("*")
+    .neq("source", "manual")
+    .order("created_at", { ascending: false });
+  if (!canSeeAll) query = query.eq("assigned_to", user.id);
+  const { data, error } = await query;
+  if (error) { console.error("fetchMyRequests:", error); return []; }
   return (data ?? []).map(mapRow);
 }
 
@@ -197,13 +228,16 @@ export async function fetchRiderJobs(date?: string, dateRange?: { from: string; 
 }
 
 // ─── Fetch everything the dashboard needs in one server-side call ─────────────
-export async function fetchDashboardData(userId: string): Promise<{
+export async function fetchDashboardData(_userId?: string): Promise<{
   role: AdminRole;
   permissions: Permission[];
   requests: AdminRequest[];
   staffUserId: string | undefined;
 }> {
-  await requireAuth();
+  // Identity comes from the session, never the client argument — otherwise a
+  // staff member could pass an owner's userId to unlock all requests.
+  const user = await requireAuth();
+  const userId = user.id;
   const supabase = createServerClient();
 
   const [profileRes, reqRes] = await Promise.all([
@@ -827,14 +861,19 @@ export async function autoAssignJobs(): Promise<{ assigned: number; skipped: num
 
 // ─── Fetch single request ─────────────────────────────────────────────────────
 export async function fetchRequest(id: string): Promise<AdminRequest | null> {
-  await requireAuth();
+  const user = await requireAuth();
   const supabase = createServerClient();
-  const { data, error } = await supabase
-    .from("requests")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const [{ data, error }, { data: profile }] = await Promise.all([
+    supabase.from("requests").select("*").eq("id", id).single(),
+    supabase.from("admin_users").select("role, permissions").eq("user_id", user.id).single(),
+  ]);
   if (error) { console.error("fetchRequest:", error); return null; }
+  // Access control: staff without "receive_new_requests" may only open requests
+  // assigned to them — same gate the dashboard/list use to scope visibility.
+  const role = (profile?.role ?? "owner") as AdminRole;
+  const perms = (profile?.permissions ?? []) as Permission[];
+  const canSeeAll = role !== "staff" || perms.includes("receive_new_requests");
+  if (!canSeeAll && data.assigned_to !== user.id) return null;
   return mapRow(data);
 }
 

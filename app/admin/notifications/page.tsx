@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bell, RefreshCw, Calendar, Settings, Loader2 } from "lucide-react";
-import { fetchRequests } from "@/app/actions/admin-requests";
+import { fetchMyRequests } from "@/app/actions/admin-requests";
 import type { AdminRequest } from "@/lib/types/admin";
 import type { AdminNotification, NotificationType } from "../../../lib/types/admin";
 
@@ -126,7 +126,7 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     const readIds = loadReadIds();
-    fetchRequests().then(requests => {
+    fetchMyRequests().then(requests => {
       setItems(buildNotifications(requests, readIds));
       setLoading(false);
     });
