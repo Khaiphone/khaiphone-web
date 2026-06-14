@@ -7,6 +7,7 @@ import StockTopbar from "@/components/stock/Topbar";
 import MetricCard from "@/components/stock/MetricCard";
 import { useThemeColors } from "@/components/stock/ThemeContext";
 import { fetchStockCustomers } from "@/app/actions/stocks";
+import { cacheGet, cacheSet } from "@/app/stock/cache";
 import type { StockCustomer } from "@/app/actions/stocks";
 
 function fmt(n: number) { return n.toLocaleString("th-TH"); }
@@ -22,12 +23,12 @@ const CHANNEL_COLOR: Record<string, string> = {
 
 export default function CustomersPage() {
   const c = useThemeColors();
-  const [customers, setCustomers] = useState<StockCustomer[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [customers, setCustomers] = useState<StockCustomer[]>(() => cacheGet<StockCustomer[]>("stock:customers") ?? []);
+  const [loading, setLoading] = useState(() => cacheGet<StockCustomer[]>("stock:customers") === null);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    fetchStockCustomers().then(d => { setCustomers(d); setLoading(false); });
+    fetchStockCustomers().then(d => { setCustomers(d); cacheSet("stock:customers", d); setLoading(false); });
   }, []);
 
   const filtered = useMemo(() => {

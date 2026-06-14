@@ -11,6 +11,7 @@ import StockStatusBadge, { GradeBadge } from "@/components/stock/StatusBadge";
 import StockDetailDrawer from "@/components/stock/StockDetailDrawer";
 import { useThemeColors } from "@/components/stock/ThemeContext";
 import { fetchStockItems, deleteStockItem, confirmDelivery } from "@/app/actions/stocks";
+import { cacheGet, cacheSet } from "@/app/stock/cache";
 import SellModal from "@/components/stock/SellModal";
 import BuybackModal from "@/components/stock/BuybackModal";
 import RepairSendModal from "@/components/stock/RepairSendModal";
@@ -61,8 +62,8 @@ function exportCSV(items: StockItem[]) {
 export default function StockInventoryPage() {
   const c = useThemeColors();
   const router = useRouter();
-  const [stocks, setStocks] = useState<StockItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [stocks, setStocks] = useState<StockItem[]>(() => cacheGet<StockItem[]>("stock:inventory") ?? []);
+  const [loading, setLoading] = useState(() => cacheGet<StockItem[]>("stock:inventory") === null);
   const [tab, setTab] = useState<StockStatus | "all">("all");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -93,7 +94,7 @@ export default function StockInventoryPage() {
   const [filterDateTo, setFilterDateTo] = useState("");
 
   useEffect(() => {
-    fetchStockItems().then(data => { setStocks(data); setLoading(false); });
+    fetchStockItems().then(data => { setStocks(data); cacheSet("stock:inventory", data); setLoading(false); });
   }, []);
 
   useEffect(() => {

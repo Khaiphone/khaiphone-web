@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bell, RefreshCw, Calendar, Settings, Loader2 } from "lucide-react";
 import { fetchMyRequests } from "@/app/actions/admin-requests";
+import { cacheGet, cacheSet } from "@/app/admin/cache";
 import type { AdminRequest } from "@/lib/types/admin";
 import type { AdminNotification, NotificationType } from "../../../lib/types/admin";
 
@@ -121,12 +122,16 @@ function fmtRelative(iso: string) {
 export default function NotificationsPage() {
   const router = useRouter();
   const [tab,     setTab]     = useState<NotificationType | "all">("all");
-  const [items,   setItems]   = useState<AdminNotification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [items,   setItems]   = useState<AdminNotification[]>(() => {
+    const cached = cacheGet<AdminRequest[]>("admin:notif-requests");
+    return cached ? buildNotifications(cached, loadReadIds()) : [];
+  });
+  const [loading, setLoading] = useState(() => cacheGet<AdminRequest[]>("admin:notif-requests") === null);
 
   useEffect(() => {
     const readIds = loadReadIds();
     fetchMyRequests().then(requests => {
+      cacheSet("admin:notif-requests", requests);
       setItems(buildNotifications(requests, readIds));
       setLoading(false);
     });

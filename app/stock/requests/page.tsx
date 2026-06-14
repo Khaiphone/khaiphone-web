@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import StockTopbar from "@/components/stock/Topbar";
 import { useThemeColors } from "@/components/stock/ThemeContext";
 import { fetchStockRequests, fetchRequestStats, createStockFromRequest } from "@/app/actions/stock-requests";
+import { cacheGet, cacheSet } from "@/app/stock/cache";
 import type { StockRequest, RequestStats } from "@/app/actions/stock-requests";
 import type { RequestStatus } from "@/lib/types/admin";
 import { STATUS_LABELS, STATUS_COLORS } from "@/lib/types/admin";
@@ -55,9 +56,9 @@ const ACTIVE_STATUSES: RequestStatus[] = [
 export default function StockRequestsPage() {
   const c = useThemeColors();
   const router = useRouter();
-  const [requests, setRequests] = useState<StockRequest[]>([]);
-  const [stats, setStats] = useState<RequestStats>({ total: 0, pending: 0, completed: 0, cancelled: 0 });
-  const [loading, setLoading] = useState(true);
+  const [requests, setRequests] = useState<StockRequest[]>(() => cacheGet<StockRequest[]>("stock:requests") ?? []);
+  const [stats, setStats] = useState<RequestStats>(() => cacheGet<RequestStats>("stock:requestStats") ?? { total: 0, pending: 0, completed: 0, cancelled: 0 });
+  const [loading, setLoading] = useState(() => cacheGet<StockRequest[]>("stock:requests") === null);
   const [tab, setTab] = useState("all");
   const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
@@ -68,6 +69,8 @@ export default function StockRequestsPage() {
     const [reqs, st] = await Promise.all([fetchStockRequests(), fetchRequestStats()]);
     setRequests(reqs);
     setStats(st);
+    cacheSet("stock:requests", reqs);
+    cacheSet("stock:requestStats", st);
     setLoading(false);
     setRefreshing(false);
   }, []);
