@@ -47,7 +47,7 @@ export default function MorePage() {
 
   return (
     <div style={{ minHeight: "100vh", background: BG }}>
-      <div style={{ padding: "12px 16px 16px", borderBottom: `1px solid ${BORDER}`, background: CARD }}>
+      <div style={{ padding: "12px 16px 16px", paddingTop: "calc(env(safe-area-inset-top) + 12px)", borderBottom: `1px solid ${BORDER}`, background: CARD }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <button onClick={() => router.back()} style={{ background: "none", border: "none", color: TEXT2, cursor: "pointer", padding: 4, display: "flex" }}>
             <ArrowLeft size={22} />
