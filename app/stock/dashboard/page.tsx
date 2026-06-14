@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Package, TrendingUp, DollarSign, CheckCircle, Clock, ShoppingBag, Wallet, Truck, BadgeDollarSign, Calendar } from "lucide-react";
+import { Package, TrendingUp, DollarSign, CheckCircle, Clock, ShoppingBag, Wallet, Truck, BadgeDollarSign, Calendar, Bell } from "lucide-react";
+import { saveSubscription } from "@/app/actions/push";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion } from "framer-motion";
 import StockTopbar from "@/components/stock/Topbar";
@@ -53,11 +54,38 @@ export default function StockDashboard() {
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
 
+  const [notifStatus, setNotifStatus] = useState<"default" | "granted" | "denied" | "unsupported" | "loading">("loading");
+
   useEffect(() => {
     fetchStockItems().then(setStocks);
     fetchRevenueData().then(setRevenueData);
     fetchCategoryData().then(setCategoryData);
   }, []);
+
+  useEffect(() => {
+    if (!("PushManager" in window) || !("Notification" in window)) { setNotifStatus("unsupported"); return; }
+    setNotifStatus(Notification.permission as "default" | "granted" | "denied");
+  }, []);
+
+  // iOS requires Notification.requestPermission() to be called from a user gesture (tap).
+  async function enableNotifications() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    const permission = await Notification.requestPermission();
+    setNotifStatus(permission as "default" | "granted" | "denied");
+    if (permission !== "granted") return;
+    try {
+      const reg = await navigator.serviceWorker.register("/sw.js");
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidKey) return;
+      const key = Uint8Array.from(atob(vapidKey.replace(/-/g, "+").replace(/_/g, "/")), ch => ch.charCodeAt(0));
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+      const json = sub.toJSON();
+      if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
+        await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth } });
+      }
+    } catch (e) { console.error("push setup error:", e); }
+  }
 
   const { dateFrom, dateTo } = useMemo(
     () => computeRange(preset, customFrom, customTo),
@@ -136,6 +164,27 @@ export default function StockDashboard() {
       <StockTopbar title="Dashboard" subtitle="ภาพรวมสต็อก" />
 
       <div style={{ paddingTop: 24, overflowX: "hidden" }} className="px-3 md:px-6">
+
+        {/* Enable notifications — must be a user gesture for iOS */}
+        {(notifStatus === "default" || notifStatus === "denied") && (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, background: `${c.gold}14`, border: `1px solid ${c.gold}55`, borderRadius: 14, padding: "12px 16px", marginBottom: 20 }}>
+            <Bell size={20} color={c.gold} style={{ flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <p style={{ color: c.text, fontSize: 13, fontWeight: 600, margin: 0 }}>เปิดการแจ้งเตือน</p>
+              <p style={{ color: c.text2, fontSize: 12, margin: "2px 0 0" }}>
+                {notifStatus === "denied" ? "ถูกปิดอยู่ — เปิดในตั้งค่า iOS แล้วลองใหม่" : "รับแจ้งเมื่อมีการขาย / เพิ่มเครื่อง"}
+              </p>
+            </div>
+            {notifStatus === "default" && (
+              <button
+                onClick={enableNotifications}
+                style={{ background: c.gold, border: "none", borderRadius: 10, padding: "8px 14px", color: "#000", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", touchAction: "manipulation" }}
+              >
+                เปิด
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Date Preset Bar */}
         <div style={{ background: c.card, borderRadius: 16, padding: "12px 16px", marginBottom: 20, border: `1px solid ${c.border}`, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>

@@ -1,7 +1,9 @@
 "use server";
 
+import { after } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/require-auth";
+import { sendPushToOwners } from "@/app/actions/push";
 import type { StockItem, StockStatus, AuditEntry, StockCountSession, StockCountMissingItem } from "@/lib/stock/types";
 import { thaiDateStr, thaiMonthStr, thaiDateOffset, startOfThaiDay } from "@/lib/thai-date";
 
@@ -121,6 +123,14 @@ export async function createStockItem(input: Omit<StockItem, "notes" | "statusLo
   });
 
   if (error) return { success: false, error: error.message };
+
+  after(() => sendPushToOwners({
+    title: "📦 เพิ่มเครื่องเข้าสต็อก",
+    body: `${input.model}${input.storage ? ` ${input.storage}` : ""} — รับซื้อจาก ${input.sellerName}`,
+    url: "/stock/dashboard",
+    tag: `stock-new-${id}`,
+  }).catch(() => {}));
+
   return { success: true, id };
 }
 
@@ -192,7 +202,7 @@ export async function markStockSold(
   const supabase = createServerClient();
   const now = new Date().toISOString();
   const soldAtTs = soldAt ?? now.slice(0, 10);
-  const { data: current } = await supabase.from("stocks").select("status_log, request_ref, cost_price, shipping_cost, other_cost").eq("id", id).single();
+  const { data: current } = await supabase.from("stocks").select("status_log, request_ref, cost_price, shipping_cost, other_cost, model, storage").eq("id", id).single();
   const note = saleType === "ขายส่ง" && partnerName ? `ขายส่งให้ ${partnerName}` : `ขายให้ ${buyerName}`;
   const newLog = [...(current?.status_log ?? []), { status: "ขายแล้ว", timestamp: now, note, by: soldBy ?? "admin" }];
   // deliveryChannel being set means user chose "จัดส่งแล้ว" — always mark as delivered
@@ -220,6 +230,13 @@ export async function markStockSold(
       stock_status: "sold",
     }).eq("order_number", current.request_ref);
   }
+
+  after(() => sendPushToOwners({
+    title: "💰 ขายเครื่องแล้ว",
+    body: `${current?.model ?? id}${current?.storage ? ` ${current.storage}` : ""} — ฿${soldPrice.toLocaleString("th-TH")}${soldBy ? ` · โดย ${soldBy}` : ""}`,
+    url: "/stock/dashboard",
+    tag: `stock-sold-${id}`,
+  }).catch(() => {}));
 
   return { success: true };
 }
