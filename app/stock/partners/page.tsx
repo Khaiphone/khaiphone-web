@@ -25,6 +25,14 @@ export default function PartnersPage() {
   const [selected, setSelected] = useState<Partner | null>(null);
   const [history, setHistory] = useState<PartnerHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   // Add / Edit form state
   const [showForm, setShowForm] = useState(false);
@@ -117,7 +125,7 @@ export default function PartnersPage() {
           {METRICS.map(m => <MetricCard key={m.label} {...m} />)}
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: selected ? "1fr 380px" : "1fr", gap: 16, alignItems: "start" }}>
+        <div style={{ display: "grid", gridTemplateColumns: selected && !isMobile ? "1fr 380px" : "1fr", gap: 16, alignItems: "start" }}>
           {/* Left: list */}
           <div>
             <div style={{ background: c.card, borderRadius: 12, padding: "12px 16px", marginBottom: 12, border: `1px solid ${c.border}` }}>
@@ -135,6 +143,42 @@ export default function PartnersPage() {
                 <div style={{ padding: 60, textAlign: "center", color: c.text3 }}>
                   <div style={{ fontSize: 40, marginBottom: 12 }}>🤝</div>
                   <p style={{ margin: 0 }}>ยังไม่มีคู่ค้า</p>
+                </div>
+              ) : isMobile ? (
+                /* ── Mobile: card list ── */
+                <div>
+                  <AnimatePresence>
+                    {filtered.map((p, i) => (
+                      <motion.div key={p.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}
+                        onClick={() => setSelected(selected?.id === p.id ? null : p)}
+                        style={{ borderBottom: `1px solid ${c.border}`, cursor: "pointer", background: selected?.id === p.id ? c.goldBg : "transparent", padding: "14px 16px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                          <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg, #a855f7, #7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <span style={{ color: "#fff", fontSize: 15, fontWeight: 700 }}>{p.name.charAt(0).toUpperCase()}</span>
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ color: c.text, fontSize: 14, fontWeight: 600, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
+                            <p style={{ color: c.text3, fontSize: 12, margin: 0 }}>{p.phone || "—"}</p>
+                          </div>
+                          <div onClick={e => e.stopPropagation()} style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+                            <button onClick={() => openEdit(p)} style={{ background: "none", border: "none", color: c.text3, cursor: "pointer", padding: 6, borderRadius: 6, display: "flex" }}>
+                              <Edit2 size={15} />
+                            </button>
+                            <button onClick={() => handleDelete(p)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", padding: 6, borderRadius: 6, display: "flex" }}>
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                          <div style={{ display: "flex", gap: 14 }}>
+                            <span style={{ fontSize: 12 }}><span style={{ color: "#3b82f6", fontWeight: 700 }}>{p.totalItems}</span><span style={{ color: c.text3 }}> เครื่อง</span></span>
+                            <span style={{ color: "#22c55e", fontSize: 12, fontWeight: 700 }}>฿{fmt(p.totalRevenue)}</span>
+                          </div>
+                          <span style={{ color: c.text3, fontSize: 11 }}>{fmtDate(p.lastPurchase)}</span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 </div>
               ) : (
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -193,7 +237,7 @@ export default function PartnersPage() {
           <AnimatePresence>
             {selected && (
               <motion.div key={selected.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
-                style={{ background: c.card, borderRadius: 16, border: `1px solid ${c.border}`, overflow: "hidden", position: "sticky", top: 24 }}>
+                style={{ background: c.card, borderRadius: 16, border: `1px solid ${c.border}`, overflow: "hidden", position: isMobile ? "static" : "sticky", top: 24 }}>
                 {/* Header */}
                 <div style={{ padding: "16px 20px", borderBottom: `1px solid ${c.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

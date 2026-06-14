@@ -191,7 +191,8 @@ export default function QuoteDetailPage() {
           <div style={{ padding: "16px 24px", borderBottom: `1px solid ${c.border}` }}>
             <p style={{ color: c.text, fontSize: 14, fontWeight: 700, margin: 0 }}>รายการสินค้า</p>
           </div>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
             <thead>
               <tr style={{ background: c.bg }}>
                 {["#", "รายละเอียด", "IMEI", "ราคา", "ส่วนลด", "รวม"].map(h => (
@@ -217,6 +218,7 @@ export default function QuoteDetailPage() {
               ))}
             </tbody>
           </table>
+          </div>
 
           {/* Totals */}
           <div style={{ padding: "16px 24px", borderTop: `1px solid ${c.border}`, display: "flex", justifyContent: "flex-end" }}>

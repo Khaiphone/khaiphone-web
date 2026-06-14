@@ -578,7 +578,8 @@ function QuoteNewInner() {
               </div>
 
               {/* Items table */}
-              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 20 }}>
+              <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 20, minWidth: 560 }}>
                 <thead>
                   <tr style={{ background: c.bg }}>
                     {["#", "รายละเอียดสินค้า", "IMEI / S/N", "ราคา", "ส่วนลด", "รวม"].map(h => (
@@ -606,6 +607,7 @@ function QuoteNewInner() {
                   ))}
                 </tbody>
               </table>
+              </div>
 
               {/* Totals */}
               <div style={{ display: "flex", justifyContent: "flex-end" }}>

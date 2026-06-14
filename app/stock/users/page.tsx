@@ -53,7 +53,8 @@ export default function UsersPage() {
               <p style={{ margin: 0 }}>ยังไม่มีผู้ใช้งาน</p>
             </div>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
               <thead>
                 <tr style={{ background: c.card2 }}>
                   {["ผู้ใช้", "Email", "Role", "สิทธิ์", "สถานะ", "เพิ่มเมื่อ"].map(h => (
@@ -118,6 +119,7 @@ export default function UsersPage() {
                 </AnimatePresence>
               </tbody>
             </table>
+            </div>
           )}
         </div>
 
