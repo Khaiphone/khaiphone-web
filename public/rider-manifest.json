@@ -2,7 +2,7 @@
   "name": "Khaiphone Rider",
   "short_name": "KP Rider",
   "description": "แอพสำหรับไรเดอร์ Khaiphone",
-  "start_url": "/rider",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0B0B0D",
