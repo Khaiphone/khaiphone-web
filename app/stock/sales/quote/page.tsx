@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Search, FileText, Printer, ChevronRight, Clock, CheckCircle2, XCircle, Ban, RotateCcw } from "lucide-react";
 import StockTopbar from "@/components/stock/Topbar";
+import { thaiDateStr } from "@/lib/thai-date";
 import { useThemeColors } from "@/components/stock/ThemeContext";
 import { fetchQuotes, updateQuoteStatus } from "@/app/actions/quotes";
 import type { StockQuote, QuoteStatus } from "@/lib/stock/types";
@@ -164,7 +165,7 @@ export default function QuoteListPage() {
                       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                         <span style={{ color: c.text3, fontSize: 12 }}>{q.items.length} รายการ</span>
                         {q.validUntil && (
-                          <span style={{ color: q.status === "sent" && q.validUntil < new Date().toISOString().slice(0, 10) ? "#ef4444" : c.text3, fontSize: 12 }}>
+                          <span style={{ color: q.status === "sent" && q.validUntil < thaiDateStr() ? "#ef4444" : c.text3, fontSize: 12 }}>
                             หมดอายุ {fmtDate(q.validUntil)}
                           </span>
                         )}

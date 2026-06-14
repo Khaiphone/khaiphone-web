@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Check, Camera, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import StockTopbar from "@/components/stock/Topbar";
+import { thaiDateStr } from "@/lib/thai-date";
 import { useThemeColors } from "@/components/stock/ThemeContext";
 import { createStockItem, checkImeiExists } from "@/app/actions/stocks";
 import { supabase } from "@/lib/supabase";
@@ -31,7 +32,7 @@ const INIT_FORM: AddStockForm = {
   icloudStatus: "ปลอดล็อกแล้ว", carrierLock: "ไม่มี (Unlocked)", accessories: "",
   physicalChecks: PHYSICAL_PARTS.map(label => ({ label, condition: "ปกติ" })),
   requestRef: "", sellerName: "", sellerPhone: "", sourceChannel: "",
-  receivedAt: new Date().toISOString().slice(0, 10), inspector: "",
+  receivedAt: thaiDateStr(), inspector: "",
   costPrice: "", shippingCost: "80", otherCost: "0", sellingPrice: "",
   photos: [],
 };

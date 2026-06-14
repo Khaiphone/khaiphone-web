@@ -10,6 +10,7 @@ import { useAdminTheme } from "@/lib/admin-theme";
 import type { AdminRequest } from "@/lib/types/admin";
 import { useAdminRole } from "@/app/admin/role-context";
 import { cacheGet, cacheSet } from "@/app/admin/cache";
+import { thaiDateStr } from "@/lib/thai-date";
 import RequestCard from "../../components/admin/RequestCard";
 
 const GOLD   = "var(--admin-gold)";
@@ -86,7 +87,7 @@ export default function DashboardPage() {
     if (!requests.length) return;
     try {
       const readIds = new Set<string>(JSON.parse(localStorage.getItem("khaiphone_admin_read_notifs") ?? "[]"));
-      const t = new Date().toISOString().slice(0, 10);
+      const t = thaiDateStr();
       let count = 0;
       for (const r of requests) {
         if (!readIds.has(`nr-${r.id}`)) count++;
@@ -99,12 +100,12 @@ export default function DashboardPage() {
     } catch {}
   }, [requests]);
 
-  const today          = new Date().toISOString().slice(0, 10);
+  const today          = thaiDateStr();
   const newCount       = requests.filter(r => r.status === "new").length;
   const pendingCount   = requests.filter(r => r.status === "pending").length;
   const todayAppt      = requests.filter(r => r.appointment.date === today).length;
   const completedToday = requests.filter(r =>
-    r.statusLog.some(l => l.status === "completed" && l.timestamp.startsWith(today))
+    r.statusLog.some(l => l.status === "completed" && thaiDateStr(new Date(l.timestamp)) === today)
   ).length;
 
   const getLastActivity = (r: AdminRequest) => r.statusLog.at(-1)?.timestamp ?? r.createdAt;

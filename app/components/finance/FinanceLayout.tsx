@@ -19,6 +19,7 @@ import {
 } from '@/app/actions/finance'
 import type { FinanceNotification, FinanceSearchResult } from '@/app/actions/finance'
 import { FinanceDateContext } from './FinanceDateContext'
+import { thaiDateStr } from '@/lib/thai-date'
 
 const GOLD = '#B8860B'
 
@@ -110,17 +111,15 @@ function fmtDateTH(iso: string) {
   return `${d}/${m}/${y}`
 }
 
-function todayISO() { return new Date().toISOString().slice(0, 10) }
-function firstOfMonthISO() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
-}
+function todayISO() { return thaiDateStr() }
+function firstOfMonthISO() { return `${thaiDateStr().slice(0, 7)}-01` }
 function monthsAgoISO(n: number) {
-  const d = new Date()
-  d.setMonth(d.getMonth() - n)
-  return d.toISOString().slice(0, 10)
+  const [y, m, d] = thaiDateStr().split('-').map(Number)
+  const base = new Date(Date.UTC(y, m - 1, d))
+  base.setUTCMonth(base.getUTCMonth() - n)
+  return base.toISOString().slice(0, 10)
 }
-function yearStartISO() { return `${new Date().getFullYear()}-01-01` }
+function yearStartISO() { return `${thaiDateStr().slice(0, 4)}-01-01` }
 
 function SidebarContent({ onClose, userName, avatarLetter }: {
   onClose?: () => void

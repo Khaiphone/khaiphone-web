@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import { ArrowLeft, Phone, MapPin, Camera, AlertTriangle, CheckCircle2, ExternalLink, ScanLine, ShieldCheck, ShieldAlert, ShieldX, Loader2, RefreshCw } from "lucide-react";
 import { scanDeviceInfo, checkSickw, scanIdCard } from "@/app/actions/device-scan";
+import { thaiDateStr } from "@/lib/thai-date";
 import type { SickwResult } from "@/app/actions/device-scan";
 import {
   fetchRiderJob, fetchRiderJobs,
@@ -406,7 +407,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
         setWarrantyStatus("valid");
         if (data.warrantyDate) {
           const parsed = new Date(data.warrantyDate);
-          if (!isNaN(parsed.getTime())) setWarranty(parsed.toISOString().slice(0, 10));
+          if (!isNaN(parsed.getTime())) setWarranty(thaiDateStr(parsed));
         }
       }
     }

@@ -6,6 +6,7 @@ import { Link2, Check, AlertCircle, Plus, X } from 'lucide-react'
 import { fetchFinanceIncome } from '@/app/actions/finance'
 import type { FinanceIncome } from '@/app/actions/finance'
 import { useFinanceDate } from '@/app/components/finance/FinanceDateContext'
+import { thaiDateStr } from '@/lib/thai-date'
 
 const CARD = 'var(--f-card)'
 const BORDER = 'var(--f-border)'
@@ -19,7 +20,7 @@ const fadeUp = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 }, 
 type BankTx = { id: string; date: string; desc: string; amount: number; matched: boolean }
 type SysTx = { id: string; refNumber: string; date: string; desc: string; amount: number; matched: boolean }
 
-const EMPTY_BANK = { desc: '', amount: '', date: new Date().toISOString().slice(0, 10) }
+const EMPTY_BANK = { desc: '', amount: '', date: thaiDateStr() }
 
 function fmtDate(s: string) {
   const d = new Date(s.length === 10 ? s + 'T00:00:00' : s)

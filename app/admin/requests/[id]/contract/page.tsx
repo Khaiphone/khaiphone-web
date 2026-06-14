@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, FileText, ExternalLink, Camera } from "lucide-react";
 import { fetchRequest, saveContractUrls, updateStatus, markContractSigned, savePaymentSlip } from "@/app/actions/admin-requests";
+import { thaiDateStr } from "@/lib/thai-date";
 import { fetchAdminUsers } from "@/app/actions/admin-users";
 import type { AdminUserRow } from "@/app/actions/admin-users";
 import { supabase } from "@/lib/supabase";
@@ -92,7 +93,7 @@ export default function ContractPage() {
   const [staffList, setStaffList] = useState<AdminUserRow[]>([]);
   const [accessories, setAccessories] = useState<string[]>(["ตัวเครื่อง"]);
   const [accessoriesOther, setAccessoriesOther] = useState("");
-  const [txDate, setTxDate] = useState(new Date().toISOString().slice(0, 10));
+  const [txDate, setTxDate] = useState(thaiDateStr());
   const [extraDeviceDetails, setExtraDeviceDetails] = useState<Array<{
     serial: string; imei: string; accessories: string[]; accessoriesOther: string;
   }>>([]);

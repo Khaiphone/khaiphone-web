@@ -12,6 +12,7 @@ import StockDetailDrawer from "@/components/stock/StockDetailDrawer";
 import { useThemeColors } from "@/components/stock/ThemeContext";
 import { fetchStockItems, deleteStockItem, confirmDelivery } from "@/app/actions/stocks";
 import { cacheGet, cacheSet } from "@/app/stock/cache";
+import { thaiDateStr } from "@/lib/thai-date";
 import SellModal from "@/components/stock/SellModal";
 import BuybackModal from "@/components/stock/BuybackModal";
 import RepairSendModal from "@/components/stock/RepairSendModal";
@@ -54,7 +55,7 @@ function exportCSV(items: StockItem[]) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `stock-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `stock-${thaiDateStr()}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }

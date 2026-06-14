@@ -2,6 +2,7 @@
 
 import { createServerClient } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/require-auth";
+import { thaiDateStr } from "@/lib/thai-date";
 import type { RequestStatus } from "@/lib/types/admin";
 
 export interface StockRequest {
@@ -104,7 +105,7 @@ export async function createStockFromRequest(
     website: "เว็บไซต์", line: "LINE OA", facebook: "Facebook",
     phone: "โทรศัพท์", manual: "หน้าร้าน",
   };
-  const year = new Date().getFullYear();
+  const year = thaiDateStr().slice(0, 4);
   // Use max existing ID (not count) so deleted records don't cause collisions
   const { data: maxRow } = await supabase
     .from("stocks")

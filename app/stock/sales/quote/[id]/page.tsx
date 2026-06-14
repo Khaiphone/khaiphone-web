@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Printer, ChevronLeft, CheckCircle2, XCircle, Send, RotateCcw, Clock, Package } from "lucide-react";
 import StockTopbar from "@/components/stock/Topbar";
+import { thaiDateStr } from "@/lib/thai-date";
 import { useThemeColors } from "@/components/stock/ThemeContext";
 import { fetchQuote, updateQuoteStatus, acceptQuoteAndReserve } from "@/app/actions/quotes";
 import type { StockQuote, QuoteStatus } from "@/lib/stock/types";
@@ -83,7 +84,7 @@ export default function QuoteDetailPage() {
   );
 
   const statusColor = STATUS_COLOR[quote.status];
-  const isExpired = quote.validUntil && quote.validUntil < new Date().toISOString().slice(0, 10);
+  const isExpired = quote.validUntil && quote.validUntil < thaiDateStr();
 
   return (
     <div style={{ background: c.bg, minHeight: "100vh", paddingBottom: 80 }}>

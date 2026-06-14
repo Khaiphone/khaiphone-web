@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Trash2, ChevronLeft, ChevronRight, Check, User, FileText } from "lucide-react";
 import StockTopbar from "@/components/stock/Topbar";
+import { thaiDateStr, thaiDateOffset } from "@/lib/thai-date";
 import { useThemeColors } from "@/components/stock/ThemeContext";
 import { GradeBadge } from "@/components/stock/StatusBadge";
 import { fetchStockItems } from "@/app/actions/stocks";
@@ -23,9 +24,7 @@ function thDate(s: string) {
   return new Date(s + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" });
 }
 function defaultValidUntil() {
-  const d = new Date();
-  d.setDate(d.getDate() + 30);
-  return d.toISOString().slice(0, 10);
+  return thaiDateOffset(thaiDateStr(), 30);
 }
 
 interface CartItem extends QuoteItem {
@@ -560,7 +559,7 @@ function QuoteNewInner() {
                   <p style={{ color: c.text3, fontSize: 12, margin: 0 }}>ใบเสนอราคา (Quotation)</p>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <p style={{ color: c.text3, fontSize: 12, margin: "0 0 2px" }}>วันที่: <strong style={{ color: c.text }}>{thDate(new Date().toISOString().slice(0, 10))}</strong></p>
+                  <p style={{ color: c.text3, fontSize: 12, margin: "0 0 2px" }}>วันที่: <strong style={{ color: c.text }}>{thDate(thaiDateStr())}</strong></p>
                   {customer.validUntil && (
                     <p style={{ color: c.text3, fontSize: 12, margin: 0 }}>มีอายุถึง: <strong style={{ color: c.gold }}>{thDate(customer.validUntil)}</strong></p>
                   )}

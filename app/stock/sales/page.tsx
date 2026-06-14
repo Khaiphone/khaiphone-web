@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { ShoppingBag, TrendingUp, DollarSign, Search, Download } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import StockTopbar from "@/components/stock/Topbar";
+import { thaiDateStr } from "@/lib/thai-date";
 import MetricCard from "@/components/stock/MetricCard";
 import { GradeBadge } from "@/components/stock/StatusBadge";
 import { useThemeColors } from "@/components/stock/ThemeContext";
@@ -69,7 +70,7 @@ export default function SalesPage() {
     const blob = new Blob(["﻿" + header + rows], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `sales-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    a.href = url; a.download = `sales-${thaiDateStr()}.csv`; a.click();
   }
 
   return (

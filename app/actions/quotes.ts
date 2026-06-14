@@ -2,6 +2,7 @@
 
 import { createServerClient } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/require-auth";
+import { thaiDateStr, thaiDateOffset } from "@/lib/thai-date";
 import type { StockQuote, QuoteStatus, QuoteItem } from "@/lib/stock/types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -52,7 +53,7 @@ export async function createQuote(input: {
 }): Promise<{ success: true; id: string } | { success: false; error: string }> {
   const user = await requireAuth();
   const supabase = createServerClient();
-  const year = new Date().getFullYear();
+  const year = thaiDateStr().slice(0, 4);
   const { data: lastRow } = await supabase
     .from("stock_quotes")
     .select("id")
@@ -92,7 +93,7 @@ export async function fetchQuotes(): Promise<StockQuote[]> {
   await requireAuth();
   const supabase = createServerClient();
   // Auto-expire sent quotes past valid_until
-  const today = new Date().toISOString().slice(0, 10);
+  const today = thaiDateStr();
   await supabase
     .from("stock_quotes")
     .update({ status: "expired", updated_at: new Date().toISOString() })
@@ -241,9 +242,9 @@ export type QuotePipeline = {
 export async function fetchQuotePipeline(): Promise<QuotePipeline> {
   await requireAuth();
   const supabase = createServerClient();
-  const today = new Date().toISOString().slice(0, 10);
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
-  const sevenDaysFromNow = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
+  const today = thaiDateStr();
+  const thirtyDaysAgo = thaiDateOffset(today, -30);
+  const sevenDaysFromNow = thaiDateOffset(today, 7);
 
   const { data } = await supabase
     .from("stock_quotes")

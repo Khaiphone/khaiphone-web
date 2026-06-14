@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Bell, RefreshCw, Calendar, Settings, Loader2 } from "lucide-react";
 import { fetchMyRequests } from "@/app/actions/admin-requests";
 import { cacheGet, cacheSet } from "@/app/admin/cache";
+import { thaiDateStr } from "@/lib/thai-date";
 import type { AdminRequest } from "@/lib/types/admin";
 import type { AdminNotification, NotificationType } from "../../../lib/types/admin";
 
@@ -60,7 +61,7 @@ function saveReadIds(ids: Set<string>) {
 }
 
 function buildNotifications(requests: AdminRequest[], readIds: Set<string>): AdminNotification[] {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = thaiDateStr();
   const items: AdminNotification[] = [];
 
   for (const r of requests) {

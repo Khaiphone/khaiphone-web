@@ -32,7 +32,7 @@ async function autoCreateStock(requestId: string) {
   }
   const parsedCarrierLock  = sickwMap["Unlock Status"] ?? sickwMap["Sim-Lock"] ?? "";
   const parsedIcloudStatus = [sickwMap["iCloud Lock"], sickwMap["iCloud Status"]].filter(Boolean).join(" / ");
-  const year = new Date().getFullYear();
+  const year = thaiDateStr().slice(0, 4);
   const { data: lastRow } = await supabase.from("stocks").select("id").like("id", `STK-${year}-%`).order("id", { ascending: false }).limit(1);
   const lastSeq = lastRow?.[0]?.id ? parseInt(lastRow[0].id.split("-")[2], 10) : 0;
   const stockId = `STK-${year}-${String(lastSeq + 1).padStart(5, "0")}`;

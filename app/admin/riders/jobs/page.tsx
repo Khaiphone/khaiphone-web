@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { fetchRiderJobs, adminConfirmReturn, adminReclaimJob } from "@/app/actions/admin-requests";
 import { fetchRiderSystemSettings } from "@/app/actions/rider-settings";
+import { thaiDateStr, thaiDateOffset } from "@/lib/thai-date";
 import type { AdminRequest, RequestStatus } from "@/lib/types/admin";
 import StatusBadge from "@/app/components/admin/StatusBadge";
 
@@ -54,11 +55,10 @@ function jobCategory(job: AdminRequest): FilterKey {
 }
 
 function thDate(iso: string) {
-  return new Date(iso).toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  return new Date(`${iso}T00:00:00+07:00`).toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok", weekday: "long", day: "numeric", month: "long", year: "numeric" });
 }
 function shiftDate(iso: string, delta: number) {
-  const d = new Date(iso); d.setDate(d.getDate() + delta);
-  return d.toISOString().slice(0, 10);
+  return thaiDateOffset(iso, delta);
 }
 function fmt(n: number) { return n.toLocaleString("th-TH"); }
 function fmtTime(iso: string) {
@@ -206,7 +206,7 @@ function getMonthRange(year: number, month: number) {
 
 export default function RiderJobsPage() {
   const router = useRouter();
-  const today  = new Date().toISOString().slice(0, 10);
+  const today  = thaiDateStr();
   const now    = new Date();
 
   const [view,        setView]       = useState<ViewMode>("jobs");

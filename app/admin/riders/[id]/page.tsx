@@ -11,6 +11,7 @@ import { supabase } from "@/lib/supabase";
 import { updateRiderAvatar } from "@/app/actions/admin-users";
 import { fetchRiderShiftStats, fetchRiderTrail, fetchActiveRiders, adminCloseRiderShift, fetchRiderJobCountByRange, fetchRiderChainDistanceKm } from "@/app/actions/rider-tracking";
 import { fmtDistance, fmtEta, etaMinutes, distanceToOfficeKm, OFFICE_LAT, OFFICE_LNG } from "@/lib/geo-utils";
+import { thaiDateStr, thaiDateOffset } from "@/lib/thai-date";
 import {
   fetchRiderKpiForAdmin, updateRiderTargets, updateRiderRankOverride,
   fetchLeaderboard, fetchRiderLifetimeForAdmin,
@@ -183,21 +184,16 @@ export default function RiderDetailPage() {
 
   // ── Overview load ──
   const dateRange = useCallback(() => {
-    const now = new Date();
-    const to = now.toISOString().split("T")[0];
+    const to = thaiDateStr();
     if (ovTab === "today") return { from: to, to };
-    if (ovTab === "week") {
-      const d = new Date(now); d.setDate(d.getDate() - 6);
-      return { from: d.toISOString().split("T")[0], to };
-    }
-    const d = new Date(now); d.setDate(1);
-    return { from: d.toISOString().split("T")[0], to };
+    if (ovTab === "week") return { from: thaiDateOffset(to, -6), to };
+    return { from: `${to.slice(0, 7)}-01`, to };
   }, [ovTab]);
 
   const loadOverview = useCallback(async () => {
     const { from, to } = dateRange();
-    const past30 = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const past30 = thaiDateOffset(thaiDateStr(), -30);
+    const todayStr = thaiDateStr();
     const [shiftData, allRiders, recentData, jobCount, distKm] = await Promise.all([
       fetchRiderShiftStats(id, from, to),
       fetchActiveRiders(),

@@ -4,6 +4,7 @@ import { after } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/require-auth";
 import { broadcastRequestUpdate } from "@/lib/broadcast";
+import { thaiDateStr } from "@/lib/thai-date";
 import { sendPushToOwners, sendPushToUser, sendPushToNewRequestReceivers } from "@/app/actions/push";
 import type { AdminRequest, RequestStatus, SellMethod, PayMethod } from "@/lib/types/admin";
 import { SLIP_PLACEHOLDER, SLIP_BLOCK } from "@/lib/contract-builder";
@@ -236,7 +237,7 @@ export async function fetchRiderJobs(date?: string, dateRange?: { from: string; 
     // Monthly mode: all jobs with appt_date in range, plus any still in-progress
     query = query.or(`and(appt_date.gte.${dateRange.from},appt_date.lte.${dateRange.to}),status.in.(${IN_PROGRESS.join(",")})`);
   } else {
-    const targetDate = date ?? new Date().toISOString().slice(0, 10);
+    const targetDate = date ?? thaiDateStr();
     query = query.or(`appt_date.eq.${targetDate},status.in.(${IN_PROGRESS.join(",")})`);
   }
 
@@ -979,7 +980,7 @@ export async function updateStatus(
         website: "เว็บไซต์", line: "LINE OA", facebook: "Facebook",
         phone: "โทรศัพท์", manual: "หน้าร้าน",
       };
-      const year = new Date().getFullYear();
+      const year = thaiDateStr().slice(0, 4);
       const { data: lastRow } = await supabase.from("stocks").select("id").like("id", `STK-${year}-%`).order("id", { ascending: false }).limit(1);
       const lastSeq = lastRow?.[0]?.id ? parseInt(lastRow[0].id.split("-")[2], 10) : 0;
       const stockId = `STK-${year}-${String(lastSeq + 1).padStart(5, "0")}`;

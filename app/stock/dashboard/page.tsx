@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Package, TrendingUp, DollarSign, CheckCircle, Clock, ShoppingBag, Wallet, Truck, BadgeDollarSign, Calendar, Bell } from "lucide-react";
 import { saveSubscription } from "@/app/actions/push";
+import { thaiDateStr, thaiDateOffset } from "@/lib/thai-date";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion } from "framer-motion";
 import StockTopbar from "@/components/stock/Topbar";
@@ -19,18 +20,11 @@ type Preset = "all" | "today" | "week" | "month" | "custom";
 
 function fmt(n: number) { return n.toLocaleString("th-TH"); }
 function fmtDate(s: string) { return new Date(s).toLocaleDateString("th-TH", { month: "short", day: "numeric" }); }
-function pad(d: Date) { return d.toISOString().slice(0, 10); }
-
 function computeRange(preset: Preset, customFrom: string, customTo: string): { dateFrom: string; dateTo: string } {
-  const today = new Date();
-  if (preset === "today") return { dateFrom: pad(today), dateTo: pad(today) };
-  if (preset === "week") {
-    const from = new Date(today); from.setDate(today.getDate() - 6);
-    return { dateFrom: pad(from), dateTo: pad(today) };
-  }
-  if (preset === "month") {
-    return { dateFrom: pad(new Date(today.getFullYear(), today.getMonth(), 1)), dateTo: pad(today) };
-  }
+  const today = thaiDateStr();
+  if (preset === "today") return { dateFrom: today, dateTo: today };
+  if (preset === "week") return { dateFrom: thaiDateOffset(today, -6), dateTo: today };
+  if (preset === "month") return { dateFrom: `${today.slice(0, 7)}-01`, dateTo: today };
   if (preset === "custom") return { dateFrom: customFrom, dateTo: customTo };
   return { dateFrom: "", dateTo: "" };
 }

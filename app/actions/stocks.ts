@@ -96,7 +96,7 @@ export async function createStockItem(input: Omit<StockItem, "notes" | "statusLo
   await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
-  const year = new Date().getFullYear();
+  const year = thaiDateStr().slice(0, 4);
   const { data: lastRow } = await supabase
     .from("stocks")
     .select("id")

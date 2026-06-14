@@ -10,6 +10,7 @@ import {
   deleteExpense,
 } from '@/app/actions/finance'
 import type { Expense, ExpenseStatus } from '@/app/actions/finance'
+import { thaiDateStr } from '@/lib/thai-date'
 import { useFinanceDate } from '@/app/components/finance/FinanceDateContext'
 
 const CARD = 'var(--f-card)'
@@ -51,7 +52,7 @@ const EMPTY_FORM = {
   amount: '',
   status: 'pending' as ExpenseStatus,
   notes: '',
-  date: new Date().toISOString().slice(0, 10),
+  date: thaiDateStr(),
 }
 
 export default function ExpensesPage() {

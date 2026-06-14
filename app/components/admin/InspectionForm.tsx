@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Camera, ScanLine, ShieldCheck, ShieldX, Loader2, RefreshCw } from "lucide-react";
 import { scanDeviceInfo, checkSickw } from "@/app/actions/device-scan";
+import { thaiDateStr } from "@/lib/thai-date";
 import type { SickwResult } from "@/app/actions/device-scan";
 import { compressImage } from "@/lib/compress-image";
 import { supabase } from "@/lib/supabase";
@@ -261,7 +262,7 @@ export default function InspectionForm({ requestId, model, selections, estimated
         setWarrantyStatus("valid");
         if (data.warrantyDate) {
           const parsed = new Date(data.warrantyDate);
-          if (!isNaN(parsed.getTime())) setWarrantyExpiry(parsed.toISOString().slice(0, 10));
+          if (!isNaN(parsed.getTime())) setWarrantyExpiry(thaiDateStr(parsed));
         }
       }
     }
