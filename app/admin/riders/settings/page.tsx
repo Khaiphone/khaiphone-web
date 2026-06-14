@@ -210,7 +210,7 @@ export default function RiderSettingsPage() {
     <div style={{ minHeight: "100vh", background: BG }}>
 
       {/* ── Header ── */}
-      <div style={{ position: "sticky", top: 0, zIndex: 10, background: CARD, borderBottom: `1px solid ${BORDER}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ position: "sticky", top: 0, zIndex: 10, background: CARD, borderBottom: `1px solid ${BORDER}`, padding: "14px 20px", paddingTop: "calc(env(safe-area-inset-top) + 14px)", display: "flex", alignItems: "center", gap: 12 }}>
         <button onClick={() => router.back()} style={{ background: "none", border: "none", color: TEXT2, cursor: "pointer", padding: 4, display: "flex" }}>
           <ArrowLeft size={20} />
         </button>

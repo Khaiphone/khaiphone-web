@@ -153,7 +153,7 @@ export default function NotificationsPage() {
     <div style={{ minHeight: "100vh", background: BG }}>
 
       {/* Sticky header */}
-      <div style={{ position: "sticky", top: 0, background: CARD, zIndex: 10, borderBottom: `1px solid ${BORDER}` }}>
+      <div style={{ position: "sticky", top: 0, background: CARD, zIndex: 10, borderBottom: `1px solid ${BORDER}`, paddingTop: "env(safe-area-inset-top)" }}>
         <div style={{ padding: "12px 16px 0" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
             <button

@@ -735,7 +735,7 @@ export default function ContractPage() {
     <div style={{ minHeight: "100vh", background: BG, paddingBottom: 40 }}>
 
       {/* Header */}
-      <div style={{ position: "sticky", top: 0, background: DARK, zIndex: 10, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ position: "sticky", top: 0, background: DARK, zIndex: 10, padding: "12px 16px", paddingTop: "calc(env(safe-area-inset-top) + 12px)", display: "flex", alignItems: "center", gap: 12 }}>
         <button onClick={() => router.back()} style={{ background: "none", border: "none", color: "#FFD700", cursor: "pointer", display: "flex", padding: 4 }}>
           <ArrowLeft size={22} />
         </button>

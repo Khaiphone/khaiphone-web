@@ -118,7 +118,7 @@ export default function RequestsPage() {
   return (
     <div style={{ minHeight: "100vh", background: BG, overflowX: "hidden", maxWidth: "100vw" }}>
       {/* Sticky header */}
-      <div style={{ position: "sticky", top: 0, background: CARD, zIndex: 10, borderBottom: `1px solid ${BORDER}`, overflowX: "hidden" }}>
+      <div style={{ position: "sticky", top: 0, background: CARD, zIndex: 10, borderBottom: `1px solid ${BORDER}`, overflowX: "hidden", paddingTop: "env(safe-area-inset-top)" }}>
         <div style={{ padding: "10px 12px 0" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
             <button onClick={() => router.push("/admin/dashboard")} style={{ background: "none", border: "none", color: TEXT2, cursor: "pointer", padding: 4, display: "flex" }}>

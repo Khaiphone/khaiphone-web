@@ -59,7 +59,7 @@ export default function ActivityPage() {
   return (
     <div style={{ background: BG, minHeight: "100vh", paddingBottom: 40 }}>
       {/* Header */}
-      <div style={{ position: "sticky", top: 0, background: CARD, zIndex: 10, padding: "12px 16px", borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ position: "sticky", top: 0, background: CARD, zIndex: 10, padding: "12px 16px", paddingTop: "calc(env(safe-area-inset-top) + 12px)", borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", gap: 10 }}>
         <button onClick={() => router.back()} style={{ background: "none", border: "none", color: TEXT2, cursor: "pointer", padding: 4, display: "flex" }}>
           <ArrowLeft size={22} />
         </button>
