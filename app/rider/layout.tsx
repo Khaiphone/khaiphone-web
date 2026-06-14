@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -51,6 +51,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
   const [lastRead, setLastRead]   = useState<string>(() =>
     typeof window !== "undefined" ? (localStorage.getItem("rider-notif-read") ?? "") : ""
   );
+  const subSavedRef = useRef(false);
 
   const unreadCount = notifs.filter(n => n.timestamp > lastRead).length;
 
@@ -58,6 +59,14 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
     const data = await fetchRiderNotifications(uid);
     setNotifs(data);
   }, []);
+
+  useEffect(() => {
+    const navHandler = (e: MessageEvent) => {
+      if (e.data?.type === "NAVIGATE" && typeof e.data.url === "string") router.push(e.data.url);
+    };
+    navigator.serviceWorker?.addEventListener("message", navHandler);
+    return () => navigator.serviceWorker?.removeEventListener("message", navHandler);
+  }, [router]);
 
   useEffect(() => {
     const setMeta = (name: string, content: string) => {
@@ -175,6 +184,18 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
       loadNotifs(uid);
       // Prefetch home data so first visit to home tab is instant
       fetchRiderHomeData(uid).then(d => cacheSet(`home:${uid}`, d));
+      // Save push subscription after auth is confirmed (SW effect may run before auth)
+      if (!subSavedRef.current && "serviceWorker" in navigator) {
+        subSavedRef.current = true;
+        navigator.serviceWorker.ready.then(async (reg) => {
+          const sub = await reg.pushManager.getSubscription();
+          if (!sub) return;
+          const json = sub.toJSON();
+          if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
+            await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, userId: uid }).catch(() => {});
+          }
+        }).catch(() => {});
+      }
     });
 
     return () => { cancelled = true; };
