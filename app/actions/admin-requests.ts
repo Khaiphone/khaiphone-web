@@ -56,13 +56,30 @@ async function logActivity(opts: {
 
 // ─── Fetch recent activity (dashboard) ───────────────────────────────────────
 export async function fetchRecentActivity(limit = 20) {
-  await requireAuth();
+  const user = await requireAuth();
   const supabase = createServerClient();
-  const { data } = await supabase
+  const { data: profile } = await supabase
+    .from("admin_users").select("role, permissions").eq("user_id", user.id).single();
+  const role = (profile?.role ?? "owner") as AdminRole;
+  const perms = (profile?.permissions ?? []) as Permission[];
+  const canSeeAll = role !== "staff" || perms.includes("receive_new_requests");
+
+  let query = supabase
     .from("request_activity_logs")
     .select("id, order_number, action, detail, performed_by_name, created_at")
     .order("created_at", { ascending: false })
     .limit(limit);
+
+  // Staff without view-all: only activity for requests assigned to them.
+  if (!canSeeAll) {
+    const { data: mine } = await supabase
+      .from("requests").select("order_number").eq("assigned_to", user.id);
+    const orderNumbers = (mine ?? []).map(r => r.order_number).filter(Boolean);
+    if (orderNumbers.length === 0) return [];
+    query = query.in("order_number", orderNumbers);
+  }
+
+  const { data } = await query;
   return data ?? [];
 }
 
