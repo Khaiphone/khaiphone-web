@@ -1238,14 +1238,17 @@ function SellModelPageContent() {
       firstEl?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
-    // Validate appointment time is still at least 1 hour in the future
-    const validSlots = getAvailableTimeSlots(appointDate);
-    if (validSlots.length === 0 || !validSlots.includes(appointTime)) {
-      const corrected = validSlots[0];
-      if (corrected) setAppointTime(corrected);
-      appointSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      alert("เวลานัดหมายที่เลือกผ่านไปแล้ว กรุณาเลือกเวลาใหม่");
-      return;
+    // Validate appointment time is still at least 1 hour in the future —
+    // only for channels that actually schedule one (parcel has no appointment).
+    if (sellMethod !== "parcel") {
+      const validSlots = getAvailableTimeSlots(appointDate);
+      if (validSlots.length === 0 || !validSlots.includes(appointTime)) {
+        const corrected = validSlots[0];
+        if (corrected) setAppointTime(corrected);
+        appointSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        alert("เวลานัดหมายที่เลือกผ่านไปแล้ว กรุณาเลือกเวลาใหม่");
+        return;
+      }
     }
     setSubmitting(true);
     const sellerData = { name, phone, email };
