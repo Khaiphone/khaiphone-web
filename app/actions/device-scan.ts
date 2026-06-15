@@ -110,6 +110,7 @@ Use null for any field not clearly visible.`,
 export type SickwResult = {
   imei?: string;
   device?: string;
+  storage?: string;
   color?: string;
   carrier?: string;
   carrierLock?: string;
@@ -133,6 +134,15 @@ function parseSickwText(raw: string): Record<string, string> {
     }
   }
   return map;
+}
+
+/** Pull a normalized capacity ("256GB", "1TB") out of the first string that contains one */
+function extractCapacity(...strs: (string | undefined)[]): string | undefined {
+  for (const s of strs) {
+    const m = s?.match(/(\d+)\s*([GT])B/i);
+    if (m) return `${m[1]}${m[2].toUpperCase()}B`;
+  }
+  return undefined;
 }
 
 function parseShortDate(s: string): string | undefined {
@@ -187,6 +197,13 @@ export async function checkSickw(
     const modelName = r["Model Name"] ?? "";
     const colorFromModel = modelName.match(/\d+\s*[GT]B\s+(.+)$/i)?.[1]?.trim();
 
+    // Storage capacity — config position 4 ("SVC,MODEL,REGION,STORAGE,COLOR"), else Model Name, else explicit keys
+    const storage = extractCapacity(
+      configParts.length >= 4 ? configParts[3] : undefined,
+      modelName,
+      r["Storage"], r["Capacity"], r["Memory"],
+    );
+
     const warrantyDate =
       parseShortDate(r["Coverage End Date"] ?? "") ??
       parseShortDate(r["Coverage Duration"] ?? "") ??
@@ -198,6 +215,7 @@ export async function checkSickw(
       data: {
         imei:          r["IMEI"]          ?? r.IMEI   ?? r.Imei  ?? r.imei,
         device:        r["Device Configuration"] ?? r.Device ?? r.device ?? r.Model ?? r.model,
+        storage,
         color:         colorFromConfig ?? colorFromModel ?? r.Color ?? r.color ?? r.Colour ?? r.colour,
         carrier:       r["Carrier"]       ?? r.Carrier ?? r.carrier,
         carrierLock:   r["Unlock Status"] ?? r["Sim-Lock"] ?? r.CarrierLock ?? r.simlock,

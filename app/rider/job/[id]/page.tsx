@@ -724,6 +724,25 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
               : <span style={{ fontSize: 12, fontWeight: 600, color: c.RED }}>⚠ ไม่ได้แจ้งความจุ</span>}
             {job.device.color && <span style={{ fontSize: 12, color: c.TEXT2, background: c.CARD2, padding: "3px 8px", borderRadius: 6 }}>{job.device.color}</span>}
           </div>
+
+          {/* Compare declared capacity against what SICKW scanned */}
+          {(() => {
+            const norm = (s?: string) => { const m = s?.match(/(\d+)\s*([GT])B/i); return m ? `${m[1]}${m[2].toUpperCase()}B` : undefined; };
+            const declared = norm(job.device.storage);
+            const scanned  = norm(sickwResult?.storage);
+            if (!scanned) return null; // SICKW didn't return a capacity — nothing to compare
+            if (!declared) {
+              return <p style={{ margin: "8px 0 0", fontSize: 12, fontWeight: 700, color: c.TEXT }}>สแกนได้: {scanned}</p>;
+            }
+            const match = declared === scanned;
+            return (
+              <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: match ? "#34C759" : c.RED }}>
+                {match
+                  ? <><ShieldCheck size={14} color="#34C759" /><span>ความจุตรงกับที่สแกน ({scanned})</span></>
+                  : <><ShieldX size={14} color={c.RED} /><span>ความจุไม่ตรง! แจ้งไว้ {declared} · สแกนได้ {scanned}</span></>}
+              </div>
+            );
+          })()}
         </div>
 
         <Card c={c}>
