@@ -713,6 +713,19 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
           <input ref={scanRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }}
             onChange={e => { const f = e.target.files?.[0]; if (f) handleScan(f); }} />
         </div>
+
+        {/* Customer-declared spec — reference to cross-check against the actual device */}
+        <div style={{ marginBottom: 10, padding: "10px 14px", borderRadius: 12, background: "rgba(74,222,128,0.08)", border: `1px solid ${c.ACCENT}` }}>
+          <p style={{ margin: "0 0 6px", fontSize: 10, fontWeight: 700, color: c.ACCENT, textTransform: "uppercase", letterSpacing: 0.6 }}>ลูกค้าแจ้งไว้ — เช็กให้ตรงกับเครื่องจริง</p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: c.TEXT }}>{job.device.model}</span>
+            {job.device.storage
+              ? <span style={{ fontSize: 13, fontWeight: 800, color: "#000", background: c.ACCENT, padding: "3px 10px", borderRadius: 6 }}>{job.device.storage}</span>
+              : <span style={{ fontSize: 12, fontWeight: 600, color: c.RED }}>⚠ ไม่ได้แจ้งความจุ</span>}
+            {job.device.color && <span style={{ fontSize: 12, color: c.TEXT2, background: c.CARD2, padding: "3px 8px", borderRadius: 6 }}>{job.device.color}</span>}
+          </div>
+        </div>
+
         <Card c={c}>
           <div ref={serialRef} style={{ padding: "12px 16px", borderBottom: `1px solid ${c.BORDER}` }}>
             <p style={{ margin: "0 0 4px", fontSize: 11, color: c.TEXT2 }}>Serial Number</p>
