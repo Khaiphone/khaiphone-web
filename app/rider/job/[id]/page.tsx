@@ -496,6 +496,13 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
         label: INSPECT_LABELS[k], stated: criteria[k].stated, actual: criteria[k].actual,
         pass: !criteria[k].stated || criteria[k].actual.trim().toLowerCase() === criteria[k].stated.trim().toLowerCase(),
       }));
+      // Capacity check — record declared vs SICKW-scanned so admin sees it with the rest
+      const normCap = (s?: string) => { const m = s?.match(/(\d+)\s*([GT])B/i); return m ? `${m[1]}${m[2].toUpperCase()}B` : undefined; };
+      const declaredCap = normCap(job.device.storage);
+      const scannedCap  = normCap(sickwResult?.storage);
+      if (declaredCap && scannedCap) {
+        criteriaArr.unshift({ label: "ความจุ", stated: declaredCap, actual: scannedCap, pass: declaredCap === scannedCap });
+      }
       const warrantyValue = warrantyStatus === "expired" ? "expired" : warrantyExpiry || undefined;
       const photos = [...Object.values(slotPhotos).filter(Boolean), ...defectPhotos] as string[];
       const accList = [...accessories, ...(accessoriesOther.trim() ? [accessoriesOther.trim()] : [])];
