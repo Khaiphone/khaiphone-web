@@ -165,7 +165,15 @@ export default function AppointmentsPage() {
                 style={{ flex: 1, background: CARD, borderRadius: "14px", padding: "12px 14px", border: `1px solid ${BORDER}`, cursor: "pointer", touchAction: "manipulation" }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                  <span style={{ color: GOLD, fontSize: "12px", fontWeight: 700 }}>{r.orderNumber}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                    <span style={{ color: GOLD, fontSize: "12px", fontWeight: 700 }}>{r.orderNumber}</span>
+                    {r.appointment.method === "parcel" && (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "#1E40AF", background: "#DBEAFE", padding: "1px 6px", borderRadius: 5, whiteSpace: "nowrap" }}>📦 พัสดุ</span>
+                    )}
+                    {r.appointment.method === "rider" && (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "#5B21B6", background: "#EDE9FE", padding: "1px 6px", borderRadius: 5, whiteSpace: "nowrap" }}>🛵 รับถึงที่</span>
+                    )}
+                  </div>
                   <StatusBadge status={r.status} size="xs" />
                 </div>
                 <p style={{ color: TEXT, fontWeight: 600, fontSize: "14px", margin: "0 0 2px" }}>{r.customer.name}</p>
