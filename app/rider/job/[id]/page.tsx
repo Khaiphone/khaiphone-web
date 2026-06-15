@@ -704,7 +704,8 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
             <span style={{ fontSize: 9, color: c.TEXT2 }}>+ ตำหนิ</span>
           </button>
         </div>
-        <input ref={defectRef} type="file" accept="image/*" capture="environment" multiple style={{ display: "none" }}
+        {/* No capture attr → lets the rider pick from gallery or camera (defect photos only) */}
+        <input ref={defectRef} type="file" accept="image/*" multiple style={{ display: "none" }}
           onChange={e => { if (e.target.files?.length) handleDefectPhotos(e.target.files); }} />
       </div>
 
