@@ -11,6 +11,7 @@ import { fetchPublicActiveProducts } from "@/app/actions/products";
 import { fetchPublicPricingConfig } from "@/app/actions/pricing-config";
 import { getModelTypeOpts, DEFAULT_PRICING_CONFIG } from "@/lib/pricing-defaults";
 import type { PricingOption } from "@/lib/pricing-defaults";
+import { calcPrice, calcPriceRange, formatPrice } from "@/lib/pricing";
 
 const BUNDLE_KEY = "khaiphone_extra_devices";
 const BUNDLE_RETURN_KEY = "khaiphone_bundle_return";
@@ -40,17 +41,6 @@ function IconLine({ className }: { className?: string }) {
 
 function toSlug(model: string) {
   return model.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-}
-
-function formatPrice(n: number) {
-  return "฿" + n.toLocaleString("th-TH");
-}
-
-function calcPriceRange(price: number) {
-  return {
-    min: Math.floor((price * 0.95) / 100) * 100,
-    max: Math.ceil((price * 1.03) / 100) * 100,
-  };
 }
 
 function getProductImage(model: string): string | null {
@@ -474,32 +464,6 @@ const ICLOUD_STEP = 8;
 const FUNCTIONAL_STEP = 9;
 
 // ─── Price calc ───────────────────────────────────────────────────────────────
-
-function calcPrice(
-  product: Product,
-  picks: (number | null)[],
-  groups: PricingOption[][],
-  storageMultiplier: number,
-  storagePrices: Record<string, number> | null,
-  floorPct: number,
-) {
-  const storages = product.storage.split(" / ");
-  const storageIdx = picks[0] ?? Math.floor((storages.length - 1) / 2);
-  const selectedStorage = storages[storageIdx];
-  let basePrice: number;
-  if (storagePrices && storagePrices[selectedStorage] !== undefined) {
-    basePrice = storagePrices[selectedStorage];
-  } else {
-    const midIdx = Math.floor((storages.length - 1) / 2);
-    basePrice = Math.round(product.priceGood * (1 + (storageIdx - midIdx) * storageMultiplier));
-  }
-  let price = basePrice;
-  groups.forEach((g, i) => {
-    const idx = picks[i + 1];
-    if (idx !== null && g[idx]) price += g[idx].ded;
-  });
-  return Math.max(Math.round(basePrice * floorPct), price);
-}
 
 function shortenModelLabel(label: string) {
   return label.replace(/ รุ่น[\s\d,]+/g, "");
