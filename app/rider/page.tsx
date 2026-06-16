@@ -395,7 +395,7 @@ export default function RiderHomePage() {
 
                   {job.appointment.location && (
                     <a
-                      href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(job.appointment.location)}`}
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${job.appointment.lat != null && job.appointment.lng != null ? `${job.appointment.lat},${job.appointment.lng}` : encodeURIComponent(job.appointment.location)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={e => e.stopPropagation()}

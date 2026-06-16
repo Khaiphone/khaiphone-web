@@ -1865,7 +1865,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                   <MapPin size={14} color={GOLD} style={{ marginTop: 2, flexShrink: 0 }} />
                   {request.appointment.method === "rider" ? (
                     <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(request.appointment.location)}`}
+                      href={`https://www.google.com/maps/search/?api=1&query=${request.appointment.lat != null && request.appointment.lng != null ? `${request.appointment.lat},${request.appointment.lng}` : encodeURIComponent(request.appointment.location)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ color: GOLD, fontSize: "13px", margin: 0, fontWeight: 600, wordBreak: "break-all", minWidth: 0, flex: 1 }}
