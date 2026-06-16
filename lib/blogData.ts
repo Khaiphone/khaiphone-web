@@ -13,6 +13,18 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    id: 9,
+    category: "ราคาล่าสุด",
+    date: "2026-06-17",
+    displayDate: "17 มิ.ย. 2569",
+    readTime: "4 นาที",
+    title: "อัปเดตราคารับซื้อ iPhone (มิถุนายน 2569)",
+    excerpt: "เช็กราคารับซื้อ iPhone ล่าสุดประจำเดือนมิถุนายน 2569 ครบทุกรุ่น iPhone 11–17 พร้อมปัจจัยที่ทำให้ราคาขึ้น-ลง และวิธีขายให้ได้ราคาดีที่สุด",
+    image: "/blog_iphone-price-jun2569.webp",
+    slug: "iphone-price-june-2026",
+    keywords: ["ราคารับซื้อ iPhone มิถุนายน 2569", "ราคารับซื้อ iPhone วันนี้", "ขาย iPhone ได้เงินเท่าไหร่", "ราคา iPhone มือสอง 2569"],
+  },
+  {
     id: 8,
     category: "ราคาล่าสุด",
     date: "2026-06-15",
