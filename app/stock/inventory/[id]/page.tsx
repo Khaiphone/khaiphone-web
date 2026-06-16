@@ -3,7 +3,7 @@
 import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft, CheckCircle2, AlertTriangle, ShieldCheck,
+  ArrowLeft, CheckCircle2, AlertTriangle, ShieldCheck, Clock,
   Edit2, Upload, RefreshCw, Tag, Printer, CheckSquare, Save, Truck,
 } from "lucide-react";
 import StockTopbar from "@/components/stock/Topbar";
@@ -106,17 +106,27 @@ function CrossCheckSection({
 
   if (rows.length === 0) return null;
 
-  const allOk = rows.every(r => r.match || r.verified);
+  // ค่าฝั่งสต็อกถูกคัดลอกมาจากผลตรวจหน้างานตอนสร้างสต็อก จึง "ตรงกัน" เองโดยอัตโนมัติ
+  // จะถือว่า "ผ่านการตรวจสอบ" ได้ก็ต่อเมื่อทีมสต็อกรีเช็คจริงแล้ว (status พ้น "รอตรวจ")
+  const rechecked = item.status !== "รอตรวจ";
+  const allOk = rechecked && rows.every(r => r.match || r.verified);
   const mismatchCount = rows.filter(r => !r.match && !r.verified && r.inspVal && r.stockVal).length;
 
   return (
     <div style={{ background: c.card, borderRadius: 20, padding: 24, border: `1px solid ${mismatchCount > 0 ? "rgba(249,115,22,0.4)" : c.border}`, marginBottom: 20 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-        {allOk
-          ? <ShieldCheck size={18} color="#22c55e" />
-          : <AlertTriangle size={18} color="#f97316" />}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+        {!rechecked
+          ? <Clock size={18} color={c.text3} />
+          : allOk
+            ? <ShieldCheck size={18} color="#22c55e" />
+            : <AlertTriangle size={18} color="#f97316" />}
         <p style={{ color: c.text, fontSize: 15, fontWeight: 700, margin: 0 }}>ตรวจสอบข้อมูล</p>
-        {mismatchCount > 0 && (
+        {!rechecked && (
+          <span style={{ background: c.card2, color: c.text3, fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 99 }}>
+            รอทีมสต็อกรีเช็ค · ค่านี้มาจากผลตรวจหน้างาน
+          </span>
+        )}
+        {rechecked && mismatchCount > 0 && (
           <span style={{ background: "rgba(249,115,22,0.15)", color: "#f97316", fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 99 }}>
             ไม่ตรงกัน {mismatchCount} รายการ
           </span>
