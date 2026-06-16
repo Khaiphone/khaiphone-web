@@ -54,7 +54,7 @@ async function autoCreateStock(requestId: string) {
     battery_health: insp.batteryHealth ?? 0,
     cycle_count:    insp.batteryCycles ?? 0,
     icloud_status:  parsedIcloudStatus,
-    carrier_lock:   parsedCarrierLock,
+    carrier_lock:   (insp as { carrierLock?: string }).carrierLock || parsedCarrierLock,
     accessories:    Array.isArray(insp.accessories) ? insp.accessories.join(", ") : "",
     physical_checks: [
       ...(insp.criteria ?? []).map((c: { label: string; pass: boolean; actual?: string }) => ({ label: c.label, condition: c.pass ? "ปกติ" : (c.actual?.trim() || "มีตำหนิ") })),
@@ -405,6 +405,7 @@ export async function riderSaveInspection(id: string, inspection: {
   imei?: string;
   serial?: string;
   color?: string;
+  carrierLock?: string;
   batteryHealth?: number;
   batteryCycles?: number;
   warrantyExpiry?: string;

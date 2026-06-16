@@ -312,6 +312,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   const [imei,   setImei]   = useState(job.inspection?.imei ?? "");
   const [serial, setSerial] = useState(job.inspection?.serial ?? "");
   const [color,  setColor]  = useState(job.device?.color ?? "");
+  const [carrierLock, setCarrierLock] = useState<string>((job.inspection as { carrierLock?: string } | undefined)?.carrierLock ?? "");
   const [battery, setBattery] = useState(job.inspection?.batteryHealth ? String(job.inspection.batteryHealth) : "");
   const [warrantyStatus, setWarrantyStatus] = useState<"valid" | "expired" | "">(
     job.inspection?.warrantyExpiry === "expired" ? "expired" : job.inspection?.warrantyExpiry ? "valid" : ""
@@ -399,6 +400,11 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
     if (data.rawText) setSickwRaw(data.rawText);
     if (data.imei) setImei(data.imei);
     if (data.color) setColor(data.color);
+    if (data.carrierLock) {
+      const cl = data.carrierLock.toLowerCase();
+      if (cl.includes("unlock")) setCarrierLock("ไม่มี (Unlocked)");
+      else if (cl.includes("lock")) setCarrierLock("มี (Locked)");
+    }
     if (data.warrantyStatus) {
       const ws = data.warrantyStatus.toLowerCase();
       if (ws === "no" || ws.includes("expir") || ws.includes("out of") || ws.includes("หมด")) {
@@ -508,6 +514,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
       const accList = [...accessories, ...(accessoriesOther.trim() ? [accessoriesOther.trim()] : [])];
       const result = await riderSaveInspection(job.id, {
         imei, serial, color: color.trim() || undefined,
+        carrierLock: carrierLock || undefined,
         batteryHealth: battery ? parseInt(battery) : undefined,
         warrantyExpiry: warrantyValue,
         criteria: criteriaArr,
@@ -866,6 +873,14 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
             <p style={{ margin: "0 0 4px", fontSize: 11, color: c.TEXT2 }}>IMEI</p>
             <input value={imei} onChange={e => setImei(e.target.value)} placeholder="กรอก IMEI (ไม่บังคับ)"
               style={{ width: "100%", background: "none", border: "none", color: c.TEXT, fontSize: 15, fontFamily: "inherit", outline: "none" }} />
+          </div>
+          <div style={{ padding: "12px 16px", borderBottom: `1px solid ${c.BORDER}` }}>
+            <p style={{ margin: "0 0 4px", fontSize: 11, color: c.TEXT2 }}>Carrier Lock (SIM)</p>
+            <select value={carrierLock} onChange={e => setCarrierLock(e.target.value)}
+              style={{ width: "100%", background: "none", border: "none", color: carrierLock ? c.TEXT : c.TEXT2, fontSize: 15, fontFamily: "inherit", outline: "none", appearance: "none" }}>
+              <option value="">-- เลือก --</option>
+              {["ไม่มี (Unlocked)", "AIS", "DTAC", "TRUE", "มี (Locked)"].map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
           </div>
           <div ref={batteryRef} style={{ padding: "12px 16px", borderBottom: `1px solid ${c.BORDER}` }}>
             <p style={{ margin: "0 0 4px", fontSize: 11, color: c.TEXT2 }}>Battery Health</p>
