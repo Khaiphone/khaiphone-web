@@ -84,6 +84,18 @@ export async function fetchRecentActivity(limit = 20) {
   return data ?? [];
 }
 
+// Column list for list/dashboard views — everything mapRow needs EXCEPT the
+// heavy JSONB (inspection, device_selections) which those views never read.
+// The detail view (fetchRequest) still uses select("*") for the full record.
+const LIST_SELECT =
+  "id, order_number, status, created_at, customer_name, customer_phone, customer_email, customer_line_id, customer_address, " +
+  "device_model, device_storage, device_color, device_condition, device_condition_details, estimated_price, actual_price, price_range, " +
+  "appt_date, appt_time, appt_location, appt_method, appt_lat, appt_lng, " +
+  "payment_method, payment_bank, payment_account_name, payment_account_number, payment_slip_url, contract_signed_at, " +
+  "customer_notes, extra_devices, notes, status_log, source, contract_url, receipt_url, " +
+  "assigned_to, assigned_to_name, rider_id, rider_name, distance_km, " +
+  "return_submitted_at, returned_to_office_at, returned_confirmed_by_id, returned_confirmed_by_name, stock_item_id";
+
 // ─── Map DB row → AdminRequest ────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapRow(row: any): AdminRequest {
@@ -191,7 +203,7 @@ export async function fetchRequests(assignedToUserId?: string): Promise<AdminReq
   const role = (profile?.role ?? "owner") as AdminRole;
   const perms = (profile?.permissions ?? []) as Permission[];
   const canSeeAll = role !== "staff" || perms.includes("receive_new_requests");
-  let query = supabase.from("requests").select("*")
+  let query = supabase.from("requests").select(LIST_SELECT)
     .neq("source", "manual")
     .order("created_at", { ascending: false });
   if (!canSeeAll) {
@@ -260,7 +272,7 @@ export async function fetchDashboardData(_userId?: string): Promise<{
 
   const [profileRes, reqRes] = await Promise.all([
     supabase.from("admin_users").select("role, permissions").eq("user_id", userId).single(),
-    supabase.from("requests").select("*").neq("source", "manual").order("created_at", { ascending: false }),
+    supabase.from("requests").select(LIST_SELECT).neq("source", "manual").order("created_at", { ascending: false }),
   ]);
 
   const role = (profileRes.data?.role ?? "owner") as AdminRole;
