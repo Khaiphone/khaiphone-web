@@ -285,6 +285,46 @@ export async function fetchDashboardData(_userId?: string): Promise<{
   return { role, permissions, requests, staffUserId: isStaff ? userId : undefined };
 }
 
+// Active-pipeline statuses — a request stops being "active" once it's closed.
+const ACTIVE_STATUSES = [
+  "new", "pending", "contacted", "confirmed", "pickup_scheduled",
+  "en_route", "inspecting", "price_negotiation", "contracting", "awaiting_transfer",
+];
+
+// ─── Dashboard / appointments: only active + recently-updated requests ───────
+// Same shape as fetchDashboardData but bounded — these views only care about
+// current/recent work, so we skip the long tail of old closed jobs. Keeps the
+// query small and fast as history grows. (The full list page uses
+// fetchDashboardData / fetchRequests which still return everything.)
+export async function fetchActiveDashboardData(): Promise<{
+  role: AdminRole;
+  permissions: Permission[];
+  requests: AdminRequest[];
+  staffUserId: string | undefined;
+}> {
+  const user = await requireAuth();
+  const userId = user.id;
+  const supabase = createServerClient();
+  const cutoff = new Date(Date.now() - 90 * 86_400_000).toISOString();
+
+  const [profileRes, reqRes] = await Promise.all([
+    supabase.from("admin_users").select("role, permissions").eq("user_id", userId).single(),
+    supabase.from("requests").select(LIST_SELECT)
+      .neq("source", "manual")
+      .or(`updated_at.gte.${cutoff},status.in.(${ACTIVE_STATUSES.join(",")})`)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  const role = (profileRes.data?.role ?? "owner") as AdminRole;
+  const permissions = (profileRes.data?.permissions ?? []) as Permission[];
+  const isStaff = role === "staff";
+  const canSeeAll = !isStaff || permissions.includes("receive_new_requests");
+  const all = (reqRes.data ?? []).map(mapRow);
+  const requests = canSeeAll ? all : all.filter(r => r.assignedTo === userId);
+
+  return { role, permissions, requests, staffUserId: isStaff ? userId : undefined };
+}
+
 // ─── Create request (admin-initiated, e.g. from LINE/phone inquiry) ──────────
 export async function createRequest(data: {
   customerName: string;

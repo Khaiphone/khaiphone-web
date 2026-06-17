@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, ArrowRight, Phone, CalendarPlus, ClipboardList, Tag, SlidersHorizontal, PlusCircle, Moon, Sun } from "lucide-react";
-import { fetchDashboardData, fetchRequests, fetchRecentActivity } from "@/app/actions/admin-requests";
+import { fetchActiveDashboardData, fetchRecentActivity } from "@/app/actions/admin-requests";
 import { saveSubscription, sendTestPush } from "@/app/actions/push";
 import { supabase } from "@/lib/supabase";
 import { useAdminTheme } from "@/lib/admin-theme";
@@ -52,7 +52,7 @@ export default function DashboardPage() {
     if (!userId) return;
     const cached = cacheGet<AdminRequest[]>("admin:requests");
     if (cached) { setRequests(cached); setLoading(false); }
-    fetchDashboardData(userId).then(data => {
+    fetchActiveDashboardData().then(data => {
       staffUserIdRef.current = data.staffUserId;
       setRequests(data.requests);
       cacheSet("admin:requests", data.requests);
@@ -66,7 +66,7 @@ export default function DashboardPage() {
       const now = Date.now();
       if (now - lastRefetchRef.current < 30_000) return;
       lastRefetchRef.current = now;
-      fetchRequests(staffUserIdRef.current).then(d => { setRequests(d); cacheSet("admin:requests", d); });
+      fetchActiveDashboardData().then(d => { setRequests(d.requests); cacheSet("admin:requests", d.requests); });
     };
 
     const channel = supabase

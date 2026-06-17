@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Clock, Loader2 } from "lucide-react";
-import { fetchDashboardData } from "@/app/actions/admin-requests";
+import { fetchActiveDashboardData } from "@/app/actions/admin-requests";
 import type { AdminRequest } from "@/lib/types/admin";
 import { useAdminRole } from "@/app/admin/role-context";
 import { cacheGet, cacheSet } from "@/app/admin/cache";
@@ -57,7 +57,7 @@ export default function AppointmentsPage() {
     if (!userId) return;
     const cached = cacheGet<AdminRequest[]>("admin:requests");
     if (cached) { setRequests(cached); setLoading(false); }
-    fetchDashboardData(userId).then(data => {
+    fetchActiveDashboardData().then(data => {
       setRequests(data.requests);
       cacheSet("admin:requests", data.requests);
       setLoading(false);
