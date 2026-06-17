@@ -325,6 +325,51 @@ export async function fetchActiveDashboardData(): Promise<{
   return { role, permissions, requests, staffUserId: isStaff ? userId : undefined };
 }
 
+// ─── Dashboard: everything in ONE server action (one auth round-trip) ────────
+// The dashboard previously fired fetchActiveDashboardData + fetchRecentActivity
+// as two separate server actions — each pays a requireAuth() network round-trip
+// + serverless invocation. Bundling them halves that fixed per-request cost.
+export async function fetchDashboardBundle(): Promise<{
+  role: AdminRole;
+  permissions: Permission[];
+  requests: AdminRequest[];
+  staffUserId: string | undefined;
+  recentActivity: Awaited<ReturnType<typeof fetchRecentActivity>>;
+}> {
+  const user = await requireAuth();
+  const userId = user.id;
+  const supabase = createServerClient();
+  const cutoff = new Date(Date.now() - 90 * 86_400_000).toISOString();
+
+  const { data: profile } = await supabase
+    .from("admin_users").select("role, permissions").eq("user_id", userId).single();
+  const role = (profile?.role ?? "owner") as AdminRole;
+  const permissions = (profile?.permissions ?? []) as Permission[];
+  const isStaff = role === "staff";
+  const canSeeAll = !isStaff || permissions.includes("receive_new_requests");
+
+  const { data: reqData } = await supabase.from("requests").select(LIST_SELECT)
+    .neq("source", "manual")
+    .or(`updated_at.gte.${cutoff},status.in.(${ACTIVE_STATUSES.join(",")})`)
+    .order("created_at", { ascending: false });
+  const allReqs = (reqData ?? []).map(mapRow);
+  const requests = canSeeAll ? allReqs : allReqs.filter(r => r.assignedTo === userId);
+
+  let actQuery = supabase.from("request_activity_logs")
+    .select("id, order_number, action, detail, performed_by_name, created_at")
+    .order("created_at", { ascending: false }).limit(20);
+  if (!canSeeAll) {
+    const orderNumbers = requests.map(r => r.orderNumber).filter(Boolean);
+    if (orderNumbers.length === 0) {
+      return { role, permissions, requests, staffUserId: userId, recentActivity: [] };
+    }
+    actQuery = actQuery.in("order_number", orderNumbers);
+  }
+  const { data: activity } = await actQuery;
+
+  return { role, permissions, requests, staffUserId: isStaff ? userId : undefined, recentActivity: activity ?? [] };
+}
+
 // ─── Create request (admin-initiated, e.g. from LINE/phone inquiry) ──────────
 export async function createRequest(data: {
   customerName: string;

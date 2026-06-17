@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, ArrowRight, Phone, CalendarPlus, ClipboardList, Tag, SlidersHorizontal, PlusCircle, Moon, Sun } from "lucide-react";
-import { fetchActiveDashboardData, fetchRecentActivity } from "@/app/actions/admin-requests";
+import { fetchDashboardBundle } from "@/app/actions/admin-requests";
 import { saveSubscription, sendTestPush } from "@/app/actions/push";
 import { supabase } from "@/lib/supabase";
 import { useAdminTheme } from "@/lib/admin-theme";
@@ -42,7 +42,7 @@ export default function DashboardPage() {
   const [requests,    setRequests]    = useState<AdminRequest[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [unreadCount,  setUnreadCount]  = useState(0);
-  const [activity,     setActivity]     = useState<Awaited<ReturnType<typeof fetchRecentActivity>>>([]);
+  const [activity,     setActivity]     = useState<Awaited<ReturnType<typeof fetchDashboardBundle>>["recentActivity"]>([]);
   const [notifStatus,  setNotifStatus]  = useState<"default" | "granted" | "denied" | "unsupported" | "loading">("loading");
   const staffUserIdRef  = useRef<string | undefined>(undefined);
   const lastRefetchRef  = useRef(0);
@@ -52,12 +52,13 @@ export default function DashboardPage() {
     if (!userId) return;
     const cached = cacheGet<AdminRequest[]>("admin:requests");
     if (cached) { setRequests(cached); setLoading(false); }
-    fetchActiveDashboardData().then(data => {
+    fetchDashboardBundle().then(data => {
       staffUserIdRef.current = data.staffUserId;
       setRequests(data.requests);
+      setActivity(data.recentActivity);
       cacheSet("admin:requests", data.requests);
       setLoading(false);
-      fetchRecentActivity().then(setActivity);
+      lastRefetchRef.current = Date.now(); // skip an immediate focus-refetch right after load
     });
   }, [userId]);
 
@@ -66,7 +67,7 @@ export default function DashboardPage() {
       const now = Date.now();
       if (now - lastRefetchRef.current < 30_000) return;
       lastRefetchRef.current = now;
-      fetchActiveDashboardData().then(d => { setRequests(d.requests); cacheSet("admin:requests", d.requests); });
+      fetchDashboardBundle().then(d => { setRequests(d.requests); setActivity(d.recentActivity); cacheSet("admin:requests", d.requests); });
     };
 
     const channel = supabase
