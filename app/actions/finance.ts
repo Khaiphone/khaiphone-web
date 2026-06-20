@@ -1038,7 +1038,7 @@ export async function fetchStaffSoldItems(
         storage: r.storage ?? "",
         soldPrice: revenue,
         profit: revenue - cost,
-        soldAt: r.sold_at,
+        soldAt: thaiDateStr(new Date(r.sold_at)), // วันที่ขายตามเวลาไทย (YYYY-MM-DD)
         buyerName: r.buyer_name ?? "",
         saleType: r.sale_type ?? "",
       };
