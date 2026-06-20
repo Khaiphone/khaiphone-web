@@ -990,6 +990,62 @@ export async function fetchStaffPerformance(dateFrom?: string, dateTo?: string):
     .sort((a, b) => b.profit - a.profit);
 }
 
+// ─── Devices sold by one staff (or unspecified) — for the staff drill-down ───
+export type StaffSoldItem = {
+  id: string;
+  model: string;
+  storage: string;
+  soldPrice: number;
+  profit: number;
+  soldAt: string;
+  buyerName: string;
+  saleType: string;
+};
+
+export async function fetchStaffSoldItems(
+  sellerName: string,
+  dateFrom?: string,
+  dateTo?: string,
+): Promise<StaffSoldItem[]> {
+  await requireAuth();
+  const supabase = createServerClient();
+  let q = supabase
+    .from("stocks")
+    .select("id, model, storage, sold_price, cost_price, shipping_cost, other_cost, sold_cost_snapshot, sold_at, buyer_name, sale_type, sold_by")
+    .in("status", ["ขายแล้ว", "รับคืนแล้ว", "ส่งซ่อม"])
+    .not("sold_price", "is", null)
+    .not("sold_at", "is", null);
+
+  // "ไม่ระบุ" = sales with no recorded seller (sold_by is null)
+  if (sellerName === "ไม่ระบุ") q = q.is("sold_by", null);
+  else q = q.eq("sold_by", sellerName);
+
+  const { data } = await q;
+  return (data ?? [])
+    .filter((r) => {
+      if (!r.sold_at) return false;
+      const day = r.sold_at.slice(0, 10);
+      if (dateFrom && day < dateFrom) return false;
+      if (dateTo && day > dateTo) return false;
+      return true;
+    })
+    .map((r) => {
+      const revenue = r.sold_price ?? 0;
+      const cost = r.sold_cost_snapshot ?? ((r.cost_price ?? 0) + (r.shipping_cost ?? 0) + (r.other_cost ?? 0));
+      return {
+        id: r.id,
+        model: r.model ?? "",
+        storage: r.storage ?? "",
+        soldPrice: revenue,
+        profit: revenue - cost,
+        soldAt: r.sold_at,
+        buyerName: r.buyer_name ?? "",
+        saleType: r.sale_type ?? "",
+      };
+    })
+    .sort((a, b) => b.soldAt.localeCompare(a.soldAt));
+}
+
 // ─── Tax Summary ──────────────────────────────────────────────────────────────
 
 export type TaxMonthRow = {
