@@ -75,7 +75,8 @@ export default function ExpensesPage() {
   const [errorMsg, setErrorMsg] = useState('')
   const [customCat, setCustomCat] = useState(false) // กำลังพิมพ์หมวดใหม่เองอยู่ไหม
   const [customAcct, setCustomAcct] = useState(false) // กำลังพิมพ์บัญชีใหม่เองอยู่ไหม
-  const [catFilter, setCatFilter] = useState<string | null>(null) // กรองตารางเฉพาะหมวดที่เลือก
+  const [summaryMode, setSummaryMode] = useState<'category' | 'account'>('category') // สรุป/กรองตามหมวด หรือ บัญชี
+  const [groupFilter, setGroupFilter] = useState<string | null>(null) // กรองตารางเฉพาะกลุ่มที่เลือก
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -139,10 +140,15 @@ export default function ExpensesPage() {
 
   const filteredTotal = filtered.reduce((s, r) => s + r.amount, 0)
 
-  // สรุปยอดต่อหมวดหมู่ (ตามแท็บ/ค้นหาที่กำลังดู — ไม่อิงตัวกรองหมวด เพื่อให้คลิกสลับได้) เรียงมาก→น้อย
-  const byCategory = Object.entries(
+  // คีย์กลุ่มของแต่ละรายการ ตามโหมดสรุป (หมวดหมู่ หรือ บัญชี = ธนาคาร · เจ้าของ)
+  const groupKeyOf = (r: Expense) => summaryMode === 'category'
+    ? (r.category || 'อื่นๆ')
+    : ([r.paymentAccount, r.accountOwner].filter(Boolean).join(' · ') || 'ไม่ระบุ')
+
+  // สรุปยอดต่อกลุ่ม (ตามแท็บ/ค้นหาที่กำลังดู — ไม่อิงตัวกรองกลุ่ม เพื่อให้คลิกสลับได้) เรียงมาก→น้อย
+  const byGroup = Object.entries(
     filtered.reduce<Record<string, { amount: number; count: number }>>((acc, r) => {
-      const k = r.category || 'อื่นๆ'
+      const k = groupKeyOf(r)
       acc[k] = acc[k] || { amount: 0, count: 0 }
       acc[k].amount += r.amount
       acc[k].count += 1
@@ -150,8 +156,8 @@ export default function ExpensesPage() {
     }, {}),
   ).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.amount - a.amount)
 
-  // ตารางด้านล่าง: กรองเพิ่มตามหมวดที่กดเลือก
-  const displayed = catFilter ? filtered.filter(r => r.category === catFilter) : filtered
+  // ตารางด้านล่าง: กรองเพิ่มตามกลุ่มที่กดเลือก
+  const displayed = groupFilter ? filtered.filter(r => groupKeyOf(r) === groupFilter) : filtered
   const totalPages = Math.max(1, Math.ceil(displayed.length / perPage))
   const paged = displayed.slice((page - 1) * perPage, page * perPage)
   const totalAmount = displayed.reduce((s, r) => s + r.amount, 0)
@@ -184,7 +190,7 @@ export default function ExpensesPage() {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, borderBottom: `1px solid ${BORDER}` }}>
         {TABS.map((t, i) => (
-          <button key={t} onClick={() => { setActiveTab(i); setPage(1); setCatFilter(null) }} style={{ padding: '10px 18px', background: 'none', border: 'none', borderBottom: activeTab === i ? `2px solid ${GOLD}` : '2px solid transparent', color: activeTab === i ? GOLD : TEXT2, fontWeight: activeTab === i ? 600 : 400, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', marginBottom: -1 }}>
+          <button key={t} onClick={() => { setActiveTab(i); setPage(1); setGroupFilter(null) }} style={{ padding: '10px 18px', background: 'none', border: 'none', borderBottom: activeTab === i ? `2px solid ${GOLD}` : '2px solid transparent', color: activeTab === i ? GOLD : TEXT2, fontWeight: activeTab === i ? 600 : 400, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', marginBottom: -1 }}>
             {t}
           </button>
         ))}
@@ -194,29 +200,40 @@ export default function ExpensesPage() {
         </span>
       </div>
 
-      {/* Category summary */}
-      {!loading && byCategory.length > 0 && (
+      {/* Summary (by category / account) */}
+      {!loading && byGroup.length > 0 && (
         <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '16px 20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <p style={{ margin: 0, color: 'var(--f-text1)', fontWeight: 700, fontSize: 15 }}>สรุปตามหมวดหมู่</p>
-            {catFilter ? (
-              <button onClick={() => { setCatFilter(null); setPage(1) }}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <p style={{ margin: 0, color: 'var(--f-text1)', fontWeight: 700, fontSize: 15 }}>สรุปตาม</p>
+              <div style={{ display: 'flex', background: 'var(--f-hover)', borderRadius: 8, padding: 2 }}>
+                {([['category', 'หมวดหมู่'], ['account', 'บัญชี']] as const).map(([m, label]) => (
+                  <button key={m} onClick={() => { setSummaryMode(m); setGroupFilter(null); setPage(1) }}
+                    style={{ padding: '4px 14px', borderRadius: 6, border: 'none', background: summaryMode === m ? CARD : 'transparent', color: summaryMode === m ? GOLD : TEXT2, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {groupFilter ? (
+              <button onClick={() => { setGroupFilter(null); setPage(1) }}
                 style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 20, background: 'var(--f-hover)', border: `1px solid ${BORDER}`, color: TEXT2, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
-                <X size={12} /> กรอง: {catFilter}
+                <X size={12} /> กรอง: {groupFilter}
               </button>
             ) : (
-              <p style={{ margin: 0, color: TEXT3, fontSize: 12 }}>{byCategory.length} หมวด · กดเพื่อกรอง</p>
+              <p style={{ margin: 0, color: TEXT3, fontSize: 12 }}>{byGroup.length} {summaryMode === 'account' ? 'บัญชี' : 'หมวด'} · กดเพื่อกรอง</p>
             )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {byCategory.map((c, i) => {
+            {byGroup.map((c, i) => {
               const pct = filteredTotal > 0 ? Math.round((c.amount / filteredTotal) * 100) : 0
               const color = CAT_COLORS[i % CAT_COLORS.length]
-              const active = catFilter === c.name
+              const active = groupFilter === c.name
+              const nameW = summaryMode === 'account' ? 180 : 110
               return (
-                <button key={c.name} onClick={() => { setCatFilter(active ? null : c.name); setPage(1) }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '7px 8px', borderRadius: 8, background: active ? 'var(--f-hover)' : 'transparent', border: active ? `1px solid ${color}` : '1px solid transparent', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', opacity: catFilter && !active ? 0.5 : 1, transition: 'opacity 0.15s' }}>
-                  <div style={{ width: 110, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button key={c.name} onClick={() => { setGroupFilter(active ? null : c.name); setPage(1) }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '7px 8px', borderRadius: 8, background: active ? 'var(--f-hover)' : 'transparent', border: active ? `1px solid ${color}` : '1px solid transparent', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', opacity: groupFilter && !active ? 0.5 : 1, transition: 'opacity 0.15s' }}>
+                  <div style={{ width: nameW, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ width: 10, height: 10, borderRadius: 3, background: color, flexShrink: 0 }} />
                     <span style={{ color: 'var(--f-text1)', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={`${c.name} · ${c.count} รายการ`}>{c.name}</span>
                   </div>
