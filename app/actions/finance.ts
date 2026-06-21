@@ -366,6 +366,15 @@ export async function fetchFinancePurchases(dateFrom = "", dateTo = ""): Promise
   }));
 }
 
+// ตรวจชนิดรูปจาก magic bytes (รองรับชนิดที่ Anthropic อ่านได้: jpeg/png/gif/webp)
+function sniffImageType(buf: Buffer): string | null {
+  if (buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "image/jpeg";
+  if (buf.length >= 8 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return "image/png";
+  if (buf.length >= 4 && buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x38) return "image/gif";
+  if (buf.length >= 12 && buf.toString("ascii", 0, 4) === "RIFF" && buf.toString("ascii", 8, 12) === "WEBP") return "image/webp";
+  return null;
+}
+
 // อ่านสลิปโอนของรายการซื้อ → ดึง "ธนาคาร + ชื่อผู้โอน" (บัญชีเราที่จ่ายให้ลูกค้า) ด้วย Claude vision
 export async function extractSlipAccount(requestId: string): Promise<
   | { success: true; bank: string; owner: string; amount: number | null; cost: number; amountMatches: boolean; confidence: string }
@@ -389,8 +398,10 @@ export async function extractSlipAccount(requestId: string): Promise<
   try {
     const resp = await fetch(req.payment_slip_url);
     if (!resp.ok) return { success: false, error: `โหลดรูปสลิปไม่สำเร็จ (${resp.status})` };
-    mediaType = resp.headers.get("content-type") || "image/jpeg";
-    b64 = Buffer.from(await resp.arrayBuffer()).toString("base64");
+    const buf = Buffer.from(await resp.arrayBuffer());
+    // ตรวจชนิดจาก magic bytes จริง (content-type จาก storage บางทีผิด เช่น .jpeg ที่จริงเป็น png)
+    mediaType = sniffImageType(buf) || resp.headers.get("content-type") || "image/jpeg";
+    b64 = buf.toString("base64");
   } catch {
     return { success: false, error: "โหลดรูปสลิปไม่สำเร็จ" };
   }
