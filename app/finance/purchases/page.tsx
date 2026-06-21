@@ -218,8 +218,8 @@ export default function PurchasesPage() {
                             </span>
                           : <span style={{ color: TEXT3, fontSize: 13 }}>—</span>}
                       </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span style={{ padding: '3px 10px', borderRadius: 6, background: `${stockInfo.color}20`, color: stockInfo.color, fontSize: 12, fontWeight: 600 }}>
+                      <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
+                        <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 6, background: `${stockInfo.color}20`, color: stockInfo.color, fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>
                           {stockInfo.label}
                         </span>
                       </td>
