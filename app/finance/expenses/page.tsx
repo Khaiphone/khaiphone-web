@@ -31,6 +31,7 @@ const STATUS_COLORS: Record<ExpenseStatus, { bg: string; text: string }> = {
 }
 
 const TABS = ['ทั้งหมด', 'อนุมัติแล้ว', 'รออนุมัติ', 'ปฏิเสธ']
+const CAT_COLORS = ['#B8860B', '#22c55e', '#3b82f6', '#a855f7', '#f59e0b', '#06b6d4', '#ef4444', '#ec4899', '#14b8a6']
 
 function fmt(d: string) {
   const dt = new Date(d.length === 10 ? d + 'T00:00:00' : d)
@@ -133,6 +134,17 @@ export default function ExpensesPage() {
   const paged = filtered.slice((page - 1) * perPage, page * perPage)
   const totalAmount = filtered.reduce((s, r) => s + r.amount, 0)
 
+  // สรุปยอดต่อหมวดหมู่ (ตามแท็บ/ค้นหาที่กำลังดู) เรียงมาก→น้อย
+  const byCategory = Object.entries(
+    filtered.reduce<Record<string, { amount: number; count: number }>>((acc, r) => {
+      const k = r.category || 'อื่นๆ'
+      acc[k] = acc[k] || { amount: 0, count: 0 }
+      acc[k].amount += r.amount
+      acc[k].count += 1
+      return acc
+    }, {}),
+  ).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.amount - a.amount)
+
   // หมวดพื้นฐาน + หมวดที่เคยใช้จริงจาก DB (พิมพ์เองครั้งเดียวแล้วจำอัตโนมัติ)
   const categoryOptions = Array.from(new Set([...CATEGORIES, ...items.map(i => i.category).filter(Boolean)]))
 
@@ -168,6 +180,35 @@ export default function ExpensesPage() {
           รวม <strong style={{ color: '#ef4444' }}>฿{totalAmount.toLocaleString('th-TH')}</strong>
         </span>
       </div>
+
+      {/* Category summary */}
+      {!loading && byCategory.length > 0 && (
+        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '16px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <p style={{ margin: 0, color: 'var(--f-text1)', fontWeight: 700, fontSize: 15 }}>สรุปตามหมวดหมู่</p>
+            <p style={{ margin: 0, color: TEXT3, fontSize: 12 }}>{byCategory.length} หมวด · {filtered.length} รายการ</p>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+            {byCategory.map((c, i) => {
+              const pct = totalAmount > 0 ? Math.round((c.amount / totalAmount) * 100) : 0
+              const color = CAT_COLORS[i % CAT_COLORS.length]
+              return (
+                <div key={c.name} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 110, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 3, background: color, flexShrink: 0 }} />
+                    <span style={{ color: 'var(--f-text1)', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={`${c.name} · ${c.count} รายการ`}>{c.name}</span>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 40, height: 8, background: 'var(--f-hover)', borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 4 }} />
+                  </div>
+                  <span style={{ color: TEXT3, fontSize: 12, width: 34, textAlign: 'right', flexShrink: 0 }}>{pct}%</span>
+                  <span style={{ color: '#ef4444', fontWeight: 700, fontSize: 13, width: 92, textAlign: 'right', flexShrink: 0 }}>฿{c.amount.toLocaleString('th-TH')}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, overflow: 'hidden' }}>
