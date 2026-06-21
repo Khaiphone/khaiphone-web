@@ -69,6 +69,7 @@ export default function ExpensesPage() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState('')
+  const [customCat, setCustomCat] = useState(false) // กำลังพิมพ์หมวดใหม่เองอยู่ไหม
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -82,6 +83,7 @@ export default function ExpensesPage() {
     setForm(EMPTY_FORM)
     setEditing(null)
     setErrorMsg('')
+    setCustomCat(false)
     setModal('add')
   }
 
@@ -89,11 +91,13 @@ export default function ExpensesPage() {
     setForm({ product: item.product, category: item.category, amount: String(item.amount), status: item.status, notes: item.notes, date: item.date })
     setEditing(item)
     setErrorMsg('')
+    setCustomCat(false)
     setModal('edit')
   }
 
   async function handleSubmit() {
     if (!form.product.trim() || !form.amount) return
+    if (!form.category.trim()) { setErrorMsg('กรุณาเลือกหรือพิมพ์หมวดหมู่'); return }
     const amount = Number(form.amount)
     if (isNaN(amount) || amount <= 0) return
     setSaving(true)
@@ -128,6 +132,9 @@ export default function ExpensesPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage))
   const paged = filtered.slice((page - 1) * perPage, page * perPage)
   const totalAmount = filtered.reduce((s, r) => s + r.amount, 0)
+
+  // หมวดพื้นฐาน + หมวดที่เคยใช้จริงจาก DB (พิมพ์เองครั้งเดียวแล้วจำอัตโนมัติ)
+  const categoryOptions = Array.from(new Set([...CATEGORIES, ...items.map(i => i.category).filter(Boolean)]))
 
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', borderRadius: 8, background: 'var(--f-input-bg)', border: `1px solid ${BORDER}`, color: 'var(--f-text1)', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }
   const labelStyle: React.CSSProperties = { display: 'block', color: TEXT2, fontSize: 12, fontWeight: 600, marginBottom: 5 }
@@ -234,9 +241,27 @@ export default function ExpensesPage() {
                   </div>
                   <div>
                     <label style={labelStyle}>หมวดหมู่</label>
-                    <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
-                      {CATEGORIES.map(c => <option key={c} value={c} style={{ background: 'var(--f-card2)' }}>{c}</option>)}
-                    </select>
+                    {customCat ? (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <input type="text" autoFocus placeholder="พิมพ์ชื่อหมวดใหม่" value={form.category}
+                          onChange={e => setForm(f => ({ ...f, category: e.target.value }))} style={inputStyle} />
+                        <button type="button" title="เลือกจากรายการ"
+                          onClick={() => { setCustomCat(false); setForm(f => ({ ...f, category: categoryOptions[0] })) }}
+                          style={{ display: 'flex', alignItems: 'center', padding: '0 10px', borderRadius: 8, background: 'var(--f-hover)', border: `1px solid ${BORDER}`, color: TEXT2, cursor: 'pointer' }}>
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <select value={form.category}
+                        onChange={e => {
+                          if (e.target.value === '__new__') { setCustomCat(true); setForm(f => ({ ...f, category: '' })) }
+                          else setForm(f => ({ ...f, category: e.target.value }))
+                        }}
+                        style={{ ...inputStyle, cursor: 'pointer' }}>
+                        {categoryOptions.map(c => <option key={c} value={c} style={{ background: 'var(--f-card2)' }}>{c}</option>)}
+                        <option value="__new__" style={{ background: 'var(--f-card2)', color: GOLD }}>+ เพิ่มหมวดใหม่…</option>
+                      </select>
+                    )}
                   </div>
                 </div>
                 <div>
