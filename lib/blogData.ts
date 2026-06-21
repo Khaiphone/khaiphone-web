@@ -13,6 +13,18 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    id: 10,
+    category: "iPad",
+    date: "2026-06-21",
+    displayDate: "21 มิ.ย. 2569",
+    readTime: "4 นาที",
+    title: "ขาย iPad ได้ราคาเท่าไหร่ — รับซื้อ iPad รุ่นไหนบ้าง (2569)",
+    excerpt: "เช็กราคารับซื้อ iPad ทุกซีรีส์ — iPad Gen 9–11, Air, mini และ Pro M-series พร้อมข้อควรรู้เรื่อง Wi-Fi vs Cellular และปัจจัยที่มีผลต่อราคาก่อนขาย",
+    image: "/blog_ipad-price.webp",
+    slug: "ipad-buyback-price-2026",
+    keywords: ["รับซื้อ iPad", "ขาย iPad ได้เงินเท่าไหร่", "ราคารับซื้อ iPad 2569", "รับซื้อ iPad Pro M4", "ราคา iPad มือสอง"],
+  },
+  {
     id: 9,
     category: "ราคาล่าสุด",
     date: "2026-06-17",
