@@ -22,6 +22,7 @@ const TEXT3 = 'var(--f-text3)'
 const fadeUp = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.25 } }
 
 const CATEGORIES = ['Ads', 'ขนส่ง', 'สำนักงาน', 'ซอฟต์แวร์', 'บุคคล', 'สื่อสาร', 'ซ่อมบำรุง', 'ซื้อคืน', 'อื่นๆ']
+const ACCOUNTS = ['เงินสด', 'กสิกรไทย', 'ไทยพาณิชย์', 'กรุงเทพ', 'กรุงไทย', 'พร้อมเพย์']
 const STATUSES: ExpenseStatus[] = ['pending', 'approved', 'rejected']
 const STATUS_LABELS: Record<ExpenseStatus, string> = { pending: 'รออนุมัติ', approved: 'อนุมัติแล้ว', rejected: 'ปฏิเสธ' }
 const STATUS_COLORS: Record<ExpenseStatus, { bg: string; text: string }> = {
@@ -54,6 +55,7 @@ const EMPTY_FORM = {
   status: 'pending' as ExpenseStatus,
   notes: '',
   date: thaiDateStr(),
+  paymentAccount: '',
 }
 
 export default function ExpensesPage() {
@@ -71,6 +73,7 @@ export default function ExpensesPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState('')
   const [customCat, setCustomCat] = useState(false) // กำลังพิมพ์หมวดใหม่เองอยู่ไหม
+  const [customAcct, setCustomAcct] = useState(false) // กำลังพิมพ์บัญชีใหม่เองอยู่ไหม
   const [catFilter, setCatFilter] = useState<string | null>(null) // กรองตารางเฉพาะหมวดที่เลือก
 
   const load = useCallback(async () => {
@@ -86,14 +89,16 @@ export default function ExpensesPage() {
     setEditing(null)
     setErrorMsg('')
     setCustomCat(false)
+    setCustomAcct(false)
     setModal('add')
   }
 
   function openEdit(item: Expense) {
-    setForm({ product: item.product, category: item.category, amount: String(item.amount), status: item.status, notes: item.notes, date: item.date })
+    setForm({ product: item.product, category: item.category, amount: String(item.amount), status: item.status, notes: item.notes, date: item.date, paymentAccount: item.paymentAccount })
     setEditing(item)
     setErrorMsg('')
     setCustomCat(false)
+    setCustomAcct(false)
     setModal('edit')
   }
 
@@ -105,10 +110,10 @@ export default function ExpensesPage() {
     setSaving(true)
     setErrorMsg('')
     if (modal === 'add') {
-      const res = await createExpense({ date: form.date, refNumber: genRef(), product: form.product.trim(), category: form.category, amount, status: form.status, notes: form.notes.trim() })
+      const res = await createExpense({ date: form.date, refNumber: genRef(), product: form.product.trim(), category: form.category, amount, status: form.status, notes: form.notes.trim(), paymentAccount: form.paymentAccount.trim() })
       if (!res.success) { setErrorMsg(res.error); setSaving(false); return }
     } else if (editing) {
-      const res = await updateExpense(editing.id, { date: form.date, product: form.product.trim(), category: form.category, amount, status: form.status, notes: form.notes.trim() })
+      const res = await updateExpense(editing.id, { date: form.date, product: form.product.trim(), category: form.category, amount, status: form.status, notes: form.notes.trim(), paymentAccount: form.paymentAccount.trim() })
       if (!res.success) { setErrorMsg(res.error); setSaving(false); return }
     }
     setSaving(false)
@@ -150,8 +155,9 @@ export default function ExpensesPage() {
   const paged = displayed.slice((page - 1) * perPage, page * perPage)
   const totalAmount = displayed.reduce((s, r) => s + r.amount, 0)
 
-  // หมวดพื้นฐาน + หมวดที่เคยใช้จริงจาก DB (พิมพ์เองครั้งเดียวแล้วจำอัตโนมัติ)
+  // หมวด/บัญชี พื้นฐาน + ที่เคยใช้จริงจาก DB (พิมพ์เองครั้งเดียวแล้วจำอัตโนมัติ)
   const categoryOptions = Array.from(new Set([...CATEGORIES, ...items.map(i => i.category).filter(Boolean)]))
+  const accountOptions = Array.from(new Set([...ACCOUNTS, ...items.map(i => i.paymentAccount).filter(Boolean)]))
 
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', borderRadius: 8, background: 'var(--f-input-bg)', border: `1px solid ${BORDER}`, color: 'var(--f-text1)', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }
   const labelStyle: React.CSSProperties = { display: 'block', color: TEXT2, fontSize: 12, fontWeight: 600, marginBottom: 5 }
@@ -230,16 +236,16 @@ export default function ExpensesPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
-                {['วันที่', 'เลขรายการ', 'รายการ', 'หมวดหมู่', 'จำนวนเงิน', 'สถานะ', ''].map(h => (
+                {['วันที่', 'เลขรายการ', 'รายการ', 'หมวดหมู่', 'บัญชี', 'จำนวนเงิน', 'สถานะ', ''].map(h => (
                   <th key={h} style={{ padding: '12px 16px', textAlign: 'left', color: TEXT3, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: TEXT3, fontSize: 14 }}>กำลังโหลด...</td></tr>
+                <tr><td colSpan={8} style={{ padding: 32, textAlign: 'center', color: TEXT3, fontSize: 14 }}>กำลังโหลด...</td></tr>
               ) : paged.length === 0 ? (
-                <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: TEXT3, fontSize: 14 }}>
+                <tr><td colSpan={8} style={{ padding: 32, textAlign: 'center', color: TEXT3, fontSize: 14 }}>
                   {items.length === 0 ? 'ยังไม่มีรายจ่าย กด "+ เพิ่มรายจ่าย" เพื่อเริ่มต้น' : 'ไม่พบรายการ'}
                 </td></tr>
               ) : paged.map((r, idx) => (
@@ -253,6 +259,7 @@ export default function ExpensesPage() {
                     {r.notes && <div style={{ color: TEXT3, fontSize: 11, marginTop: 2 }}>{r.notes}</div>}
                   </td>
                   <td style={{ padding: '12px 16px' }}><span style={{ padding: '2px 10px', borderRadius: 20, background: 'var(--f-hover)', color: TEXT2, fontSize: 12 }}>{r.category}</span></td>
+                  <td style={{ padding: '12px 16px', color: r.paymentAccount ? TEXT2 : TEXT3, fontSize: 13, whiteSpace: 'nowrap' }}>{r.paymentAccount || '—'}</td>
                   <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}><span style={{ color: '#ef4444', fontWeight: 700, fontSize: 14 }}>฿{r.amount.toLocaleString('th-TH')}</span></td>
                   <td style={{ padding: '12px 16px' }}>
                     <span style={{ padding: '3px 10px', borderRadius: 6, background: STATUS_COLORS[r.status].bg, color: STATUS_COLORS[r.status].text, fontSize: 12, fontWeight: 600 }}>{STATUS_LABELS[r.status]}</span>
@@ -334,6 +341,31 @@ export default function ExpensesPage() {
                       {STATUSES.map(s => <option key={s} value={s} style={{ background: 'var(--f-card2)' }}>{STATUS_LABELS[s]}</option>)}
                     </select>
                   </div>
+                </div>
+                <div>
+                  <label style={labelStyle}>ชำระจากบัญชี</label>
+                  {customAcct ? (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <input type="text" autoFocus placeholder="พิมพ์ชื่อบัญชีใหม่" value={form.paymentAccount}
+                        onChange={e => setForm(f => ({ ...f, paymentAccount: e.target.value }))} style={inputStyle} />
+                      <button type="button" title="เลือกจากรายการ"
+                        onClick={() => { setCustomAcct(false); setForm(f => ({ ...f, paymentAccount: '' })) }}
+                        style={{ display: 'flex', alignItems: 'center', padding: '0 10px', borderRadius: 8, background: 'var(--f-hover)', border: `1px solid ${BORDER}`, color: TEXT2, cursor: 'pointer' }}>
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <select value={form.paymentAccount}
+                      onChange={e => {
+                        if (e.target.value === '__new__') { setCustomAcct(true); setForm(f => ({ ...f, paymentAccount: '' })) }
+                        else setForm(f => ({ ...f, paymentAccount: e.target.value }))
+                      }}
+                      style={{ ...inputStyle, cursor: 'pointer' }}>
+                      <option value="" style={{ background: 'var(--f-card2)' }}>— ไม่ระบุ —</option>
+                      {accountOptions.map(a => <option key={a} value={a} style={{ background: 'var(--f-card2)' }}>{a}</option>)}
+                      <option value="__new__" style={{ background: 'var(--f-card2)', color: GOLD }}>+ เพิ่มบัญชีใหม่…</option>
+                    </select>
+                  )}
                 </div>
                 <div>
                   <label style={labelStyle}>หมายเหตุ</label>
