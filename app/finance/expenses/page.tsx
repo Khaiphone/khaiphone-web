@@ -56,6 +56,7 @@ const EMPTY_FORM = {
   notes: '',
   date: thaiDateStr(),
   paymentAccount: '',
+  accountOwner: '',
 }
 
 export default function ExpensesPage() {
@@ -94,7 +95,7 @@ export default function ExpensesPage() {
   }
 
   function openEdit(item: Expense) {
-    setForm({ product: item.product, category: item.category, amount: String(item.amount), status: item.status, notes: item.notes, date: item.date, paymentAccount: item.paymentAccount })
+    setForm({ product: item.product, category: item.category, amount: String(item.amount), status: item.status, notes: item.notes, date: item.date, paymentAccount: item.paymentAccount, accountOwner: item.accountOwner })
     setEditing(item)
     setErrorMsg('')
     setCustomCat(false)
@@ -110,10 +111,10 @@ export default function ExpensesPage() {
     setSaving(true)
     setErrorMsg('')
     if (modal === 'add') {
-      const res = await createExpense({ date: form.date, refNumber: genRef(), product: form.product.trim(), category: form.category, amount, status: form.status, notes: form.notes.trim(), paymentAccount: form.paymentAccount.trim() })
+      const res = await createExpense({ date: form.date, refNumber: genRef(), product: form.product.trim(), category: form.category, amount, status: form.status, notes: form.notes.trim(), paymentAccount: form.paymentAccount.trim(), accountOwner: form.accountOwner.trim() })
       if (!res.success) { setErrorMsg(res.error); setSaving(false); return }
     } else if (editing) {
-      const res = await updateExpense(editing.id, { date: form.date, product: form.product.trim(), category: form.category, amount, status: form.status, notes: form.notes.trim(), paymentAccount: form.paymentAccount.trim() })
+      const res = await updateExpense(editing.id, { date: form.date, product: form.product.trim(), category: form.category, amount, status: form.status, notes: form.notes.trim(), paymentAccount: form.paymentAccount.trim(), accountOwner: form.accountOwner.trim() })
       if (!res.success) { setErrorMsg(res.error); setSaving(false); return }
     }
     setSaving(false)
@@ -158,6 +159,7 @@ export default function ExpensesPage() {
   // หมวด/บัญชี พื้นฐาน + ที่เคยใช้จริงจาก DB (พิมพ์เองครั้งเดียวแล้วจำอัตโนมัติ)
   const categoryOptions = Array.from(new Set([...CATEGORIES, ...items.map(i => i.category).filter(Boolean)]))
   const accountOptions = Array.from(new Set([...ACCOUNTS, ...items.map(i => i.paymentAccount).filter(Boolean)]))
+  const ownerOptions = Array.from(new Set(items.map(i => i.accountOwner).filter(Boolean))) // ชื่อเจ้าของที่เคยใช้
 
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', borderRadius: 8, background: 'var(--f-input-bg)', border: `1px solid ${BORDER}`, color: 'var(--f-text1)', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }
   const labelStyle: React.CSSProperties = { display: 'block', color: TEXT2, fontSize: 12, fontWeight: 600, marginBottom: 5 }
@@ -259,7 +261,14 @@ export default function ExpensesPage() {
                     {r.notes && <div style={{ color: TEXT3, fontSize: 11, marginTop: 2 }}>{r.notes}</div>}
                   </td>
                   <td style={{ padding: '12px 16px' }}><span style={{ padding: '2px 10px', borderRadius: 20, background: 'var(--f-hover)', color: TEXT2, fontSize: 12 }}>{r.category}</span></td>
-                  <td style={{ padding: '12px 16px', color: r.paymentAccount ? TEXT2 : TEXT3, fontSize: 13, whiteSpace: 'nowrap' }}>{r.paymentAccount || '—'}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, whiteSpace: 'nowrap' }}>
+                    {r.paymentAccount || r.accountOwner ? (
+                      <div>
+                        <div style={{ color: TEXT2 }}>{r.paymentAccount || '—'}</div>
+                        {r.accountOwner && <div style={{ color: TEXT3, fontSize: 11, marginTop: 2 }}>{r.accountOwner}</div>}
+                      </div>
+                    ) : <span style={{ color: TEXT3 }}>—</span>}
+                  </td>
                   <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}><span style={{ color: '#ef4444', fontWeight: 700, fontSize: 14 }}>฿{r.amount.toLocaleString('th-TH')}</span></td>
                   <td style={{ padding: '12px 16px' }}>
                     <span style={{ padding: '3px 10px', borderRadius: 6, background: STATUS_COLORS[r.status].bg, color: STATUS_COLORS[r.status].text, fontSize: 12, fontWeight: 600 }}>{STATUS_LABELS[r.status]}</span>
@@ -342,30 +351,40 @@ export default function ExpensesPage() {
                     </select>
                   </div>
                 </div>
-                <div>
-                  <label style={labelStyle}>ชำระจากบัญชี</label>
-                  {customAcct ? (
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <input type="text" autoFocus placeholder="พิมพ์ชื่อบัญชีใหม่" value={form.paymentAccount}
-                        onChange={e => setForm(f => ({ ...f, paymentAccount: e.target.value }))} style={inputStyle} />
-                      <button type="button" title="เลือกจากรายการ"
-                        onClick={() => { setCustomAcct(false); setForm(f => ({ ...f, paymentAccount: '' })) }}
-                        style={{ display: 'flex', alignItems: 'center', padding: '0 10px', borderRadius: 8, background: 'var(--f-hover)', border: `1px solid ${BORDER}`, color: TEXT2, cursor: 'pointer' }}>
-                        <X size={14} />
-                      </button>
-                    </div>
-                  ) : (
-                    <select value={form.paymentAccount}
-                      onChange={e => {
-                        if (e.target.value === '__new__') { setCustomAcct(true); setForm(f => ({ ...f, paymentAccount: '' })) }
-                        else setForm(f => ({ ...f, paymentAccount: e.target.value }))
-                      }}
-                      style={{ ...inputStyle, cursor: 'pointer' }}>
-                      <option value="" style={{ background: 'var(--f-card2)' }}>— ไม่ระบุ —</option>
-                      {accountOptions.map(a => <option key={a} value={a} style={{ background: 'var(--f-card2)' }}>{a}</option>)}
-                      <option value="__new__" style={{ background: 'var(--f-card2)', color: GOLD }}>+ เพิ่มบัญชีใหม่…</option>
-                    </select>
-                  )}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={labelStyle}>ธนาคาร</label>
+                    {customAcct ? (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <input type="text" autoFocus placeholder="พิมพ์ชื่อธนาคารใหม่" value={form.paymentAccount}
+                          onChange={e => setForm(f => ({ ...f, paymentAccount: e.target.value }))} style={inputStyle} />
+                        <button type="button" title="เลือกจากรายการ"
+                          onClick={() => { setCustomAcct(false); setForm(f => ({ ...f, paymentAccount: '' })) }}
+                          style={{ display: 'flex', alignItems: 'center', padding: '0 10px', borderRadius: 8, background: 'var(--f-hover)', border: `1px solid ${BORDER}`, color: TEXT2, cursor: 'pointer' }}>
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <select value={form.paymentAccount}
+                        onChange={e => {
+                          if (e.target.value === '__new__') { setCustomAcct(true); setForm(f => ({ ...f, paymentAccount: '' })) }
+                          else setForm(f => ({ ...f, paymentAccount: e.target.value }))
+                        }}
+                        style={{ ...inputStyle, cursor: 'pointer' }}>
+                        <option value="" style={{ background: 'var(--f-card2)' }}>— ไม่ระบุ —</option>
+                        {accountOptions.map(a => <option key={a} value={a} style={{ background: 'var(--f-card2)' }}>{a}</option>)}
+                        <option value="__new__" style={{ background: 'var(--f-card2)', color: GOLD }}>+ เพิ่มธนาคารใหม่…</option>
+                      </select>
+                    )}
+                  </div>
+                  <div>
+                    <label style={labelStyle}>ชื่อเจ้าของบัญชี</label>
+                    <input type="text" list="owner-list" placeholder="เช่น ปนุพันธ์" value={form.accountOwner}
+                      onChange={e => setForm(f => ({ ...f, accountOwner: e.target.value }))} style={inputStyle} />
+                    <datalist id="owner-list">
+                      {ownerOptions.map(o => <option key={o} value={o} />)}
+                    </datalist>
+                  </div>
                 </div>
                 <div>
                   <label style={labelStyle}>หมายเหตุ</label>

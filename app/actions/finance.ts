@@ -632,6 +632,7 @@ export type Expense = {
   status: ExpenseStatus;
   notes: string;
   paymentAccount: string;
+  accountOwner: string;
   createdAt: string;
 };
 
@@ -652,6 +653,7 @@ export async function fetchExpenses(dateFrom = "", dateTo = ""): Promise<Expense
     status: r.status as ExpenseStatus,
     notes: r.notes ?? "",
     paymentAccount: r.payment_account ?? "",
+    accountOwner: r.account_owner ?? "",
     createdAt: r.created_at,
   }));
 }
@@ -665,6 +667,7 @@ export async function createExpense(data: {
   status: ExpenseStatus;
   notes: string;
   paymentAccount?: string;
+  accountOwner?: string;
 }): Promise<{ success: true; id: string } | { success: false; error: string }> {
   await requireAuth();
   const supabase = createServerClient();
@@ -679,6 +682,7 @@ export async function createExpense(data: {
       status: data.status,
       notes: data.notes,
       payment_account: data.paymentAccount ?? "",
+      account_owner: data.accountOwner ?? "",
       updated_at: new Date().toISOString(),
     })
     .select("id")
@@ -694,15 +698,15 @@ export async function createExpense(data: {
 
 export async function updateExpense(
   id: string,
-  data: { date: string; product: string; category: string; amount: number; status: ExpenseStatus; notes: string; paymentAccount?: string },
+  data: { date: string; product: string; category: string; amount: number; status: ExpenseStatus; notes: string; paymentAccount?: string; accountOwner?: string },
 ): Promise<{ success: true } | { success: false; error: string }> {
   await requireAuth();
   const supabase = createServerClient();
   const { data: existing } = await supabase.from("expenses").select("ref_number").eq("id", id).single();
-  const { paymentAccount, ...rest } = data;
+  const { paymentAccount, accountOwner, ...rest } = data;
   const { error } = await supabase
     .from("expenses")
-    .update({ ...rest, payment_account: paymentAccount ?? "", updated_at: new Date().toISOString() })
+    .update({ ...rest, payment_account: paymentAccount ?? "", account_owner: accountOwner ?? "", updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) return { success: false, error: error.message };
   insertAuditLog({
