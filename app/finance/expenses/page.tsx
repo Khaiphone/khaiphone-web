@@ -71,6 +71,7 @@ export default function ExpensesPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState('')
   const [customCat, setCustomCat] = useState(false) // กำลังพิมพ์หมวดใหม่เองอยู่ไหม
+  const [catFilter, setCatFilter] = useState<string | null>(null) // กรองตารางเฉพาะหมวดที่เลือก
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -130,11 +131,9 @@ export default function ExpensesPage() {
     return tabMatch && searchMatch
   })
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage))
-  const paged = filtered.slice((page - 1) * perPage, page * perPage)
-  const totalAmount = filtered.reduce((s, r) => s + r.amount, 0)
+  const filteredTotal = filtered.reduce((s, r) => s + r.amount, 0)
 
-  // สรุปยอดต่อหมวดหมู่ (ตามแท็บ/ค้นหาที่กำลังดู) เรียงมาก→น้อย
+  // สรุปยอดต่อหมวดหมู่ (ตามแท็บ/ค้นหาที่กำลังดู — ไม่อิงตัวกรองหมวด เพื่อให้คลิกสลับได้) เรียงมาก→น้อย
   const byCategory = Object.entries(
     filtered.reduce<Record<string, { amount: number; count: number }>>((acc, r) => {
       const k = r.category || 'อื่นๆ'
@@ -144,6 +143,12 @@ export default function ExpensesPage() {
       return acc
     }, {}),
   ).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.amount - a.amount)
+
+  // ตารางด้านล่าง: กรองเพิ่มตามหมวดที่กดเลือก
+  const displayed = catFilter ? filtered.filter(r => r.category === catFilter) : filtered
+  const totalPages = Math.max(1, Math.ceil(displayed.length / perPage))
+  const paged = displayed.slice((page - 1) * perPage, page * perPage)
+  const totalAmount = displayed.reduce((s, r) => s + r.amount, 0)
 
   // หมวดพื้นฐาน + หมวดที่เคยใช้จริงจาก DB (พิมพ์เองครั้งเดียวแล้วจำอัตโนมัติ)
   const categoryOptions = Array.from(new Set([...CATEGORIES, ...items.map(i => i.category).filter(Boolean)]))
@@ -171,7 +176,7 @@ export default function ExpensesPage() {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, borderBottom: `1px solid ${BORDER}` }}>
         {TABS.map((t, i) => (
-          <button key={t} onClick={() => { setActiveTab(i); setPage(1) }} style={{ padding: '10px 18px', background: 'none', border: 'none', borderBottom: activeTab === i ? `2px solid ${GOLD}` : '2px solid transparent', color: activeTab === i ? GOLD : TEXT2, fontWeight: activeTab === i ? 600 : 400, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', marginBottom: -1 }}>
+          <button key={t} onClick={() => { setActiveTab(i); setPage(1); setCatFilter(null) }} style={{ padding: '10px 18px', background: 'none', border: 'none', borderBottom: activeTab === i ? `2px solid ${GOLD}` : '2px solid transparent', color: activeTab === i ? GOLD : TEXT2, fontWeight: activeTab === i ? 600 : 400, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', marginBottom: -1 }}>
             {t}
           </button>
         ))}
@@ -186,14 +191,23 @@ export default function ExpensesPage() {
         <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '16px 20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <p style={{ margin: 0, color: 'var(--f-text1)', fontWeight: 700, fontSize: 15 }}>สรุปตามหมวดหมู่</p>
-            <p style={{ margin: 0, color: TEXT3, fontSize: 12 }}>{byCategory.length} หมวด · {filtered.length} รายการ</p>
+            {catFilter ? (
+              <button onClick={() => { setCatFilter(null); setPage(1) }}
+                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 20, background: 'var(--f-hover)', border: `1px solid ${BORDER}`, color: TEXT2, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                <X size={12} /> กรอง: {catFilter}
+              </button>
+            ) : (
+              <p style={{ margin: 0, color: TEXT3, fontSize: 12 }}>{byCategory.length} หมวด · กดเพื่อกรอง</p>
+            )}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {byCategory.map((c, i) => {
-              const pct = totalAmount > 0 ? Math.round((c.amount / totalAmount) * 100) : 0
+              const pct = filteredTotal > 0 ? Math.round((c.amount / filteredTotal) * 100) : 0
               const color = CAT_COLORS[i % CAT_COLORS.length]
+              const active = catFilter === c.name
               return (
-                <div key={c.name} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <button key={c.name} onClick={() => { setCatFilter(active ? null : c.name); setPage(1) }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '7px 8px', borderRadius: 8, background: active ? 'var(--f-hover)' : 'transparent', border: active ? `1px solid ${color}` : '1px solid transparent', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', opacity: catFilter && !active ? 0.5 : 1, transition: 'opacity 0.15s' }}>
                   <div style={{ width: 110, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ width: 10, height: 10, borderRadius: 3, background: color, flexShrink: 0 }} />
                     <span style={{ color: 'var(--f-text1)', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={`${c.name} · ${c.count} รายการ`}>{c.name}</span>
@@ -203,7 +217,7 @@ export default function ExpensesPage() {
                   </div>
                   <span style={{ color: TEXT3, fontSize: 12, width: 34, textAlign: 'right', flexShrink: 0 }}>{pct}%</span>
                   <span style={{ color: '#ef4444', fontWeight: 700, fontSize: 13, width: 92, textAlign: 'right', flexShrink: 0 }}>฿{c.amount.toLocaleString('th-TH')}</span>
-                </div>
+                </button>
               )
             })}
           </div>
