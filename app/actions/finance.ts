@@ -63,6 +63,10 @@ export type FinancePurchase = {
   customerName: string;
   stockStatus: string;
   source: string;
+  paidFromBank: string;
+  paidFromOwner: string;
+  hasSlip: boolean;
+  paymentMethod: string;
 };
 
 export type FinanceProfitByModel = {
@@ -339,7 +343,7 @@ export async function fetchFinancePurchases(dateFrom = "", dateTo = ""): Promise
   const supabase = createServerClient();
   let q = supabase
     .from("requests")
-    .select("id, order_number, device_model, device_storage, actual_price, estimated_price, sell_price, stock_status, customer_name, source, created_at")
+    .select("id, order_number, device_model, device_storage, actual_price, estimated_price, sell_price, stock_status, customer_name, source, created_at, payment_method, payment_slip_url, paid_from_bank, paid_from_owner")
     .eq("status", "completed");
   if (dateFrom && dateTo) q = q.gte("created_at", dateFrom).lte("created_at", endOfThaiDay(dateTo));
   const { data } = await q.order("created_at", { ascending: false });
@@ -355,7 +359,104 @@ export async function fetchFinancePurchases(dateFrom = "", dateTo = ""): Promise
     customerName: row.customer_name ?? "",
     stockStatus: row.stock_status ?? "in_stock",
     source: row.source ?? "",
+    paidFromBank: row.paid_from_bank ?? "",
+    paidFromOwner: row.paid_from_owner ?? "",
+    hasSlip: !!row.payment_slip_url,
+    paymentMethod: row.payment_method ?? "",
   }));
+}
+
+// อ่านสลิปโอนของรายการซื้อ → ดึง "ธนาคาร + ชื่อผู้โอน" (บัญชีเราที่จ่ายให้ลูกค้า) ด้วย Claude vision
+export async function extractSlipAccount(requestId: string): Promise<
+  | { success: true; bank: string; owner: string; amount: number | null; cost: number; amountMatches: boolean; confidence: string }
+  | { success: false; error: string }
+> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data: req } = await supabase
+    .from("requests")
+    .select("payment_slip_url, actual_price, estimated_price")
+    .eq("id", requestId)
+    .single();
+  if (!req) return { success: false, error: "ไม่พบรายการ" };
+  if (!req.payment_slip_url) return { success: false, error: "รายการนี้ไม่มีสลิป (อาจจ่ายเงินสด) — กรุณากรอกบัญชีเอง" };
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return { success: false, error: "ยังไม่ได้ตั้งค่า ANTHROPIC_API_KEY" };
+
+  let b64: string;
+  let mediaType: string;
+  try {
+    const resp = await fetch(req.payment_slip_url);
+    if (!resp.ok) return { success: false, error: `โหลดรูปสลิปไม่สำเร็จ (${resp.status})` };
+    mediaType = resp.headers.get("content-type") || "image/jpeg";
+    b64 = Buffer.from(await resp.arrayBuffer()).toString("base64");
+  } catch {
+    return { success: false, error: "โหลดรูปสลิปไม่สำเร็จ" };
+  }
+
+  const prompt =
+    'นี่คือสลิปโอนเงินของร้านรับซื้อมือถือ ที่ร้านโอนจ่ายเงินให้ลูกค้า. ดึงข้อมูลฝั่ง "ผู้โอน/จ่ายออก" (ไม่ใช่ผู้รับ). ' +
+    'ตอบเป็น JSON เท่านั้น ไม่ต้องมีคำอธิบาย: ' +
+    '{"sender_bank":"ชื่อธนาคารผู้โอนแบบเต็มภาษาไทย","sender_name":"ชื่อบัญชีผู้โอนตามที่เห็น","amount":"จำนวนเงินเป็นตัวเลขล้วน","recipient_name":"ชื่อผู้รับ","confidence":"high|medium|low"}. ' +
+    'ถ้าฟิลด์ไหนอ่านไม่ได้ให้ใส่ค่าว่าง.';
+
+  let parsed: { sender_bank?: string; sender_name?: string; amount?: string; confidence?: string };
+  try {
+    const ai = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-opus-4-8",
+        max_tokens: 400,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: mediaType, data: b64 } },
+              { type: "text", text: prompt },
+            ],
+          },
+        ],
+      }),
+    });
+    const j = await ai.json();
+    if (j.error) return { success: false, error: `AI: ${j.error.message ?? "error"}` };
+    const text: string = j.content?.[0]?.text ?? "";
+    const m = text.match(/\{[\s\S]*\}/);
+    parsed = JSON.parse(m ? m[0] : text);
+  } catch {
+    return { success: false, error: "อ่านสลิปไม่สำเร็จ — ลองใหม่หรือกรอกเอง" };
+  }
+
+  const bank = String(parsed.sender_bank ?? "").trim();
+  const owner = String(parsed.sender_name ?? "").trim();
+  const slipAmount = parseFloat(String(parsed.amount ?? "").replace(/[^0-9.]/g, "")) || null;
+  const cost = req.actual_price ?? req.estimated_price ?? 0;
+  const amountMatches = slipAmount != null ? Math.abs(slipAmount - cost) < 1 : false;
+
+  await supabase
+    .from("requests")
+    .update({ paid_from_bank: bank, paid_from_owner: owner, updated_at: new Date().toISOString() })
+    .eq("id", requestId);
+
+  return { success: true, bank, owner, amount: slipAmount, cost, amountMatches, confidence: String(parsed.confidence ?? "") };
+}
+
+// กรอก/แก้บัญชีที่จ่ายเอง (เผื่อเงินสด หรือแก้ทับที่ AI อ่าน)
+export async function updatePurchaseAccount(
+  requestId: string,
+  bank: string,
+  owner: string,
+): Promise<{ success: true } | { success: false; error: string }> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { error } = await supabase
+    .from("requests")
+    .update({ paid_from_bank: bank.trim(), paid_from_owner: owner.trim(), updated_at: new Date().toISOString() })
+    .eq("id", requestId);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
 }
 
 export async function fetchFinanceProfitByModel(dateFrom = "", dateTo = ""): Promise<{

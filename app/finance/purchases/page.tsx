@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Search, Trash2 } from 'lucide-react'
-import { fetchFinancePurchases, deletePurchaseRecord } from '@/app/actions/finance'
+import { Search, Trash2, Sparkles, Pencil, X, Loader2 } from 'lucide-react'
+import { fetchFinancePurchases, deletePurchaseRecord, extractSlipAccount, updatePurchaseAccount } from '@/app/actions/finance'
 import type { FinancePurchase } from '@/app/actions/finance'
 import { useFinanceDate } from '@/app/components/finance/FinanceDateContext'
 import { supabase } from '@/lib/supabase'
@@ -40,7 +40,46 @@ export default function PurchasesPage() {
   const [page, setPage] = useState(1)
   const [isOwner, setIsOwner] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [extractingId, setExtractingId] = useState<string | null>(null)
+  const [bulkRunning, setBulkRunning] = useState(false)
+  const [acctEdit, setAcctEdit] = useState<{ id: string; ref: string; bank: string; owner: string } | null>(null)
+  const [savingAcct, setSavingAcct] = useState(false)
   const perPage = 10
+
+  function patchRow(id: string, bank: string, owner: string) {
+    setItems(prev => prev.map(r => r.id === id ? { ...r, paidFromBank: bank, paidFromOwner: owner } : r))
+  }
+
+  async function readSlip(r: FinancePurchase): Promise<boolean> {
+    setExtractingId(r.id)
+    const res = await extractSlipAccount(r.id)
+    setExtractingId(null)
+    if (!res.success) { alert(`${r.refNumber}: ${res.error}`); return false }
+    patchRow(r.id, res.bank, res.owner)
+    if (res.amount != null && !res.amountMatches) {
+      alert(`⚠️ ${r.refNumber}: ยอดในสลิป ฿${res.amount.toLocaleString('th-TH')} ไม่ตรงกับต้นทุน ฿${res.cost.toLocaleString('th-TH')}\nอ่านได้: ${res.bank} / ${res.owner}\nโปรดตรวจสอบว่าใช่สลิปของรายการนี้`)
+    }
+    return true
+  }
+
+  async function readAllSlips() {
+    const targets = filtered.filter(r => r.hasSlip && !r.paidFromBank)
+    if (targets.length === 0) return
+    if (!confirm(`อ่านสลิป ${targets.length} รายการที่ยังไม่มีบัญชี?\n(ใช้ AI อ่านทีละใบ อาจใช้เวลาสักครู่)`)) return
+    setBulkRunning(true)
+    for (const r of targets) { await readSlip(r) }
+    setBulkRunning(false)
+  }
+
+  async function saveAcct() {
+    if (!acctEdit) return
+    setSavingAcct(true)
+    const res = await updatePurchaseAccount(acctEdit.id, acctEdit.bank, acctEdit.owner)
+    setSavingAcct(false)
+    if (!res.success) { alert(res.error); return }
+    patchRow(acctEdit.id, acctEdit.bank.trim(), acctEdit.owner.trim())
+    setAcctEdit(null)
+  }
 
   useEffect(() => {
     setLoading(true)
@@ -80,6 +119,7 @@ export default function PurchasesPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage))
   const paged = filtered.slice((page - 1) * perPage, page * perPage)
   const totalCost = filtered.reduce((s, r) => s + r.costPrice, 0)
+  const pendingSlips = filtered.filter((r) => r.hasSlip && !r.paidFromBank).length
   const soldProfit = filtered.filter((r) => r.stockStatus === 'sold' && r.sellPrice != null)
     .reduce((s, r) => s + (r.sellPrice ?? 0) - r.costPrice, 0)
 
@@ -97,6 +137,13 @@ export default function PurchasesPage() {
             style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--f-text1)', fontSize: 13, width: '100%', fontFamily: 'inherit' }}
           />
         </div>
+        {pendingSlips > 0 && (
+          <button onClick={readAllSlips} disabled={bulkRunning}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, background: GOLD, border: 'none', color: 'var(--f-text1)', fontSize: 13, fontWeight: 600, cursor: bulkRunning ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit', opacity: bulkRunning ? 0.7 : 1 }}>
+            {bulkRunning ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+            อ่านสลิปทั้งหมด ({pendingSlips})
+          </button>
+        )}
       </div>
 
       {/* Summary */}
@@ -123,7 +170,7 @@ export default function PurchasesPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
-                {['วันที่รับซื้อ', 'เลขรายการ', 'รุ่น', 'ต้นทุน', 'ผู้ขาย', 'ราคาขาย', 'กำไร', 'สถานะ', ...(isOwner ? [''] : [])].map((h) => (
+                {['วันที่รับซื้อ', 'เลขรายการ', 'รุ่น', 'ต้นทุน', 'ผู้ขาย', 'ราคาขาย', 'กำไร', 'สถานะ', 'บัญชีที่จ่าย', ...(isOwner ? [''] : [])].map((h) => (
                   <th key={h} style={{ padding: '12px 16px', textAlign: 'left', color: TEXT3, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                     {h}
                   </th>
@@ -133,11 +180,11 @@ export default function PurchasesPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={isOwner ? 9 : 8} style={{ padding: 32, textAlign: 'center', color: TEXT3, fontSize: 14 }}>กำลังโหลด...</td>
+                  <td colSpan={isOwner ? 10 : 9} style={{ padding: 32, textAlign: 'center', color: TEXT3, fontSize: 14 }}>กำลังโหลด...</td>
                 </tr>
               ) : paged.length === 0 ? (
                 <tr>
-                  <td colSpan={isOwner ? 9 : 8} style={{ padding: 32, textAlign: 'center', color: TEXT3, fontSize: 14 }}>ไม่พบรายการ</td>
+                  <td colSpan={isOwner ? 10 : 9} style={{ padding: 32, textAlign: 'center', color: TEXT3, fontSize: 14 }}>ไม่พบรายการ</td>
                 </tr>
               ) : (
                 paged.map((r, idx) => {
@@ -175,6 +222,34 @@ export default function PurchasesPage() {
                         <span style={{ padding: '3px 10px', borderRadius: 6, background: `${stockInfo.color}20`, color: stockInfo.color, fontSize: 12, fontWeight: 600 }}>
                           {stockInfo.label}
                         </span>
+                      </td>
+                      <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
+                        {r.paidFromBank || r.paidFromOwner ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div>
+                              <div style={{ color: TEXT2, fontSize: 13 }}>{r.paidFromBank || '—'}</div>
+                              {r.paidFromOwner && <div style={{ color: TEXT3, fontSize: 11, marginTop: 2 }}>{r.paidFromOwner}</div>}
+                            </div>
+                            <button onClick={() => setAcctEdit({ id: r.id, ref: r.refNumber, bank: r.paidFromBank, owner: r.paidFromOwner })}
+                              title="แก้ไขบัญชี" style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', padding: 3, borderRadius: 6, lineHeight: 0 }}>
+                              <Pencil size={13} />
+                            </button>
+                          </div>
+                        ) : extractingId === r.id ? (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: GOLD, fontSize: 12 }}>
+                            <Loader2 size={13} className="animate-spin" /> กำลังอ่าน...
+                          </span>
+                        ) : r.hasSlip ? (
+                          <button onClick={() => readSlip(r)} disabled={bulkRunning}
+                            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7, background: 'rgba(184,134,11,0.12)', border: `1px solid ${GOLD}55`, color: GOLD, fontSize: 12, fontWeight: 600, cursor: bulkRunning ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                            <Sparkles size={13} /> อ่านสลิป
+                          </button>
+                        ) : (
+                          <button onClick={() => setAcctEdit({ id: r.id, ref: r.refNumber, bank: '', owner: '' })}
+                            style={{ padding: '5px 10px', borderRadius: 7, background: 'var(--f-hover)', border: `1px solid ${BORDER}`, color: TEXT2, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            + กรอกบัญชี
+                          </button>
+                        )}
                       </td>
                       {isOwner && (
                         <td style={{ padding: '12px 16px' }}>
@@ -215,6 +290,43 @@ export default function PurchasesPage() {
           </div>
         </div>
       </div>
+
+      {/* แก้ไข/กรอกบัญชีที่จ่าย */}
+      {acctEdit && (
+        <div onClick={() => !savingAcct && setAcctEdit(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ background: 'var(--f-card)', border: `1px solid ${BORDER}`, borderRadius: 20, padding: 28, width: '100%', maxWidth: 420 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <p style={{ margin: 0, color: 'var(--f-text1)', fontWeight: 700, fontSize: 16 }}>บัญชีที่จ่าย</p>
+              <button onClick={() => setAcctEdit(null)} style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', padding: 4, display: 'flex' }}><X size={20} /></button>
+            </div>
+            <p style={{ margin: '0 0 18px', color: TEXT3, fontSize: 12 }}>{acctEdit.ref}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={{ display: 'block', color: TEXT2, fontSize: 12, fontWeight: 600, marginBottom: 5 }}>ธนาคาร</label>
+                <input type="text" value={acctEdit.bank} placeholder="เช่น ธนาคารไทยพาณิชย์"
+                  onChange={(e) => setAcctEdit(a => a && { ...a, bank: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, background: 'var(--f-input-bg)', border: `1px solid ${BORDER}`, color: 'var(--f-text1)', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', color: TEXT2, fontSize: 12, fontWeight: 600, marginBottom: 5 }}>ชื่อเจ้าของบัญชี</label>
+                <input type="text" value={acctEdit.owner} placeholder="เช่น ภาณุพันธ์ เจ๊ะสแม"
+                  onChange={(e) => setAcctEdit(a => a && { ...a, owner: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, background: 'var(--f-input-bg)', border: `1px solid ${BORDER}`, color: 'var(--f-text1)', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 24, justifyContent: 'flex-end' }}>
+              <button onClick={() => setAcctEdit(null)} disabled={savingAcct}
+                style={{ padding: '10px 20px', borderRadius: 8, background: 'var(--f-hover)', border: `1px solid ${BORDER}`, color: TEXT2, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>ยกเลิก</button>
+              <button onClick={saveAcct} disabled={savingAcct}
+                style={{ padding: '10px 24px', borderRadius: 8, background: GOLD, border: 'none', color: 'var(--f-text1)', fontSize: 13, fontWeight: 700, cursor: savingAcct ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: savingAcct ? 0.7 : 1 }}>
+                {savingAcct ? 'กำลังบันทึก...' : 'บันทึก'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   )
 }
