@@ -63,7 +63,7 @@ export default function PurchasesPage() {
   }
 
   async function readAllSlips() {
-    const targets = filtered.filter(r => r.hasSlip && !r.paidFromBank)
+    const targets = filtered.filter(r => r.hasSlip && r.paymentMethod === 'transfer' && !r.paidFromBank)
     if (targets.length === 0) return
     if (!confirm(`อ่านสลิป ${targets.length} รายการที่ยังไม่มีบัญชี?\n(ใช้ AI อ่านทีละใบ อาจใช้เวลาสักครู่)`)) return
     setBulkRunning(true)
@@ -119,7 +119,9 @@ export default function PurchasesPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage))
   const paged = filtered.slice((page - 1) * perPage, page * perPage)
   const totalCost = filtered.reduce((s, r) => s + r.costPrice, 0)
-  const pendingSlips = filtered.filter((r) => r.hasSlip && !r.paidFromBank).length
+  // อ่านสลิปได้เฉพาะรายการ "โอน" ที่มีสลิป — เงินสด (รูปถือเงิน) อ่านไม่ได้ ให้กรอกเอง
+  const canReadSlip = (r: FinancePurchase) => r.hasSlip && r.paymentMethod === 'transfer'
+  const pendingSlips = filtered.filter((r) => canReadSlip(r) && !r.paidFromBank).length
   const soldProfit = filtered.filter((r) => r.stockStatus === 'sold' && r.sellPrice != null)
     .reduce((s, r) => s + (r.sellPrice ?? 0) - r.costPrice, 0)
 
@@ -239,7 +241,7 @@ export default function PurchasesPage() {
                           <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: GOLD, fontSize: 12 }}>
                             <Loader2 size={13} className="animate-spin" /> กำลังอ่าน...
                           </span>
-                        ) : r.hasSlip ? (
+                        ) : canReadSlip(r) ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <button onClick={() => readSlip(r)} disabled={bulkRunning}
                               style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7, background: 'rgba(184,134,11,0.12)', border: `1px solid ${GOLD}55`, color: GOLD, fontSize: 12, fontWeight: 600, cursor: bulkRunning ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
@@ -247,6 +249,14 @@ export default function PurchasesPage() {
                             </button>
                             <button onClick={() => setAcctEdit({ id: r.id, ref: r.refNumber, bank: '', owner: '' })}
                               title="กรอกเอง" style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', padding: 3, borderRadius: 6, lineHeight: 0 }}>
+                              <Pencil size={13} />
+                            </button>
+                          </div>
+                        ) : r.paymentMethod === 'cash' ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ padding: '3px 10px', borderRadius: 6, background: 'rgba(34,197,94,0.12)', color: '#16a34a', fontSize: 12, fontWeight: 600 }}>เงินสด</span>
+                            <button onClick={() => setAcctEdit({ id: r.id, ref: r.refNumber, bank: 'เงินสด', owner: r.paidFromOwner })}
+                              title="ระบุผู้จ่าย (ถ้าต้องการ)" style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', padding: 3, borderRadius: 6, lineHeight: 0 }}>
                               <Pencil size={13} />
                             </button>
                           </div>
