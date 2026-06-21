@@ -240,10 +240,16 @@ export default function PurchasesPage() {
                             <Loader2 size={13} className="animate-spin" /> กำลังอ่าน...
                           </span>
                         ) : r.hasSlip ? (
-                          <button onClick={() => readSlip(r)} disabled={bulkRunning}
-                            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7, background: 'rgba(184,134,11,0.12)', border: `1px solid ${GOLD}55`, color: GOLD, fontSize: 12, fontWeight: 600, cursor: bulkRunning ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-                            <Sparkles size={13} /> อ่านสลิป
-                          </button>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <button onClick={() => readSlip(r)} disabled={bulkRunning}
+                              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7, background: 'rgba(184,134,11,0.12)', border: `1px solid ${GOLD}55`, color: GOLD, fontSize: 12, fontWeight: 600, cursor: bulkRunning ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                              <Sparkles size={13} /> อ่านสลิป
+                            </button>
+                            <button onClick={() => setAcctEdit({ id: r.id, ref: r.refNumber, bank: '', owner: '' })}
+                              title="กรอกเอง" style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', padding: 3, borderRadius: 6, lineHeight: 0 }}>
+                              <Pencil size={13} />
+                            </button>
+                          </div>
                         ) : (
                           <button onClick={() => setAcctEdit({ id: r.id, ref: r.refNumber, bank: '', owner: '' })}
                             style={{ padding: '5px 10px', borderRadius: 7, background: 'var(--f-hover)', border: `1px solid ${BORDER}`, color: TEXT2, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
