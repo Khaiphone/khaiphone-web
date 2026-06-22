@@ -30,6 +30,8 @@ const STATUS_TABS: Array<{ value: RequestStatus | "all"; label: string }> = [
   { value: "cancelled",         label: "ยกเลิกนัดหมาย"   },
   { value: "no_show",           label: "ลูกค้าไม่อยู่"   },
   { value: "rejected",          label: "ไม่เข้าเงื่อนไข" },
+  { value: "unreachable",       label: "ติดต่อไม่ได้"    },
+  { value: "out_of_area",       label: "นอกพื้นที่"      },
 ];
 
 const INIT_FILTER: FilterState = { statuses: [], model: "", priceMin: "", priceMax: "" };

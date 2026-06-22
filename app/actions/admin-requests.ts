@@ -28,6 +28,8 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled:         "ยกเลิก",
   no_show:           "ไม่มาตามนัด",
   rejected:          "ไม่เข้าเงื่อนไข",
+  unreachable:       "ไม่สามารถติดต่อลูกค้าได้",
+  out_of_area:       "อยู่นอกเหนือพื้นที่ให้บริการ",
 };
 
 // ─── Activity log helper ──────────────────────────────────────────────────────

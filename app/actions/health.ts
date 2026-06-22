@@ -96,7 +96,7 @@ export async function fetchHealthReport(): Promise<HealthReport> {
   const [reqToday, estToday, openReqs, stockCount] = await Promise.all([
     supabase.from("requests").select("*", { count: "exact", head: true }).gte("created_at", startOfThaiDay(today)),
     supabase.from("estimate_events").select("*", { count: "exact", head: true }).eq("event", "start").gte("created_at", startOfThaiDay(today)),
-    supabase.from("requests").select("*", { count: "exact", head: true }).not("status", "in", '("completed","cancelled","rejected")'),
+    supabase.from("requests").select("*", { count: "exact", head: true }).not("status", "in", '("completed","cancelled","rejected","unreachable","out_of_area")'),
     supabase.from("stocks").select("*", { count: "exact", head: true }),
   ]);
 

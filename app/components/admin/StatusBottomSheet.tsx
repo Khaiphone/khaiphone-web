@@ -13,6 +13,8 @@ const STATUSES: Array<{ value: RequestStatus; label: string; dot: string }> = [
   { value: "completed",         label: "เสร็จสิ้น",                  dot: "#10B981" },
   { value: "cancelled",         label: "ยกเลิกนัดหมาย",             dot: "#EF4444" },
   { value: "rejected",          label: "ไม่เข้าเงื่อนไขการรับซื้อ", dot: "#6B7280" },
+  { value: "unreachable",       label: "ไม่สามารถติดต่อลูกค้าได้",  dot: "#CA8A04" },
+  { value: "out_of_area",       label: "อยู่นอกเหนือพื้นที่ให้บริการ", dot: "#64748B" },
 ];
 
 interface Props {

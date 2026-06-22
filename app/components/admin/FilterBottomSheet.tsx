@@ -13,6 +13,8 @@ const STATUS_OPTIONS: Array<{ value: RequestStatus; label: string }> = [
   { value: "completed",        label: "เสร็จสิ้น"     },
   { value: "cancelled",        label: "ยกเลิก"        },
   { value: "no_show",          label: "ลูกค้าไม่อยู่" },
+  { value: "unreachable",      label: "ไม่สามารถติดต่อลูกค้าได้" },
+  { value: "out_of_area",      label: "อยู่นอกเหนือพื้นที่ให้บริการ" },
 ];
 
 const MODEL_OPTIONS = [

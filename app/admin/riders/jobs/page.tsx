@@ -43,7 +43,7 @@ type FilterKey = "all" | "unassigned" | "waiting" | "in_progress" | "completed" 
 
 const IN_PROGRESS_STATUSES: RequestStatus[] = ["pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting", "awaiting_transfer"];
 const COMPLETED_STATUSES:   RequestStatus[] = ["completed"];
-const CANCELLED_STATUSES:   RequestStatus[] = ["cancelled", "no_show", "rejected"];
+const CANCELLED_STATUSES:   RequestStatus[] = ["cancelled", "no_show", "rejected", "unreachable", "out_of_area"];
 
 function jobCategory(job: AdminRequest): FilterKey {
   if (COMPLETED_STATUSES.includes(job.status))   return "completed";

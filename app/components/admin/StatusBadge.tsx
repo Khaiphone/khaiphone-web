@@ -13,6 +13,8 @@ const STATUS_COLORS: Record<RequestStatus, { color: string; bg: string; dot: str
   cancelled:         { color: "#991B1B", bg: "#FEE2E2", dot: "#EF4444" },
   no_show:           { color: "#9A3412", bg: "#FFEDD5", dot: "#F97316" },
   rejected:          { color: "#374151", bg: "#F3F4F6", dot: "#6B7280" },
+  unreachable:       { color: "#854D0E", bg: "#FEF9C3", dot: "#CA8A04" },
+  out_of_area:       { color: "#334155", bg: "#F1F5F9", dot: "#64748B" },
   merged:            { color: "#374151", bg: "#F3F4F6", dot: "#6B7280" },
   pickup_scheduled:  { color: "#0E7490", bg: "#CFFAFE", dot: "#06B6D4" },
   en_route:          { color: "#854D0E", bg: "#FEF9C3", dot: "#EAB308" },
