@@ -229,7 +229,7 @@ export async function fetchMyRequests(): Promise<AdminRequest[]> {
   const role = (profile?.role ?? "owner") as AdminRole;
   const perms = (profile?.permissions ?? []) as Permission[];
   const canSeeAll = role !== "staff" || perms.includes("receive_new_requests");
-  let query = supabase.from("requests").select("*")
+  let query = supabase.from("requests").select(LIST_SELECT)
     .neq("source", "manual")
     .order("created_at", { ascending: false });
   if (!canSeeAll) query = query.eq("assigned_to", user.id);
@@ -245,7 +245,7 @@ export async function fetchRiderJobs(date?: string, dateRange?: { from: string; 
 
   const IN_PROGRESS = ["pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting", "awaiting_transfer"];
 
-  let query = supabase.from("requests").select("*").not("status", "in", '("new","pending","contacted")');
+  let query = supabase.from("requests").select(LIST_SELECT).not("status", "in", '("new","pending","contacted")');
 
   if (dateRange) {
     // Monthly mode: all jobs with appt_date in range, plus any still in-progress
