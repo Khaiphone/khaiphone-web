@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/appointment-noshow",
       "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/warm",
+      "schedule": "*/5 0-16 * * *"
     }
   ]
 }
