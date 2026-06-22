@@ -182,6 +182,14 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
     return true;
   });
 
+  // เครื่องที่รับซื้อ "ในช่วงวันที่ที่เลือก" (อิงวันที่รับซื้อ = created_at ตามเวลาไทย)
+  // ให้สอดคล้องกับ "เครื่องที่ขายแล้ว" และหน้าซื้อเครื่อง
+  const purchasedInRange = rows.filter((r) => {
+    if (!dateFrom || !dateTo) return true;
+    const day = thaiDateStr(new Date(r.created_at));
+    return day >= dateFrom && day <= dateTo;
+  });
+
   // สต็อกในมือ "ปัจจุบัน" = ตาราง stocks (แหล่งเดียวกับหน้าสต็อกค้าง) — ไม่อิง requests.stock_status
   // ที่อาจไม่ sync กับสต็อกจริง และเป็น point-in-time ไม่กรองตามช่วงวันที่
   const inStockItems = unsoldStockData ?? [];
@@ -254,7 +262,7 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
     stockValue,
     stockCount: inStockItems.length,
     soldCount: soldItems.length,
-    purchaseCount: rows.length + (directSoldStocks?.length ?? 0),
+    purchaseCount: purchasedInRange.length,
     revenueByMonth,
     profitByMonth,
     topModels,
