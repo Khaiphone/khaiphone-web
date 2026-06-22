@@ -151,7 +151,7 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
   const [{ data }, { data: expenseData }, { data: directSoldStocks }, { data: unsoldStockData }] = await Promise.all([
     supabase
       .from("requests")
-      .select("id, device_model, actual_price, estimated_price, sell_price, sell_date, stock_status, created_at")
+      .select("id, device_model, actual_price, estimated_price, sell_price, sell_date, stock_status, created_at, contract_signed_at")
       .eq("status", "completed"),
     supabase
       .from("expenses")
@@ -182,11 +182,11 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
     return true;
   });
 
-  // เครื่องที่รับซื้อ "ในช่วงวันที่ที่เลือก" (อิงวันที่รับซื้อ = created_at ตามเวลาไทย)
-  // ให้สอดคล้องกับ "เครื่องที่ขายแล้ว" และหน้าซื้อเครื่อง
+  // เครื่องที่รับซื้อ "ในช่วงวันที่ที่เลือก" — อิงวันที่เซ็นสัญญาจริง (contract_signed_at)
+  // ไม่ใช่ created_at (วันลูกค้าลงจองล่วงหน้า) ให้ตรงกับวันที่รับซื้อในหน้าซื้อเครื่อง
   const purchasedInRange = rows.filter((r) => {
     if (!dateFrom || !dateTo) return true;
-    const day = thaiDateStr(new Date(r.created_at));
+    const day = thaiDateStr(new Date(r.contract_signed_at ?? r.created_at));
     return day >= dateFrom && day <= dateTo;
   });
 
@@ -353,14 +353,15 @@ export async function fetchFinancePurchases(dateFrom = "", dateTo = ""): Promise
   const supabase = createServerClient();
   let q = supabase
     .from("requests")
-    .select("id, order_number, device_model, device_storage, actual_price, estimated_price, sell_price, stock_status, customer_name, payment_account_name, source, created_at, payment_method, payment_slip_url, paid_from_bank, paid_from_owner")
+    .select("id, order_number, device_model, device_storage, actual_price, estimated_price, sell_price, stock_status, customer_name, payment_account_name, source, created_at, contract_signed_at, payment_method, payment_slip_url, paid_from_bank, paid_from_owner")
     .eq("status", "completed");
-  if (dateFrom && dateTo) q = q.gte("created_at", dateFrom).lte("created_at", endOfThaiDay(dateTo));
-  const { data } = await q.order("created_at", { ascending: false });
+  // วันที่รับซื้อ = วันที่เซ็นสัญญาจริง (contract_signed_at) ไม่ใช่ created_at (วันลูกค้าลงจองล่วงหน้า)
+  if (dateFrom && dateTo) q = q.gte("contract_signed_at", dateFrom).lte("contract_signed_at", endOfThaiDay(dateTo));
+  const { data } = await q.order("contract_signed_at", { ascending: false });
 
   return (data ?? []).map((row) => ({
     id: row.id,
-    date: row.created_at,
+    date: thaiDateStr(new Date(row.contract_signed_at ?? row.created_at)),
     refNumber: row.order_number ?? "",
     model: row.device_model ?? "",
     storage: row.device_storage ?? "",
