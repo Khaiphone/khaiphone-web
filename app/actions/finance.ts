@@ -26,6 +26,7 @@ export type FinanceDashboard = {
   totalExpenses: number;
   pendingExpensesCount: number;
   stockValue: number;
+  stockCount: number;
   soldCount: number;
   purchaseCount: number;
   revenueByMonth: { date: string; revenue: number; cost: number }[];
@@ -165,8 +166,7 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
     supabase
       .from("stocks")
       .select("cost_price, shipping_cost, other_cost")
-      .is("request_ref", null)
-      .neq("status", "ขายแล้ว"),
+      .not("status", "in", '("ขายแล้ว","ส่งคืน","ตีกลับ/ไม่รับซื้อ")'),
   ]);
 
   const rows = data ?? [];
@@ -182,14 +182,15 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
     return true;
   });
 
-  const unsoldRequests = rows.filter((r) => r.stock_status !== "sold");
-  const stockValueFromRequests = unsoldRequests.reduce((s, r) => s + (r.actual_price ?? r.estimated_price ?? 0), 0);
-  const stockValueFromDirect = (unsoldStockData ?? []).reduce((s, r) => s + (r.cost_price ?? 0) + (r.shipping_cost ?? 0) + (r.other_cost ?? 0), 0);
+  // สต็อกในมือ "ปัจจุบัน" = ตาราง stocks (แหล่งเดียวกับหน้าสต็อกค้าง) — ไม่อิง requests.stock_status
+  // ที่อาจไม่ sync กับสต็อกจริง และเป็น point-in-time ไม่กรองตามช่วงวันที่
+  const inStockItems = unsoldStockData ?? [];
+  const stockValueFromDirect = inStockItems.reduce((s, r) => s + (r.cost_price ?? 0) + (r.shipping_cost ?? 0) + (r.other_cost ?? 0), 0);
 
   const totalRevenue = soldItems.reduce((s, r) => s + r.sell_price, 0);
   const totalCost = soldItems.reduce((s, r) => s + r.cost, 0);
   const netProfit = totalRevenue - totalCost;
-  const stockValue = stockValueFromRequests + stockValueFromDirect;
+  const stockValue = stockValueFromDirect;
 
   const allExpenses = expenseData ?? [];
   const approvedExpenses = allExpenses.filter((e) => {
@@ -251,6 +252,7 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
     totalExpenses,
     pendingExpensesCount,
     stockValue,
+    stockCount: inStockItems.length,
     soldCount: soldItems.length,
     purchaseCount: rows.length + (directSoldStocks?.length ?? 0),
     revenueByMonth,

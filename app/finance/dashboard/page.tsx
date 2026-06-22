@@ -77,7 +77,7 @@ export default function DashboardPage() {
     { label: 'มูลค่าสต็อก',     value: data.stockValue,   format: 'currency' as const },
     { label: 'เครื่องที่รับซื้อ', value: data.purchaseCount, format: 'number' as const },
     { label: 'เครื่องที่ขายแล้ว', value: data.soldCount,    format: 'number' as const },
-    { label: 'เครื่องในมือ',      value: data.purchaseCount - data.soldCount, format: 'number' as const },
+    { label: 'เครื่องในมือ',      value: data.stockCount, format: 'number' as const },
     { label: 'รออนุมัติค่าใช้จ่าย', value: data.pendingExpensesCount, format: 'number' as const },
   ]
 
