@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import BottomTabNav from "../components/admin/BottomTabNav";
 import { supabase } from "@/lib/supabase";
-import { fetchMyRole, fetchMyProfile } from "@/app/actions/admin-users";
+import { fetchMyProfile } from "@/app/actions/admin-users";
 import { saveSubscription } from "@/app/actions/push";
 import { AdminRoleProvider } from "./role-context";
 import { AdminThemeProvider, useAdminTheme, adminCssVars } from "@/lib/admin-theme";
@@ -129,16 +129,16 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const r = await fetchMyRole(session.user.id);
+      // ดึง role + profile + permissions ในครั้งเดียว (เดิมเรียก fetchMyRole + fetchMyProfile
+      // แยกกัน 2-3 รอบ แต่ละรอบเสีย getUser() ~280ms — รวมเป็น call เดียว)
+      const profile = await fetchMyProfile(session.user.id);
       if (cancelled) return;
-      if (r) localStorage.setItem("kp_admin_role", r);
+      const r = (profile?.role ?? "owner") as AdminRole;
+      localStorage.setItem("kp_admin_role", r);
       setRole(r);
-
-      fetchMyProfile(session.user.id).then(p => { if (p && !cancelled) { setProfileName(p.name); setProfileAvatar(p.avatar_url ?? null); } });
+      if (profile) { setProfileName(profile.name); setProfileAvatar(profile.avatar_url ?? null); }
 
       if (r === "staff") {
-        const profile = await fetchMyProfile(session.user.id);
-        if (cancelled) return;
         const perms = profile?.permissions ?? [];
         const allowed =
           STAFF_ALLOWED_PREFIXES.some(p => pathname.startsWith(p)) ||
