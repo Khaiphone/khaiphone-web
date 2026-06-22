@@ -353,7 +353,7 @@ export async function fetchFinancePurchases(dateFrom = "", dateTo = ""): Promise
   const supabase = createServerClient();
   let q = supabase
     .from("requests")
-    .select("id, order_number, device_model, device_storage, actual_price, estimated_price, sell_price, stock_status, customer_name, source, created_at, payment_method, payment_slip_url, paid_from_bank, paid_from_owner")
+    .select("id, order_number, device_model, device_storage, actual_price, estimated_price, sell_price, stock_status, customer_name, payment_account_name, source, created_at, payment_method, payment_slip_url, paid_from_bank, paid_from_owner")
     .eq("status", "completed");
   if (dateFrom && dateTo) q = q.gte("created_at", dateFrom).lte("created_at", endOfThaiDay(dateTo));
   const { data } = await q.order("created_at", { ascending: false });
@@ -366,7 +366,8 @@ export async function fetchFinancePurchases(dateFrom = "", dateTo = ""): Promise
     storage: row.device_storage ?? "",
     costPrice: row.actual_price ?? row.estimated_price ?? 0,
     sellPrice: row.sell_price ?? undefined,
-    customerName: row.customer_name ?? "",
+    // ชื่อจริงตามบัญชี/สัญญา (payment_account_name) ก่อน ถ้าไม่มี (เช่นเงินสด) ค่อยใช้ชื่อที่ลูกค้าลงจอง
+    customerName: row.payment_account_name || row.customer_name || "",
     stockStatus: row.stock_status ?? "in_stock",
     source: row.source ?? "",
     paidFromBank: row.paid_from_bank ?? "",
