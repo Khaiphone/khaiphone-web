@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Settings } from "lucide-react";
@@ -93,6 +94,7 @@ const COOKIE_OPTIONS = [
 ];
 
 export default function CookieConsent() {
+  const pathname = usePathname();
   const [visible, setVisible] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [customizing, setCustomizing] = useState(false);
@@ -198,6 +200,9 @@ export default function CookieConsent() {
       </div>
     </div>
   );
+
+  // ไม่โชว์ banner คุกกี้ในแอปภายใน (admin/rider/stock/finance)
+  if (/^\/(admin|rider|stock|finance)/.test(pathname)) return null;
 
   return (
     <AnimatePresence>

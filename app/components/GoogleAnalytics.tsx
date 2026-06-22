@@ -23,6 +23,9 @@ function updateConsent(analytics: boolean, marketing: boolean) {
 
 export default function GoogleAnalytics() {
   useEffect(() => {
+    // ข้ามในแอปภายใน (admin/rider/stock/finance) — ไม่ต้องมี analytics การตลาด
+    if (/^(admin|rider|stock|finance)\./.test(window.location.hostname)) return;
+
     // Apply any consent already stored (returning visitor)
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
