@@ -66,7 +66,7 @@ export default function DashboardPage() {
 
   const kpiMain = [
     { label: 'รายได้รวม',        value: data.totalRevenue,   delta: data.deltaRevenue,   deltaType: 'positive' as const },
-    { label: 'ต้นทุนเครื่อง',    value: data.totalCost,      delta: data.deltaCost,      deltaType: 'negative' as const },
+    { label: 'ต้นทุนเครื่องที่ขาย', value: data.totalCost,      delta: data.deltaCost,      deltaType: 'negative' as const },
     { label: 'ค่าใช้จ่าย',       value: data.totalExpenses,  delta: data.deltaExpenses,  deltaType: 'negative' as const },
     { label: 'กำไรสุทธิแท้จริง', value: data.trueNetProfit,  delta: data.deltaProfit,    deltaType: 'positive' as const },
   ]
