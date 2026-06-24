@@ -94,7 +94,11 @@ async function autoCreateStock(requestId: string) {
 // ─── Home page data — pending + active + stats in one round trip ─────────────
 export async function fetchRiderHomeData(riderId: string) {
   await requireAuth();
-  const supabase = createServerClient();
+  return _riderHomeData(createServerClient(), riderId);
+}
+
+// internal — ไม่เรียก requireAuth (ใช้ร่วมกับ fetchRiderBootstrap เพื่อ auth ครั้งเดียว)
+async function _riderHomeData(supabase: ReturnType<typeof createServerClient>, riderId: string) {
   const startOfMonth = startOfThaiMonth(thaiMonthStr());
 
   const IN_PROGRESS = ["pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting", "awaiting_transfer"];
@@ -915,10 +919,45 @@ export async function fetchRiderOnlineStatus(userId: string): Promise<boolean> {
   return data?.is_online ?? false;
 }
 
+// ─── Rider shell bootstrap — auth ครั้งเดียว คืนทุกอย่างที่ layout ต้องใช้ ───────
+// รวม profile + online + consent + notifications + home → ลด server round-trip จาก ~5 เหลือ 1
+export type RiderBootstrap = {
+  profile: { name: string; role: string; email: string; permissions: string[]; is_rider: boolean; avatar_url: string | null } | null;
+  online: boolean;
+  consent: { consented: boolean; grantedAt: string | null };
+  notifications: Awaited<ReturnType<typeof _riderNotifications>>;
+  home: Awaited<ReturnType<typeof _riderHomeData>>;
+};
+
+export async function fetchRiderBootstrap(userId: string): Promise<RiderBootstrap> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const [profileRow, consentRow, notifications, home] = await Promise.all([
+    supabase.from("admin_users").select("name, role, email, permissions, is_rider, avatar_url, is_online").eq("user_id", userId).single(),
+    supabase.from("rider_profiles").select("consent_location, consent_granted_at").eq("user_id", userId).single(),
+    _riderNotifications(supabase, userId),
+    _riderHomeData(supabase, userId),
+  ]);
+  const p = profileRow.data;
+  return {
+    profile: p
+      ? { name: p.name, role: p.role, email: p.email, permissions: (p.permissions ?? []) as string[], is_rider: p.is_rider ?? false, avatar_url: p.avatar_url ?? null }
+      : null,
+    online: p?.is_online ?? false,
+    consent: { consented: consentRow.data?.consent_location ?? false, grantedAt: consentRow.data?.consent_granted_at ?? null },
+    notifications,
+    home,
+  };
+}
+
 // ─── Recent notifications for rider bell ─────────────────────────────────────
 export async function fetchRiderNotifications(riderId: string) {
   await requireAuth();
-  const supabase = createServerClient();
+  return _riderNotifications(createServerClient(), riderId);
+}
+
+// internal — ไม่เรียก requireAuth (ใช้ร่วมกับ fetchRiderBootstrap)
+async function _riderNotifications(supabase: ReturnType<typeof createServerClient>, riderId: string) {
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(); // last 7 days
 
   const { data } = await supabase

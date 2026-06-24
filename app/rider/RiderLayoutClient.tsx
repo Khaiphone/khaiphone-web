@@ -6,14 +6,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { Home, Clock, BarChart2, UserCircle, Bell } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { fetchMyProfile } from "@/app/actions/admin-users";
-import { fetchRiderOnlineStatus, fetchRiderNotifications, fetchRiderHomeData } from "@/app/actions/rider";
+import { fetchRiderNotifications, fetchRiderBootstrap } from "@/app/actions/rider";
 import { cacheSet } from "@/app/rider/cache";
 import { saveSubscription } from "@/app/actions/push";
 import { RiderThemeProvider, useRiderTheme } from "@/app/rider/theme";
 import { RiderSessionContext } from "@/app/rider/context";
 import { isStandalone } from "@/lib/pwa-detect";
-import { fetchRiderConsent } from "@/app/actions/rider-tracking";
+import { perfStart } from "@/lib/perf";
 
 const NAV = [
   { href: "/rider",          label: "หน้าแรก",   icon: Home       },
@@ -148,12 +147,11 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
       if (!session) { if (!isLoginPage) router.replace("/rider/login"); return; }
       if (isLoginPage) { router.replace("/rider"); return; }
       const uid = session.user.id;
-      const [profile, online, consent] = await Promise.all([
-        fetchMyProfile(uid),
-        fetchRiderOnlineStatus(uid),
-        fetchRiderConsent(),
-      ]);
+      const endPerf = perfStart("rider:bootstrap");
+      const boot = await fetchRiderBootstrap(uid);
+      endPerf();
       if (cancelled) return;
+      const profile = boot.profile;
       if (!profile) { router.replace("/rider/login"); return; }
       if (profile.role !== "owner" && !profile.is_rider) {
         router.replace("/rider/login");
@@ -161,7 +159,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
       }
 
       // Consent gate — skip for install/consent pages
-      if (!consent.consented && !isInstallPage && !isConsentPage) {
+      if (!boot.consent.consented && !isInstallPage && !isConsentPage) {
         router.replace("/rider/consent");
         return;
       }
@@ -171,11 +169,11 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
       setRiderRole(profile.role ?? "");
       setAvatarUrl(profile.avatar_url ?? null);
       setUserId(uid);
-      setIsOnline(online);
+      setIsOnline(boot.online);
       setReady(true);
-      loadNotifs(uid);
-      // Prefetch home data so first visit to home tab is instant
-      fetchRiderHomeData(uid).then(d => cacheSet(`home:${uid}`, d));
+      // notifications + home มากับ bootstrap แล้ว — ไม่ต้องยิงเพิ่ม
+      setNotifs(boot.notifications);
+      cacheSet(`home:${uid}`, boot.home);
       // Save push subscription after auth is confirmed (SW effect may run before auth)
       if (!subSavedRef.current && "serviceWorker" in navigator) {
         subSavedRef.current = true;

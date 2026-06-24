@@ -11,6 +11,7 @@ import {
 import BottomTabNav from "../components/admin/BottomTabNav";
 import { supabase } from "@/lib/supabase";
 import { fetchMyProfile } from "@/app/actions/admin-users";
+import { perfStart } from "@/lib/perf";
 import { saveSubscription } from "@/app/actions/push";
 import { AdminRoleProvider } from "./role-context";
 import { AdminThemeProvider, useAdminTheme, adminCssVars } from "@/lib/admin-theme";
@@ -131,7 +132,9 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
       // ดึง role + profile + permissions ในครั้งเดียว (เดิมเรียก fetchMyRole + fetchMyProfile
       // แยกกัน 2-3 รอบ แต่ละรอบเสีย getUser() ~280ms — รวมเป็น call เดียว)
+      const endPerf = perfStart("admin:bootstrap");
       const profile = await fetchMyProfile(session.user.id);
+      endPerf();
       if (cancelled) return;
       const r = (profile?.role ?? "owner") as AdminRole;
       localStorage.setItem("kp_admin_role", r);
