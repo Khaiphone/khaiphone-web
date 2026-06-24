@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { fetchMyProfile } from "@/app/actions/admin-users";
@@ -12,6 +12,7 @@ import MobileBottomNav from "@/components/stock/MobileBottomNav";
 import { MobileMenuProvider, useMobileMenu } from "@/components/stock/MobileMenuContext";
 import { StockRoleProvider } from "./role-context";
 import { StockNavReadyContext } from "./nav-ready-context";
+import { shouldRedirect } from "@/lib/route-guard";
 
 function StockLayoutInner({ children }: { children: React.ReactNode }) {
   const c = useThemeColors();
@@ -48,6 +49,8 @@ export default function StockLayoutClient({ children }: { children: React.ReactN
   const [navReady, setNavReady] = useState(false);
   const [role, setRole] = useState<AdminRole | null>(null);
   const [permissions, setPermissions] = useState<Permission[]>([]);
+  const latestPathRef = useRef(pathname);
+  latestPathRef.current = pathname;
 
   const markFirstScreenReady = useCallback(() => setNavReady(true), []);
   useEffect(() => {
@@ -79,9 +82,13 @@ export default function StockLayoutClient({ children }: { children: React.ReactN
   useEffect(() => {
     let cancelled = false;
     const isLoginPage = pathname === "/stock/login";
+    const startPath = pathname;
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (cancelled) return;
-      if (!session) { if (!isLoginPage) router.replace("/stock/login"); return; }
+      if (!session) {
+        if (!isLoginPage && shouldRedirect({ reason: "no-session", from: startPath, current: latestPathRef.current, target: "/stock/login", cancelled, pathnameSensitive: false })) router.replace("/stock/login");
+        return;
+      }
       if (isLoginPage) { router.replace("/stock/dashboard"); return; }
       const profile = await fetchMyProfile(session.user.id);
       if (cancelled) return;

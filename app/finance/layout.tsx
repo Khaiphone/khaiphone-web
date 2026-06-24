@@ -10,10 +10,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [ready, setReady] = useState(false)
 
+  // dep [] โดยตั้งใจ — ตรวจ auth ครั้งเดียวตอน mount ไม่ re-run/redirect ตอนเปลี่ยนหน้า (กัน jump-back)
   useEffect(() => {
+    let cancelled = false
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (cancelled) return
       if (!session) { router.replace('/admin/login'); return }
       const profile = await fetchMyProfile(session.user.id)
+      if (cancelled) return
       const canAccess = profile?.role === 'owner' || (profile?.permissions ?? []).includes('view_finance')
       if (!canAccess) {
         const host = window.location.host
@@ -23,6 +27,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       }
       setReady(true)
     })
+    return () => { cancelled = true }
   }, [])
 
   if (!ready) return <div style={{ minHeight: '100vh', background: '#060606' }} />

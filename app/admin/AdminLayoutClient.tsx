@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -15,6 +15,7 @@ import { perfStart } from "@/lib/perf";
 import { saveSubscription } from "@/app/actions/push";
 import { AdminRoleProvider } from "./role-context";
 import { AdminNavReadyContext } from "./nav-ready-context";
+import { shouldRedirect } from "@/lib/route-guard";
 import { AdminThemeProvider, useAdminTheme, adminCssVars } from "@/lib/admin-theme";
 import type { AdminRole } from "@/app/actions/admin-users";
 import type { Permission } from "@/lib/admin-permissions";
@@ -42,6 +43,8 @@ const GOLD = "#B8860B";
 function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
+  const latestPathRef = useRef(pathname);
+  latestPathRef.current = pathname; // ถือ pathname ล่าสุดเสมอ ให้ async continuation เช็คได้
   const isLogin  = pathname === "/admin/login" || pathname === "/admin/set-password";
   const [ready, setReady]             = useState(false);
   const [navReady, setNavReady]       = useState(false); // เปิด prefetch nav หลัง first screen พร้อม (กัน RSC flood ตอนเปิด)
@@ -145,11 +148,13 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       setReady(true);
     }
 
+    const startPath = pathname;
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (cancelled) return;
       if (!session) {
         localStorage.removeItem("kp_admin_role");
-        router.replace("/admin/login");
+        // auth ใช้ไม่ได้ทั้งแอป → เด้ง login ได้ทุกหน้า (ยกเว้นอยู่ login แล้ว)
+        if (shouldRedirect({ reason: "no-session", from: startPath, current: latestPathRef.current, target: "/admin/login", cancelled, pathnameSensitive: false })) router.replace("/admin/login");
         return;
       }
 
@@ -167,14 +172,19 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       if (profile) { setProfileName(profile.name); setProfileAvatar(profile.avatar_url ?? null); setPermissions(profile.permissions); }
 
       if (r === "staff") {
+        // ประเมินสิทธิ์ตาม "หน้าปัจจุบันจริง" (latest) ไม่ใช่ pathname ตอน effect เริ่ม —
+        // ถ้าระหว่าง await ผู้ใช้ย้ายไปหน้าที่อนุญาต จะได้ไม่เด้งกลับ
+        const cur = latestPathRef.current;
         const perms = profile?.permissions ?? [];
         const allowed =
-          STAFF_ALLOWED_PREFIXES.some(p => pathname.startsWith(p)) ||
-          (perms.includes("manage_prices") && (pathname.startsWith("/admin/prices") || pathname.startsWith("/admin/price-settings"))) ||
-          (perms.includes("view_reports")   && pathname.startsWith("/admin/reports"))   ||
-          (perms.includes("view_customers") && pathname.startsWith("/admin/customers")) ||
-          (perms.includes("view_payments")  && pathname.startsWith("/admin/payments"));
-        if (!allowed) { router.replace("/admin/dashboard"); return; }
+          STAFF_ALLOWED_PREFIXES.some(p => cur.startsWith(p)) ||
+          (perms.includes("manage_prices") && (cur.startsWith("/admin/prices") || cur.startsWith("/admin/price-settings"))) ||
+          (perms.includes("view_reports")   && cur.startsWith("/admin/reports"))   ||
+          (perms.includes("view_customers") && cur.startsWith("/admin/customers")) ||
+          (perms.includes("view_payments")  && cur.startsWith("/admin/payments"));
+        if (!allowed && shouldRedirect({ reason: "staff-not-allowed", from: startPath, current: cur, target: "/admin/dashboard", cancelled, pathnameSensitive: false })) {
+          router.replace("/admin/dashboard"); return;
+        }
       }
 
       if (!cached) setReady(true);

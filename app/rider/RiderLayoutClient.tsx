@@ -13,6 +13,7 @@ import { RiderThemeProvider, useRiderTheme } from "@/app/rider/theme";
 import { RiderSessionContext } from "@/app/rider/context";
 import { isStandalone } from "@/lib/pwa-detect";
 import { perfStart } from "@/lib/perf";
+import { shouldRedirect } from "@/lib/route-guard";
 
 const NAV = [
   { href: "/rider",          label: "หน้าแรก",   icon: Home       },
@@ -36,6 +37,8 @@ function fmtTime(iso: string) {
 function RiderLayoutInner({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
+  const latestPathRef = useRef(pathname);
+  latestPathRef.current = pathname;
   const { BG, CARD, BORDER, ACCENT, GREEN, TEXT, TEXT2 } = useRiderTheme();
 
   const [ready, setReady]         = useState(false);
@@ -145,14 +148,18 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
     const isConsentPage = pathname === "/rider/consent";
     const isLoginPage   = pathname === "/rider/login";
 
+    const startPath = pathname;
     if (!isDev && !isStandalone() && !isInstallPage && !isLoginPage) {
-      router.replace("/rider/install");
+      if (shouldRedirect({ reason: "not-standalone", from: startPath, current: latestPathRef.current, target: "/rider/install", pathnameSensitive: false })) router.replace("/rider/install");
       return;
     }
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (cancelled) return;
-      if (!session) { if (!isLoginPage) router.replace("/rider/login"); return; }
+      if (!session) {
+        if (!isLoginPage && shouldRedirect({ reason: "no-session", from: startPath, current: latestPathRef.current, target: "/rider/login", cancelled, pathnameSensitive: false })) router.replace("/rider/login");
+        return;
+      }
       if (isLoginPage) { router.replace("/rider"); return; }
       const uid = session.user.id;
       const endPerf = perfStart("rider:bootstrap");
@@ -160,15 +167,18 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
       endPerf();
       if (cancelled) return;
       const profile = boot.profile;
-      if (!profile) { router.replace("/rider/login"); return; }
+      if (!profile) {
+        if (shouldRedirect({ reason: "no-profile", from: startPath, current: latestPathRef.current, target: "/rider/login", cancelled, pathnameSensitive: false })) router.replace("/rider/login");
+        return;
+      }
       if (profile.role !== "owner" && !profile.is_rider) {
-        router.replace("/rider/login");
+        if (shouldRedirect({ reason: "not-rider", from: startPath, current: latestPathRef.current, target: "/rider/login", cancelled, pathnameSensitive: false })) router.replace("/rider/login");
         return;
       }
 
-      // Consent gate — skip for install/consent pages
+      // Consent gate — skip for install/consent pages (account-wide → ใช้ pathnameSensitive=false แต่คงข้อยกเว้นหน้า)
       if (!boot.consent.consented && !isInstallPage && !isConsentPage) {
-        router.replace("/rider/consent");
+        if (shouldRedirect({ reason: "no-consent", from: startPath, current: latestPathRef.current, target: "/rider/consent", cancelled, pathnameSensitive: false })) router.replace("/rider/consent");
         return;
       }
 
