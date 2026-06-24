@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, ArrowRight, Phone, CalendarPlus, ClipboardList, Tag, SlidersHorizontal, PlusCircle, Moon, Sun } from "lucide-react";
 import { fetchDashboardBundle } from "@/app/actions/admin-requests";
-import { saveSubscription, sendTestPush } from "@/app/actions/push";
+import { saveSubscription, sendTestPush, getMyPushSubs } from "@/app/actions/push";
 import { supabase } from "@/lib/supabase";
 import { useAdminTheme } from "@/lib/admin-theme";
 import type { AdminRequest } from "@/lib/types/admin";
@@ -212,15 +212,17 @@ export default function DashboardPage() {
                           const json = sub.toJSON();
                           if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
                             const { data: { session } } = await supabase.auth.getSession();
-                            await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, userId: session?.user?.id });
+                            await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, userId: session?.user?.id, app: "admin" });
                           }
                         }
                       }
                     } catch (e) { alert("Subscribe error: " + String(e)); return; }
                   }
                   const r = await sendTestPush();
-                  if (!r.ok) alert("ส่งไม่ได้: " + r.error);
-                  else alert("ส่งแล้ว รอดูการแจ้งเตือน");
+                  const subs = await getMyPushSubs();
+                  const tagLines = subs.map(s => `${s.app ?? "null (ยังไม่ tag)"} …${s.tail}`).join("\n");
+                  if (!r.ok) alert("ส่งไม่ได้: " + r.error + "\n\nsubscription:\n" + tagLines);
+                  else alert("ส่งแล้ว รอดูการแจ้งเตือน\n\nsubscription ทั้งหมด:\n" + tagLines);
                 }}
                 title="ทดสอบ push"
                 style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "9px 11px", cursor: "pointer", display: "flex", color: TEXT2, touchAction: "manipulation", fontSize: 16 }}

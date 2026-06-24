@@ -121,6 +121,20 @@ export async function sendPushToUser(userId: string, payload: PushPayload, app: 
   await sendToSubs(subs, payload);
 }
 
+// วินิจฉัย: subscription ของ user ปัจจุบัน (เห็น app tag ของแต่ละแอป) — ใช้ debug การ route
+export async function getMyPushSubs(): Promise<{ app: string | null; tail: string }[]> {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("push_subscriptions")
+    .select("app, endpoint")
+    .eq("user_id", user.id);
+  return (data ?? []).map((r: { app: string | null; endpoint: string }) => ({
+    app: r.app ?? null,
+    tail: String(r.endpoint).slice(-10),
+  }));
+}
+
 // ทดสอบ: ส่งหาเครื่องของผู้กดเอง เฉพาะแอป admin (สะท้อนการ route จริง — ไม่เด้งข้ามแอป)
 export async function sendTestPush(): Promise<{ ok: boolean; error?: string }> {
   try {
