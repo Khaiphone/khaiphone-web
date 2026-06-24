@@ -1,18 +1,46 @@
 "use client";
 
-// Splash ระหว่างรอ auth/bootstrap — CSS ล้วน เด้งทันที ไม่ดึงข้อมูล/ไม่ import lib หนัก
-// โลโก้ pulse + วงแหวนหมุน + ชื่อแอป (ส่งสี/โลโก้/พื้นหลังตามแต่ละแอป)
+import { useEffect, useState } from "react";
+
+// Splash ระหว่างรอ auth/bootstrap + ข้อมูลหลักโหลดครบ — CSS ล้วน เด้งทันที ไม่ดึงข้อมูล/lib หนัก
+// โหมด:
+//  - done === undefined → static (โชว์ตลอด ใช้ช่วง !ready/auth)
+//  - done = boolean     → overlay: คลุมจน (done && ครบขั้นต่ำ minMs) แล้ว fade ออก (ช่วงรอข้อมูล)
 export default function AppSplash({
   logo,
   name,
   accent,
   bg,
+  done,
+  minMs = 800,
 }: {
   logo: string;
   name: string;
   accent: string;
   bg: string;
+  done?: boolean;
+  minMs?: number;
 }) {
+  const controlled = done !== undefined;
+  const [minElapsed, setMinElapsed] = useState(!controlled);
+  const [hidden, setHidden] = useState(false);
+
+  useEffect(() => {
+    if (!controlled) return;
+    const t = setTimeout(() => setMinElapsed(true), minMs);
+    return () => clearTimeout(t);
+  }, [controlled, minMs]);
+
+  const fading = controlled && done === true && minElapsed;
+
+  useEffect(() => {
+    if (!fading) return;
+    const t = setTimeout(() => setHidden(true), 400); // หลัง fade เสร็จค่อยถอดออก
+    return () => clearTimeout(t);
+  }, [fading]);
+
+  if (hidden) return null;
+
   return (
     <div
       suppressHydrationWarning
@@ -25,6 +53,9 @@ export default function AppSplash({
         alignItems: "center",
         justifyContent: "center",
         zIndex: 9999,
+        opacity: fading ? 0 : 1,
+        transition: "opacity 0.4s ease",
+        pointerEvents: fading ? "none" : "auto",
       }}
     >
       <div style={{ position: "relative", width: 92, height: 92, display: "flex", alignItems: "center", justifyContent: "center" }}>

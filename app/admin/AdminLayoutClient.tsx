@@ -412,6 +412,8 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
           {!hideBottomNav && <BottomTabNav />}
         </div>
       </div>
+      {/* ฉากหน้า: คลุมจนข้อมูล dashboard โหลดครบ (navReady) แล้ว fade ออก */}
+      <AppSplash done={navReady} logo="/icon-192.png" name="KP Admin" accent="#B8860B" bg="#0F0F11" />
     </AdminRoleProvider>
     </AdminNavReadyContext.Provider>
   );

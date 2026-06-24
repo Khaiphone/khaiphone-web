@@ -118,6 +118,8 @@ export default function StockLayoutClient({ children }: { children: React.ReactN
         </MobileMenuProvider>
       </StockRoleProvider>
     </StockThemeProvider>
+    {/* ฉากหน้า: คลุมจนข้อมูล dashboard โหลดครบ แล้ว fade */}
+    <AppSplash done={navReady} logo="/stock-icon-192.png" name="KP Stock" accent="#D4A843" bg="#050505" />
     </StockNavReadyContext.Provider>
   );
 }

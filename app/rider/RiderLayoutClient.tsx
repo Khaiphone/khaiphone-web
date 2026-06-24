@@ -325,6 +325,8 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
         </div>
       )}
     </div>
+    {/* ฉากหน้า: คลุมจนข้อมูลหน้าแรกโหลดครบ (navReady) แล้ว fade */}
+    <AppSplash done={navReady} logo="/rider-icon-192.png" name="KP Rider" accent={ACCENT} bg={BG} />
     </RiderSessionContext.Provider>
   );
 }
