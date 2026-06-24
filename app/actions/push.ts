@@ -119,14 +119,16 @@ export async function sendPushToUser(userId: string, payload: PushPayload, app: 
   await sendToSubs(subs, payload);
 }
 
+// ทดสอบ: ส่งหาเครื่องของผู้กดเอง เฉพาะแอป admin (สะท้อนการ route จริง — ไม่เด้งข้ามแอป)
 export async function sendTestPush(): Promise<{ ok: boolean; error?: string }> {
   try {
-    await sendPushToAll({
+    const user = await requireAuth();
+    await sendPushToUser(user.id, {
       title: "ทดสอบการแจ้งเตือน",
       body: "ระบบแจ้งเตือนทำงานปกติ ✓",
       url: "/admin/dashboard",
       tag: "test",
-    });
+    }, "admin");
     return { ok: true };
   } catch (e) {
     return { ok: false, error: String(e) };
