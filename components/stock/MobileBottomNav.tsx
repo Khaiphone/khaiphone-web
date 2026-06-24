@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Package, FileText, Users, ScanSearch } from "lucide-react";
 import { useThemeColors } from "./ThemeContext";
+import { useStockNavReady } from "@/app/stock/nav-ready-context";
 
 const TABS = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/stock/dashboard" },
@@ -16,6 +17,7 @@ const TABS = [
 export default function MobileBottomNav() {
   const c = useThemeColors();
   const pathname = usePathname();
+  const { navReady } = useStockNavReady();
 
   return (
     <div className="flex md:hidden" style={{
@@ -29,6 +31,7 @@ export default function MobileBottomNav() {
           <Link
             key={href}
             href={href}
+            prefetch={navReady ? undefined : false}
             style={{
               flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
               gap: 3, padding: "10px 0", background: "none", border: "none", textDecoration: "none",

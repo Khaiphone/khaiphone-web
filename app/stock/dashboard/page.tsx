@@ -12,6 +12,7 @@ import MetricCard from "@/components/stock/MetricCard";
 import StockStatusBadge from "@/components/stock/StatusBadge";
 import { useThemeColors } from "@/components/stock/ThemeContext";
 import { useStockRole } from "@/app/stock/role-context";
+import { useStockNavReady } from "@/app/stock/nav-ready-context";
 import { fetchStockItems, fetchRevenueData, fetchCategoryData } from "@/app/actions/stocks";
 import type { StockItem } from "@/lib/stock/types";
 import type { RevenuePoint, CategoryPoint } from "@/app/actions/stocks";
@@ -41,6 +42,7 @@ export default function StockDashboard() {
   const c = useThemeColors();
   const router = useRouter();
   const { canViewFinance } = useStockRole();
+  const { markFirstScreenReady } = useStockNavReady();
   const [stocks, setStocks] = useState<StockItem[]>([]);
   const [revenueData, setRevenueData] = useState<RevenuePoint[]>([]);
   const [categoryData, setCategoryData] = useState<CategoryPoint[]>([]);
@@ -51,10 +53,10 @@ export default function StockDashboard() {
   const [notifStatus, setNotifStatus] = useState<"default" | "granted" | "denied" | "unsupported" | "loading">("loading");
 
   useEffect(() => {
-    fetchStockItems().then(setStocks);
+    fetchStockItems().then(d => { setStocks(d); markFirstScreenReady(); });
     fetchRevenueData().then(setRevenueData);
     fetchCategoryData().then(setCategoryData);
-  }, []);
+  }, [markFirstScreenReady]);
 
   useEffect(() => {
     if (!("PushManager" in window) || !("Notification" in window)) { setNotifStatus("unsupported"); return; }

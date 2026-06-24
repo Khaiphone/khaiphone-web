@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { fetchMyProfile } from "@/app/actions/admin-users";
+import type { AdminRole } from "@/app/actions/admin-users";
+import type { Permission } from "@/lib/admin-permissions";
 import { StockThemeProvider, useThemeColors } from "@/components/stock/ThemeContext";
 import StockSidebar from "@/components/stock/Sidebar";
 import MobileBottomNav from "@/components/stock/MobileBottomNav";
 import { MobileMenuProvider, useMobileMenu } from "@/components/stock/MobileMenuContext";
 import { StockRoleProvider } from "./role-context";
+import { StockNavReadyContext } from "./nav-ready-context";
 
 function StockLayoutInner({ children }: { children: React.ReactNode }) {
   const c = useThemeColors();
@@ -42,6 +45,16 @@ export default function StockLayoutClient({ children }: { children: React.ReactN
   const router   = useRouter();
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
+  const [navReady, setNavReady] = useState(false);
+  const [role, setRole] = useState<AdminRole | null>(null);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+
+  const markFirstScreenReady = useCallback(() => setNavReady(true), []);
+  useEffect(() => {
+    if (!ready) return;
+    const t = setTimeout(() => setNavReady(true), 4000); // fallback
+    return () => clearTimeout(t);
+  }, [ready]);
 
   useEffect(() => {
     const link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
@@ -79,6 +92,7 @@ export default function StockLayoutClient({ children }: { children: React.ReactN
         window.location.href = `${window.location.protocol}//${adminHost}/admin/dashboard`;
         return;
       }
+      if (profile) { setRole(profile.role); setPermissions(profile.permissions); }
       setReady(true);
     });
     return () => { cancelled = true; };
@@ -88,12 +102,14 @@ export default function StockLayoutClient({ children }: { children: React.ReactN
   if (!ready) return <div style={{ minHeight: "100vh", background: "#050505" }} />;
 
   return (
+    <StockNavReadyContext.Provider value={{ navReady, markFirstScreenReady }}>
     <StockThemeProvider>
-      <StockRoleProvider>
+      <StockRoleProvider value={{ role, permissions, canViewFinance: role === "owner" || permissions.includes("view_finance") }}>
         <MobileMenuProvider>
           <StockLayoutInner>{children}</StockLayoutInner>
         </MobileMenuProvider>
       </StockRoleProvider>
     </StockThemeProvider>
+    </StockNavReadyContext.Provider>
   );
 }

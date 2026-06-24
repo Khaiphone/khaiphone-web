@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useThemeColors } from "./ThemeContext";
 import { useStockRole } from "@/app/stock/role-context";
+import { useStockNavReady } from "@/app/stock/nav-ready-context";
 import { fetchRequestStats, fetchStockSummary } from "@/app/actions/stock-requests";
 import { supabase } from "@/lib/supabase";
 
@@ -40,13 +41,18 @@ export default function StockSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { canViewFinance } = useStockRole();
+  const { navReady } = useStockNavReady();
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [summary, setSummary] = useState<{ todayRevenue: number; todayProfit: number } | null>(null);
   const [userInfo, setUserInfo] = useState<{ name: string; email: string } | null>(null);
 
   useEffect(() => {
+    if (!navReady) return; // เลื่อน stat/summary ออกจาก critical path ตอนเปิดแอป (refresh ตาม nav หลัง navReady)
     fetchRequestStats().then(s => setPendingCount(s.pending));
     fetchStockSummary().then(setSummary);
+  }, [pathname, navReady]);
+
+  useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         const email = session.user.email ?? "";
