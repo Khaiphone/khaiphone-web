@@ -48,6 +48,8 @@ export default function StockLayoutClient({ children }: { children: React.ReactN
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
   const [navReady, setNavReady] = useState(false);
+  const [splashLight, setSplashLight] = useState(false); // ธีม splash ให้ตรงกับแอป (default มืด)
+  useEffect(() => { setSplashLight(localStorage.getItem("stock-theme") === "light"); }, []);
   const [role, setRole] = useState<AdminRole | null>(null);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const latestPathRef = useRef(pathname);
@@ -107,7 +109,7 @@ export default function StockLayoutClient({ children }: { children: React.ReactN
   }, [router, pathname]);
 
   if (pathname === "/stock/login") return <>{children}</>;
-  if (!ready) return <AppSplash logo="/stock-icon-192.png" name="KP Stock" accent="#D4A843" bg="#050505" />;
+  if (!ready) return <AppSplash logo="/stock-icon-192.png" name="KP Stock" accent="#D4A843" bg={splashLight ? "#F9F9F7" : "#050505"} light={splashLight} />;
 
   return (
     <StockNavReadyContext.Provider value={{ navReady, markFirstScreenReady }}>
@@ -119,7 +121,7 @@ export default function StockLayoutClient({ children }: { children: React.ReactN
       </StockRoleProvider>
     </StockThemeProvider>
     {/* ฉากหน้า: คลุมจนข้อมูล dashboard โหลดครบ แล้ว fade */}
-    <AppSplash done={navReady} logo="/stock-icon-192.png" name="KP Stock" accent="#D4A843" bg="#050505" />
+    <AppSplash done={navReady} logo="/stock-icon-192.png" name="KP Stock" accent="#D4A843" bg={splashLight ? "#F9F9F7" : "#050505"} light={splashLight} />
     </StockNavReadyContext.Provider>
   );
 }

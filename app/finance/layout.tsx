@@ -10,6 +10,8 @@ import AppSplash from '@/app/components/AppSplash'
 export default function Layout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [ready, setReady] = useState(false)
+  const [splashLight, setSplashLight] = useState(false) // ธีม splash ให้ตรงกับแอป (default มืด)
+  useEffect(() => { setSplashLight(localStorage.getItem('finance-theme') === 'light') }, [])
 
   // dep [] โดยตั้งใจ — ตรวจ auth ครั้งเดียวตอน mount ไม่ re-run/redirect ตอนเปลี่ยนหน้า (กัน jump-back)
   useEffect(() => {
@@ -31,12 +33,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true }
   }, [])
 
-  if (!ready) return <AppSplash logo="/icon-192.png" name="KP Finance" accent="#B8860B" bg="#060606" />
+  if (!ready) return <AppSplash logo="/icon-192.png" name="KP Finance" accent="#B8860B" bg={splashLight ? "#F0F2F5" : "#060606"} light={splashLight} />
   return (
     <>
       <FinanceLayout>{children}</FinanceLayout>
       {/* ฉากหน้าขั้นต่ำ 0.8 วิ แล้ว fade (finance ไม่มี data-ready signal แยก) */}
-      <AppSplash done logo="/icon-192.png" name="KP Finance" accent="#B8860B" bg="#060606" />
+      <AppSplash done logo="/icon-192.png" name="KP Finance" accent="#B8860B" bg={splashLight ? "#F0F2F5" : "#060606"} light={splashLight} />
     </>
   )
 }

@@ -6,11 +6,13 @@ import { useEffect, useState } from "react";
 // โหมด:
 //  - done === undefined → static (โชว์ตลอด ใช้ช่วง !ready/auth)
 //  - done = boolean     → overlay: คลุมจน (done && ครบขั้นต่ำ minMs) แล้ว fade ออก (ช่วงรอข้อมูล)
+// light: true = โทนสว่าง (ตัวหนังสือเข้ม) ให้เข้ากับธีมแอปตอนโหมดสว่าง
 export default function AppSplash({
   logo,
   name,
   accent,
   bg,
+  light = false,
   done,
   minMs = 800,
 }: {
@@ -18,6 +20,7 @@ export default function AppSplash({
   name: string;
   accent: string;
   bg: string;
+  light?: boolean;
   done?: boolean;
   minMs?: number;
 }) {
@@ -41,6 +44,8 @@ export default function AppSplash({
 
   if (hidden) return null;
 
+  const subColor = light ? "rgba(0,0,0,0.42)" : "rgba(255,255,255,0.42)";
+
   return (
     <div
       suppressHydrationWarning
@@ -58,35 +63,83 @@ export default function AppSplash({
         pointerEvents: fading ? "none" : "auto",
       }}
     >
-      <div style={{ position: "relative", width: 92, height: 92, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {/* วงแหวนหมุน */}
+      {/* โซนโลโก้ + คลื่นกระเพื่อม */}
+      <div style={{ position: "relative", width: 150, height: 150, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {/* แสงเรือง (glow) ด้านหลังโลโก้ */}
         <span
+          aria-hidden
           style={{
             position: "absolute",
-            inset: 0,
+            width: 150,
+            height: 150,
             borderRadius: "50%",
-            border: `2px solid ${accent}26`,
-            borderTopColor: accent,
-            animation: "kp-splash-spin 0.9s linear infinite",
+            background: `radial-gradient(circle, ${accent}55 0%, ${accent}00 65%)`,
+            animation: "kp-splash-glow 2.4s ease-in-out infinite",
           }}
         />
-        {/* โลโก้ pulse */}
+        {/* คลื่นกระเพื่อม 3 ชั้น (staggered) */}
+        {[0, 0.8, 1.6].map((delay) => (
+          <span
+            key={delay}
+            aria-hidden
+            style={{
+              position: "absolute",
+              width: 150,
+              height: 150,
+              borderRadius: "50%",
+              border: `1.5px solid ${accent}`,
+              animation: "kp-splash-ripple 2.4s cubic-bezier(0.2,0.6,0.3,1) infinite",
+              animationDelay: `${delay}s`,
+            }}
+          />
+        ))}
+        {/* โลโก้ — ใหญ่ขึ้น + หายใจเบาๆ */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={logo}
           alt={name}
-          width={52}
-          height={52}
-          style={{ borderRadius: 13, animation: "kp-splash-pulse 1.6s ease-in-out infinite" }}
+          width={96}
+          height={96}
+          style={{
+            position: "relative",
+            borderRadius: 22,
+            boxShadow: `0 8px 30px ${accent}40`,
+            animation: "kp-splash-breathe 2.4s ease-in-out infinite",
+          }}
         />
       </div>
-      <p style={{ margin: "22px 0 0", color: accent, fontSize: 15, fontWeight: 700, letterSpacing: 0.5 }}>{name}</p>
-      <p style={{ margin: "5px 0 0", color: "rgba(255,255,255,0.38)", fontSize: 12 }}>กำลังโหลด...</p>
+
+      <p style={{ margin: "30px 0 0", color: accent, fontSize: 18, fontWeight: 800, letterSpacing: 0.5, animation: "kp-splash-rise 0.6s ease 0.1s both" }}>
+        {name}
+      </p>
+      <p style={{ margin: "7px 0 0", color: subColor, fontSize: 12.5, fontWeight: 500, animation: "kp-splash-rise 0.6s ease 0.2s both" }}>
+        กำลังโหลด
+        <span style={{ animation: "kp-splash-blink 1.4s steps(1) infinite" }}>.</span>
+        <span style={{ animation: "kp-splash-blink 1.4s steps(1) 0.2s infinite" }}>.</span>
+        <span style={{ animation: "kp-splash-blink 1.4s steps(1) 0.4s infinite" }}>.</span>
+      </p>
+
       <style>{`
-        @keyframes kp-splash-spin { to { transform: rotate(360deg); } }
-        @keyframes kp-splash-pulse {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(0.9); opacity: 0.7; }
+        @keyframes kp-splash-ripple {
+          0%   { transform: scale(0.5); opacity: 0.5; }
+          70%  { opacity: 0; }
+          100% { transform: scale(1.25); opacity: 0; }
+        }
+        @keyframes kp-splash-glow {
+          0%, 100% { transform: scale(0.85); opacity: 0.55; }
+          50%      { transform: scale(1.05); opacity: 0.9; }
+        }
+        @keyframes kp-splash-breathe {
+          0%, 100% { transform: scale(1); }
+          50%      { transform: scale(1.07); }
+        }
+        @keyframes kp-splash-rise {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes kp-splash-blink {
+          0%, 50%   { opacity: 1; }
+          50.01%, 100% { opacity: 0.25; }
         }
       `}</style>
     </div>

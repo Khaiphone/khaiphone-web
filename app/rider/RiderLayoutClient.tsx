@@ -40,7 +40,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const latestPathRef = useRef(pathname);
   latestPathRef.current = pathname;
-  const { BG, CARD, BORDER, ACCENT, GREEN, TEXT, TEXT2 } = useRiderTheme();
+  const { BG, CARD, BORDER, ACCENT, GREEN, TEXT, TEXT2, isDark } = useRiderTheme();
 
   const [ready, setReady]         = useState(false);
   const [navReady, setNavReady]   = useState(false); // เปิด prefetch nav หลัง first screen พร้อม (กัน RSC flood)
@@ -233,7 +233,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
   }
 
   if (pathname === "/rider/login") return <>{children}</>;
-  if (!ready) return <AppSplash logo="/rider-icon-192.png" name="KP Rider" accent={ACCENT} bg={BG} />;
+  if (!ready) return <AppSplash logo="/rider-icon-192.png" name="KP Rider" accent={ACCENT} bg={BG} light={!isDark} />;
 
   const isJobPage = /^\/rider\/job\//.test(pathname);
 
@@ -326,7 +326,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
       )}
     </div>
     {/* ฉากหน้า: คลุมจนข้อมูลหน้าแรกโหลดครบ (navReady) แล้ว fade */}
-    <AppSplash done={navReady} logo="/rider-icon-192.png" name="KP Rider" accent={ACCENT} bg={BG} />
+    <AppSplash done={navReady} logo="/rider-icon-192.png" name="KP Rider" accent={ACCENT} bg={BG} light={!isDark} />
     </RiderSessionContext.Provider>
   );
 }
