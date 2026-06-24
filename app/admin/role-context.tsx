@@ -9,7 +9,7 @@ import type { Permission } from "@/lib/admin-permissions";
 type RoleCtx = { role: AdminRole | null; permissions: Permission[]; loading: boolean; userId: string; userName: string; userEmail: string };
 const RoleContext = createContext<RoleCtx>({ role: null, permissions: [], loading: true, userId: "", userName: "", userEmail: "" });
 
-export function AdminRoleProvider({ children }: { children: React.ReactNode }) {
+export function AdminRoleProvider({ children, value }: { children: React.ReactNode; value?: RoleCtx }) {
   const [role, setRole]         = useState<AdminRole | null>(null);
   const [permissions, setPerms] = useState<Permission[]>([]);
   const [loading, setLoading]   = useState(true);
@@ -18,6 +18,9 @@ export function AdminRoleProvider({ children }: { children: React.ReactNode }) {
   const [userEmail, setUserEmail] = useState("");
 
   useEffect(() => {
+    // controlled mode — parent (AdminLayoutClient) already fetched profile/role/permissions;
+    // skip the duplicate getUser() + fetchMyProfile() round-trip
+    if (value) return;
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) { setLoading(false); return; }
       setUserId(data.user.id);
@@ -33,10 +36,11 @@ export function AdminRoleProvider({ children }: { children: React.ReactNode }) {
       }
       setLoading(false);
     });
-  }, []);
+  }, [value]);
 
+  const ctx = value ?? { role, permissions, loading, userId, userName, userEmail };
   return (
-    <RoleContext.Provider value={{ role, permissions, loading, userId, userName, userEmail }}>
+    <RoleContext.Provider value={ctx}>
       {children}
     </RoleContext.Provider>
   );

@@ -148,7 +148,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
       if (isLoginPage) { router.replace("/rider"); return; }
       const uid = session.user.id;
       const endPerf = perfStart("rider:bootstrap");
-      const boot = await fetchRiderBootstrap(uid);
+      const boot = await fetchRiderBootstrap();
       endPerf();
       if (cancelled) return;
       const profile = boot.profile;

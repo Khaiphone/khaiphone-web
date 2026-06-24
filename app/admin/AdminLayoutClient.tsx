@@ -16,6 +16,7 @@ import { saveSubscription } from "@/app/actions/push";
 import { AdminRoleProvider } from "./role-context";
 import { AdminThemeProvider, useAdminTheme, adminCssVars } from "@/lib/admin-theme";
 import type { AdminRole } from "@/app/actions/admin-users";
+import type { Permission } from "@/lib/admin-permissions";
 
 const NAV_ITEMS = [
   { label: "หน้าหลัก",  icon: LayoutDashboard, href: "/admin/dashboard"    },
@@ -43,6 +44,9 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const isLogin  = pathname === "/admin/login" || pathname === "/admin/set-password";
   const [ready, setReady]             = useState(false);
   const [role, setRole]               = useState<AdminRole | null>(null);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [userId, setUserId]           = useState("");
+  const [userEmail, setUserEmail]     = useState("");
   const [profileName,   setProfileName]   = useState<string | null>(null);
   const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
   const [collapsed, setCollapsed]     = useState(false);
@@ -139,7 +143,9 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       const r = (profile?.role ?? "owner") as AdminRole;
       localStorage.setItem("kp_admin_role", r);
       setRole(r);
-      if (profile) { setProfileName(profile.name); setProfileAvatar(profile.avatar_url ?? null); }
+      setUserId(session.user.id);
+      setUserEmail(session.user.email ?? "");
+      if (profile) { setProfileName(profile.name); setProfileAvatar(profile.avatar_url ?? null); setPermissions(profile.permissions); }
 
       if (r === "staff") {
         const perms = profile?.permissions ?? [];
@@ -170,7 +176,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const activeColor   = dark ? "#D4A843" : GOLD;
 
   return (
-    <AdminRoleProvider>
+    <AdminRoleProvider value={{ role, permissions, loading: !ready, userId, userName: profileName ?? "", userEmail }}>
       <div className="admin-shell" style={{ minHeight: "100vh", background: dark ? "#0F0F11" : "#F5F5F7", display: "flex", "--admin-sidebar-w": `${sidebarW}px`, ...adminCssVars(dark) } as React.CSSProperties}>
 
         {/* ── Desktop Sidebar (md+) ── */}

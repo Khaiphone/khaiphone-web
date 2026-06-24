@@ -929,8 +929,10 @@ export type RiderBootstrap = {
   home: Awaited<ReturnType<typeof _riderHomeData>>;
 };
 
-export async function fetchRiderBootstrap(userId: string): Promise<RiderBootstrap> {
-  await requireAuth();
+export async function fetchRiderBootstrap(): Promise<RiderBootstrap> {
+  // ไม่รับ userId จาก client — ใช้ id ของผู้ที่ login จริงเท่านั้น (กันดึงข้อมูลคนอื่น)
+  const user = await requireAuth();
+  const userId = user.id;
   const supabase = createServerClient();
   const [profileRow, consentRow, notifications, home] = await Promise.all([
     supabase.from("admin_users").select("name, role, email, permissions, is_rider, avatar_url, is_online").eq("user_id", userId).single(),
