@@ -103,7 +103,6 @@ export default function AppSplash({
           style={{
             position: "relative",
             borderRadius: 22,
-            boxShadow: `0 8px 30px ${accent}40`,
             animation: "kp-splash-breathe 2.4s ease-in-out infinite",
           }}
         />
