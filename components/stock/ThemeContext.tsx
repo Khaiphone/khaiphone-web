@@ -1,17 +1,15 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState } from "react";
 
 type Theme = "dark" | "light";
-const ThemeCtx = createContext<{ theme: Theme; toggle: () => void }>({ theme: "dark", toggle: () => {} });
+const ThemeCtx = createContext<{ theme: Theme; toggle: () => void }>({ theme: "light", toggle: () => {} });
 
 export function StockThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
-
-  useEffect(() => {
-    const saved = localStorage.getItem("stock-theme") as Theme | null;
-    if (saved) setTheme(saved);
-  }, []);
+  // default = light, dark เป็นทางเลือก; อ่าน synchronous กัน flash
+  const [theme, setTheme] = useState<Theme>(() =>
+    typeof window !== "undefined" && localStorage.getItem("stock-theme") === "dark" ? "dark" : "light"
+  );
 
   function toggle() {
     setTheme(t => {

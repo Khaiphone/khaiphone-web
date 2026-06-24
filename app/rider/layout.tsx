@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   manifest: "/rider-manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black",
+    statusBarStyle: "default",
     title: "KP Rider",
   },
   icons: {

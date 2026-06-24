@@ -10,8 +10,8 @@ import AppSplash from '@/app/components/AppSplash'
 export default function Layout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [ready, setReady] = useState(false)
-  const [splashLight, setSplashLight] = useState(false) // ธีม splash ให้ตรงกับแอป (default มืด)
-  useEffect(() => { setSplashLight(localStorage.getItem('finance-theme') === 'light') }, [])
+  // default = light; อ่าน synchronous กัน flash (light เว้นแต่เลือก dark ไว้)
+  const [splashLight] = useState(() => typeof window === 'undefined' || localStorage.getItem('finance-theme') !== 'dark')
 
   // dep [] โดยตั้งใจ — ตรวจ auth ครั้งเดียวตอน mount ไม่ re-run/redirect ตอนเปลี่ยนหน้า (กัน jump-back)
   useEffect(() => {

@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   manifest: "/stock-manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "KP Stock",
   },
   icons: {

@@ -177,8 +177,8 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [userEmail, setUserEmail] = useState('')
 
-  // theme
-  const [isDark, setIsDark] = useState(true)
+  // theme — default = light, dark เป็นทางเลือก (อ่าน synchronous กัน flash)
+  const [isDark, setIsDark] = useState(() => typeof window !== 'undefined' && localStorage.getItem('finance-theme') === 'dark')
 
   // date range
   const [dateFrom, setDateFrom] = useState(firstOfMonthISO)
@@ -206,7 +206,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   useEffect(() => {
     // Load theme from localStorage
     const saved = localStorage.getItem('finance-theme')
-    const dark = saved ? saved === 'dark' : true
+    const dark = saved === 'dark'
     setIsDark(dark)
     applyThemeVars(dark)
 

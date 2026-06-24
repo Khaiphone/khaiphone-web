@@ -22,6 +22,17 @@ function StockLayoutInner({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { close(); }, [pathname]);
 
+  // status-bar / theme-color ตามธีม (default light) — กัน "ด้านบนดำ" / ตัวเลขขาวอ่านไม่ออก
+  useEffect(() => {
+    const setMeta = (name: string, content: string) => {
+      let el = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
+      if (!el) { el = document.createElement("meta"); el.name = name; document.head.appendChild(el); }
+      el.content = content;
+    };
+    setMeta("apple-mobile-web-app-status-bar-style", c.dark ? "black-translucent" : "default");
+    setMeta("theme-color", c.dark ? "#050505" : "#F9F9F7");
+  }, [c.dark]);
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: c.bg }}>
       {/* Desktop sidebar */}
@@ -48,8 +59,8 @@ export default function StockLayoutClient({ children }: { children: React.ReactN
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
   const [navReady, setNavReady] = useState(false);
-  const [splashLight, setSplashLight] = useState(false); // ธีม splash ให้ตรงกับแอป (default มืด)
-  useEffect(() => { setSplashLight(localStorage.getItem("stock-theme") === "light"); }, []);
+  // default = light; อ่าน synchronous กัน flash (light เว้นแต่เลือก dark ไว้)
+  const [splashLight] = useState(() => typeof window === "undefined" || localStorage.getItem("stock-theme") !== "dark");
   const [role, setRole] = useState<AdminRole | null>(null);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const latestPathRef = useRef(pathname);

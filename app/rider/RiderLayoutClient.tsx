@@ -79,6 +79,17 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
     return () => navigator.serviceWorker?.removeEventListener("message", navHandler);
   }, [router]);
 
+  // status-bar / theme-color ตามธีม (default light) — กัน "ด้านบนดำ"
+  useEffect(() => {
+    const setMeta = (name: string, content: string) => {
+      let el = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
+      if (!el) { el = document.createElement("meta"); el.name = name; document.head.appendChild(el); }
+      el.content = content;
+    };
+    setMeta("apple-mobile-web-app-status-bar-style", isDark ? "black-translucent" : "default");
+    setMeta("theme-color", isDark ? "#0B0B0D" : "#F2F2F7");
+  }, [isDark]);
+
   useEffect(() => {
     const setMeta = (name: string, content: string) => {
       let el = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
@@ -86,9 +97,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
       el.content = content;
     };
     setMeta("apple-mobile-web-app-capable", "yes");
-    setMeta("apple-mobile-web-app-status-bar-style", "black");
     setMeta("apple-mobile-web-app-title", "KP Rider");
-    setMeta("theme-color", "#4ADE80");
 
     document.documentElement.style.overscrollBehavior = "none";
     document.body.style.overscrollBehavior = "none";

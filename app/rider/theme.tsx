@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState } from "react";
 
 export const DARK = {
   BG:        "#0B0B0D",
@@ -38,11 +38,10 @@ type ThemeCtx = Colors & { isDark: boolean; toggleTheme: () => void };
 export const Ctx = createContext<ThemeCtx | null>(null);
 
 export function RiderThemeProvider({ children }: { children: React.ReactNode }) {
-  const [isDark, setIsDark] = useState(true);
-
-  useEffect(() => {
-    if (localStorage.getItem("rider-theme") === "light") setIsDark(false);
-  }, []);
+  // default = light, dark เป็นทางเลือก; อ่าน synchronous กัน flash
+  const [isDark, setIsDark] = useState(() =>
+    typeof window !== "undefined" && localStorage.getItem("rider-theme") === "dark"
+  );
 
   function toggleTheme() {
     setIsDark(prev => {
