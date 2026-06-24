@@ -9,6 +9,8 @@ import { supabase } from "@/lib/supabase";
 import { useAdminTheme } from "@/lib/admin-theme";
 import type { AdminRequest } from "@/lib/types/admin";
 import { useAdminRole } from "@/app/admin/role-context";
+import { useAdminNavReady } from "@/app/admin/nav-ready-context";
+import { perfStart } from "@/lib/perf";
 import { cacheGet, cacheSet } from "@/app/admin/cache";
 import { thaiDateStr } from "@/lib/thai-date";
 import RequestCard from "../../components/admin/RequestCard";
@@ -39,6 +41,7 @@ function StatCard({ label, value, color, href }: { label: string; value: number;
 export default function DashboardPage() {
   const router = useRouter();
   const { userId, role, permissions } = useAdminRole();
+  const { markFirstScreenReady } = useAdminNavReady();
   const [requests,    setRequests]    = useState<AdminRequest[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [unreadCount,  setUnreadCount]  = useState(0);
@@ -51,16 +54,19 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!userId) return;
     const cached = cacheGet<AdminRequest[]>("admin:requests");
-    if (cached) { setRequests(cached); setLoading(false); }
+    if (cached) { setRequests(cached); setLoading(false); markFirstScreenReady(); }
+    const endPerf = perfStart("admin:dashboard-fetch");
     fetchDashboardBundle().then(data => {
+      endPerf();
       staffUserIdRef.current = data.staffUserId;
       setRequests(data.requests);
       setActivity(data.recentActivity);
       cacheSet("admin:requests", data.requests);
       setLoading(false);
+      markFirstScreenReady(); // หน้าจอแรกพร้อม → ปลดล็อก prefetch ของ nav
       lastRefetchRef.current = Date.now(); // skip an immediate focus-refetch right after load
     });
-  }, [userId]);
+  }, [userId, markFirstScreenReady]);
 
   useEffect(() => {
     const refetch = () => {

@@ -8,6 +8,8 @@ import { fetchRequests } from "@/app/actions/admin-requests";
 import { useAdminTheme } from "@/lib/admin-theme";
 import { cacheGet } from "@/app/admin/cache";
 import type { AdminRequest } from "@/lib/types/admin";
+import { useAdminNavReady } from "@/app/admin/nav-ready-context";
+import { perfStart } from "@/lib/perf";
 
 const TABS = [
   { label: "หน้าหลัก",  icon: Home,           href: "/admin/dashboard"     },
@@ -17,9 +19,10 @@ const TABS = [
   { label: "เพิ่มเติม", icon: MoreHorizontal, href: "/admin/more"          },
 ] as const;
 
-export default function BottomTabNav({ navReady = true }: { navReady?: boolean }) {
+export default function BottomTabNav() {
   const pathname  = usePathname();
   const { dark }  = useAdminTheme();
+  const { navReady } = useAdminNavReady();
   // ใช้ค่าจาก cache ก่อน (ไม่ยิง network ตอน first-open)
   const [newCount, setNewCount] = useState<number>(() => {
     const cached = cacheGet<AdminRequest[]>("admin:requests");
@@ -28,7 +31,9 @@ export default function BottomTabNav({ navReady = true }: { navReady?: boolean }
 
   useEffect(() => {
     if (!navReady) return; // เลื่อน refresh badge ออกจาก critical path ตอนเปิดแอป
+    const end = perfStart("bottom-nav:badge-fetch");
     fetchRequests().then(reqs => {
+      end();
       setNewCount(reqs.filter(r => r.status === "new").length);
     });
   }, [pathname, navReady]);

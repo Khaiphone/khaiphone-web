@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -14,6 +14,7 @@ import { fetchMyProfile } from "@/app/actions/admin-users";
 import { perfStart } from "@/lib/perf";
 import { saveSubscription } from "@/app/actions/push";
 import { AdminRoleProvider } from "./role-context";
+import { AdminNavReadyContext } from "./nav-ready-context";
 import { AdminThemeProvider, useAdminTheme, adminCssVars } from "@/lib/admin-theme";
 import type { AdminRole } from "@/app/actions/admin-users";
 import type { Permission } from "@/lib/admin-permissions";
@@ -54,10 +55,20 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const { dark, toggle }              = useAdminTheme();
   const sidebarW = collapsed ? 64 : 220;
 
-  // หลังหน้าจอแรกพร้อม รออีกสักครู่ค่อยเปิด prefetch ของ nav (ไม่แย่ง bandwidth ตอน first-open)
+  // เปิด prefetch nav เมื่อ "หน้าจอแรกพร้อม" จริง — dashboard page จะเรียก markFirstScreenReady()
+  // หลัง data render; ส่วนหน้าอื่นใช้ fallback timer (กัน RSC flood ช่วง first-open)
+  const markFirstScreenReady = useCallback(() => {
+    setNavReady(prev => {
+      if (!prev) { const end = perfStart("admin:first-screen-ready"); end(); }
+      return true;
+    });
+  }, []);
+  useEffect(() => {
+    if (navReady) { const end = perfStart("admin:nav-prefetch-enabled"); end(); }
+  }, [navReady]);
   useEffect(() => {
     if (!ready) return;
-    const t = setTimeout(() => setNavReady(true), 1500);
+    const t = setTimeout(() => setNavReady(true), 4000); // fallback เผื่อหน้า landing ไม่ส่ง signal
     return () => clearTimeout(t);
   }, [ready]);
 
@@ -184,6 +195,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const activeColor   = dark ? "#D4A843" : GOLD;
 
   return (
+    <AdminNavReadyContext.Provider value={{ navReady, markFirstScreenReady }}>
     <AdminRoleProvider value={{ role, permissions, loading: !ready, userId, userName: profileName ?? "", userEmail }}>
       <div className="admin-shell" style={{ minHeight: "100vh", background: dark ? "#0F0F11" : "#F5F5F7", display: "flex", "--admin-sidebar-w": `${sidebarW}px`, ...adminCssVars(dark) } as React.CSSProperties}>
 
@@ -386,10 +398,11 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
           </main>
 
           {/* ── Mobile Bottom Nav (in normal flow — not fixed) ── */}
-          {!hideBottomNav && <BottomTabNav navReady={navReady} />}
+          {!hideBottomNav && <BottomTabNav />}
         </div>
       </div>
     </AdminRoleProvider>
+    </AdminNavReadyContext.Provider>
   );
 }
 
