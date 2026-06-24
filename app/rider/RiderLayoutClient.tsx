@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Home, Clock, BarChart2, UserCircle, Bell } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { fetchRiderNotifications, fetchRiderBootstrap } from "@/app/actions/rider";
+import { fetchRiderNotifications, fetchRiderHomeData, fetchRiderBootstrap } from "@/app/actions/rider";
 import { cacheSet } from "@/app/rider/cache";
 import { saveSubscription } from "@/app/actions/push";
 import { RiderThemeProvider, useRiderTheme } from "@/app/rider/theme";
@@ -171,9 +171,9 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
       setUserId(uid);
       setIsOnline(boot.online);
       setReady(true);
-      // notifications + home มากับ bootstrap แล้ว — ไม่ต้องยิงเพิ่ม
-      setNotifs(boot.notifications);
-      cacheSet(`home:${uid}`, boot.home);
+      // secondary data — โหลด background หลัง shell ขึ้นแล้ว (ไม่ block first-open)
+      loadNotifs(uid);
+      fetchRiderHomeData(uid).then(d => cacheSet(`home:${uid}`, d)).catch(() => {});
       // Save push subscription after auth is confirmed (SW effect may run before auth)
       if (!subSavedRef.current && "serviceWorker" in navigator) {
         subSavedRef.current = true;

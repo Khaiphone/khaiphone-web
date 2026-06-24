@@ -925,14 +925,13 @@ export async function fetchRiderOnlineStatus(userId: string): Promise<boolean> {
   return data?.is_online ?? false;
 }
 
-// ─── Rider shell bootstrap — auth ครั้งเดียว คืนทุกอย่างที่ layout ต้องใช้ ───────
-// รวม profile + online + consent + notifications + home → ลด server round-trip จาก ~5 เหลือ 1
+// ─── Rider shell bootstrap (CORE) — auth ครั้งเดียว คืนเฉพาะข้อมูลที่ใช้ "เปิด/กั้น" shell ──
+// profile + online + consent เท่านั้น (เบา เร็ว) → gate ready ได้ไว
+// notifications + home เป็น secondary — โหลด background หลัง shell ขึ้นแล้ว (ไม่ block first-open)
 export type RiderBootstrap = {
   profile: { name: string; role: string; email: string; permissions: string[]; is_rider: boolean; avatar_url: string | null } | null;
   online: boolean;
   consent: { consented: boolean; grantedAt: string | null };
-  notifications: Awaited<ReturnType<typeof _riderNotifications>>;
-  home: Awaited<ReturnType<typeof _riderHomeData>>;
 };
 
 export async function fetchRiderBootstrap(): Promise<RiderBootstrap> {
@@ -940,11 +939,9 @@ export async function fetchRiderBootstrap(): Promise<RiderBootstrap> {
   const user = await requireAuth();
   const userId = user.id;
   const supabase = createServerClient();
-  const [profileRow, consentRow, notifications, home] = await Promise.all([
+  const [profileRow, consentRow] = await Promise.all([
     supabase.from("admin_users").select("name, role, email, permissions, is_rider, avatar_url, is_online").eq("user_id", userId).single(),
     supabase.from("rider_profiles").select("consent_location, consent_granted_at").eq("user_id", userId).single(),
-    _riderNotifications(supabase, userId),
-    _riderHomeData(supabase, userId),
   ]);
   const p = profileRow.data;
   return {
@@ -953,8 +950,6 @@ export async function fetchRiderBootstrap(): Promise<RiderBootstrap> {
       : null,
     online: p?.is_online ?? false,
     consent: { consented: consentRow.data?.consent_location ?? false, grantedAt: consentRow.data?.consent_granted_at ?? null },
-    notifications,
-    home,
   };
 }
 

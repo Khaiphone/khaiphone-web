@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bell, RefreshCw, Calendar, Settings, Loader2 } from "lucide-react";
 import { fetchMyRequests } from "@/app/actions/admin-requests";
+import { perfStart } from "@/lib/perf";
 import { cacheGet, cacheSet } from "@/app/admin/cache";
 import { thaiDateStr } from "@/lib/thai-date";
 import type { AdminRequest } from "@/lib/types/admin";
@@ -131,7 +132,9 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     const readIds = loadReadIds();
+    const endPerf = perfStart("admin:notifications-fetch");
     fetchMyRequests().then(requests => {
+      endPerf();
       cacheSet("admin:notif-requests", requests);
       setItems(buildNotifications(requests, readIds));
       setLoading(false);
