@@ -39,6 +39,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
   const { BG, CARD, BORDER, ACCENT, GREEN, TEXT, TEXT2 } = useRiderTheme();
 
   const [ready, setReady]         = useState(false);
+  const [navReady, setNavReady]   = useState(false); // เปิด prefetch nav หลัง first screen พร้อม (กัน RSC flood)
   const [riderName, setRiderName]   = useState("");
   const [riderEmail, setRiderEmail] = useState("");
   const [riderRole, setRiderRole]   = useState("");
@@ -58,6 +59,13 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
     const data = await fetchRiderNotifications(uid);
     setNotifs(data);
   }, []);
+
+  // fallback: เปิด prefetch nav อย่างช้า 4 วิหลัง shell พร้อม (เผื่อ home prefetch ค้าง/ไม่ใช่หน้า home)
+  useEffect(() => {
+    if (!ready) return;
+    const t = setTimeout(() => setNavReady(true), 4000);
+    return () => clearTimeout(t);
+  }, [ready]);
 
   useEffect(() => {
     const navHandler = (e: MessageEvent) => {
@@ -173,7 +181,10 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
       setReady(true);
       // secondary data — โหลด background หลัง shell ขึ้นแล้ว (ไม่ block first-open)
       loadNotifs(uid);
-      fetchRiderHomeData(uid).then(d => cacheSet(`home:${uid}`, d)).catch(() => {});
+      // เปิด prefetch nav หลัง home data พร้อม (first usable screen) — กัน prefetch แย่ง bandwidth
+      fetchRiderHomeData(uid)
+        .then(d => { cacheSet(`home:${uid}`, d); setNavReady(true); })
+        .catch(() => setNavReady(true));
       // Save push subscription after auth is confirmed (SW effect may run before auth)
       if (!subSavedRef.current && "serviceWorker" in navigator) {
         subSavedRef.current = true;
@@ -266,7 +277,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
           {NAV.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
             return (
-              <Link key={href} href={href} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "10px 0", gap: 3, textDecoration: "none", color: active ? ACCENT : TEXT2 }}>
+              <Link key={href} href={href} prefetch={navReady ? undefined : false} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "10px 0", gap: 3, textDecoration: "none", color: active ? ACCENT : TEXT2 }}>
                 <Icon size={21} strokeWidth={active ? 2.5 : 1.8} />
                 <span style={{ fontSize: 10, fontWeight: active ? 600 : 400 }}>{label}</span>
               </Link>
