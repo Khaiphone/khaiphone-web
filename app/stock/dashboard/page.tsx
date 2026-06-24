@@ -63,6 +63,27 @@ export default function StockDashboard() {
     setNotifStatus(Notification.permission as "default" | "granted" | "denied");
   }, []);
 
+  // ถ้า permission granted อยู่แล้ว → re-tag subscription เป็น "stock" เงียบๆ ตอนเปิดแอป
+  // (ไม่เรียก requestPermission จึงไม่ต้องมี user gesture) — กัน noti ของแอปอื่นรั่วเข้าสต็อก
+  useEffect(() => {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return;
+    if (Notification.permission !== "granted") return;
+    (async () => {
+      try {
+        const reg = await navigator.serviceWorker.register("/sw.js");
+        const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        if (!vapidKey) return;
+        const key = Uint8Array.from(atob(vapidKey.replace(/-/g, "+").replace(/_/g, "/")), ch => ch.charCodeAt(0));
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+        const json = sub.toJSON();
+        if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
+          await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, app: "stock" });
+        }
+      } catch { /* เงียบไว้ — ปุ่มเปิดแจ้งเตือนยังใช้ได้ */ }
+    })();
+  }, []);
+
   // iOS requires Notification.requestPermission() to be called from a user gesture (tap).
   async function enableNotifications() {
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
