@@ -233,7 +233,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
   }
 
   if (pathname === "/rider/login") return <>{children}</>;
-  if (!ready) return <AppSplash logo="/splash-icon-rider.png" name="KP Rider" accent={ACCENT} bg={BG} light={!isDark} />;
+  if (!ready) return <AppSplash logo="/splash-icon-rider.png" name="KP Rider" accent="#C9A227" bg={BG} light={!isDark} />;
 
   const isJobPage = /^\/rider\/job\//.test(pathname);
 
@@ -326,7 +326,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
       )}
     </div>
     {/* ฉากหน้า: คลุมจนข้อมูลหน้าแรกโหลดครบ (navReady) แล้ว fade */}
-    <AppSplash done={navReady} logo="/splash-icon-rider.png" name="KP Rider" accent={ACCENT} bg={BG} light={!isDark} />
+    <AppSplash done={navReady} logo="/splash-icon-rider.png" name="KP Rider" accent="#C9A227" bg={BG} light={!isDark} />
     </RiderSessionContext.Provider>
   );
 }
