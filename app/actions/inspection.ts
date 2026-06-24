@@ -242,7 +242,7 @@ export async function adminRequestInspectionRevision(
         body: `${req.device_model ?? ""} · ${note.trim().slice(0, 100)}`,
         url: `/rider/job/${id}`,
         tag: `revision-${id}`,
-      }).catch(console.error);
+      }, "rider").catch(console.error);
     }
   });
 
@@ -292,7 +292,7 @@ export async function adminCancelAtInspection(
         body: `${req.device_model ?? ""} · ${safeReason}`,
         url: "/rider",
         tag: `cancelled-${id}`,
-      }).catch(console.error);
+      }, "rider").catch(console.error);
     }
   });
 

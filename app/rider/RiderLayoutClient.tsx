@@ -124,7 +124,15 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
           const existingKeyBuf = existing.options.applicationServerKey;
           if (existingKeyBuf) {
             const existingKey = new Uint8Array(existingKeyBuf);
-            if (key.length === existingKey.length && key.every((v, i) => v === existingKey[i])) return;
+            if (key.length === existingKey.length && key.every((v, i) => v === existingKey[i])) {
+              // same key — upsert เพื่อบันทึก app tag (sub เก่าอาจยังไม่มี app)
+              const json = existing.toJSON();
+              if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
+                const { data: { session } } = await supabase.auth.getSession();
+                await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, userId: session?.user?.id, app: "rider" });
+              }
+              return;
+            }
           }
           await existing.unsubscribe();
         }
@@ -132,7 +140,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
         const json = sub.toJSON();
         if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
           const { data: { session } } = await supabase.auth.getSession();
-          await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, userId: session?.user?.id });
+          await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, userId: session?.user?.id, app: "rider" });
         }
       }).catch(e => console.error("SW registration error:", e));
     }
@@ -212,7 +220,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
           if (!sub) return;
           const json = sub.toJSON();
           if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
-            await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, userId: uid }).catch(() => {});
+            await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, userId: uid, app: "rider" }).catch(() => {});
           }
         }).catch(() => {});
       }

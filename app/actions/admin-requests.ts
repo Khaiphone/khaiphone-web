@@ -496,7 +496,7 @@ export async function assignRequest(id: string, userId: string | null, name: str
       body:  `${req?.order_number ?? ""} · ${req?.device_model ?? ""}`,
       url:   `/admin/requests/${id}`,
       tag:   `assign-${id}`,
-    }).catch(console.error));
+    }, "admin").catch(console.error));
   }
 
   return { success: true as const };
@@ -772,7 +772,7 @@ export async function adminReclaimJob(id: string, reason?: string) {
         body: `${req?.device_model ?? ""} · ${req?.order_number ?? ""} — Admin นำงานกลับ`,
         url: "/rider",
         tag: `reclaimed-${id}`,
-      }).catch(console.error);
+      }, "rider").catch(console.error);
     }
   });
 
@@ -853,7 +853,7 @@ export async function assignRider(id: string, riderId: string | null, riderName:
       body:  `${req?.order_number ?? ""} · ${req?.device_model ?? ""} ถูกมอบหมายให้ไรเดอร์คนอื่นแล้ว`,
       url:   `/rider`,
       tag:   `rider-unassign-${id}`,
-    }).catch(console.error));
+    }, "rider").catch(console.error));
   }
 
   if (riderId) {
@@ -864,7 +864,7 @@ export async function assignRider(id: string, riderId: string | null, riderName:
       body:  `${req?.order_number ?? ""} · ${req?.device_model ?? ""}${distText}`,
       url:   `/rider`,
       tag:   `rider-assign-${id}`,
-    }).catch(console.error));
+    }, "rider").catch(console.error));
     // Notify owners that a rider was assigned
     after(() => sendPushToOwners({
       title: `มอบหมายไรเดอร์แล้ว — ${req?.order_number ?? ""}`,
@@ -966,7 +966,7 @@ export async function autoAssignJobs(): Promise<{ assigned: number; skipped: num
         body: `${job.order_number} · ${job.device_model ?? ""}`,
         url: `/rider`,
         tag: `rider-assign-${job.id}`,
-      }).catch(console.error));
+      }, "rider").catch(console.error));
       assigned++;
     } else {
       skipped++;
@@ -1157,7 +1157,7 @@ export async function updateStatus(
     };
     await sendPushToOwners(pushPayload).catch(console.error);
     if (current?.assigned_to && current.assigned_to !== user.id) {
-      await sendPushToUser(current.assigned_to, pushPayload).catch(console.error);
+      await sendPushToUser(current.assigned_to, pushPayload, "admin").catch(console.error);
     }
   });
 

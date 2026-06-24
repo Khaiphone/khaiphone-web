@@ -129,7 +129,7 @@ export async function createStockItem(input: Omit<StockItem, "notes" | "statusLo
     body: `${input.model}${input.storage ? ` ${input.storage}` : ""} — รับซื้อจาก ${input.sellerName}`,
     url: "/stock/dashboard",
     tag: `stock-new-${id}`,
-  }).catch(() => {}));
+  }, "stock").catch(() => {}));
 
   return { success: true, id };
 }
@@ -236,7 +236,7 @@ export async function markStockSold(
     body: `${current?.model ?? id}${current?.storage ? ` ${current.storage}` : ""} — ฿${soldPrice.toLocaleString("th-TH")}${soldBy ? ` · โดย ${soldBy}` : ""}`,
     url: "/stock/dashboard",
     tag: `stock-sold-${id}`,
-  }).catch(() => {}));
+  }, "stock").catch(() => {}));
 
   return { success: true };
 }

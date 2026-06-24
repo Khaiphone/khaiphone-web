@@ -128,7 +128,7 @@ export async function broadcastToRiders(
 
   const uniqueIds = [...new Set((subs ?? []).map(s => s.user_id).filter(Boolean))];
   await Promise.allSettled(
-    uniqueIds.map(uid => sendPushToUser(uid, { title, body, url: "/rider", tag: "broadcast" }))
+    uniqueIds.map(uid => sendPushToUser(uid, { title, body, url: "/rider", tag: "broadcast" }, "rider"))
   );
   return { success: true as const, sent: uniqueIds.length };
 }

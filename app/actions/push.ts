@@ -6,6 +6,8 @@ import { requireAuth } from "@/lib/require-auth";
 
 type PushPayload = { title: string; body: string; url?: string; tag?: string };
 type SubRow = { endpoint: string; p256dh: string; auth: string };
+// แอปปลายทางของการแจ้งเตือน — กันเด้งซ้ำข้ามแอป (owner ติดตั้งหลาย PWA, endpoint คนละตัว แต่ user เดียว)
+export type PushApp = "admin" | "rider" | "stock";
 
 function getWebPush() {
   const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -40,6 +42,7 @@ export async function saveSubscription(subscription: {
   endpoint: string;
   keys: { p256dh: string; auth: string };
   userId?: string;
+  app?: PushApp;
 }) {
   const user = await requireAuth();
   const supabase = createServerClient();
@@ -49,6 +52,7 @@ export async function saveSubscription(subscription: {
       p256dh:    subscription.keys.p256dh,
       auth:      subscription.keys.auth,
       user_id:   user.id,
+      ...(subscription.app ? { app: subscription.app } : {}),
     },
     { onConflict: "endpoint" },
   );
@@ -61,8 +65,8 @@ export async function sendPushToAll(payload: PushPayload) {
   await sendToSubs(subs, payload);
 }
 
-// Send to all owner subscriptions (+ legacy null user_id rows)
-export async function sendPushToOwners(payload: PushPayload) {
+// Send to all owner subscriptions (+ legacy null user_id rows) — เฉพาะ subscription ของแอปปลายทาง
+export async function sendPushToOwners(payload: PushPayload, app: PushApp = "admin") {
   const supabase = createServerClient();
   const { data: owners } = await supabase
     .from("admin_users")
@@ -71,7 +75,7 @@ export async function sendPushToOwners(payload: PushPayload) {
     .eq("active", true);
   const ownerIds = (owners ?? []).map((o: { user_id: string }) => o.user_id).filter(Boolean);
 
-  let query = supabase.from("push_subscriptions").select("endpoint, p256dh, auth");
+  let query = supabase.from("push_subscriptions").select("endpoint, p256dh, auth").eq("app", app);
   if (ownerIds.length) {
     query = query.or(`user_id.in.(${ownerIds.join(",")}),user_id.is.null`);
   } else {
@@ -82,8 +86,8 @@ export async function sendPushToOwners(payload: PushPayload) {
   await sendToSubs(subs, payload);
 }
 
-// Send to owners + staff who have the receive_new_requests permission
-export async function sendPushToNewRequestReceivers(payload: PushPayload) {
+// Send to owners + staff who have the receive_new_requests permission — เฉพาะแอป admin
+export async function sendPushToNewRequestReceivers(payload: PushPayload, app: PushApp = "admin") {
   const supabase = createServerClient();
   const { data: recipients } = await supabase
     .from("admin_users")
@@ -92,7 +96,7 @@ export async function sendPushToNewRequestReceivers(payload: PushPayload) {
     .or('role.eq.owner,permissions.cs.{"receive_new_requests"}');
   const recipientIds = (recipients ?? []).map((r: { user_id: string }) => r.user_id).filter(Boolean);
 
-  let query = supabase.from("push_subscriptions").select("endpoint, p256dh, auth");
+  let query = supabase.from("push_subscriptions").select("endpoint, p256dh, auth").eq("app", app);
   if (recipientIds.length) {
     query = query.or(`user_id.in.(${recipientIds.join(",")}),user_id.is.null`);
   } else {
@@ -103,13 +107,14 @@ export async function sendPushToNewRequestReceivers(payload: PushPayload) {
   await sendToSubs(subs, payload);
 }
 
-// Send to a specific user's subscriptions
-export async function sendPushToUser(userId: string, payload: PushPayload) {
+// Send to a specific user's subscriptions — เฉพาะ subscription ของแอปปลายทาง (rider/admin)
+export async function sendPushToUser(userId: string, payload: PushPayload, app: PushApp) {
   const supabase = createServerClient();
   const { data: subs } = await supabase
     .from("push_subscriptions")
     .select("endpoint, p256dh, auth")
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .eq("app", app);
   if (!subs?.length) return;
   await sendToSubs(subs, payload);
 }

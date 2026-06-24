@@ -121,7 +121,15 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
           if (existingKeyBuf) {
             const existingKey = new Uint8Array(existingKeyBuf);
             const keyMatches = key.length === existingKey.length && key.every((v, i) => v === existingKey[i]);
-            if (keyMatches) return; // same key, subscription is still valid
+            if (keyMatches) {
+              // same key — subscription ยังใช้ได้ แต่ upsert เพื่อบันทึก app tag (sub เก่าอาจยังไม่มี app)
+              const json = existing.toJSON();
+              if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
+                const { data: { session } } = await supabase.auth.getSession();
+                await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, userId: session?.user?.id, app: "admin" });
+              }
+              return;
+            }
           }
           await existing.unsubscribe();
         }
@@ -131,7 +139,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         const json = sub.toJSON();
         if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
           const { data: { session } } = await supabase.auth.getSession();
-          await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, userId: session?.user?.id });
+          await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, userId: session?.user?.id, app: "admin" });
         }
       }).catch(e => console.error("SW registration error:", e));
     }

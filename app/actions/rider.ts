@@ -753,7 +753,7 @@ export async function riderRequestTransfer(id: string) {
       tag: `transfer-${id}`,
     };
     for (const u of (financeUsers ?? [])) {
-      await sendPushToUser(u.user_id, pushPayload).catch(console.error);
+      await sendPushToUser(u.user_id, pushPayload, "admin").catch(console.error);
     }
     await sendPushToOwners(pushPayload).catch(console.error);
   });
