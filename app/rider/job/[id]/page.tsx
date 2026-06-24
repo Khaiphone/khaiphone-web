@@ -23,6 +23,8 @@ import { useRiderTheme } from "@/app/rider/theme";
 import { setTrackingMode } from "@/lib/rider-tracking";
 import { fetchMyProfile, fetchAdminUsers } from "@/app/actions/admin-users";
 import type { AdminRequest, InspectionCriterion, FunctionalTest } from "@/lib/types/admin";
+import { applyRequestPatch } from "@/lib/request-patch";
+import type { RequestPatch } from "@/lib/request-patch";
 import { FONT_LINK, DOC_CSS, buildContractPage, buildReceiptPage, thDate, thTime, shortDate } from "@/lib/contract-builder";
 import type { ContractDevice, ContractCtx } from "@/lib/contract-builder";
 
@@ -1792,19 +1794,37 @@ export default function JobWizardPage() {
   }, [reload]);
 
   useEffect(() => {
-    const bc = supabase.channel("request-updates").on("broadcast", { event: "updated" }, p => { if (p.payload?.id === id) reload(); }).subscribe();
+    let lastSync = 0;
+    const debouncedReload = () => {
+      const now = Date.now();
+      if (now - lastSync < 1500) return; // กัน refetch ถี่ (patch เพิ่ง sync มา)
+      lastSync = now;
+      reload();
+    };
+    const bc = supabase.channel("request-updates").on("broadcast", { event: "updated" }, p => {
+      if (p.payload?.id !== id) return;
+      if (p.payload?.patch) {
+        // merge ทันที ไม่ต้อง refetch (admin/rider เห็นกันแบบ realtime)
+        setJob(prev => prev ? applyRequestPatch(prev, p.payload.patch as RequestPatch) : prev);
+        lastSync = Date.now();
+      } else {
+        debouncedReload();
+      }
+    }).subscribe();
     const pg = supabase.channel(`wizard-pg-${id}`).on("postgres_changes", { event:"UPDATE", schema:"public", table:"requests" },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (p: any) => { if (p.new?.id === id) reload(); }).subscribe();
-    const onVisible = () => { if (document.visibilityState === "visible") reload(); };
+      (p: any) => { if (p.new?.id === id) debouncedReload(); }).subscribe();
+    const onVisible = () => { if (document.visibilityState === "visible") debouncedReload(); };
     document.addEventListener("visibilitychange", onVisible);
     return () => { supabase.removeChannel(bc); supabase.removeChannel(pg); document.removeEventListener("visibilitychange", onVisible); };
   }, [id, reload]);
 
   async function handleAccept() {
     setBusy(true);
-    await riderAcceptJob(id);
-    reload(); setBusy(false);
+    const res = await riderAcceptJob(id);
+    if (res.success && res.patch) setJob(prev => prev ? applyRequestPatch(prev, res.patch) : prev);
+    setBusy(false);
+    reload(); // background sync (non-blocking) — patch already updated UI
   }
   async function handleReject() {
     setBusy(true);
@@ -1815,8 +1835,10 @@ export default function JobWizardPage() {
     setBusy(true); setStartError("");
     const result = await riderStartJob(id);
     if (!result.success) { setStartError((result as { success:false; error?:string }).error ?? "ไม่สามารถออกเดินทางได้"); setBusy(false); return; }
+    if (result.patch) setJob(prev => prev ? applyRequestPatch(prev, result.patch) : prev);
     setTrackingMode("enroute"); // keep local ping state in sync
-    reload(); setBusy(false);
+    setBusy(false);
+    reload(); // background sync (non-blocking)
   }
   async function handleArrive() {
     setBusy(true);
@@ -1827,9 +1849,11 @@ export default function JobWizardPage() {
       );
       gps = { lat: pos.coords.latitude, lng: pos.coords.longitude };
     } catch { /* GPS unavailable — proceed without */ }
-    await riderArriveJob(id, gps);
+    const res = await riderArriveJob(id, gps);
+    if (res.success && res.patch) setJob(prev => prev ? applyRequestPatch(prev, res.patch) : prev);
     setTrackingMode("on_site");
-    reload();
+    setBusy(false);
+    reload(); // background sync (non-blocking)
   }
   async function handleNoShow() {
     setBusy(true);

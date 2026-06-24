@@ -1,4 +1,4 @@
-import type { RequestStatus } from "@/lib/types/admin";
+import type { RequestStatus, AdminRequest } from "@/lib/types/admin";
 
 // แพตช์ของคำขอ — ฟิลด์ที่ "ปลอดภัยพอจะ broadcast" ให้ UI admin/rider อัปเดตเองโดยไม่ refetch
 // ห้ามใส่ข้อมูลลูกค้าละเอียด/เอกสาร PDPA/signed URL ที่อ่อนไหว — ใส่เฉพาะสถานะงาน
@@ -33,4 +33,27 @@ export function buildRequestPatch(id: string, row: Record<string, unknown>): Req
     if (v !== undefined) (patch as Record<string, unknown>)[f] = v;
   }
   return patch;
+}
+
+/** merge patch (snake_case) เข้า AdminRequest (camelCase) — ใช้ฝั่ง client อัปเดต UI โดยไม่ refetch */
+export function applyRequestPatch(req: AdminRequest, patch: RequestPatch): AdminRequest {
+  if (patch.id !== req.id) return req;
+  const next: AdminRequest = { ...req };
+  if (patch.status !== undefined) next.status = patch.status;
+  if (patch.rider_id !== undefined) next.riderId = patch.rider_id;
+  if (patch.rider_name !== undefined) next.riderName = patch.rider_name;
+  if (patch.return_submitted_at !== undefined) next.returnSubmittedAt = patch.return_submitted_at;
+  if (patch.returned_to_office_at !== undefined) next.returnedToOfficeAt = patch.returned_to_office_at;
+  if (patch.stock_item_id !== undefined) next.stockItemId = patch.stock_item_id;
+  if (patch.actual_price !== undefined) {
+    next.device = { ...req.device, actualPrice: patch.actual_price ?? undefined };
+  }
+  if (patch.payment_slip_url !== undefined || patch.contract_signed_at !== undefined) {
+    next.payment = {
+      ...req.payment,
+      ...(patch.payment_slip_url !== undefined ? { slipUrl: patch.payment_slip_url ?? undefined } : {}),
+      ...(patch.contract_signed_at !== undefined ? { contractSignedAt: patch.contract_signed_at ?? undefined } : {}),
+    };
+  }
+  return next;
 }

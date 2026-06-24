@@ -6,6 +6,8 @@ import { ArrowLeft, Search, SlidersHorizontal, X } from "lucide-react";
 import { fetchDashboardData, fetchRequests } from "@/app/actions/admin-requests";
 import { supabase } from "@/lib/supabase";
 import type { AdminRequest, RequestStatus } from "@/lib/types/admin";
+import { applyRequestPatch } from "@/lib/request-patch";
+import type { RequestPatch } from "@/lib/request-patch";
 import RequestCard from "../../components/admin/RequestCard";
 import FilterBottomSheet, { type FilterState } from "../../components/admin/FilterBottomSheet";
 import { useAdminRole } from "@/app/admin/role-context";
@@ -75,7 +77,25 @@ export default function RequestsPage() {
       fetchRequests(staffUserIdRef.current).then(d => { setRequests(d); cacheSet("admin:requests", d); });
     };
 
-    // Realtime — รับคำขอใหม่ + สถานะเปลี่ยนทันที
+    // Broadcast — merge patch เข้าแถวที่มีอยู่ทันที (เห็นสถานะเปลี่ยนจากไรเดอร์โดยไม่ refetch ทั้งลิสต์)
+    const bc = supabase
+      .channel("request-updates")
+      .on("broadcast", { event: "updated" }, (p) => {
+        const pid = p.payload?.id as string | undefined;
+        if (!pid) return;
+        if (p.payload?.patch) {
+          setRequests(prev => {
+            const next = prev.map(r => r.id === pid ? applyRequestPatch(r, p.payload.patch as RequestPatch) : r);
+            cacheSet("admin:requests", next);
+            return next;
+          });
+        } else {
+          refetch(); // throttled fallback
+        }
+      })
+      .subscribe();
+
+    // Realtime — รับคำขอใหม่/ลบ (INSERT/DELETE) + UPDATE เป็น fallback (throttled refetch)
     const channel = supabase
       .channel("admin-requests-list")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "requests" }, refetch)
@@ -85,6 +105,7 @@ export default function RequestsPage() {
 
     window.addEventListener("focus", refetch);
     return () => {
+      supabase.removeChannel(bc);
       supabase.removeChannel(channel);
       window.removeEventListener("focus", refetch);
     };

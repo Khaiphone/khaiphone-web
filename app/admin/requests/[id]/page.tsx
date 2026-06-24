@@ -26,6 +26,8 @@ import { validateImageFile } from "@/lib/validate-file";
 import InspectionForm from "../../../components/admin/InspectionForm";
 import { STATUS_LABELS } from "@/lib/types/admin";
 import type { AdminRequest, RequestStatus, SellMethod, PayMethod } from "@/lib/types/admin";
+import { applyRequestPatch } from "@/lib/request-patch";
+import type { RequestPatch } from "@/lib/request-patch";
 import StatusBadge from "../../../components/admin/StatusBadge";
 import StatusBottomSheet from "../../../components/admin/StatusBottomSheet";
 
@@ -272,12 +274,26 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
       });
     }
 
+    let lastSync = 0;
+    const debouncedReload = () => {
+      const now = Date.now();
+      if (now - lastSync < 1500) return; // กัน refetch ถี่ (patch เพิ่ง sync มา)
+      lastSync = now;
+      reload();
+    };
+
     // Broadcast channel (bypasses RLS — triggered by server actions)
     const broadcastCh = supabase
       .channel("request-updates")
       .on("broadcast", { event: "updated" }, (payload) => {
         if (payload.payload?.id !== id) return;
-        reload();
+        if (payload.payload?.patch) {
+          // merge ทันที — เห็นการเปลี่ยนสถานะจากไรเดอร์โดยไม่ refetch
+          setRequest(prev => prev ? applyRequestPatch(prev, payload.payload.patch as RequestPatch) : prev);
+          lastSync = Date.now();
+        } else {
+          debouncedReload();
+        }
       })
       .subscribe();
 
@@ -290,12 +306,12 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (payload: any) => {
           if (payload.new?.id !== id) return;
-          reload();
+          debouncedReload();
         },
       )
       .subscribe();
 
-    const onVisible = () => { if (document.visibilityState === "visible") reload(); };
+    const onVisible = () => { if (document.visibilityState === "visible") debouncedReload(); };
     document.addEventListener("visibilitychange", onVisible);
 
     return () => {

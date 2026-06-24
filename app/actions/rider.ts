@@ -6,6 +6,7 @@ import { requireAuth } from "@/lib/require-auth";
 import { thaiDateStr, thaiMonthStr, startOfThaiDay, startOfThaiMonth } from "@/lib/thai-date";
 import { sendPushToOwners, sendPushToUser } from "@/app/actions/push";
 import { broadcastRequestUpdate } from "@/lib/broadcast";
+import { buildRequestPatch } from "@/lib/request-patch";
 import type { AdminRequest } from "@/lib/types/admin";
 
 // ─── Auto-create stock entry when a job is completed by rider ────────────────
@@ -237,8 +238,9 @@ export async function riderRejectJob(id: string) {
     }
   }
 
+  const patch = buildRequestPatch(id, { status: "confirmed", rider_id: null, rider_name: null, assigned_at: null, updated_at: now });
   after(async () => {
-    await broadcastRequestUpdate(id);
+    await broadcastRequestUpdate(id, patch);
     await sendPushToOwners({
       title: `ไรเดอร์ปฏิเสธงาน — ${req?.order_number ?? ""}`,
       body: `${req?.device_model ?? ""} · ต้องมอบหมายไรเดอร์ใหม่`,
@@ -247,7 +249,7 @@ export async function riderRejectJob(id: string) {
     }).catch(console.error);
   });
 
-  return { success: true as const };
+  return { success: true as const, patch };
 }
 
 // ─── Accept job (confirmed → pickup_scheduled) ────────────────────────────────
@@ -278,8 +280,9 @@ export async function riderAcceptJob(id: string) {
     .update({ current_job_id: id, updated_at: now })
     .eq("rider_id", user.id);
 
+  const patch = buildRequestPatch(id, { status: "pickup_scheduled", updated_at: now });
   after(async () => {
-    await broadcastRequestUpdate(id);
+    await broadcastRequestUpdate(id, patch);
     await sendPushToOwners({
       title: `ไรเดอร์รับงาน — ${req?.order_number ?? ""}`,
       body: `${req?.device_model ?? ""} · รับงานแล้ว รอออกเดินทาง`,
@@ -288,7 +291,7 @@ export async function riderAcceptJob(id: string) {
     }).catch(console.error);
   });
 
-  return { success: true as const };
+  return { success: true as const, patch };
 }
 
 // ─── Start job (pickup_scheduled → en_route) ──────────────────────────────────
@@ -334,8 +337,9 @@ export async function riderStartJob(id: string) {
     .update({ tracking_mode: "enroute", current_job_id: id, updated_at: now })
     .eq("rider_id", user.id);
 
+  const patch = buildRequestPatch(id, { status: "en_route", updated_at: now });
   after(async () => {
-    await broadcastRequestUpdate(id);
+    await broadcastRequestUpdate(id, patch);
     await sendPushToOwners({
       title: `ไรเดอร์ออกเดินทาง — ${req?.order_number ?? ""}`,
       body: `${req?.device_model ?? ""} · กำลังเดินทางไปหาลูกค้า`,
@@ -344,7 +348,7 @@ export async function riderStartJob(id: string) {
     }).catch(console.error);
   });
 
-  return { success: true as const };
+  return { success: true as const, patch };
 }
 
 // ─── Arrive at customer (inspecting) ─────────────────────────────────────────
@@ -367,8 +371,9 @@ export async function riderArriveJob(id: string, gps?: { lat: number; lng: numbe
     .update({ tracking_mode: "on_site", current_job_id: id, updated_at: now })
     .eq("rider_id", user.id);
 
+  const patch = buildRequestPatch(id, { status: "inspecting", updated_at: now });
   after(async () => {
-    await broadcastRequestUpdate(id);
+    await broadcastRequestUpdate(id, patch);
     await sendPushToOwners({
       title: `ไรเดอร์ถึงที่แล้ว — ${req?.order_number ?? ""}`,
       body: `${req?.device_model ?? ""} · กำลังตรวจเครื่อง`,
@@ -376,7 +381,7 @@ export async function riderArriveJob(id: string, gps?: { lat: number; lng: numbe
       tag: `arrive-${id}`,
     }).catch(console.error);
   });
-  return { success: true as const };
+  return { success: true as const, patch };
 }
 
 // ─── Auto-save SICKW result immediately after check ──────────────────────────
@@ -819,8 +824,9 @@ export async function riderNoShow(id: string) {
 
   await finishJobCleanup(supabase, user.id, now, false);
 
+  const patch = buildRequestPatch(id, { status: "no_show", updated_at: now });
   after(async () => {
-    await broadcastRequestUpdate(id);
+    await broadcastRequestUpdate(id, patch);
     await sendPushToOwners({
       title: `ลูกค้าไม่อยู่ — ${req?.order_number ?? ""}`,
       body: `${req?.device_model ?? ""} · ไรเดอร์ถึงที่แล้วแต่ไม่พบลูกค้า`,
@@ -829,7 +835,7 @@ export async function riderNoShow(id: string) {
     }).catch(console.error);
   });
 
-  return { success: true as const };
+  return { success: true as const, patch };
 }
 
 export async function riderCancelAtInspection(id: string, reason: string) {
