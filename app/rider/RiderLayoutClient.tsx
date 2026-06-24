@@ -6,11 +6,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { Home, Clock, BarChart2, UserCircle, Bell } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { fetchRiderNotifications, fetchRiderHomeData, fetchRiderBootstrap } from "@/app/actions/rider";
-import { cacheSet } from "@/app/rider/cache";
+import { fetchRiderNotifications, fetchRiderBootstrap } from "@/app/actions/rider";
 import { saveSubscription } from "@/app/actions/push";
 import { RiderThemeProvider, useRiderTheme } from "@/app/rider/theme";
 import { RiderSessionContext } from "@/app/rider/context";
+import { RiderNavReadyContext } from "@/app/rider/nav-ready-context";
 import { isStandalone } from "@/lib/pwa-detect";
 import { perfStart } from "@/lib/perf";
 import { shouldRedirect } from "@/lib/route-guard";
@@ -58,6 +58,8 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
   const subSavedRef = useRef(false);
 
   const unreadCount = notifs.filter(n => n.timestamp > lastRead).length;
+
+  const markFirstScreenReady = useCallback(() => setNavReady(true), []);
 
   const loadNotifs = useCallback(async (uid: string) => {
     const data = await fetchRiderNotifications(uid);
@@ -200,11 +202,8 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
       setIsOnline(boot.online);
       setReady(true);
       // secondary data — โหลด background หลัง shell ขึ้นแล้ว (ไม่ block first-open)
+      // navReady ถูกยิงโดยหน้า home (cache-first) ผ่าน markFirstScreenReady — ไม่ fetch home ซ้ำที่ layout
       loadNotifs(uid);
-      // เปิด prefetch nav หลัง home data พร้อม (first usable screen) — กัน prefetch แย่ง bandwidth
-      fetchRiderHomeData(uid)
-        .then(d => { cacheSet(`home:${uid}`, d); setNavReady(true); })
-        .catch(() => setNavReady(true));
       // Save push subscription after auth is confirmed (SW effect may run before auth)
       if (!subSavedRef.current && "serviceWorker" in navigator) {
         subSavedRef.current = true;
@@ -247,6 +246,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
   const isJobPage = /^\/rider\/job\//.test(pathname);
 
   return (
+    <RiderNavReadyContext.Provider value={{ navReady, markFirstScreenReady }}>
     <RiderSessionContext.Provider value={{ userId, riderName, riderEmail, riderRole, avatarUrl, setAvatarUrl, isOnline, setIsOnline }}>
     <div style={{ height: "100dvh", background: BG, color: TEXT, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", display: "flex", flexDirection: "column", overflow: "hidden", overscrollBehavior: "none" }}>
 
@@ -337,6 +337,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
     {/* ฉากหน้า: คลุมจนข้อมูลหน้าแรกโหลดครบ (navReady) แล้ว fade */}
     <AppSplash done={navReady} logo="/splash-icon-rider.png" name="KP Rider" accent="#C9A227" bg={BG} light={!isDark} />
     </RiderSessionContext.Provider>
+    </RiderNavReadyContext.Provider>
   );
 }
 

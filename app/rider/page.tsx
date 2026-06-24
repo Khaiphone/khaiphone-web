@@ -11,6 +11,7 @@ import { startTracking, stopTracking, setTrackingMode, isTracking } from "@/lib/
 import { Sk } from "@/app/rider/skeleton";
 import { useRiderTheme } from "@/app/rider/theme";
 import { useRiderSession } from "@/app/rider/context";
+import { useRiderNavReady } from "@/app/rider/nav-ready-context";
 import { cacheGet, cacheSet } from "@/app/rider/cache";
 import type { AdminRequest } from "@/lib/types/admin";
 
@@ -32,6 +33,7 @@ export default function RiderHomePage() {
   const router = useRouter();
   const { CARD, CARD2, BORDER, ACCENT, GREEN, RED, TEXT, TEXT2 } = useRiderTheme();
   const { userId, isOnline, setIsOnline } = useRiderSession();
+  const { markFirstScreenReady } = useRiderNavReady();
   const [toggling, setToggling]       = useState(false);
   const [shiftId, setShiftId]         = useState<string | null>(null);
   const [pendingJobs, setPendingJobs] = useState<AdminRequest[]>([]);
@@ -76,7 +78,8 @@ export default function RiderHomePage() {
     setStats(homeData.stats);
     cacheSet<HomeData>(`home:${uid}`, homeData);
     setLoading(false);
-  }, []);
+    markFirstScreenReady(); // หน้าจอแรกพร้อม → splash fade + ปลดล็อก prefetch nav
+  }, [markFirstScreenReady]);
 
   useEffect(() => {
     if (!userId) return;
@@ -86,6 +89,7 @@ export default function RiderHomePage() {
       setActiveJobs(cached.active);
       setStats(cached.stats);
       setLoading(false);
+      markFirstScreenReady(); // มี cache → ปลด splash ทันที (revisit ไม่ต้องรอ fetch)
     }
     loadData(userId);
 
