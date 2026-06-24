@@ -105,7 +105,9 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     // Register service worker + subscribe to push notifications
     if ("serviceWorker" in navigator && "PushManager" in window) {
       navigator.serviceWorker.register("/sw.js").then(async (reg) => {
-        const permission = await Notification.requestPermission();
+        // iOS: requestPermission นอก user gesture จะไม่คืน "granted" → ถ้า granted แล้วข้ามไปเลย
+        // (มิฉะนั้น effect จะ return ก่อนถึง saveSubscription → sub ไม่เคยถูก re-tag เป็น admin)
+        const permission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
         if (permission !== "granted") return;
 
         const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;

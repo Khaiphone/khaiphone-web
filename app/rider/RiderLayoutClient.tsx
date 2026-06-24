@@ -114,7 +114,8 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
 
     if ("serviceWorker" in navigator && "PushManager" in window) {
       navigator.serviceWorker.register("/sw.js").then(async (reg) => {
-        const permission = await Notification.requestPermission();
+        // iOS: requestPermission นอก user gesture จะไม่คืน "granted" → ถ้า granted แล้วข้ามไป
+        const permission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
         if (permission !== "granted") return;
         const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
         if (!vapidKey) return;
