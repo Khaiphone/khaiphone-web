@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import { Home, ClipboardList, CalendarDays, Bell, MoreHorizontal } from "lucide-react";
 import { fetchRequests } from "@/app/actions/admin-requests";
 import { useAdminTheme } from "@/lib/admin-theme";
+import { cacheGet } from "@/app/admin/cache";
+import type { AdminRequest } from "@/lib/types/admin";
 
 const TABS = [
   { label: "หน้าหลัก",  icon: Home,           href: "/admin/dashboard"     },
@@ -15,16 +17,21 @@ const TABS = [
   { label: "เพิ่มเติม", icon: MoreHorizontal, href: "/admin/more"          },
 ] as const;
 
-export default function BottomTabNav() {
+export default function BottomTabNav({ navReady = true }: { navReady?: boolean }) {
   const pathname  = usePathname();
   const { dark }  = useAdminTheme();
-  const [newCount, setNewCount] = useState(0);
+  // ใช้ค่าจาก cache ก่อน (ไม่ยิง network ตอน first-open)
+  const [newCount, setNewCount] = useState<number>(() => {
+    const cached = cacheGet<AdminRequest[]>("admin:requests");
+    return cached ? cached.filter(r => r.status === "new").length : 0;
+  });
 
   useEffect(() => {
+    if (!navReady) return; // เลื่อน refresh badge ออกจาก critical path ตอนเปิดแอป
     fetchRequests().then(reqs => {
       setNewCount(reqs.filter(r => r.status === "new").length);
     });
-  }, [pathname]);
+  }, [pathname, navReady]);
 
   const GOLD     = dark ? "#D4A843" : "#B8860B";
   const INACTIVE = dark ? "#636366" : "#6B7280";
@@ -51,6 +58,7 @@ export default function BottomTabNav() {
             <Link
               key={href}
               href={href}
+              prefetch={navReady ? undefined : false}
               style={{
                 flex: 1,
                 display: "flex",

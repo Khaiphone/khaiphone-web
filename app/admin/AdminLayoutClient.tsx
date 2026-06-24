@@ -43,6 +43,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLogin  = pathname === "/admin/login" || pathname === "/admin/set-password";
   const [ready, setReady]             = useState(false);
+  const [navReady, setNavReady]       = useState(false); // เปิด prefetch nav หลัง first screen พร้อม (กัน RSC flood ตอนเปิด)
   const [role, setRole]               = useState<AdminRole | null>(null);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [userId, setUserId]           = useState("");
@@ -52,6 +53,13 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed]     = useState(false);
   const { dark, toggle }              = useAdminTheme();
   const sidebarW = collapsed ? 64 : 220;
+
+  // หลังหน้าจอแรกพร้อม รออีกสักครู่ค่อยเปิด prefetch ของ nav (ไม่แย่ง bandwidth ตอน first-open)
+  useEffect(() => {
+    if (!ready) return;
+    const t = setTimeout(() => setNavReady(true), 1500);
+    return () => clearTimeout(t);
+  }, [ready]);
 
   // Handle notification tap: SW sends postMessage → router.push keeps history intact
   useEffect(() => {
@@ -220,7 +228,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                 ].map(({ href, label, icon: Icon }) => {
                   const active = pathname === href || (href !== "/admin/riders" && pathname.startsWith(href));
                   return (
-                    <Link key={href} href={href} title={collapsed ? label : undefined} style={{ display: "flex", alignItems: "center", gap: collapsed ? 0 : "10px", padding: "10px 12px", borderRadius: "10px", color: active ? activeColor : sidebarText2, background: active ? activeBg : "transparent", textDecoration: "none", fontSize: "13px", fontWeight: active ? 600 : 400, justifyContent: collapsed ? "center" : "flex-start" }}>
+                    <Link key={href} href={href} prefetch={navReady ? undefined : false} title={collapsed ? label : undefined} style={{ display: "flex", alignItems: "center", gap: collapsed ? 0 : "10px", padding: "10px 12px", borderRadius: "10px", color: active ? activeColor : sidebarText2, background: active ? activeBg : "transparent", textDecoration: "none", fontSize: "13px", fontWeight: active ? 600 : 400, justifyContent: collapsed ? "center" : "flex-start" }}>
                       <Icon size={18} strokeWidth={active ? 2.5 : 2} />
                       {!collapsed && label}
                     </Link>
@@ -229,7 +237,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
                 <div style={{ height: 1, background: sidebarBorder, margin: "6px 4px" }} />
 
-                <Link href="/admin/riders/help" title={collapsed ? "ช่วยเหลือ" : undefined} style={{ display: "flex", alignItems: "center", gap: collapsed ? 0 : "10px", padding: "10px 12px", borderRadius: "10px", color: sidebarText2, textDecoration: "none", fontSize: "13px", justifyContent: collapsed ? "center" : "flex-start" }}>
+                <Link href="/admin/riders/help" prefetch={navReady ? undefined : false} title={collapsed ? "ช่วยเหลือ" : undefined} style={{ display: "flex", alignItems: "center", gap: collapsed ? 0 : "10px", padding: "10px 12px", borderRadius: "10px", color: sidebarText2, textDecoration: "none", fontSize: "13px", justifyContent: collapsed ? "center" : "flex-start" }}>
                   <HelpCircle size={18} strokeWidth={2} />
                   {!collapsed && "ช่วยเหลือ"}
                 </Link>
@@ -303,7 +311,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                 {NAV_ITEMS.map(({ label, icon: Icon, href }) => {
                   const active = pathname === href || (href !== "/admin/dashboard" && pathname.startsWith(href));
                   return (
-                    <Link key={href} href={href} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "10px", color: active ? activeColor : sidebarText2, background: active ? activeBg : "transparent", textDecoration: "none", fontSize: "14px", fontWeight: active ? 600 : 400 }}>
+                    <Link key={href} href={href} prefetch={navReady ? undefined : false} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "10px", color: active ? activeColor : sidebarText2, background: active ? activeBg : "transparent", textDecoration: "none", fontSize: "14px", fontWeight: active ? 600 : 400 }}>
                       <Icon size={18} strokeWidth={active ? 2.5 : 2} />
                       {label}
                     </Link>
@@ -320,7 +328,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                     ].map(({ href, label }) => {
                       const active = pathname.startsWith(href);
                       return (
-                        <Link key={href} href={href} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "10px", color: active ? activeColor : sidebarText2, background: active ? activeBg : "transparent", textDecoration: "none", fontSize: "14px", fontWeight: active ? 600 : 400 }}>
+                        <Link key={href} href={href} prefetch={navReady ? undefined : false} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "10px", color: active ? activeColor : sidebarText2, background: active ? activeBg : "transparent", textDecoration: "none", fontSize: "14px", fontWeight: active ? 600 : 400 }}>
                           {label}
                         </Link>
                       );
@@ -378,7 +386,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
           </main>
 
           {/* ── Mobile Bottom Nav (in normal flow — not fixed) ── */}
-          {!hideBottomNav && <BottomTabNav />}
+          {!hideBottomNav && <BottomTabNav navReady={navReady} />}
         </div>
       </div>
     </AdminRoleProvider>
