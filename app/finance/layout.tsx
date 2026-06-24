@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { fetchMyProfile } from '@/app/actions/admin-users'
 import FinanceLayout from '@/app/components/finance/FinanceLayout'
+import AppSplash from '@/app/components/AppSplash'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -30,6 +31,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true }
   }, [])
 
-  if (!ready) return <div style={{ minHeight: '100vh', background: '#060606' }} />
+  if (!ready) return <AppSplash logo="/icon-192.png" name="KP Finance" accent="#B8860B" bg="#060606" />
   return <FinanceLayout>{children}</FinanceLayout>
 }

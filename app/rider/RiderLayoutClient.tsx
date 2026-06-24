@@ -14,6 +14,7 @@ import { RiderSessionContext } from "@/app/rider/context";
 import { isStandalone } from "@/lib/pwa-detect";
 import { perfStart } from "@/lib/perf";
 import { shouldRedirect } from "@/lib/route-guard";
+import AppSplash from "@/app/components/AppSplash";
 
 const NAV = [
   { href: "/rider",          label: "หน้าแรก",   icon: Home       },
@@ -232,12 +233,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
   }
 
   if (pathname === "/rider/login") return <>{children}</>;
-  if (!ready) return (
-    <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 36, height: 36, borderRadius: "50%", border: `3px solid ${BORDER}`, borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
+  if (!ready) return <AppSplash logo="/rider-icon-192.png" name="KP Rider" accent={ACCENT} bg={BG} />;
 
   const isJobPage = /^\/rider\/job\//.test(pathname);
 

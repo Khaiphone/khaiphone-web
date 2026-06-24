@@ -13,6 +13,7 @@ import { MobileMenuProvider, useMobileMenu } from "@/components/stock/MobileMenu
 import { StockRoleProvider } from "./role-context";
 import { StockNavReadyContext } from "./nav-ready-context";
 import { shouldRedirect } from "@/lib/route-guard";
+import AppSplash from "@/app/components/AppSplash";
 
 function StockLayoutInner({ children }: { children: React.ReactNode }) {
   const c = useThemeColors();
@@ -106,7 +107,7 @@ export default function StockLayoutClient({ children }: { children: React.ReactN
   }, [router, pathname]);
 
   if (pathname === "/stock/login") return <>{children}</>;
-  if (!ready) return <div style={{ minHeight: "100vh", background: "#050505" }} />;
+  if (!ready) return <AppSplash logo="/stock-icon-192.png" name="KP Stock" accent="#D4A843" bg="#050505" />;
 
   return (
     <StockNavReadyContext.Provider value={{ navReady, markFirstScreenReady }}>

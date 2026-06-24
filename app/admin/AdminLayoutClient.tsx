@@ -16,6 +16,7 @@ import { saveSubscription } from "@/app/actions/push";
 import { AdminRoleProvider } from "./role-context";
 import { AdminNavReadyContext } from "./nav-ready-context";
 import { shouldRedirect } from "@/lib/route-guard";
+import AppSplash from "@/app/components/AppSplash";
 import { AdminThemeProvider, useAdminTheme, adminCssVars } from "@/lib/admin-theme";
 import type { AdminRole } from "@/app/actions/admin-users";
 import type { Permission } from "@/lib/admin-permissions";
@@ -193,7 +194,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true; };
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!ready) return <div suppressHydrationWarning style={{ minHeight: "100vh", background: "#0F0F11" }} />;
+  if (!ready) return <AppSplash logo="/icon-192.png" name="KP Admin" accent="#B8860B" bg="#0F0F11" />;
   if (isLogin) return <AdminRoleProvider>{children}</AdminRoleProvider>;
 
   const hideBottomNav = /^\/admin\/(requests|prices)\/[^/]+$/.test(pathname) || pathname.startsWith("/admin/riders");
