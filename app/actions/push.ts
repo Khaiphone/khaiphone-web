@@ -75,8 +75,7 @@ export async function sendPushToOwners(payload: PushPayload, app: PushApp = "adm
     .eq("active", true);
   const ownerIds = (owners ?? []).map((o: { user_id: string }) => o.user_id).filter(Boolean);
 
-  // app ตรงแอป หรือ null (sub เก่ายังไม่ถูก tag — รับได้ระหว่างเปลี่ยนผ่าน)
-  let query = supabase.from("push_subscriptions").select("endpoint, p256dh, auth").or(`app.eq.${app},app.is.null`);
+  let query = supabase.from("push_subscriptions").select("endpoint, p256dh, auth").eq("app", app);
   if (ownerIds.length) {
     query = query.or(`user_id.in.(${ownerIds.join(",")}),user_id.is.null`);
   } else {
@@ -97,8 +96,7 @@ export async function sendPushToNewRequestReceivers(payload: PushPayload, app: P
     .or('role.eq.owner,permissions.cs.{"receive_new_requests"}');
   const recipientIds = (recipients ?? []).map((r: { user_id: string }) => r.user_id).filter(Boolean);
 
-  // app ตรงแอป หรือ null (sub เก่ายังไม่ถูก tag — รับได้ระหว่างเปลี่ยนผ่าน)
-  let query = supabase.from("push_subscriptions").select("endpoint, p256dh, auth").or(`app.eq.${app},app.is.null`);
+  let query = supabase.from("push_subscriptions").select("endpoint, p256dh, auth").eq("app", app);
   if (recipientIds.length) {
     query = query.or(`user_id.in.(${recipientIds.join(",")}),user_id.is.null`);
   } else {
@@ -116,7 +114,7 @@ export async function sendPushToUser(userId: string, payload: PushPayload, app: 
     .from("push_subscriptions")
     .select("endpoint, p256dh, auth")
     .eq("user_id", userId)
-    .or(`app.eq.${app},app.is.null`); // app ตรงแอป หรือ null (sub เก่ายังไม่ถูก tag)
+    .eq("app", app);
   if (!subs?.length) return;
   await sendToSubs(subs, payload);
 }
