@@ -109,7 +109,7 @@ export default function StockLayoutClient({ children }: { children: React.ReactN
   }, [router, pathname]);
 
   if (pathname === "/stock/login") return <>{children}</>;
-  if (!ready) return <AppSplash logo="/stock-icon-192.png" name="KP Stock" accent="#D4A843" bg={splashLight ? "#F9F9F7" : "#050505"} light={splashLight} />;
+  if (!ready) return <AppSplash logo="/splash-icon-stock.png" name="KP Stock" accent="#D4A843" bg={splashLight ? "#F9F9F7" : "#050505"} light={splashLight} />;
 
   return (
     <StockNavReadyContext.Provider value={{ navReady, markFirstScreenReady }}>
@@ -121,7 +121,7 @@ export default function StockLayoutClient({ children }: { children: React.ReactN
       </StockRoleProvider>
     </StockThemeProvider>
     {/* ฉากหน้า: คลุมจนข้อมูล dashboard โหลดครบ แล้ว fade */}
-    <AppSplash done={navReady} logo="/stock-icon-192.png" name="KP Stock" accent="#D4A843" bg={splashLight ? "#F9F9F7" : "#050505"} light={splashLight} />
+    <AppSplash done={navReady} logo="/splash-icon-stock.png" name="KP Stock" accent="#D4A843" bg={splashLight ? "#F9F9F7" : "#050505"} light={splashLight} />
     </StockNavReadyContext.Provider>
   );
 }

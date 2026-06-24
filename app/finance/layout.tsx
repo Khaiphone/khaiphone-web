@@ -33,12 +33,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true }
   }, [])
 
-  if (!ready) return <AppSplash logo="/icon-192.png" name="KP Finance" accent="#B8860B" bg={splashLight ? "#F0F2F5" : "#060606"} light={splashLight} />
+  if (!ready) return <AppSplash logo="/splash-icon-admin.png" name="KP Finance" accent="#B8860B" bg={splashLight ? "#F0F2F5" : "#060606"} light={splashLight} />
   return (
     <>
       <FinanceLayout>{children}</FinanceLayout>
       {/* ฉากหน้าขั้นต่ำ 0.8 วิ แล้ว fade (finance ไม่มี data-ready signal แยก) */}
-      <AppSplash done logo="/icon-192.png" name="KP Finance" accent="#B8860B" bg={splashLight ? "#F0F2F5" : "#060606"} light={splashLight} />
+      <AppSplash done logo="/splash-icon-admin.png" name="KP Finance" accent="#B8860B" bg={splashLight ? "#F0F2F5" : "#060606"} light={splashLight} />
     </>
   )
 }

@@ -194,7 +194,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true; };
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!ready) return <AppSplash logo="/icon-192.png" name="KP Admin" accent="#B8860B" bg={dark ? "#0F0F11" : "#F5F5F7"} light={!dark} />;
+  if (!ready) return <AppSplash logo="/splash-icon-admin.png" name="KP Admin" accent="#B8860B" bg={dark ? "#0F0F11" : "#F5F5F7"} light={!dark} />;
   if (isLogin) return <AdminRoleProvider>{children}</AdminRoleProvider>;
 
   const hideBottomNav = /^\/admin\/(requests|prices)\/[^/]+$/.test(pathname) || pathname.startsWith("/admin/riders");
@@ -413,7 +413,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         </div>
       </div>
       {/* ฉากหน้า: คลุมจนข้อมูล dashboard โหลดครบ (navReady) แล้ว fade ออก */}
-      <AppSplash done={navReady} logo="/icon-192.png" name="KP Admin" accent="#B8860B" bg={dark ? "#0F0F11" : "#F5F5F7"} light={!dark} />
+      <AppSplash done={navReady} logo="/splash-icon-admin.png" name="KP Admin" accent="#B8860B" bg={dark ? "#0F0F11" : "#F5F5F7"} light={!dark} />
     </AdminRoleProvider>
     </AdminNavReadyContext.Provider>
   );
