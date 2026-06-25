@@ -427,6 +427,7 @@ export async function riderSaveInspection(id: string, inspection: {
   accessories?: string[];
   conditionGrade?: string;
   conditionLabel?: string;
+  note?: string; // หมายเหตุอิสระจากไรเดอร์ถึงแอดมิน
 }) {
   const user = await requireAuth();
   const supabase = createServerClient();

@@ -1363,6 +1363,12 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                         </div>
                       );
                     })()}
+                    {(request.inspection as { note?: string }).note && (
+                      <div style={{ marginBottom: 16, borderRadius: 10, border: "1px solid #FDE68A", background: "#FFFBEB", padding: "10px 14px" }}>
+                        <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "#92400E" }}>📝 หมายเหตุจากไรเดอร์</p>
+                        <p style={{ margin: 0, fontSize: 13, color: TEXT, whiteSpace: "pre-wrap", lineHeight: 1.55 }}>{(request.inspection as { note?: string }).note}</p>
+                      </div>
+                    )}
                     {request.inspection.sickw_report && (() => {
                       const raw = request.inspection!.sickw_report!;
                       const map: Record<string, string> = {};

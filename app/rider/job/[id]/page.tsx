@@ -347,6 +347,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   const [accessoriesOther, setAccessoriesOther] = useState("");
   const [conditionGrade, setConditionGrade] = useState<string>((job.inspection as { conditionGrade?: string } | undefined)?.conditionGrade ?? "");
   const [conditionLabel, setConditionLabel] = useState<string>((job.inspection as { conditionLabel?: string } | undefined)?.conditionLabel ?? "");
+  const [inspectNote, setInspectNote] = useState<string>((job.inspection as { note?: string } | undefined)?.note ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const revisionNote = (job.inspection as { revisionNote?: string } | undefined)?.revisionNote ?? "";
@@ -526,6 +527,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
         accessories: accList.length ? accList : undefined,
         conditionGrade: conditionGrade || undefined,
         conditionLabel: conditionLabel || undefined,
+        note: inspectNote.trim() || undefined,
       });
       if (!result.success) { setError((result as { success: false; error?: string }).error ?? "เกิดข้อผิดพลาด"); return; }
       setIsEditingInspection(false);
@@ -996,6 +998,17 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
               )}
             </div>
           )}
+          <div>
+            <p style={{ margin: "0 0 8px", fontSize: 11, color: c.TEXT2, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>หมายเหตุถึงแอดมิน (ถ้ามี)</p>
+            <textarea
+              value={inspectNote}
+              onChange={e => setInspectNote(e.target.value)}
+              rows={3}
+              maxLength={1000}
+              placeholder="พิมพ์อะไรก็ได้เพิ่มเติม เช่น ตำหนิที่ไม่อยู่ในเกณฑ์ / สิ่งที่ลูกค้าแจ้ง / ข้อสังเกต — แอดมินจะเห็นหลังบันทึกผลตรวจ"
+              style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 9, border: `1px solid ${c.BORDER}`, background: c.CARD2, color: c.TEXT, fontSize: 14, fontFamily: "inherit", resize: "vertical", lineHeight: 1.5 }}
+            />
+          </div>
         </div>
       </Card>
       </div>
