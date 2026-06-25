@@ -614,7 +614,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
 
       {/* Sticky Header */}
       <div style={{ position: "sticky", top: 0, background: CARD, zIndex: 10, padding: "12px 16px", paddingTop: "calc(env(safe-area-inset-top) + 12px)", borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", gap: "10px" }}>
-        <button onClick={() => router.back()} style={{ background: "none", border: "none", color: TEXT2, cursor: "pointer", padding: "4px", display: "flex", touchAction: "manipulation" }}>
+        <button onClick={() => { if (window.history.length > 1) router.back(); else router.push("/admin/requests"); }} style={{ background: "none", border: "none", color: TEXT2, cursor: "pointer", padding: "4px", display: "flex", touchAction: "manipulation" }}>
           <ArrowLeft size={22} />
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>

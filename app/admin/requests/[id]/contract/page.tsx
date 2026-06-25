@@ -737,7 +737,7 @@ export default function ContractPage() {
 
       {/* Header */}
       <div style={{ position: "sticky", top: 0, background: DARK, zIndex: 10, padding: "12px 16px", paddingTop: "calc(env(safe-area-inset-top) + 12px)", display: "flex", alignItems: "center", gap: 12 }}>
-        <button onClick={() => router.back()} style={{ background: "none", border: "none", color: "#FFD700", cursor: "pointer", display: "flex", padding: 4 }}>
+        <button onClick={() => { if (window.history.length > 1) router.back(); else router.push(`/admin/requests/${id}`); }} style={{ background: "none", border: "none", color: "#FFD700", cursor: "pointer", display: "flex", padding: 4 }}>
           <ArrowLeft size={22} />
         </button>
         <div style={{ flex: 1 }}>
