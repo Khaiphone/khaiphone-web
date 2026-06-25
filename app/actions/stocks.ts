@@ -534,9 +534,13 @@ export async function fetchSoldItems(): Promise<SoldItem[]> {
 
 // ─── Customers page ───────────────────────────────────────────────────────────
 
+// normalize เบอร์โทร: เหลือเฉพาะตัวเลข (กัน "092-728-0778" กับ "0927280778" แยกกัน)
+function normPhone(p: string): string { return (p ?? "").replace(/\D/g, ""); }
+
 export interface StockCustomer {
   name: string;
-  phone: string;
+  phone: string;       // เบอร์สำหรับแสดง (รูปแบบล่าสุด)
+  phoneKey: string;    // เบอร์ normalize ใช้เป็น key + ดึงประวัติ
   totalItems: number;
   totalPaid: number;
   avgPrice: number;
@@ -553,23 +557,26 @@ export interface StockCustomerHistoryItem {
   status: string;
 }
 
-// ประวัติเครื่องที่ลูกค้ารายนี้ (ตามเบอร์โทร) ขายให้เรา
-export async function fetchStockCustomerHistory(phone: string): Promise<StockCustomerHistoryItem[]> {
+// ประวัติเครื่องที่ลูกค้ารายนี้ (ตามเบอร์โทร normalize) ขายให้เรา
+export async function fetchStockCustomerHistory(phoneKey: string): Promise<StockCustomerHistoryItem[]> {
   await requireAuth();
   const supabase = createServerClient();
+  const key = normPhone(phoneKey);
   const { data } = await supabase
     .from("stocks")
-    .select("id, model, storage, cost_price, received_at, status")
-    .eq("seller_phone", phone)
+    .select("id, model, storage, cost_price, received_at, status, seller_phone")
+    .not("seller_phone", "is", null)
     .order("received_at", { ascending: false });
-  return (data ?? []).map((r: { id: string; model: string | null; storage: string | null; cost_price: number | null; received_at: string | null; status: string | null }) => ({
-    id: r.id,
-    model: r.model ?? "",
-    storage: r.storage ?? "",
-    costPrice: r.cost_price ?? 0,
-    receivedAt: r.received_at ?? "",
-    status: r.status ?? "",
-  }));
+  return (data ?? [])
+    .filter((r: { seller_phone: string | null }) => normPhone(r.seller_phone ?? "") === key)
+    .map((r: { id: string; model: string | null; storage: string | null; cost_price: number | null; received_at: string | null; status: string | null }) => ({
+      id: r.id,
+      model: r.model ?? "",
+      storage: r.storage ?? "",
+      costPrice: r.cost_price ?? 0,
+      receivedAt: r.received_at ?? "",
+      status: r.status ?? "",
+    }));
 }
 
 export async function fetchStockCustomers(): Promise<StockCustomer[]> {
@@ -581,24 +588,29 @@ export async function fetchStockCustomers(): Promise<StockCustomer[]> {
     .not("seller_phone", "is", null)
     .neq("seller_phone", "");
 
-  const map = new Map<string, { name: string; channel: string; totalPaid: number; count: number; lastSeen: string }>();
+  // group ตามเบอร์ที่ normalize แล้ว (ตัดขีด/ช่องว่าง) — กันคนเดียวกันแยกเพราะ format ต่าง
+  const map = new Map<string, { name: string; phone: string; channel: string; totalPaid: number; count: number; lastSeen: string }>();
   for (const row of data ?? []) {
-    const phone = row.seller_phone ?? "";
-    if (!phone) continue;
-    if (!map.has(phone)) {
-      map.set(phone, { name: row.seller_name ?? "", channel: row.source_channel ?? "", totalPaid: 0, count: 0, lastSeen: row.received_at ?? "" });
+    const raw = row.seller_phone ?? "";
+    const key = normPhone(raw);
+    if (!key) continue;
+    if (!map.has(key)) {
+      map.set(key, { name: row.seller_name ?? "", phone: raw, channel: row.source_channel ?? "", totalPaid: 0, count: 0, lastSeen: row.received_at ?? "" });
     }
-    const cur = map.get(phone)!;
+    const cur = map.get(key)!;
     cur.totalPaid += row.cost_price ?? 0;
     cur.count += 1;
-    if ((row.received_at ?? "") > cur.lastSeen) cur.lastSeen = row.received_at ?? "";
-    if (!cur.name && row.seller_name) cur.name = row.seller_name;
+    const rcv = row.received_at ?? "";
+    if (rcv > cur.lastSeen) { cur.lastSeen = rcv; cur.phone = raw; if (row.source_channel) cur.channel = row.source_channel; }
+    // เลือกชื่อที่สมบูรณ์สุด (ยาวสุด) เป็นตัวแทน เช่น "กิตติยา รุ่งเรือง" แทน "กิตติยา"
+    if ((row.seller_name ?? "").trim().length > (cur.name ?? "").trim().length) cur.name = row.seller_name ?? cur.name;
   }
 
   return Array.from(map.entries())
-    .map(([phone, { name, channel, totalPaid, count, lastSeen }]) => ({
+    .map(([key, { name, phone, channel, totalPaid, count, lastSeen }]) => ({
       name: name || "ไม่ระบุชื่อ",
       phone,
+      phoneKey: key,
       totalItems: count,
       totalPaid,
       avgPrice: count > 0 ? Math.round(totalPaid / count) : 0,
