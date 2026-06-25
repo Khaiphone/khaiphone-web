@@ -544,6 +544,34 @@ export interface StockCustomer {
   channel: string;
 }
 
+export interface StockCustomerHistoryItem {
+  id: string;
+  model: string;
+  storage: string;
+  costPrice: number;
+  receivedAt: string;
+  status: string;
+}
+
+// ประวัติเครื่องที่ลูกค้ารายนี้ (ตามเบอร์โทร) ขายให้เรา
+export async function fetchStockCustomerHistory(phone: string): Promise<StockCustomerHistoryItem[]> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("stocks")
+    .select("id, model, storage, cost_price, received_at, status")
+    .eq("seller_phone", phone)
+    .order("received_at", { ascending: false });
+  return (data ?? []).map((r: { id: string; model: string | null; storage: string | null; cost_price: number | null; received_at: string | null; status: string | null }) => ({
+    id: r.id,
+    model: r.model ?? "",
+    storage: r.storage ?? "",
+    costPrice: r.cost_price ?? 0,
+    receivedAt: r.received_at ?? "",
+    status: r.status ?? "",
+  }));
+}
+
 export async function fetchStockCustomers(): Promise<StockCustomer[]> {
   await requireAuth();
   const supabase = createServerClient();

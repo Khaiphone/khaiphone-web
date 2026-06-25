@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { Users, DollarSign, Search, Phone } from "lucide-react";
+import { useState, useEffect, useMemo, Fragment } from "react";
+import { useRouter } from "next/navigation";
+import { Users, DollarSign, Search, Phone, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import StockTopbar from "@/components/stock/Topbar";
 import MetricCard from "@/components/stock/MetricCard";
 import { useThemeColors } from "@/components/stock/ThemeContext";
-import { fetchStockCustomers } from "@/app/actions/stocks";
+import { fetchStockCustomers, fetchStockCustomerHistory } from "@/app/actions/stocks";
 import { cacheGet, cacheSet } from "@/app/stock/cache";
-import type { StockCustomer } from "@/app/actions/stocks";
+import type { StockCustomer, StockCustomerHistoryItem } from "@/app/actions/stocks";
 
 function fmt(n: number) { return n.toLocaleString("th-TH"); }
 function fmtDate(s: string) {
@@ -23,9 +24,19 @@ const CHANNEL_COLOR: Record<string, string> = {
 
 export default function CustomersPage() {
   const c = useThemeColors();
+  const router = useRouter();
   const [customers, setCustomers] = useState<StockCustomer[]>(() => cacheGet<StockCustomer[]>("stock:customers") ?? []);
   const [loading, setLoading] = useState(() => cacheGet<StockCustomer[]>("stock:customers") === null);
   const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [historyMap, setHistoryMap] = useState<Record<string, StockCustomerHistoryItem[]>>({});
+
+  function toggleRow(phone: string) {
+    setExpanded(prev => prev === phone ? null : phone);
+    if (!historyMap[phone]) {
+      fetchStockCustomerHistory(phone).then(h => setHistoryMap(m => ({ ...m, [phone]: h })));
+    }
+  }
 
   useEffect(() => {
     fetchStockCustomers().then(d => { setCustomers(d); cacheSet("stock:customers", d); setLoading(false); });
@@ -82,7 +93,7 @@ export default function CustomersPage() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: c.card2 }}>
-                    {["#", "ชื่อ", "เบอร์โทร", "จำนวนครั้ง", "ยอดรวมที่ขาย", "ราคาเฉลี่ย", "ช่องทาง", "ล่าสุด"].map(h => (
+                    {["#", "ชื่อ", "เบอร์โทร", "จำนวนครั้ง", "ยอดรวมที่ขาย", "ราคาเฉลี่ย", "ช่องทาง", "ล่าสุด", ""].map(h => (
                       <th key={h} style={{ padding: "12px 14px", textAlign: "left", color: c.text3, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
                     ))}
                   </tr>
@@ -90,12 +101,13 @@ export default function CustomersPage() {
                 <tbody>
                   <AnimatePresence>
                     {filtered.map((customer, i) => (
+                      <Fragment key={customer.phone}>
                       <motion.tr
-                        key={customer.phone}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: Math.min(i * 0.02, 0.3) }}
-                        style={{ borderBottom: `1px solid ${c.border}` }}
+                        onClick={() => toggleRow(customer.phone)}
+                        style={{ borderBottom: `1px solid ${c.border}`, cursor: "pointer", background: expanded === customer.phone ? c.card2 : "transparent" }}
                       >
                         <td style={{ padding: "12px 14px", color: c.text3, fontSize: 12 }}>{i + 1}</td>
                         <td style={{ padding: "12px 14px" }}>
@@ -128,7 +140,38 @@ export default function CustomersPage() {
                           </span>
                         </td>
                         <td style={{ padding: "12px 14px", color: c.text3, fontSize: 12, whiteSpace: "nowrap" }}>{fmtDate(customer.lastSeen)}</td>
+                        <td style={{ padding: "12px 14px", width: 28 }}>
+                          <ChevronRight size={16} style={{ color: c.text3, transform: expanded === customer.phone ? "rotate(90deg)" : "none", transition: "transform 0.15s" }} />
+                        </td>
                       </motion.tr>
+                      {expanded === customer.phone && (
+                        <tr style={{ background: c.bg }}>
+                          <td colSpan={9} style={{ padding: 0 }}>
+                            <div style={{ padding: "4px 14px 14px 58px" }}>
+                              {!historyMap[customer.phone] ? (
+                                <p style={{ color: c.text3, fontSize: 12, padding: "8px 0" }}>กำลังโหลด...</p>
+                              ) : historyMap[customer.phone].length === 0 ? (
+                                <p style={{ color: c.text3, fontSize: 12, padding: "8px 0" }}>ไม่พบรายการ</p>
+                              ) : (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                  <p style={{ color: c.text3, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", margin: "4px 0 2px" }}>เครื่องที่ขายให้เรา ({historyMap[customer.phone].length})</p>
+                                  {historyMap[customer.phone].map(h => (
+                                    <div key={h.id} onClick={(e) => { e.stopPropagation(); router.push(`/stock/inventory/${h.id}`); }}
+                                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "8px 12px", borderRadius: 9, background: c.card, border: `1px solid ${c.border}`, cursor: "pointer" }}>
+                                      <div style={{ minWidth: 0 }}>
+                                        <p style={{ color: c.text, fontSize: 13, fontWeight: 600, margin: 0 }}>{h.model} {h.storage}</p>
+                                        <p style={{ color: c.text3, fontSize: 11, margin: "2px 0 0" }}>{h.id} · {fmtDate(h.receivedAt)} · {h.status}</p>
+                                      </div>
+                                      <span style={{ color: c.text, fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>฿{fmt(h.costPrice)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </Fragment>
                     ))}
                   </AnimatePresence>
                 </tbody>
