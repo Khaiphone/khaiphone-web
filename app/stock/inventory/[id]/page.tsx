@@ -15,6 +15,7 @@ import {
   updateStockPhotos, confirmStockRecheck, confirmDelivery, addStockSlips,
 } from "@/app/actions/stocks";
 import SellModal from "@/components/stock/SellModal";
+import EditSaleModal from "@/components/stock/EditSaleModal";
 import type { StockItem, StockStatus } from "@/lib/stock/types";
 import { STOCK_STATUS_COLORS } from "@/lib/stock/constants";
 import { supabase } from "@/lib/supabase";
@@ -223,6 +224,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ id: stri
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState<VerifyField | null>(null);
   const [showSellModal, setShowSellModal] = useState(false);
+  const [showEditSale, setShowEditSale] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Edit
@@ -993,7 +995,15 @@ export default function StockDetailPage({ params }: { params: Promise<{ id: stri
             {/* Sold Info */}
             {item.status === "ขายแล้ว" && (
               <div style={{ background: c.card, borderRadius: 20, padding: 24, border: "1px solid rgba(34,197,94,0.3)", marginBottom: 20 }}>
-                <p style={{ color: "#22c55e", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 16px" }}>ข้อมูลการขาย</p>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "0 0 16px" }}>
+                  <p style={{ color: "#22c55e", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>ข้อมูลการขาย</p>
+                  <button
+                    onClick={() => setShowEditSale(true)}
+                    style={{ padding: "4px 12px", borderRadius: 7, border: `1px solid ${c.border}`, background: "transparent", color: c.text2, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}
+                  >
+                    <Edit2 size={13} /> แก้ไข
+                  </button>
+                </div>
                 {[
                   ["ราคาขายจริง", item.soldPrice !== undefined ? `฿${fmt(item.soldPrice)}` : "-"],
                   ["กำไรจริง", item.soldPrice !== undefined ? `฿${fmt(item.soldPrice - totalCost)}` : "-"],
@@ -1299,6 +1309,14 @@ export default function StockDetailPage({ params }: { params: Promise<{ id: stri
           item={item}
           onClose={() => setShowSellModal(false)}
           onSuccess={async () => { await reload(); }}
+        />
+      )}
+
+      {showEditSale && (
+        <EditSaleModal
+          item={item}
+          onClose={() => setShowEditSale(false)}
+          onSuccess={(updates) => setItem(prev => prev ? { ...prev, ...updates } : prev)}
         />
       )}
 

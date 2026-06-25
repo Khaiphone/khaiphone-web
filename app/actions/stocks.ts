@@ -267,6 +267,60 @@ export async function confirmDelivery(
   return { success: true };
 }
 
+// แก้ไขข้อมูลการขายย้อนหลัง (กรณีลงข้อมูลพลาด) — ไม่เปลี่ยนสถานะ ไม่ส่งแจ้งเตือนซ้ำ
+export async function updateStockSale(
+  id: string,
+  data: {
+    soldPrice?: number;
+    buyerName?: string;
+    buyerPhone?: string;
+    soldAt?: string;
+    soldBy?: string | null;
+    saleType?: string;
+    partnerName?: string | null;
+  },
+  by = "admin",
+): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const now = new Date().toISOString();
+
+  const { data: current } = await supabase
+    .from("stocks")
+    .select("status, request_ref, audit_log")
+    .eq("id", id)
+    .single();
+  if (current?.status !== "ขายแล้ว") return { success: false, error: "แก้ไขได้เฉพาะรายการที่ขายแล้ว" };
+
+  const update: Record<string, unknown> = { updated_at: now };
+  if (data.soldPrice  !== undefined) update.sold_price  = data.soldPrice;
+  if (data.buyerName  !== undefined) update.buyer_name  = data.buyerName;
+  if (data.buyerPhone !== undefined) update.buyer_phone = data.buyerPhone;
+  if (data.soldAt     !== undefined) update.sold_at     = data.soldAt;
+  if (data.soldBy     !== undefined) update.sold_by     = data.soldBy || null;
+  if (data.saleType   !== undefined) update.sale_type   = data.saleType;
+  if (data.partnerName !== undefined) update.partner_name = data.partnerName || null;
+
+  const newAuditLog: AuditEntry[] = [
+    ...(current?.audit_log ?? []),
+    { action: "แก้ไขข้อมูลการขาย", detail: "แก้ไขข้อมูลการขายย้อนหลัง", timestamp: now, by },
+  ];
+  update.audit_log = newAuditLog;
+
+  const { error } = await supabase.from("stocks").update(update).eq("id", id);
+  if (error) return { success: false, error: error.message };
+
+  // sync ไป requests เพื่อให้ finance สะท้อนการแก้ไข
+  if (current?.request_ref && (data.soldPrice !== undefined || data.soldAt !== undefined)) {
+    const reqUpdate: Record<string, unknown> = {};
+    if (data.soldPrice !== undefined) reqUpdate.sell_price = data.soldPrice;
+    if (data.soldAt    !== undefined) reqUpdate.sell_date  = data.soldAt.slice(0, 10);
+    if (Object.keys(reqUpdate).length) await supabase.from("requests").update(reqUpdate).eq("order_number", current.request_ref);
+  }
+
+  return { success: true };
+}
+
 export async function fetchStockStaff(): Promise<string[]> {
   await requireAuth();
   const supabase = createServerClient();
