@@ -168,7 +168,7 @@ export default function CustomersPage() {
                             </div>
                           </div>
                         </td>
-                        <td style={{ padding: "12px 14px", color: c.text2, fontSize: 13, fontFamily: "monospace" }}>{customer.phone}</td>
+                        <td style={{ padding: "12px 14px", color: c.text2, fontSize: 13, fontFamily: "monospace" }}>{customer.phoneKey || customer.phone}</td>
                         <td style={{ padding: "12px 14px" }}>
                           <span style={{ color: customer.totalItems >= 3 ? c.gold : c.text, fontSize: 14, fontWeight: 700 }}>{customer.totalItems}</span>
                           <span style={{ color: c.text3, fontSize: 12 }}> เครื่อง</span>
