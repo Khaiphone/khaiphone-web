@@ -693,7 +693,7 @@ export default function ContractPage() {
 
     await saveContractUrls(id, cu.data.path, ru.data.path);
     await updateStatus(id, "completed", "บันทึกสัญญาและใบรับเงินสำเร็จ — เสร็จสิ้น");
-    await markContractSigned(id);
+    await markContractSigned(id, buyerName.trim() || undefined);
     setSavedUrls({ contract: cu.data.path, receipt: ru.data.path });
     setUploading(false);
   }

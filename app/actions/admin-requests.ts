@@ -1329,15 +1329,29 @@ export async function updatePayment(
 }
 
 // ─── Mark contract signed ─────────────────────────────────────────────────────
-export async function markContractSigned(id: string) {
+export async function markContractSigned(id: string, verifiedName?: string) {
   await requireAuth();
   const supabase = createServerClient();
   const signedAt = new Date().toISOString();
-  const { error } = await supabase
+
+  // ชื่อในสัญญา = ข้อมูลที่ถูกต้องสุด (ตรงบัตร ปชช.) → เขียนกลับเป็น single source of truth
+  const name = verifiedName?.trim();
+  const update: Record<string, unknown> = { contract_signed_at: signedAt, updated_at: signedAt };
+  if (name) update.customer_name = name;
+
+  const { data: updated, error } = await supabase
     .from("requests")
-    .update({ contract_signed_at: signedAt, updated_at: signedAt })
-    .eq("id", id);
+    .update(update)
+    .eq("id", id)
+    .select("order_number")
+    .single();
   if (error) return { success: false as const, error: error.message };
+
+  // อัปเดตชื่อผู้ขายในสต็อกของเครื่องที่ผูกกับคำขอนี้ด้วย (ถ้าเข้าสต็อกแล้ว)
+  if (name && updated?.order_number) {
+    await supabase.from("stocks").update({ seller_name: name }).eq("request_ref", updated.order_number);
+  }
+
   after(() => broadcastRequestUpdate(id));
   return { success: true as const, signedAt };
 }
