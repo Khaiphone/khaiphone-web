@@ -584,6 +584,38 @@ export async function fetchStockCustomerHistory(phoneKey: string): Promise<Stock
     }));
 }
 
+export interface StockSearchResult {
+  id: string;
+  model: string;
+  storage: string;
+  imei: string;
+  serial: string;
+  status: string;
+}
+
+// global search สำหรับช่องบน Topbar — ค้นเครื่องด้วย รหัส/รุ่น/IMEI/Serial/ชื่อผู้ขาย
+export async function searchStockItems(q: string): Promise<StockSearchResult[]> {
+  await requireAuth();
+  const term = q.trim().replace(/[,()%*]/g, ""); // กันอักขระที่ทำ PostgREST or() พัง
+  if (term.length < 2) return [];
+  const supabase = createServerClient();
+  const like = `%${term}%`;
+  const { data } = await supabase
+    .from("stocks")
+    .select("id, model, storage, imei, serial, status, received_at")
+    .or(`id.ilike.${like},model.ilike.${like},imei.ilike.${like},serial.ilike.${like},seller_name.ilike.${like}`)
+    .order("received_at", { ascending: false })
+    .limit(8);
+  return (data ?? []).map((r: { id: string; model: string | null; storage: string | null; imei: string | null; serial: string | null; status: string | null }) => ({
+    id: r.id,
+    model: r.model ?? "",
+    storage: r.storage ?? "",
+    imei: r.imei ?? "",
+    serial: r.serial ?? "",
+    status: r.status ?? "",
+  }));
+}
+
 export async function fetchStockCustomers(): Promise<StockCustomer[]> {
   await requireAuth();
   const supabase = createServerClient();
