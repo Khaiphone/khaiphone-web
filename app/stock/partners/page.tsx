@@ -74,7 +74,13 @@ export default function PartnersPage() {
   const filtered = useMemo(() => {
     if (!query) return partners;
     const q = query.toLowerCase();
-    return partners.filter(p => p.name.toLowerCase().includes(q) || cleanPhone(p.phone).includes(cleanPhone(q)) || p.phone.includes(q));
+    const qDigits = cleanPhone(q);
+    return partners.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      (qDigits !== "" && cleanPhone(p.phone).includes(qDigits)) ||
+      p.phone.includes(q) ||
+      p.deviceSearch.includes(q), // ค้นด้วย IMEI / Serial / รหัสสต็อก / รุ่น ของเครื่องที่ขายให้
+    );
   }, [partners, query]);
 
   const sorted = useMemo(() => {
@@ -167,7 +173,7 @@ export default function PartnersPage() {
             <div style={{ background: c.card, borderRadius: 12, padding: "12px 16px", marginBottom: 12, border: `1px solid ${c.border}` }}>
               <div style={{ position: "relative" }}>
                 <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: c.text3 }} />
-                <input value={query} onChange={e => setQuery(e.target.value)} placeholder="ค้นหาชื่อหรือเบอร์..."
+                <input value={query} onChange={e => setQuery(e.target.value)} placeholder="ค้นหาชื่อ / เบอร์ / IMEI / Serial / รหัสสต็อก..."
                   style={{ ...inputSt, paddingLeft: 34 }} />
               </div>
             </div>

@@ -65,10 +65,13 @@ export default function CustomersPage() {
   const filtered = useMemo(() => {
     if (!search.trim()) return customers;
     const q = search.toLowerCase();
+    const qDigits = q.replace(/\D/g, "");
     return customers.filter(c =>
       c.name.toLowerCase().includes(q) ||
       c.phone.includes(q) ||
-      c.channel.toLowerCase().includes(q),
+      (qDigits !== "" && c.phoneKey.includes(qDigits)) ||
+      c.channel.toLowerCase().includes(q) ||
+      c.deviceSearch.includes(q), // ค้นด้วย IMEI / Serial / รหัสสต็อก / รุ่น
     );
   }, [customers, search]);
 
@@ -110,7 +113,7 @@ export default function CustomersPage() {
           <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: c.text3 }} />
           <input
             value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="ค้นหาชื่อ, เบอร์โทร, ช่องทาง..."
+            placeholder="ค้นหาชื่อ / เบอร์ / IMEI / Serial / รหัสสต็อก..."
             style={{ width: "100%", background: c.card, border: `1px solid ${c.border}`, borderRadius: 12, padding: "10px 12px 10px 36px", color: c.text, fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
           />
         </div>

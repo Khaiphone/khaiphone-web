@@ -13,6 +13,7 @@ export interface Partner {
   totalItems: number;
   totalRevenue: number;
   lastPurchase: string;
+  deviceSearch: string; // รวม imei/serial/รหัสสต็อก/รุ่น ของเครื่องที่ขายให้ (ใช้ค้นหา)
 }
 
 export interface PartnerHistoryItem {
@@ -36,22 +37,23 @@ export async function fetchPartners(): Promise<Partner[]> {
 
   const [{ data: partnersData }, { data: salesData }] = await Promise.all([
     supabase.from("partners").select("*").order("name"),
-    supabase.from("stocks").select("partner_name, sold_price, sold_at")
+    supabase.from("stocks").select("partner_name, sold_price, sold_at, id, imei, serial, model")
       .eq("sale_type", "ขายส่ง").not("partner_name", "is", null),
   ]);
 
-  const map = new Map<string, { count: number; revenue: number; lastDate: string }>();
+  const map = new Map<string, { count: number; revenue: number; lastDate: string; search: string }>();
   for (const row of salesData ?? []) {
     const name = row.partner_name;
-    if (!map.has(name)) map.set(name, { count: 0, revenue: 0, lastDate: "" });
+    if (!map.has(name)) map.set(name, { count: 0, revenue: 0, lastDate: "", search: "" });
     const cur = map.get(name)!;
     cur.count += 1;
     cur.revenue += row.sold_price ?? 0;
     if ((row.sold_at ?? "") > cur.lastDate) cur.lastDate = row.sold_at ?? "";
+    cur.search += ` ${row.id ?? ""} ${row.imei ?? ""} ${row.serial ?? ""} ${row.model ?? ""}`.toLowerCase();
   }
 
   return (partnersData ?? []).map(p => {
-    const agg = map.get(p.name) ?? { count: 0, revenue: 0, lastDate: "" };
+    const agg = map.get(p.name) ?? { count: 0, revenue: 0, lastDate: "", search: "" };
     return {
       id: p.id,
       name: p.name,
@@ -62,6 +64,7 @@ export async function fetchPartners(): Promise<Partner[]> {
       totalItems: agg.count,
       totalRevenue: agg.revenue,
       lastPurchase: agg.lastDate,
+      deviceSearch: agg.search,
     };
   });
 }

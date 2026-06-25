@@ -546,6 +546,7 @@ export interface StockCustomer {
   avgPrice: number;
   lastSeen: string;
   channel: string;
+  deviceSearch: string; // รวม imei/serial/รหัสสต็อก/รุ่น ของเครื่องที่ขายให้เรา (ใช้ค้นหา)
 }
 
 export interface StockCustomerHistoryItem {
@@ -588,22 +589,23 @@ export async function fetchStockCustomers(): Promise<StockCustomer[]> {
   const supabase = createServerClient();
   const { data } = await supabase
     .from("stocks")
-    .select("seller_name, seller_phone, cost_price, source_channel, received_at")
+    .select("seller_name, seller_phone, cost_price, source_channel, received_at, id, imei, serial, model")
     .not("seller_phone", "is", null)
     .neq("seller_phone", "");
 
   // group ตามเบอร์ที่ normalize แล้ว (ตัดขีด/ช่องว่าง) — กันคนเดียวกันแยกเพราะ format ต่าง
-  const map = new Map<string, { name: string; phone: string; channel: string; totalPaid: number; count: number; lastSeen: string }>();
+  const map = new Map<string, { name: string; phone: string; channel: string; totalPaid: number; count: number; lastSeen: string; search: string }>();
   for (const row of data ?? []) {
     const raw = row.seller_phone ?? "";
     const key = normPhone(raw);
     if (!key) continue;
     if (!map.has(key)) {
-      map.set(key, { name: row.seller_name ?? "", phone: raw, channel: row.source_channel ?? "", totalPaid: 0, count: 0, lastSeen: row.received_at ?? "" });
+      map.set(key, { name: row.seller_name ?? "", phone: raw, channel: row.source_channel ?? "", totalPaid: 0, count: 0, lastSeen: row.received_at ?? "", search: "" });
     }
     const cur = map.get(key)!;
     cur.totalPaid += row.cost_price ?? 0;
     cur.count += 1;
+    cur.search += ` ${row.id ?? ""} ${row.imei ?? ""} ${row.serial ?? ""} ${row.model ?? ""}`.toLowerCase();
     const rcv = row.received_at ?? "";
     if (rcv > cur.lastSeen) { cur.lastSeen = rcv; cur.phone = raw; if (row.source_channel) cur.channel = row.source_channel; }
     // เลือกชื่อที่สมบูรณ์สุด (ยาวสุด) เป็นตัวแทน เช่น "กิตติยา รุ่งเรือง" แทน "กิตติยา"
@@ -611,7 +613,7 @@ export async function fetchStockCustomers(): Promise<StockCustomer[]> {
   }
 
   return Array.from(map.entries())
-    .map(([key, { name, phone, channel, totalPaid, count, lastSeen }]) => ({
+    .map(([key, { name, phone, channel, totalPaid, count, lastSeen, search }]) => ({
       name: name || "ไม่ระบุชื่อ",
       phone,
       phoneKey: key,
@@ -619,6 +621,7 @@ export async function fetchStockCustomers(): Promise<StockCustomer[]> {
       totalPaid,
       avgPrice: count > 0 ? Math.round(totalPaid / count) : 0,
       lastSeen,
+      deviceSearch: search,
       channel,
     }))
     .sort((a, b) => b.totalItems - a.totalItems);
