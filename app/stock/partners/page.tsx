@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, Search, X, Phone, MapPin, FileText, Trash2, Edit2, Save, ChevronRight, Package, TrendingUp, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import StockTopbar from "@/components/stock/Topbar";
@@ -30,6 +31,7 @@ const PCOLUMNS: { label: string; key?: PSortKey }[] = [
 
 export default function PartnersPage() {
   const c = useThemeColors();
+  const router = useRouter();
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -348,7 +350,8 @@ export default function PartnersPage() {
                   ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 360, overflowY: "auto" }}>
                       {history.map(h => (
-                        <div key={h.id} style={{ background: c.card2, borderRadius: 10, padding: "10px 12px" }}>
+                        <div key={h.id} onClick={() => router.push(`/stock/inventory/${h.id}`)}
+                          style={{ background: c.card2, borderRadius: 10, padding: "10px 12px", cursor: "pointer" }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
                             <div>
                               <p style={{ color: c.text, fontSize: 13, fontWeight: 600, margin: 0 }}>{h.model}</p>
@@ -361,13 +364,16 @@ export default function PartnersPage() {
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <span style={{ color: c.text3, fontSize: 11 }}>{fmtDate(h.soldAt)}</span>
-                            {h.deliveryStatus && (
-                              <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6,
-                                color: h.deliveryStatus === "จัดส่งแล้ว" ? "#22c55e" : "#f59e0b",
-                                background: h.deliveryStatus === "จัดส่งแล้ว" ? "rgba(34,197,94,0.12)" : "rgba(245,158,11,0.12)" }}>
-                                {h.deliveryStatus}
-                              </span>
-                            )}
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              {h.deliveryStatus && (
+                                <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6,
+                                  color: h.deliveryStatus === "จัดส่งแล้ว" ? "#22c55e" : "#f59e0b",
+                                  background: h.deliveryStatus === "จัดส่งแล้ว" ? "rgba(34,197,94,0.12)" : "rgba(245,158,11,0.12)" }}>
+                                  {h.deliveryStatus}
+                                </span>
+                              )}
+                              <ChevronRight size={14} color={c.text3} />
+                            </div>
                           </div>
                         </div>
                       ))}
