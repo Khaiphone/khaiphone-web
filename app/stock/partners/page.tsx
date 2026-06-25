@@ -16,6 +16,17 @@ function fmtDate(s?: string) {
 }
 
 const EMPTY_FORM = { name: "", phone: "", address: "", notes: "" };
+const cleanPhone = (p?: string) => (p || "").replace(/\D/g, "");
+
+type PSortKey = "name" | "phone" | "totalItems" | "totalRevenue" | "lastPurchase";
+const PCOLUMNS: { label: string; key?: PSortKey }[] = [
+  { label: "ชื่อคู่ค้า", key: "name" },
+  { label: "เบอร์โทร", key: "phone" },
+  { label: "จำนวนเครื่อง", key: "totalItems" },
+  { label: "ยอดรวม", key: "totalRevenue" },
+  { label: "ล่าสุด", key: "lastPurchase" },
+  { label: "" },
+];
 
 export default function PartnersPage() {
   const c = useThemeColors();
@@ -51,11 +62,33 @@ export default function PartnersPage() {
     fetchPartnerHistory(selected.name).then(data => { setHistory(data); setHistoryLoading(false); });
   }, [selected]);
 
+  const [sortKey, setSortKey] = useState<PSortKey>("totalItems");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  function clickSort(k: PSortKey) {
+    if (sortKey === k) setSortDir(d => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(k); setSortDir(k === "name" || k === "phone" ? "asc" : "desc"); }
+  }
+
   const filtered = useMemo(() => {
     if (!query) return partners;
     const q = query.toLowerCase();
-    return partners.filter(p => p.name.toLowerCase().includes(q) || p.phone.includes(q));
+    return partners.filter(p => p.name.toLowerCase().includes(q) || cleanPhone(p.phone).includes(cleanPhone(q)) || p.phone.includes(q));
   }, [partners, query]);
+
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      let cmp: number;
+      switch (sortKey) {
+        case "name":         cmp = a.name.localeCompare(b.name, "th"); break;
+        case "phone":        cmp = cleanPhone(a.phone).localeCompare(cleanPhone(b.phone)); break;
+        case "lastPurchase": cmp = (a.lastPurchase || "").localeCompare(b.lastPurchase || ""); break;
+        default:             cmp = (a[sortKey] as number) - (b[sortKey] as number);
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return arr;
+  }, [filtered, sortKey, sortDir]);
 
   const totalRevenue = partners.reduce((a, p) => a + p.totalRevenue, 0);
   const totalItems = partners.reduce((a, p) => a + p.totalItems, 0);
@@ -83,13 +116,14 @@ export default function PartnersPage() {
     if (!form.name.trim()) { setFormError("กรุณาระบุชื่อคู่ค้า"); return; }
     setSaving(true);
     setFormError("");
+    const payload = { ...form, phone: cleanPhone(form.phone) }; // เก็บเบอร์เลขล้วน
     if (editing) {
-      const res = await updatePartner(editing.id, form);
+      const res = await updatePartner(editing.id, payload);
       if (!res.success) { setFormError(res.error ?? "เกิดข้อผิดพลาด"); setSaving(false); return; }
-      setPartners(prev => prev.map(p => p.id === editing.id ? { ...p, ...form } : p));
-      if (selected?.id === editing.id) setSelected(prev => prev ? { ...prev, ...form } : null);
+      setPartners(prev => prev.map(p => p.id === editing.id ? { ...p, ...payload } : p));
+      if (selected?.id === editing.id) setSelected(prev => prev ? { ...prev, ...payload } : null);
     } else {
-      const res = await createPartner(form);
+      const res = await createPartner(payload);
       if (!res.success) { setFormError(res.error ?? "เกิดข้อผิดพลาด"); setSaving(false); return; }
       const refreshed = await fetchPartners();
       setPartners(refreshed);
@@ -148,7 +182,7 @@ export default function PartnersPage() {
                 /* ── Mobile: card list ── */
                 <div>
                   <AnimatePresence>
-                    {filtered.map((p, i) => (
+                    {sorted.map((p, i) => (
                       <motion.div key={p.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}
                         onClick={() => setSelected(selected?.id === p.id ? null : p)}
                         style={{ borderBottom: `1px solid ${c.border}`, cursor: "pointer", background: selected?.id === p.id ? c.goldBg : "transparent", padding: "14px 16px" }}>
@@ -158,7 +192,7 @@ export default function PartnersPage() {
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <p style={{ color: c.text, fontSize: 14, fontWeight: 600, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
-                            <p style={{ color: c.text3, fontSize: 12, margin: 0 }}>{p.phone || "—"}</p>
+                            <p style={{ color: c.text3, fontSize: 12, margin: 0 }}>{cleanPhone(p.phone) || "—"}</p>
                           </div>
                           <div onClick={e => e.stopPropagation()} style={{ display: "flex", gap: 2, flexShrink: 0 }}>
                             <button onClick={() => openEdit(p)} style={{ background: "none", border: "none", color: c.text3, cursor: "pointer", padding: 6, borderRadius: 6, display: "flex" }}>
@@ -184,14 +218,20 @@ export default function PartnersPage() {
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ background: c.card2 }}>
-                      {["ชื่อคู่ค้า", "เบอร์โทร", "จำนวนเครื่อง", "ยอดรวม", "ล่าสุด", ""].map((h, i) => (
-                        <th key={i} style={{ padding: "12px 16px", textAlign: "left", color: c.text3, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
-                      ))}
+                      {PCOLUMNS.map(col => {
+                        const active = col.key && sortKey === col.key;
+                        return (
+                          <th key={col.label} onClick={col.key ? () => clickSort(col.key!) : undefined}
+                            style={{ padding: "12px 16px", textAlign: "left", color: active ? c.gold : c.text3, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap", cursor: col.key ? "pointer" : "default", userSelect: "none" }}>
+                            {col.label}{active ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
+                          </th>
+                        );
+                      })}
                     </tr>
                   </thead>
                   <tbody>
                     <AnimatePresence>
-                      {filtered.map((p, i) => (
+                      {sorted.map((p, i) => (
                         <motion.tr key={p.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}
                           onClick={() => setSelected(selected?.id === p.id ? null : p)}
                           style={{ borderBottom: `1px solid ${c.border}`, cursor: "pointer", background: selected?.id === p.id ? c.goldBg : "transparent", transition: "background 150ms" }}>
@@ -206,7 +246,7 @@ export default function PartnersPage() {
                               </div>
                             </div>
                           </td>
-                          <td style={{ padding: "14px 16px", color: c.text2, fontSize: 13 }}>{p.phone || "—"}</td>
+                          <td style={{ padding: "14px 16px", color: c.text2, fontSize: 13 }}>{cleanPhone(p.phone) || "—"}</td>
                           <td style={{ padding: "14px 16px" }}>
                             <span style={{ color: "#3b82f6", fontWeight: 700, fontSize: 13 }}>{p.totalItems}</span>
                             <span style={{ color: c.text3, fontSize: 12 }}> เครื่อง</span>
@@ -265,7 +305,7 @@ export default function PartnersPage() {
                   {selected.phone && (
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                       <Phone size={13} color={c.text3} />
-                      <span style={{ color: c.text2, fontSize: 13 }}>{selected.phone}</span>
+                      <span style={{ color: c.text2, fontSize: 13 }}>{cleanPhone(selected.phone)}</span>
                     </div>
                   )}
                   {selected.address && (
