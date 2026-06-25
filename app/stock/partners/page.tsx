@@ -353,9 +353,15 @@ export default function PartnersPage() {
                         <div key={h.id} onClick={() => router.push(`/stock/inventory/${h.id}`)}
                           style={{ background: c.card2, borderRadius: 10, padding: "10px 12px", cursor: "pointer" }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-                            <div>
+                            <div style={{ minWidth: 0 }}>
                               <p style={{ color: c.text, fontSize: 13, fontWeight: 600, margin: 0 }}>{h.model}</p>
-                              <p style={{ color: c.text3, fontSize: 11, margin: 0 }}>{h.storage} · {h.color} · เกรด {h.grade}</p>
+                              <p style={{ color: c.text3, fontSize: 11, margin: "1px 0 0" }}>{h.storage} · {h.color} · เกรด {h.grade}</p>
+                              <p style={{ color: c.gold, fontSize: 10.5, fontWeight: 600, margin: "3px 0 0", fontFamily: "monospace" }}>{h.id}</p>
+                              {(h.imei || h.serial) && (
+                                <p style={{ color: c.text3, fontSize: 10, margin: "1px 0 0", fontFamily: "monospace", wordBreak: "break-all" }}>
+                                  {h.imei ? `IMEI ${h.imei}` : ""}{h.imei && h.serial ? " · " : ""}{h.serial ? `SN ${h.serial}` : ""}
+                                </p>
+                              )}
                             </div>
                             <div style={{ textAlign: "right" }}>
                               <p style={{ color: "#22c55e", fontSize: 13, fontWeight: 700, margin: 0 }}>฿{fmt(h.soldPrice)}</p>

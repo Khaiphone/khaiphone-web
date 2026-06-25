@@ -205,7 +205,12 @@ export default function CustomersPage() {
                                       style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "8px 12px", borderRadius: 9, background: c.card, border: `1px solid ${c.border}`, cursor: "pointer" }}>
                                       <div style={{ minWidth: 0 }}>
                                         <p style={{ color: c.text, fontSize: 13, fontWeight: 600, margin: 0 }}>{h.model} {h.storage}</p>
-                                        <p style={{ color: c.text3, fontSize: 11, margin: "2px 0 0" }}>{h.id} · {fmtDate(h.receivedAt)} · {h.status}</p>
+                                        <p style={{ color: c.text3, fontSize: 11, margin: "2px 0 0" }}><span style={{ color: c.gold, fontFamily: "monospace", fontWeight: 600 }}>{h.id}</span> · {fmtDate(h.receivedAt)} · {h.status}</p>
+                                        {(h.imei || h.serial) && (
+                                          <p style={{ color: c.text3, fontSize: 10, margin: "1px 0 0", fontFamily: "monospace", wordBreak: "break-all" }}>
+                                            {h.imei ? `IMEI ${h.imei}` : ""}{h.imei && h.serial ? " · " : ""}{h.serial ? `SN ${h.serial}` : ""}
+                                          </p>
+                                        )}
                                       </div>
                                       <span style={{ color: c.text, fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>฿{fmt(h.costPrice)}</span>
                                     </div>

@@ -26,6 +26,8 @@ export interface PartnerHistoryItem {
   cost: number;
   profit: number;
   deliveryStatus: string;
+  imei: string;
+  serial: string;
 }
 
 export async function fetchPartners(): Promise<Partner[]> {
@@ -69,7 +71,7 @@ export async function fetchPartnerHistory(partnerName: string): Promise<PartnerH
   const supabase = createServerClient();
   const { data } = await supabase
     .from("stocks")
-    .select("id, model, storage, color, grade, sold_price, sold_at, cost_price, shipping_cost, other_cost, delivery_status")
+    .select("id, model, storage, color, grade, sold_price, sold_at, cost_price, shipping_cost, other_cost, delivery_status, imei, serial")
     .eq("partner_name", partnerName)
     .eq("sale_type", "ขายส่ง")
     .order("sold_at", { ascending: false });
@@ -87,6 +89,8 @@ export async function fetchPartnerHistory(partnerName: string): Promise<PartnerH
       cost,
       profit: (r.sold_price ?? 0) - cost,
       deliveryStatus: r.delivery_status ?? "",
+      imei: r.imei ?? "",
+      serial: r.serial ?? "",
     };
   });
 }

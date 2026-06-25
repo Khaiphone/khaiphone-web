@@ -555,6 +555,8 @@ export interface StockCustomerHistoryItem {
   costPrice: number;
   receivedAt: string;
   status: string;
+  imei: string;
+  serial: string;
 }
 
 // ประวัติเครื่องที่ลูกค้ารายนี้ (ตามเบอร์โทร normalize) ขายให้เรา
@@ -564,18 +566,20 @@ export async function fetchStockCustomerHistory(phoneKey: string): Promise<Stock
   const key = normPhone(phoneKey);
   const { data } = await supabase
     .from("stocks")
-    .select("id, model, storage, cost_price, received_at, status, seller_phone")
+    .select("id, model, storage, cost_price, received_at, status, seller_phone, imei, serial")
     .not("seller_phone", "is", null)
     .order("received_at", { ascending: false });
   return (data ?? [])
     .filter((r: { seller_phone: string | null }) => normPhone(r.seller_phone ?? "") === key)
-    .map((r: { id: string; model: string | null; storage: string | null; cost_price: number | null; received_at: string | null; status: string | null }) => ({
+    .map((r: { id: string; model: string | null; storage: string | null; cost_price: number | null; received_at: string | null; status: string | null; imei: string | null; serial: string | null }) => ({
       id: r.id,
       model: r.model ?? "",
       storage: r.storage ?? "",
       costPrice: r.cost_price ?? 0,
       receivedAt: r.received_at ?? "",
       status: r.status ?? "",
+      imei: r.imei ?? "",
+      serial: r.serial ?? "",
     }));
 }
 
