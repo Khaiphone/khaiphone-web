@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { FileText, Receipt, ShoppingCart, ExternalLink } from 'lucide-react'
-import { fetchFinanceIncome, fetchFinancePurchases } from '@/app/actions/finance'
+import { fetchFinanceIncome, fetchFinancePurchases, fetchVatEnabled } from '@/app/actions/finance'
 import type { FinanceIncome, FinancePurchase } from '@/app/actions/finance'
 
 const CARD  = 'var(--f-card)'
@@ -28,6 +28,7 @@ export default function DocumentsPage() {
   const [purchases, setPurchases] = useState<FinancePurchase[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [vatEnabled, setVatEnabled] = useState(false)
 
   useEffect(() => {
     Promise.all([fetchFinanceIncome(), fetchFinancePurchases()]).then(([s, p]) => {
@@ -35,6 +36,7 @@ export default function DocumentsPage() {
       setPurchases(p)
       setLoading(false)
     })
+    fetchVatEnabled().then(setVatEnabled)
   }, [])
 
   const filteredSales = sales.filter(r => {
@@ -54,6 +56,11 @@ export default function DocumentsPage() {
       <div style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 12, padding: '12px 16px', color: '#3b82f6', fontSize: 13 }}>
         เลือกรายการที่ต้องการ แล้วกด "ออกเอกสาร" — เปิดหน้าพิมพ์ได้ทันที สามารถบันทึกเป็น PDF ผ่านเมนูพิมพ์ของเบราว์เซอร์
       </div>
+      {!vatEnabled && (
+        <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 12, padding: '12px 16px', color: '#b45309', fontSize: 13 }}>
+          🔒 ยังไม่ได้เปิด VAT — ออกได้เฉพาะ <strong>ใบเสร็จรับเงิน</strong> (การออกใบกำกับภาษีโดยไม่จด VAT ผิดกฎหมาย). เมื่อจด VAT แล้วเปิดที่ <strong>ตั้งค่าการเงิน → ภาษี</strong> ปุ่มใบกำกับภาษีจะแสดงให้อัตโนมัติ
+        </div>
+      )}
 
       {/* Search + Tabs */}
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, overflow: 'hidden' }}>
@@ -105,10 +112,12 @@ export default function DocumentsPage() {
                           style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, background: 'var(--f-hover)', border: `1px solid ${BORDER}`, color: TEXT1, fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                           <Receipt size={11} /> ใบเสร็จ
                         </button>
-                        <button onClick={() => window.open(`${window.location.origin.replace(/^(https?:\/\/)stock\./, '$1')}/print/tax-invoice/${r.id}`, '_blank')}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, background: 'rgba(184,134,11,0.12)', border: `1px solid rgba(184,134,11,0.3)`, color: GOLD, fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                          <FileText size={11} /> ใบกำกับภาษี
-                        </button>
+                        {vatEnabled && (
+                          <button onClick={() => window.open(`${window.location.origin.replace(/^(https?:\/\/)stock\./, '$1')}/print/tax-invoice/${r.id}`, '_blank')}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, background: 'rgba(184,134,11,0.12)', border: `1px solid rgba(184,134,11,0.3)`, color: GOLD, fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            <FileText size={11} /> ใบกำกับภาษี
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

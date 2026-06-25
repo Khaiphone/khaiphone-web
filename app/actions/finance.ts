@@ -1411,6 +1411,8 @@ export type SaleDocument = {
   taxId: string;
   address: string;
   businessPhone: string;
+  vatEnabled: boolean;
+  branch: string;
 };
 
 export type PurchaseDocument = {
@@ -1429,7 +1431,54 @@ export type PurchaseDocument = {
   taxId: string;
   address: string;
   businessPhone: string;
+  branch: string;
 };
+
+// เลขเอกสารแบบรันนิ่ง — เรียงลำดับ ไม่ซ้ำ ไม่ข้าม ต่อปี ต่อชนิด (REC/TAX/PUR-YYYY-00001)
+// ออกครั้งแรกแล้วผูกกับเอกสารถาวร (เปิดซ้ำได้เลขเดิม) + เก็บ log ไว้ตรวจสอบ
+export async function getOrIssueDocNumber(
+  docType: "receipt" | "tax_invoice" | "purchase",
+  sourceId: string,
+): Promise<string> {
+  await requireAuth();
+  const supabase = createServerClient();
+
+  const { data: existing } = await supabase
+    .from("issued_documents")
+    .select("doc_no")
+    .eq("doc_type", docType)
+    .eq("source_id", sourceId)
+    .maybeSingle();
+  if (existing?.doc_no) return existing.doc_no;
+
+  const year = new Date().getFullYear();
+  const { data: seq, error: seqErr } = await supabase.rpc("next_doc_no", { p_type: docType, p_year: year });
+  if (seqErr) throw new Error(seqErr.message);
+  const n = (seq as number) ?? 1;
+  const prefix = docType === "receipt" ? "REC" : docType === "tax_invoice" ? "TAX" : "PUR";
+  const docNo = `${prefix}-${year}-${String(n).padStart(5, "0")}`;
+
+  const { error: insErr } = await supabase
+    .from("issued_documents")
+    .insert({ doc_type: docType, source_id: sourceId, doc_no: docNo, seq: n, year });
+  if (insErr) {
+    // race: อีก request ออกเลขให้ source เดียวกันไปก่อน → ใช้ของเดิม
+    const { data: again } = await supabase
+      .from("issued_documents").select("doc_no")
+      .eq("doc_type", docType).eq("source_id", sourceId).maybeSingle();
+    if (again?.doc_no) return again.doc_no;
+    throw new Error(insErr.message);
+  }
+  return docNo;
+}
+
+// ใช้กับหน้า documents เพื่อซ่อนปุ่มใบกำกับภาษีถ้ายังไม่จด VAT
+export async function fetchVatEnabled(): Promise<boolean> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data } = await supabase.from("finance_settings").select("vat_enabled").eq("id", 1).single();
+  return data?.vat_enabled ?? false;
+}
 
 export async function fetchSaleDocument(id: string): Promise<SaleDocument | null> {
   await requireAuth();
@@ -1499,6 +1548,8 @@ export async function fetchSaleDocument(id: string): Promise<SaleDocument | null
       taxId: settings?.tax_id ?? "",
       address: settings?.address ?? "",
       businessPhone: settings?.phone ?? "",
+      vatEnabled,
+      branch: "สำนักงานใหญ่",
     };
   }
 
@@ -1527,6 +1578,8 @@ export async function fetchSaleDocument(id: string): Promise<SaleDocument | null
     taxId: settings?.tax_id ?? "",
     address: settings?.address ?? "",
     businessPhone: settings?.phone ?? "",
+    vatEnabled,
+    branch: "สำนักงานใหญ่",
   };
 }
 
@@ -1566,5 +1619,6 @@ export async function fetchPurchaseDocument(id: string): Promise<PurchaseDocumen
     taxId: settings?.tax_id ?? "",
     address: settings?.address ?? "",
     businessPhone: settings?.phone ?? "",
+    branch: "สำนักงานใหญ่",
   };
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { fetchSaleDocument } from '@/app/actions/finance'
+import { fetchSaleDocument, getOrIssueDocNumber } from '@/app/actions/finance'
 import type { SaleDocument } from '@/app/actions/finance'
 
 function getLoginUrl() {
@@ -38,18 +38,18 @@ export default function ReceiptPage() {
   const [doc, setDoc] = useState<SaleDocument | null>(null)
   const [loading, setLoading] = useState(true)
   const [unauthorized, setUnauthorized] = useState(false)
+  const [docNumber, setDocNumber] = useState('')
 
   useEffect(() => {
     fetchSaleDocument(id)
       .then(d => { setDoc(d); setLoading(false) })
       .catch(() => { setLoading(false); setUnauthorized(true) })
+    getOrIssueDocNumber('receipt', id).then(setDocNumber).catch(() => {})
   }, [id])
 
   if (loading) return <div style={{ padding: 60, textAlign: 'center', fontFamily: 'sans-serif', color: '#666' }}>กำลังโหลด...</div>
   if (unauthorized) return <AuthError />
   if (!doc) return <div style={{ padding: 60, textAlign: 'center', fontFamily: 'sans-serif', color: '#ef4444' }}>ไม่พบข้อมูล</div>
-
-  const docNumber = `REC-${doc.refNumber}`
 
   return (
     <>
@@ -75,15 +75,19 @@ export default function ReceiptPage() {
 
           {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32, paddingBottom: 24, borderBottom: '2px solid #111' }}>
-            <div>
-              <h1 style={{ margin: '0 0 4px', fontSize: 24, fontWeight: 800, color: '#111', letterSpacing: '-0.5px' }}>{doc.businessName}</h1>
-              {doc.address && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>{doc.address}</p>}
-              {doc.businessPhone && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>โทร {doc.businessPhone}</p>}
-              {doc.taxId && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>เลขที่ผู้เสียภาษี {doc.taxId}</p>}
+            <div style={{ display: 'flex', gap: 12 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/icon-192.png" alt="logo" width={44} height={44} style={{ borderRadius: 10, flexShrink: 0 }} />
+              <div>
+                <h1 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 800, color: '#111', letterSpacing: '-0.5px' }}>{doc.businessName}</h1>
+                {doc.address && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>{doc.address}</p>}
+                {doc.businessPhone && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>โทร {doc.businessPhone}</p>}
+                {doc.taxId && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>เลขที่ผู้เสียภาษี {doc.taxId} ({doc.branch})</p>}
+              </div>
             </div>
             <div style={{ textAlign: 'right' }}>
               <h2 style={{ margin: '0 0 8px', fontSize: 22, fontWeight: 700, color: '#111' }}>ใบเสร็จรับเงิน</h2>
-              <p style={{ margin: '2px 0', fontSize: 13, color: '#555' }}>เลขที่ <strong style={{ color: '#111' }}>{docNumber}</strong></p>
+              <p style={{ margin: '2px 0', fontSize: 13, color: '#555' }}>เลขที่ <strong style={{ color: '#111' }}>{docNumber || '...'}</strong></p>
               <p style={{ margin: '2px 0', fontSize: 13, color: '#555' }}>วันที่ <strong style={{ color: '#111' }}>{thDate(doc.date)}</strong></p>
             </div>
           </div>

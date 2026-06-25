@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { fetchPurchaseDocument } from '@/app/actions/finance'
+import { fetchPurchaseDocument, getOrIssueDocNumber } from '@/app/actions/finance'
 import type { PurchaseDocument } from '@/app/actions/finance'
 
 function getLoginUrl() {
@@ -38,18 +38,18 @@ export default function PurchaseReceiptPage() {
   const [doc, setDoc] = useState<PurchaseDocument | null>(null)
   const [loading, setLoading] = useState(true)
   const [unauthorized, setUnauthorized] = useState(false)
+  const [docNumber, setDocNumber] = useState('')
 
   useEffect(() => {
     fetchPurchaseDocument(id)
       .then(d => { setDoc(d); setLoading(false) })
       .catch(() => { setLoading(false); setUnauthorized(true) })
+    getOrIssueDocNumber('purchase', id).then(setDocNumber).catch(() => {})
   }, [id])
 
   if (loading) return <div style={{ padding: 60, textAlign: 'center', fontFamily: 'sans-serif', color: '#666' }}>กำลังโหลด...</div>
   if (unauthorized) return <AuthError />
   if (!doc) return <div style={{ padding: 60, textAlign: 'center', fontFamily: 'sans-serif', color: '#ef4444' }}>ไม่พบข้อมูล</div>
-
-  const docNumber = `PUR-${doc.refNumber}`
 
   return (
     <>
@@ -73,16 +73,20 @@ export default function PurchaseReceiptPage() {
 
           {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32, paddingBottom: 24, borderBottom: '2px solid #3b82f6' }}>
-            <div>
-              <h1 style={{ margin: '0 0 4px', fontSize: 24, fontWeight: 800, color: '#111' }}>{doc.businessName}</h1>
-              {doc.address && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>{doc.address}</p>}
-              {doc.businessPhone && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>โทร {doc.businessPhone}</p>}
-              {doc.taxId && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>เลขที่ผู้เสียภาษี {doc.taxId}</p>}
+            <div style={{ display: 'flex', gap: 12 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/icon-192.png" alt="logo" width={44} height={44} style={{ borderRadius: 10, flexShrink: 0 }} />
+              <div>
+                <h1 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 800, color: '#111' }}>{doc.businessName}</h1>
+                {doc.address && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>{doc.address}</p>}
+                {doc.businessPhone && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>โทร {doc.businessPhone}</p>}
+                {doc.taxId && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>เลขที่ผู้เสียภาษี {doc.taxId} ({doc.branch})</p>}
+              </div>
             </div>
             <div style={{ textAlign: 'right' }}>
               <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 700, color: '#3b82f6' }}>ใบรับสินค้า</h2>
               <p style={{ margin: '1px 0', fontSize: 11, color: '#888' }}>Purchase Receipt</p>
-              <p style={{ margin: '8px 0 2px', fontSize: 13, color: '#555' }}>เลขที่ <strong style={{ color: '#111' }}>{docNumber}</strong></p>
+              <p style={{ margin: '8px 0 2px', fontSize: 13, color: '#555' }}>เลขที่ <strong style={{ color: '#111' }}>{docNumber || '...'}</strong></p>
               <p style={{ margin: '2px 0', fontSize: 13, color: '#555' }}>วันที่ <strong style={{ color: '#111' }}>{thDate(doc.date)}</strong></p>
             </div>
           </div>

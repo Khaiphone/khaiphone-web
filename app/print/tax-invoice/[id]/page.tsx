@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { fetchSaleDocument } from '@/app/actions/finance'
+import { fetchSaleDocument, getOrIssueDocNumber } from '@/app/actions/finance'
 import type { SaleDocument } from '@/app/actions/finance'
 
 function getLoginUrl() {
@@ -38,10 +38,15 @@ export default function TaxInvoicePage() {
   const [doc, setDoc] = useState<SaleDocument | null>(null)
   const [loading, setLoading] = useState(true)
   const [unauthorized, setUnauthorized] = useState(false)
+  const [docNumber, setDocNumber] = useState('')
 
   useEffect(() => {
     fetchSaleDocument(id)
-      .then(d => { setDoc(d); setLoading(false) })
+      .then(d => {
+        setDoc(d); setLoading(false)
+        // ออกเลขใบกำกับภาษีเฉพาะเมื่อจด/เปิด VAT แล้วเท่านั้น
+        if (d && d.vatEnabled) getOrIssueDocNumber('tax_invoice', id).then(setDocNumber).catch(() => {})
+      })
       .catch(() => { setLoading(false); setUnauthorized(true) })
   }, [id])
 
@@ -49,7 +54,21 @@ export default function TaxInvoicePage() {
   if (unauthorized) return <AuthError />
   if (!doc) return <div style={{ padding: 60, textAlign: 'center', fontFamily: 'sans-serif', color: '#ef4444' }}>ไม่พบข้อมูล</div>
 
-  const docNumber = `TAX-${doc.refNumber}`
+  // ❌ ยังไม่ได้จด/เปิด VAT → ออกใบกำกับภาษีไม่ได้ (ผิดกฎหมาย)
+  if (!doc.vatEnabled) {
+    return (
+      <div style={{ padding: '60px 24px', textAlign: 'center', fontFamily: 'Sarabun, sans-serif', maxWidth: 460, margin: '0 auto' }}>
+        <p style={{ fontSize: 40, margin: 0 }}>🔒</p>
+        <p style={{ fontSize: 18, color: '#111', fontWeight: 700, margin: '12px 0 8px' }}>ยังออกใบกำกับภาษีไม่ได้</p>
+        <p style={{ fontSize: 13, color: '#666', lineHeight: 1.7, margin: '0 0 20px' }}>
+          ร้านยังไม่ได้จดทะเบียน VAT — การออกใบกำกับภาษีโดยไม่ได้จด VAT ผิดกฎหมาย<br />
+          ช่วงนี้ให้ใช้ <strong>ใบเสร็จรับเงิน</strong> แทน<br />
+          เมื่อจด VAT แล้ว ไปที่ <strong>ตั้งค่าการเงิน → ภาษี</strong> เพื่อเปิดใช้งาน
+        </p>
+        <button onClick={() => window.history.back()} style={{ padding: '10px 24px', background: '#B8860B', border: 'none', color: '#fff', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>← กลับ</button>
+      </div>
+    )
+  }
   const baseAmount = doc.vatRate > 0 ? Math.round(doc.amount * 100 / (100 + doc.vatRate)) : doc.amount
   const vatIncluded = doc.vatRate > 0 ? doc.amount - baseAmount : 0
 
@@ -75,16 +94,20 @@ export default function TaxInvoicePage() {
 
           {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32, paddingBottom: 24, borderBottom: '2px solid #B8860B' }}>
-            <div>
-              <h1 style={{ margin: '0 0 4px', fontSize: 24, fontWeight: 800, color: '#111' }}>{doc.businessName}</h1>
-              {doc.address && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>{doc.address}</p>}
-              {doc.businessPhone && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>โทร {doc.businessPhone}</p>}
-              {doc.taxId && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>เลขที่ผู้เสียภาษี <strong>{doc.taxId}</strong></p>}
+            <div style={{ display: 'flex', gap: 12 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/icon-192.png" alt="logo" width={44} height={44} style={{ borderRadius: 10, flexShrink: 0 }} />
+              <div>
+                <h1 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 800, color: '#111' }}>{doc.businessName}</h1>
+                {doc.address && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>{doc.address}</p>}
+                {doc.businessPhone && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>โทร {doc.businessPhone}</p>}
+                {doc.taxId && <p style={{ margin: '2px 0', fontSize: 12, color: '#555' }}>เลขที่ผู้เสียภาษี <strong>{doc.taxId}</strong> ({doc.branch})</p>}
+              </div>
             </div>
             <div style={{ textAlign: 'right' }}>
               <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 700, color: '#B8860B' }}>ใบกำกับภาษี</h2>
-              <p style={{ margin: '1px 0', fontSize: 11, color: '#888' }}>Tax Invoice</p>
-              <p style={{ margin: '8px 0 2px', fontSize: 13, color: '#555' }}>เลขที่ <strong style={{ color: '#111' }}>{docNumber}</strong></p>
+              <p style={{ margin: '1px 0', fontSize: 11, color: '#888' }}>Tax Invoice (ต้นฉบับ)</p>
+              <p style={{ margin: '8px 0 2px', fontSize: 13, color: '#555' }}>เลขที่ <strong style={{ color: '#111' }}>{docNumber || '...'}</strong></p>
               <p style={{ margin: '2px 0', fontSize: 13, color: '#555' }}>วันที่ <strong style={{ color: '#111' }}>{thDate(doc.date)}</strong></p>
             </div>
           </div>
