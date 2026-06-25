@@ -17,6 +17,19 @@ function fmtDate(s: string) {
   return new Date(s).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
 }
 
+type SortKey = "name" | "phone" | "totalItems" | "totalPaid" | "avgPrice" | "channel" | "lastSeen";
+const COLUMNS: { label: string; key?: SortKey }[] = [
+  { label: "#" },
+  { label: "ชื่อ", key: "name" },
+  { label: "เบอร์โทร", key: "phone" },
+  { label: "จำนวนครั้ง", key: "totalItems" },
+  { label: "ยอดรวมที่ขาย", key: "totalPaid" },
+  { label: "ราคาเฉลี่ย", key: "avgPrice" },
+  { label: "ช่องทาง", key: "channel" },
+  { label: "ล่าสุด", key: "lastSeen" },
+  { label: "" },
+];
+
 const CHANNEL_COLOR: Record<string, string> = {
   "หน้าร้าน": "#22c55e", "เว็บไซต์": "#3b82f6", "LINE OA": "#22c55e",
   "Facebook": "#3b82f6", "Shopee": "#f97316", "โทรศัพท์": "#a855f7",
@@ -30,6 +43,13 @@ export default function CustomersPage() {
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [historyMap, setHistoryMap] = useState<Record<string, StockCustomerHistoryItem[]>>({});
+  const [sortKey, setSortKey] = useState<SortKey>("totalItems");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  function clickSort(k: SortKey) {
+    if (sortKey === k) setSortDir(d => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(k); setSortDir(k === "name" || k === "phone" || k === "channel" ? "asc" : "desc"); }
+  }
 
   function toggleRow(phone: string) {
     setExpanded(prev => prev === phone ? null : phone);
@@ -51,6 +71,22 @@ export default function CustomersPage() {
       c.channel.toLowerCase().includes(q),
     );
   }, [customers, search]);
+
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      let cmp: number;
+      switch (sortKey) {
+        case "name":    cmp = a.name.localeCompare(b.name, "th"); break;
+        case "phone":   cmp = a.phone.localeCompare(b.phone); break;
+        case "channel": cmp = (a.channel || "").localeCompare(b.channel || "", "th"); break;
+        case "lastSeen":cmp = (a.lastSeen || "").localeCompare(b.lastSeen || ""); break;
+        default:        cmp = (a[sortKey] as number) - (b[sortKey] as number);
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return arr;
+  }, [filtered, sortKey, sortDir]);
 
   const totalPaid = filtered.reduce((a, c) => a + c.totalPaid, 0);
   const totalItems = filtered.reduce((a, c) => a + c.totalItems, 0);
@@ -93,14 +129,23 @@ export default function CustomersPage() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: c.card2 }}>
-                    {["#", "ชื่อ", "เบอร์โทร", "จำนวนครั้ง", "ยอดรวมที่ขาย", "ราคาเฉลี่ย", "ช่องทาง", "ล่าสุด", ""].map(h => (
-                      <th key={h} style={{ padding: "12px 14px", textAlign: "left", color: c.text3, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
-                    ))}
+                    {COLUMNS.map(col => {
+                      const active = col.key && sortKey === col.key;
+                      return (
+                        <th
+                          key={col.label}
+                          onClick={col.key ? () => clickSort(col.key!) : undefined}
+                          style={{ padding: "12px 14px", textAlign: "left", color: active ? c.gold : c.text3, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap", cursor: col.key ? "pointer" : "default", userSelect: "none" }}
+                        >
+                          {col.label}{active ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody>
                   <AnimatePresence>
-                    {filtered.map((customer, i) => (
+                    {sorted.map((customer, i) => (
                       <Fragment key={customer.phone}>
                       <motion.tr
                         initial={{ opacity: 0 }}
