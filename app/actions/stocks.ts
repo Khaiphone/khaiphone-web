@@ -278,6 +278,7 @@ export async function updateStockSale(
     soldBy?: string | null;
     saleType?: string;
     partnerName?: string | null;
+    deliveryChannel?: string | null;
   },
   by = "admin",
 ): Promise<{ success: boolean; error?: string }> {
@@ -300,6 +301,7 @@ export async function updateStockSale(
   if (data.soldBy     !== undefined) update.sold_by     = data.soldBy || null;
   if (data.saleType   !== undefined) update.sale_type   = data.saleType;
   if (data.partnerName !== undefined) update.partner_name = data.partnerName || null;
+  if (data.deliveryChannel !== undefined) update.delivery_channel = data.deliveryChannel || null;
 
   const newAuditLog: AuditEntry[] = [
     ...(current?.audit_log ?? []),

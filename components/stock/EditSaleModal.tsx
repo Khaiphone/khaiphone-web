@@ -25,6 +25,7 @@ export default function EditSaleModal({ item, onClose, onSuccess }: Props) {
   const [soldAt, setSoldAt] = useState((item.soldAt ?? new Date().toISOString()).slice(0, 10));
   const [soldBy, setSoldBy] = useState(item.soldBy ?? "");
   const [saleType, setSaleType] = useState<"ขายปลีก" | "ขายส่ง">(item.saleType === "ขายส่ง" ? "ขายส่ง" : "ขายปลีก");
+  const [deliveryChannel, setDeliveryChannel] = useState<string>(item.deliveryChannel ?? "");
 
   const [staff, setStaff] = useState<string[]>([]);
   useEffect(() => { fetchStockStaff().then(setStaff); }, []);
@@ -49,6 +50,7 @@ export default function EditSaleModal({ item, onClose, onSuccess }: Props) {
       soldBy: soldBy || null,
       saleType,
       partnerName: saleType === "ขายส่ง" ? buyerName.trim() : null,
+      deliveryChannel: deliveryChannel || null,
     });
     if (res.success) {
       onSuccess({
@@ -58,6 +60,7 @@ export default function EditSaleModal({ item, onClose, onSuccess }: Props) {
         soldAt,
         soldBy: soldBy || undefined,
         saleType,
+        deliveryChannel: deliveryChannel || undefined,
       });
       onClose();
     } else {
@@ -114,9 +117,21 @@ export default function EditSaleModal({ item, onClose, onSuccess }: Props) {
           <input type="text" value={buyerName} onChange={e => setBuyerName(e.target.value)} style={inputSt} />
         </div>
 
-        <div style={{ marginBottom: 22 }}>
+        <div style={{ marginBottom: 14 }}>
           <label style={labelSt}>เบอร์โทร</label>
           <input type="tel" value={buyerPhone} onChange={e => setBuyerPhone(e.target.value)} placeholder="08x-xxx-xxxx" style={inputSt} />
+        </div>
+
+        <div style={{ marginBottom: 22 }}>
+          <label style={labelSt}>ช่องทางจัดส่ง</label>
+          <select value={deliveryChannel} onChange={e => setDeliveryChannel(e.target.value)}
+            style={{ ...inputSt, cursor: "pointer", color: deliveryChannel ? c.text : c.text3 }}>
+            <option value="">— ไม่ระบุ —</option>
+            <option value="หน้าร้าน">รับที่หน้าร้าน</option>
+            <option value="ส่งถึงที่">เราไปส่งถึงที่</option>
+            <option value="ส่งพัสดุ">ส่งพัสดุ</option>
+          </select>
+          <p style={{ color: c.text3, fontSize: 11, margin: "6px 0 0" }}>* สถานะจัดส่ง / เลข Tracking แก้ที่ปุ่ม &ldquo;ยืนยันส่งของ&rdquo; และช่อง Tracking</p>
         </div>
 
         {error && <p style={{ color: "#ef4444", fontSize: 13, margin: "0 0 14px" }}>{error}</p>}
