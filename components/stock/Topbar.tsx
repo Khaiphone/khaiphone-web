@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Bell, Sun, Moon, Search, Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useStockTheme, useThemeColors } from "./ThemeContext";
@@ -17,6 +18,12 @@ export default function StockTopbar({ title, subtitle, children, onMenuClick }: 
   const c = useThemeColors();
   const { toggle: toggleMenu } = useMobileMenu();
   const router = useRouter();
+  const [q, setQ] = useState("");
+
+  function submitSearch() {
+    const v = q.trim();
+    if (v) router.push(`/stock/inventory?q=${encodeURIComponent(v)}`);
+  }
 
   return (
     <div style={{
@@ -42,13 +49,16 @@ export default function StockTopbar({ title, subtitle, children, onMenuClick }: 
 
       {/* Search */}
       <div className="hidden md:flex" style={{ position: "relative", alignItems: "center" }}>
-        <Search size={15} style={{ position: "absolute", left: 12, color: c.text3 }} />
+        <Search size={15} style={{ position: "absolute", left: 12, color: c.text3, cursor: "pointer" }} onClick={submitSearch} />
         <input
-          placeholder="ค้นหา..."
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") submitSearch(); }}
+          placeholder="ค้นหาเครื่อง: IMEI / Serial / รหัส / รุ่น..."
           style={{
             background: c.card2, border: `1px solid ${c.border}`, borderRadius: 10,
             padding: "8px 14px 8px 36px", color: c.text, fontSize: 13,
-            width: 220, outline: "none", fontFamily: "inherit",
+            width: 260, outline: "none", fontFamily: "inherit",
           }}
         />
       </div>

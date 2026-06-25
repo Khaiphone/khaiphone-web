@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useMemo, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Download, Printer, Search, X, Eye, Edit2, MoreHorizontal, ChevronLeft, ChevronRight, Trash2, Copy, ExternalLink, ShoppingCart, Truck } from "lucide-react";
 import { Package, TrendingUp, DollarSign, CheckCircle, Clock, ShoppingBag } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -61,12 +61,19 @@ function exportCSV(items: StockItem[]) {
 }
 
 export default function StockInventoryPage() {
+  return <Suspense fallback={null}><StockInventoryInner /></Suspense>;
+}
+
+function StockInventoryInner() {
   const c = useThemeColors();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [stocks, setStocks] = useState<StockItem[]>(() => cacheGet<StockItem[]>("stock:inventory") ?? []);
   const [loading, setLoading] = useState(() => cacheGet<StockItem[]>("stock:inventory") === null);
   const [tab, setTab] = useState<StockStatus | "all">("all");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
+  // ซิงค์ช่องค้นหากับ ?q= (มาจาก global search บน Topbar)
+  useEffect(() => { setQuery(searchParams.get("q") ?? ""); }, [searchParams]);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<StockItem | null>(null);
   const [checked, setChecked] = useState<Set<string>>(new Set());
