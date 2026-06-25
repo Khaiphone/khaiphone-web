@@ -39,7 +39,8 @@ export function proxy(req: NextRequest) {
   if (subdomain && subdomain in SUBDOMAIN_MAP) {
     const base = SUBDOMAIN_MAP[subdomain];
     // Pass through if path already starts with any known base (e.g. /admin/login after auth redirect)
-    const alreadyRouted = Object.values(SUBDOMAIN_MAP).some(b => pathname.startsWith(b));
+    // หรือ /print (หน้าเอกสาร global — ห้าม rewrite เข้า section ไม่งั้นกลายเป็น /finance/print → 404)
+    const alreadyRouted = Object.values(SUBDOMAIN_MAP).some(b => pathname.startsWith(b)) || pathname.startsWith("/print");
     if (alreadyRouted) return NextResponse.next();
     // Redirect "/" so the browser URL actually changes — keeps usePathname() correct
     // and prevents the public MobileNav from flashing before the admin layout renders
