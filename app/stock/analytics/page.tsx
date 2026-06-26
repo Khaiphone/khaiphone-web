@@ -64,6 +64,36 @@ function DailyChart({ daily, c }: { daily: DailyCount[]; c: ReturnType<typeof us
   );
 }
 
+// ─── Daily table (เข้าประเมิน → ส่งคำขอ ต่อวัน) ──────────────────────────────
+function DailyTable({ daily, c }: { daily: DailyCount[]; c: ReturnType<typeof useThemeColors> }) {
+  const rows = [...daily].reverse().filter(d => d.starts > 0); // ใหม่สุดบน, ตัดวันที่ไม่มีคน
+  const fmtDate = (s: string) => { const [, m, d] = s.split("-"); return `${parseInt(d)}/${parseInt(m)}`; };
+  return (
+    <div style={{ background: c.card, border: `1px solid ${c.border}`, borderRadius: 16, overflow: "hidden" }}>
+      <p style={{ color: c.text, fontSize: 14, fontWeight: 700, margin: 0, padding: "20px 24px 14px" }}>สรุปรายวัน — เข้าประเมิน → ส่งคำขอ</p>
+      <div style={{ overflowX: "auto" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 1fr 1fr 70px", gap: 8, padding: "8px 24px", background: c.card2, fontSize: 11, color: c.text3, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+          <span>วันที่</span><span style={{ textAlign: "right" }}>เข้าประเมิน</span><span style={{ textAlign: "right" }}>เห็นราคา</span><span style={{ textAlign: "right" }}>ส่งคำขอ</span><span style={{ textAlign: "right" }}>%สำเร็จ</span>
+        </div>
+        {rows.length === 0 ? (
+          <p style={{ padding: 24, textAlign: "center", color: c.text3, fontSize: 13, margin: 0 }}>ยังไม่มีข้อมูล</p>
+        ) : rows.map((d, i) => {
+          const rate = d.starts > 0 ? Math.round((d.submits / d.starts) * 100) : 0;
+          return (
+            <div key={d.date} style={{ display: "grid", gridTemplateColumns: "80px 1fr 1fr 1fr 70px", gap: 8, padding: "11px 24px", borderTop: i === 0 ? "none" : `1px solid ${c.border}`, fontSize: 13, alignItems: "center" }}>
+              <span style={{ color: c.text2 }}>{fmtDate(d.date)}</span>
+              <span style={{ textAlign: "right", color: c.text, fontWeight: 700 }}>{d.starts}</span>
+              <span style={{ textAlign: "right", color: "#f59e0b" }}>{d.priceSeen}</span>
+              <span style={{ textAlign: "right", color: "#22c55e", fontWeight: 600 }}>{d.submits}</span>
+              <span style={{ textAlign: "right", color: rate >= 10 ? "#22c55e" : rate >= 3 ? "#f59e0b" : c.text3, fontWeight: 700 }}>{rate}%</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Funnel ──────────────────────────────────────────────────────────────────
 
 function FunnelChart({ funnel, c }: { funnel: FunnelStep[]; c: ReturnType<typeof useThemeColors> }) {
@@ -545,6 +575,9 @@ export default function EstimateAnalyticsPage() {
 
             {/* Daily chart (full width, always overall) */}
             <DailyChart daily={data.daily} c={c} />
+
+            {/* Daily table — เข้าประเมิน vs ส่งคำขอ ต่อวัน */}
+            <DailyTable daily={data.daily} c={c} />
 
             {/* Two column: Funnel (filtered) + Model bar */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
