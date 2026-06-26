@@ -152,6 +152,8 @@ export type MissionControl = {
   // ── Mission Control (dense overview) ──
   cashInMonth: number; cashOutMonth: number; netCashflowMonth: number;
   leads: number; roi: number;                       // roi = กำไรขั้นต้น/ค่าโฆษณา %
+  conversionRate: number;                           // % คำขอที่ปิดสำเร็จ
+  leadsFunnel: { label: string; count: number; tone: "good" | "info" | "warn" | "danger" }[];
   salesRetail: number; salesWholesale: number; retailPct: number;
   inventoryByStatus: { status: string; count: number }[];
   profitByMonth: { date: string; profit: number }[];
@@ -173,7 +175,7 @@ export async function fetchMissionControl(): Promise<MissionControl> {
     fetchStockAging(),
     fetchForecast(),
     getCeoSettings(),
-    supabase.from("requests").select("id", { count: "exact", head: true }).gte("created_at", `${from}T00:00:00`),
+    supabase.from("requests").select("status").gte("created_at", `${from}T00:00:00`),
     supabase.from("stocks").select("sale_type").eq("status", "ขายแล้ว").gte("sold_at", from),
     supabase.from("stocks").select("model, storage, sold_price, cost_price, status, sold_at, received_at").order("updated_at", { ascending: false }).limit(6),
   ]);
@@ -225,7 +227,27 @@ export async function fetchMissionControl(): Promise<MissionControl> {
   const cashInMonth = cfMonth.summary.totalIn;
   const cashOutMonth = cfMonth.summary.totalOut;
   const netCashflowMonth = cashInMonth - cashOutMonth;
-  const leads = leadsRes.count ?? 0;
+  // Leads funnel — นับทุกคำขอเดือนนี้ แยกตามผลลัพธ์ (วิเคราะห์อัตราปิดการขาย)
+  const leadRows = (leadsRes.data ?? []) as { status: string | null }[];
+  const leads = leadRows.length;
+  const cnt = (st: string) => leadRows.filter(r => r.status === st).length;
+  const lf_completed = cnt("completed");
+  const lf_cancelled = cnt("cancelled");
+  const lf_unreachable = cnt("unreachable");
+  const lf_rejected = cnt("rejected");
+  const lf_noShow = cnt("no_show");
+  const lf_outOfArea = cnt("out_of_area");
+  const lf_inProgress = leads - lf_completed - lf_cancelled - lf_unreachable - lf_rejected - lf_noShow - lf_outOfArea;
+  const conversionRate = leads > 0 ? Math.round((lf_completed / leads) * 100) : 0;
+  const leadsFunnel = [
+    { label: "สำเร็จ", count: lf_completed, tone: "good" as const },
+    { label: "กำลังดำเนินการ", count: lf_inProgress, tone: "info" as const },
+    { label: "ยกเลิก", count: lf_cancelled, tone: "warn" as const },
+    { label: "ติดต่อไม่ได้", count: lf_unreachable, tone: "warn" as const },
+    { label: "ไม่เข้าเงื่อนไข", count: lf_rejected, tone: "danger" as const },
+    { label: "ไม่มาตามนัด", count: lf_noShow, tone: "warn" as const },
+    { label: "นอกพื้นที่", count: lf_outOfArea, tone: "danger" as const },
+  ].filter(x => x.count > 0);
   const roi = adSpend > 0 ? Math.round((grossProfit / adSpend) * 100) : 0;
   const soldRows = (soldMonthRes.data ?? []) as { sale_type: string | null }[];
   const salesWholesale = soldRows.filter(r => r.sale_type === "ขายส่ง").length;
@@ -312,7 +334,7 @@ export async function fetchMissionControl(): Promise<MissionControl> {
     projectedAcquired, projectedProfit,
     forecastPoints: f.points,
     cashInMonth, cashOutMonth, netCashflowMonth,
-    leads, roi, salesRetail, salesWholesale, retailPct,
+    leads, roi, conversionRate, leadsFunnel, salesRetail, salesWholesale, retailPct,
     inventoryByStatus, profitByMonth: d.profitByMonth, healthChecklist, recentActivity,
     settings,
   };

@@ -87,6 +87,38 @@ export default function CeoOverviewPage() {
         </Grid>
       </Section>
 
+      {/* ── Leads funnel / Conversion ── */}
+      <Section title="LEADS / การปิดการขาย">
+        <Card>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 16, flexWrap: "wrap", marginBottom: 14 }}>
+            <span style={{ fontSize: 13, color: "#6b7280" }}>คำขอทั้งหมดเดือนนี้</span>
+            <span style={{ fontSize: 26, fontWeight: 800, color: "#111" }}>{num(d.leads)}</span>
+            <span style={{ fontSize: 13, color: "#6b7280" }}>· ปิดสำเร็จ</span>
+            <span style={{ fontSize: 22, fontWeight: 800, color: d.conversionRate >= 50 ? GREEN : GOLD }}>{d.conversionRate}%</span>
+          </div>
+          {/* stacked bar */}
+          {d.leads > 0 && (
+            <div style={{ display: "flex", height: 12, borderRadius: 6, overflow: "hidden", marginBottom: 12 }}>
+              {d.leadsFunnel.map(f => {
+                const c = f.tone === "good" ? GREEN : f.tone === "info" ? BLUE : f.tone === "warn" ? GOLD : RED;
+                return <div key={f.label} title={`${f.label} ${f.count}`} style={{ width: `${(f.count / d.leads) * 100}%`, background: c }} />;
+              })}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+            {d.leadsFunnel.map(f => {
+              const c = f.tone === "good" ? GREEN : f.tone === "info" ? BLUE : f.tone === "warn" ? GOLD : RED;
+              return (
+                <span key={f.label} style={{ fontSize: 12.5, color: "#374151", display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: c }} />
+                  {f.label} <strong>{f.count}</strong>
+                </span>
+              );
+            })}
+          </div>
+        </Card>
+      </Section>
+
       {/* ── 3. CAPITAL & CASHFLOW ── */}
       <Section no={3} title="CAPITAL & CASHFLOW" href="/ceo/capital">
         <Grid min={170}>
