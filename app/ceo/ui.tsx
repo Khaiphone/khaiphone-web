@@ -127,6 +127,30 @@ export function ScoreCard({ score, level, breakdown }: { score: number; level: s
   );
 }
 
+// Section wrapper (หัวข้อ + ดูรายละเอียด)
+export function Section({ no, title, href, children }: { no?: number; title: string; href?: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "#374151", letterSpacing: 0.4 }}>{no ? `${no}. ` : ""}{title}</p>
+        {href && <a href={href} style={{ fontSize: 12, color: GOLD, fontWeight: 600, textDecoration: "none", border: `1px solid ${GOLD}55`, borderRadius: 8, padding: "3px 10px" }}>ดูรายละเอียด</a>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// Mini stat (compact, for dense grids)
+export function Mini({ label, value, sub, color = "#111", deltaUp }: { label: string; value: string; sub?: string; color?: string; deltaUp?: boolean | null }) {
+  return (
+    <Card style={{ padding: 14 }}>
+      <p style={{ margin: 0, fontSize: 11.5, color: "#6b7280", fontWeight: 600 }}>{label}</p>
+      <p style={{ margin: "5px 0 0", fontSize: 20, fontWeight: 800, color }}>{value}</p>
+      {sub && <p style={{ margin: "3px 0 0", fontSize: 11, color: deltaUp == null ? "#9ca3af" : deltaUp ? GREEN : RED }}>{deltaUp == null ? "" : deltaUp ? "▲ " : "▼ "}{sub}</p>}
+    </Card>
+  );
+}
+
 export function Loading() {
   return <p style={{ color: "#9ca3af", fontSize: 14, padding: "40px 0", textAlign: "center" }}>กำลังโหลด...</p>;
 }

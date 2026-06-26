@@ -147,7 +147,16 @@ export type MissionControl = {
   // growth / goals
   targetRevenue: number; targetProfit: number; targetAcquired: number; targetSold: number;
   gap: number; requiredPerDay: number; avgDailyRevenue: number; projectedMonthEnd: number; onTrack: boolean;
+  projectedAcquired: number; projectedProfit: number;
   forecastPoints: { date: string; actual?: number; forecast?: number }[];
+  // ── Mission Control (dense overview) ──
+  cashInMonth: number; cashOutMonth: number; netCashflowMonth: number;
+  leads: number; roi: number;                       // roi = กำไรขั้นต้น/ค่าโฆษณา %
+  salesRetail: number; salesWholesale: number; retailPct: number;
+  inventoryByStatus: { status: string; count: number }[];
+  profitByMonth: { date: string; profit: number }[];
+  healthChecklist: { label: string; level: "good" | "warn" | "danger" }[];
+  recentActivity: { kind: "buy" | "sell" | "ads"; label: string; amount: number; at: string }[];
   settings: CeoSettings;
 };
 
@@ -156,12 +165,17 @@ const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
 export async function fetchMissionControl(): Promise<MissionControl> {
   await requireOwner();
   const { from, to, label } = thisMonthRange();
-  const [d, cf, aging, f, settings] = await Promise.all([
+  const supabase = createServerClient();
+  const [d, cf, cfMonth, aging, f, settings, leadsRes, soldMonthRes, recentRes] = await Promise.all([
     fetchFinanceDashboard(from, to),
     fetchFinanceCashFlow("2020-01-01", to),
+    fetchFinanceCashFlow(from, to),
     fetchStockAging(),
     fetchForecast(),
     getCeoSettings(),
+    supabase.from("requests").select("id", { count: "exact", head: true }).gte("created_at", `${from}T00:00:00`),
+    supabase.from("stocks").select("sale_type").eq("status", "ขายแล้ว").gte("sold_at", from),
+    supabase.from("stocks").select("model, storage, sold_price, cost_price, status, sold_at, received_at").order("updated_at", { ascending: false }).limit(6),
   ]);
 
   // ── money ──
@@ -203,6 +217,33 @@ export async function fetchMissionControl(): Promise<MissionControl> {
   const requiredPerDay = Math.round(gap / daysLeft);
   const projectedMonthEnd = Math.round(revenue + f.avgDailyRevenue * (daysLeft - 1));
   const onTrack = settings.targetRevenue > 0 && projectedMonthEnd >= settings.targetRevenue;
+  const daysElapsed = Math.max(1, now.getDate());
+  const projectedAcquired = Math.round(acquired / daysElapsed * daysInMonth);
+  const projectedProfit = Math.round(grossProfit / daysElapsed * daysInMonth);
+
+  // ── Mission Control extras ──
+  const cashInMonth = cfMonth.summary.totalIn;
+  const cashOutMonth = cfMonth.summary.totalOut;
+  const netCashflowMonth = cashInMonth - cashOutMonth;
+  const leads = leadsRes.count ?? 0;
+  const roi = adSpend > 0 ? Math.round((grossProfit / adSpend) * 100) : 0;
+  const soldRows = (soldMonthRes.data ?? []) as { sale_type: string | null }[];
+  const salesWholesale = soldRows.filter(r => r.sale_type === "ขายส่ง").length;
+  const salesRetail = soldRows.length - salesWholesale;
+  const retailPct = soldRows.length > 0 ? Math.round((salesRetail / soldRows.length) * 100) : 0;
+  const statusMap = new Map<string, number>();
+  for (const a of inStock) statusMap.set(a.status, (statusMap.get(a.status) ?? 0) + 1);
+  const inventoryByStatus = Array.from(statusMap.entries()).map(([status, count]) => ({ status, count }));
+  const recentActivity = ((recentRes.data ?? []) as { model: string | null; storage: string | null; sold_price: number | null; cost_price: number | null; status: string | null; sold_at: string | null; received_at: string | null }[])
+    .map(r => {
+      const sold = r.status === "ขายแล้ว";
+      return {
+        kind: (sold ? "sell" : "buy") as "buy" | "sell" | "ads",
+        label: `${sold ? "ขาย" : "รับซื้อ"} ${r.model ?? ""} ${r.storage ?? ""}`.trim(),
+        amount: sold ? (r.sold_price ?? 0) : (r.cost_price ?? 0),
+        at: (sold ? r.sold_at : r.received_at) ?? "",
+      };
+    });
 
   // ── BUSINESS SCORE (0-100) ──
   const capScore = belowBuffer ? 0.15 : (safeBuffer > 0 ? clamp01((cash - safeBuffer) / (safeBuffer * 2) + 0.5) : (cash > 0 ? 0.7 : 0.2));
@@ -222,6 +263,16 @@ export async function fetchMissionControl(): Promise<MissionControl> {
     { label: "สต็อก", pct: Math.round(stockScore * 100) },
     { label: "เป้าหมาย", pct: Math.round(goalScore * 100) },
     { label: "โฆษณา", pct: Math.round(adsScore * 100) },
+  ];
+
+  const lvl = (p: number): "good" | "warn" | "danger" => p >= 75 ? "good" : p >= 50 ? "warn" : "danger";
+  const healthChecklist: { label: string; level: "good" | "warn" | "danger" }[] = [
+    { label: "เงินพร้อมซื้อ", level: belowBuffer ? "danger" : lvl(Math.round(capScore * 100)) },
+    { label: "สต็อกหมุนเร็ว", level: lvl(Math.round(stockScore * 100)) },
+    { label: "ROI โฆษณา", level: adSpend > 0 ? lvl(Math.round(adsScore * 100)) : "warn" },
+    { label: "อายุสต็อก", level: avgDaysHeld <= 14 ? "good" : avgDaysHeld <= 30 ? "warn" : "danger" },
+    { label: "กำไรต่อเครื่อง", level: lvl(Math.round(marginScore * 100)) },
+    { label: "สภาพคล่อง", level: netCashflowMonth >= 0 ? "good" : "warn" },
   ];
 
   // ── INSIGHTS (เรียงตามความสำคัญ) ──
@@ -258,7 +309,12 @@ export async function fetchMissionControl(): Promise<MissionControl> {
     slowMovers: slow.slice(0, 20).map(a => ({ id: a.id, model: a.model, storage: a.storage, daysInStock: a.daysInStock, totalCost: a.totalCost })),
     targetRevenue: settings.targetRevenue, targetProfit: settings.targetProfit, targetAcquired: settings.targetAcquired, targetSold: settings.targetSold,
     gap, requiredPerDay, avgDailyRevenue: f.avgDailyRevenue, projectedMonthEnd, onTrack,
-    forecastPoints: f.points, settings,
+    projectedAcquired, projectedProfit,
+    forecastPoints: f.points,
+    cashInMonth, cashOutMonth, netCashflowMonth,
+    leads, roi, salesRetail, salesWholesale, retailPct,
+    inventoryByStatus, profitByMonth: d.profitByMonth, healthChecklist, recentActivity,
+    settings,
   };
 }
 
