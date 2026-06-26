@@ -121,6 +121,27 @@ export default function CeoMarketingPage() {
 
       {/* ── Lost Opportunity ── */}
       <Section title="โอกาสที่เสียไป (Lost Opportunity)">
+        {/* กระทบยอด: leads = สำเร็จ + หลุด + กำลังดำเนินการ */}
+        <Card style={{ marginBottom: 14 }}>
+          <p style={{ margin: "0 0 10px", fontSize: 13, fontWeight: 700, color: "#111" }}>
+            ผลลัพธ์ของ {num(la.leads)} leads {la.mergedCount > 0 ? `(ไม่รวมรายการซ้ำ ${num(la.mergedCount)})` : ""}
+          </p>
+          <div style={{ display: "flex", height: 14, borderRadius: 7, overflow: "hidden", background: "#f0f0f2" }}>
+            {la.completedCount > 0 && <div style={{ width: `${la.leads ? (la.completedCount / la.leads) * 100 : 0}%`, background: GREEN }} />}
+            {la.inProgressCount > 0 && <div style={{ width: `${la.leads ? (la.inProgressCount / la.leads) * 100 : 0}%`, background: GOLD }} />}
+            {la.lostCount > 0 && <div style={{ width: `${la.leads ? (la.lostCount / la.leads) * 100 : 0}%`, background: RED }} />}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginTop: 12 }}>
+            <span style={{ fontSize: 13 }}><span style={{ color: GREEN }}>●</span> สำเร็จ <strong>{num(la.completedCount)}</strong></span>
+            <span style={{ fontSize: 13 }}><span style={{ color: GOLD }}>●</span> กำลังดำเนินการ <strong>{num(la.inProgressCount)}</strong></span>
+            <span style={{ fontSize: 13 }}><span style={{ color: RED }}>●</span> หลุด <strong>{num(la.lostCount)}</strong></span>
+          </div>
+          {la.inProgressByStatus.length > 0 && (
+            <p style={{ margin: "10px 0 0", fontSize: 12, color: "#9ca3af" }}>
+              กำลังดำเนินการ = {la.inProgressByStatus.map(s => `${s.label} ${s.count}`).join(" · ")}
+            </p>
+          )}
+        </Card>
         <Grid min={180}>
           <Mini label="Lead ที่ปิดไม่ได้" value={`${num(la.lostCount)}`} sub={`จาก ${num(la.leads)} leads`} color={RED} />
           <Mini label="มูลค่าดีลที่เสีย" value={baht(la.lostValue)} sub="ราคาประเมินรวม" color={RED} />

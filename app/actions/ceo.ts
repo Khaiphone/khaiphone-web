@@ -386,6 +386,10 @@ export type LeadAnalytics = {
   funnel: { label: string; count: number; conv: number | null }[];
   lostByStatus: { label: string; count: number; value: number }[];
   lostCount: number; lostValue: number;
+  completedCount: number;
+  mergedCount: number;
+  inProgressCount: number;
+  inProgressByStatus: { status: string; label: string; count: number }[]; // เคสที่ยังไม่จบ ยังไม่หลุด
   avgPurchasePrice: number;
   avgCloseDays: number;
   soldFromLeads: number;
@@ -484,7 +488,15 @@ export async function fetchLeadAnalytics(days = 30): Promise<LeadAnalytics> {
     .map(([status, count]) => ({ status, label: ALL_STATUS_LABEL[status] ?? status, count }))
     .sort((a, b) => b.count - a.count);
 
-  return { leads, leadValue, funnel, lostByStatus, lostCount, lostValue, avgPurchasePrice, avgCloseDays, soldFromLeads, bySource, statusBreakdown };
+  // กระทบยอด: leads = สำเร็จ + หลุด + รวมรายการ + กำลังดำเนินการ
+  const completedCount = completed.length;
+  const mergedCount = rows.filter(r => r.status === "merged").length;
+  const inProgressCount = leads - completedCount - lostCount - mergedCount;
+  const inProgressByStatus = statusBreakdown
+    .filter(s => s.status !== "completed" && s.status !== "merged" && !LOST_STATUS[s.status])
+    .map(s => ({ status: s.status, label: s.label, count: s.count }));
+
+  return { leads, leadValue, funnel, lostByStatus, lostCount, lostValue, completedCount, mergedCount, inProgressCount, inProgressByStatus, avgPurchasePrice, avgCloseDays, soldFromLeads, bySource, statusBreakdown };
 }
 
 // ── สรุป Estimate funnel (หน้าเว็บ) + อัตราสำเร็จรายรุ่น ──────────────────────
