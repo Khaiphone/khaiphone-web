@@ -81,8 +81,8 @@ export default function CeoLayoutClient({ children }: { children: React.ReactNod
         <div style={{ marginTop: "auto", padding: 16, fontSize: 10.5, color: "rgba(255,255,255,0.35)" }}>ดูอย่างเดียว · ข้อมูลจาก Finance / Stock / Requests</div>
       </aside>
 
-      {/* Mobile top nav */}
-      <div className="md:hidden" style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 30, background: "#16161A", display: "flex", gap: 4, overflowX: "auto", padding: "10px 12px", paddingTop: "calc(env(safe-area-inset-top) + 10px)" }}>
+      {/* Mobile top nav — ใช้ class คุม display (อย่าใส่ display:flex inline เพราะจะชนะ md:hidden) */}
+      <div className="flex md:hidden" style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 30, background: "#16161A", gap: 4, overflowX: "auto", padding: "10px 12px", paddingTop: "calc(env(safe-area-inset-top) + 10px)" }}>
         {NAV.map(({ href, label, icon: Icon }) => {
           const active = pathname === href;
           return (
