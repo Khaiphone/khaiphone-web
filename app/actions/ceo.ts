@@ -479,25 +479,34 @@ export type EstimateSummary = {
   topDropStep: string;     // จุดที่คนออกมากสุด
   byModel: { model: string; estimates: number; submits: number; conv: number }[]; // อัตราสำเร็จรายรุ่น
 };
+const ESTIMATE_STEP_NAMES = ["เริ่มต้น", "Model", "ประกัน", "ตัวเครื่อง", "หน้าจอ", "การแสดงภาพ", "แบตเตอรี่", "อุปกรณ์เสริม", "iCloud", "เห็นราคา", "นัดหมายสำเร็จ"];
+
 export async function fetchEstimateSummary(days = 30): Promise<EstimateSummary> {
   await requireOwner();
+  const supabase = createServerClient();
+  const bkkToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
+  const since = new Date(new Date(bkkToday + "T00:00:00+07:00").getTime() - (days - 1) * 86400000).toISOString();
+
+  // เรียก RPC ตรง → ได้ modelFunnels ทุกรุ่น (ไม่ตัด top 10)
+  const { data: agg } = await supabase.rpc("estimate_analytics", { p_since: since });
+  if (agg) {
+    const funnel = (agg.funnel ?? []) as number[];
+    const mf = (agg.modelFunnels ?? []) as { model: string; counts: number[] }[];
+    const byModel = mf
+      .map(m => { const e = m.counts[0] ?? 0, s = m.counts[10] ?? 0; return { model: m.model, estimates: e, submits: s, conv: e > 0 ? Math.round((s / e) * 100) : 0 }; })
+      .sort((x, y) => y.estimates - x.estimates);
+    let topDrop = "ไม่มีข้อมูล", maxDrop = 0;
+    for (let i = 1; i < funnel.length; i++) { const drop = (funnel[i - 1] ?? 0) - (funnel[i] ?? 0); if (drop > maxDrop) { maxDrop = drop; topDrop = ESTIMATE_STEP_NAMES[i]; } }
+    const est = funnel[0] ?? 0, sub = funnel[10] ?? 0;
+    return { days, estimates: est, priceSeen: funnel[9] ?? 0, submits: sub, conversionRate: est > 0 ? Math.round((sub / est) * 100) : 0, topDropStep: topDrop, byModel };
+  }
+
+  // fallback (ยังไม่ได้รัน migration RPC) — ใช้ top 10 จาก fetchEstimateAnalytics
   const a = await fetchEstimateAnalytics(days);
   const byModel = a.modelFunnels
-    .map(m => {
-      const est = m.funnel[0]?.count ?? 0;
-      const sub = m.funnel[10]?.count ?? 0;
-      return { model: m.model, estimates: est, submits: sub, conv: est > 0 ? Math.round((sub / est) * 100) : 0 };
-    })
+    .map(m => { const e = m.funnel[0]?.count ?? 0, s = m.funnel[10]?.count ?? 0; return { model: m.model, estimates: e, submits: s, conv: e > 0 ? Math.round((s / e) * 100) : 0 }; })
     .sort((x, y) => y.estimates - x.estimates);
-  return {
-    days,
-    estimates: a.totalStarts,
-    priceSeen: a.funnel[9]?.count ?? 0,
-    submits: a.funnel[10]?.count ?? 0,
-    conversionRate: a.completionRate,
-    topDropStep: a.topDropStep,
-    byModel,
-  };
+  return { days, estimates: a.totalStarts, priceSeen: a.funnel[9]?.count ?? 0, submits: a.funnel[10]?.count ?? 0, conversionRate: a.completionRate, topDropStep: a.topDropStep, byModel };
 }
 
 // ── เงินทุน ───────────────────────────────────────────────────────────────────

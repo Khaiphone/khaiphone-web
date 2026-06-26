@@ -14,6 +14,7 @@ export default function CeoMarketingPage() {
   const [d, setD] = useState<MissionControl | null>(null);
   const [la, setLa] = useState<LeadAnalytics | null>(null);
   const [es, setEs] = useState<EstimateSummary | null>(null);
+  const [showAllModels, setShowAllModels] = useState(false);
   useEffect(() => {
     fetchMissionControl().then(setD).catch(() => {});
     fetchLeadAnalytics().then(setLa).catch(() => {});
@@ -57,7 +58,7 @@ export default function CeoMarketingPage() {
             <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 8, padding: "0 4px 8px", borderBottom: "1px solid #eef0f2", fontSize: 11, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase" }}>
               <span>รุ่น</span><span style={{ textAlign: "right" }}>เข้าประเมิน</span><span style={{ textAlign: "right" }}>ส่งคำขอ</span><span style={{ textAlign: "right" }}>%สำเร็จ</span>
             </div>
-            {es.byModel.map(m => (
+            {(showAllModels ? es.byModel : es.byModel.slice(0, 10)).map(m => (
               <div key={m.model} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 8, padding: "9px 4px", borderBottom: "1px solid #f6f6f8", fontSize: 13, alignItems: "center" }}>
                 <span style={{ color: "#374151", fontWeight: 600 }}>{m.model}</span>
                 <span style={{ textAlign: "right" }}>{num(m.estimates)}</span>
@@ -65,6 +66,11 @@ export default function CeoMarketingPage() {
                 <span style={{ textAlign: "right", color: m.conv >= 5 ? GREEN : m.conv >= 2 ? GOLD : RED, fontWeight: 700 }}>{m.conv}%</span>
               </div>
             ))}
+            {es.byModel.length > 10 && (
+              <button onClick={() => setShowAllModels(v => !v)} style={{ width: "100%", marginTop: 10, padding: "8px", borderRadius: 9, border: `1px solid ${GOLD}55`, background: "transparent", color: GOLD, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                {showAllModels ? "▲ ย่อ (โชว์ 10 อันดับแรก)" : `▼ ดูทั้งหมด (${es.byModel.length} รุ่น)`}
+              </button>
+            )}
             <p style={{ margin: "10px 0 0", fontSize: 12, color: "#9ca3af" }}>* รุ่นที่ &ldquo;เข้าประเมินเยอะ&rdquo; แต่ &ldquo;%สำเร็จต่ำ (แดง)&rdquo; = น่าทบทวนราคารับซื้อรุ่นนั้น</p>
           </Card>
         </div>
