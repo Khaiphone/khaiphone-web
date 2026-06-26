@@ -1,55 +1,113 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchMissionControl, type MissionControl } from "@/app/actions/ceo";
-import { PageTitle, Card, Kpi, Grid, Progress, InsightBox, Loading, baht, GOLD, GREEN, RED, BLUE } from "../ui";
+import { fetchMissionControl, fetchLeadAnalytics, type MissionControl, type LeadAnalytics } from "@/app/actions/ceo";
+import { PageTitle, Card, Kpi, Grid, Mini, Section, InsightBox, Loading, baht, num, GOLD, GREEN, RED, BLUE } from "../ui";
 
-export default function CeoAdsPage() {
+export default function CeoMarketingPage() {
   const [d, setD] = useState<MissionControl | null>(null);
-  useEffect(() => { fetchMissionControl().then(setD).catch(() => {}); }, []);
-  if (!d) return <><PageTitle title="โฆษณา" /><Loading /></>;
+  const [la, setLa] = useState<LeadAnalytics | null>(null);
+  useEffect(() => {
+    fetchMissionControl().then(setD).catch(() => {});
+    fetchLeadAnalytics().then(setLa).catch(() => {});
+  }, []);
+  if (!d || !la) return <><PageTitle title="การตลาด & Leads" /><Loading /></>;
 
-  const overBudget = d.adsBudget > 0 && d.adSpend > d.adsBudget;
+  const lostProfit = la.lostCount * d.avgProfitPerDevice;
 
   return (
     <>
-      <PageTitle title="โฆษณา" sub={`เดือน${d.monthLabel} · ควรเพิ่ม/ลด Ads หรือไม่`} />
-      <InsightBox insights={d.insights.filter(i => i.text.includes("Ads") || i.text.includes("โฆษณา"))} max={3} />
+      <PageTitle title="การตลาด & Leads" sub={`เดือน${d.monthLabel} · Lead เข้าพอไหม · หลุดตรงไหน · เงินหายไปกับอะไร`} />
+      <InsightBox insights={d.insights.filter(i => i.text.includes("Ads") || i.text.includes("โฆษณา"))} max={2} />
 
-      {d.adSpend === 0 ? (
-        <Card><p style={{ margin: 0, color: "#6b7280", fontSize: 14 }}>ยังไม่ได้กรอกยอดใช้จ่ายโฆษณา — ไปที่ <strong>ตั้งค่า</strong> → &ldquo;ยอดใช้จ่ายโฆษณาจริงเดือนนี้&rdquo; เพื่อให้ระบบคำนวณ ROAS และแนะนำงบ</p></Card>
-      ) : (
-        <>
-          <Grid min={210}>
-            <Kpi label="งบที่ใช้เดือนนี้" value={baht(d.adSpend)} color={RED} accent={RED} sub={d.adsBudget > 0 ? `งบตั้งไว้ ${baht(d.adsBudget)}` : "ยังไม่ตั้งงบ"} />
-            <Kpi label="ROAS" value={`${d.roas}x`} sub="รายได้ต่อค่าโฆษณา 1 บาท" color={d.roas >= 3 ? GREEN : d.roas >= 1 ? GOLD : RED} accent={GOLD} />
-            <Kpi label="ต้นทุนโฆษณา/เครื่อง" value={baht(d.costPerAcquired)} sub={`รับซื้อ ${d.acquired} เครื่อง`} color={BLUE} accent={BLUE} />
-            <Kpi label="สถานะงบ" value={overBudget ? "เกินงบ" : "อยู่ในงบ"} color={overBudget ? RED : GREEN} accent={overBudget ? RED : GREEN} />
-          </Grid>
+      {/* ── ROI โฆษณา ── */}
+      <Section title="ผลตอบแทนโฆษณา (จากบิลจริงใน Finance)">
+        <Grid min={160}>
+          <Mini label="ใช้งบโฆษณา" value={baht(d.adSpend)} sub={d.adsBudget ? `เป้า ${baht(d.adsBudget)}` : undefined} color={RED} />
+          <Mini label="ROAS" value={d.roas ? `${d.roas}x` : "—"} color={d.roas >= 3 ? GREEN : d.roas >= 1 ? GOLD : RED} />
+          <Mini label="ROI" value={d.roi ? `${d.roi}%` : "—"} color={d.roi >= 100 ? GREEN : GOLD} />
+          <Mini label="ต้นทุน/Lead (CPA)" value={la.leads > 0 && d.adSpend > 0 ? baht(Math.round(d.adSpend / la.leads)) : "—"} />
+        </Grid>
+      </Section>
 
-          {/* Action: คำแนะนำเรื่องงบ */}
-          <div style={{ height: 16 }} />
-          <Card style={{ borderLeft: `4px solid ${d.adsCanAdd > 0 ? GREEN : "#9ca3af"}` }}>
-            <p style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 700, color: "#111" }}>คำแนะนำเรื่องงบโฆษณา</p>
-            {d.adsCanAdd > 0 && d.expectedExtraProfit > 0 ? (
-              <p style={{ margin: 0, fontSize: 14, color: "#374151", lineHeight: 1.9 }}>
-                ROAS ดี + เงินทุนแข็งแรง → <strong style={{ color: GREEN }}>เพิ่มงบได้อีก ~{baht(d.adsCanAdd)}/เดือน</strong><br />
-                คาดได้เครื่องเพิ่ม ~<strong>{d.expectedExtraDevices} เครื่อง</strong> · กำไรเพิ่ม ~<strong style={{ color: GREEN }}>{baht(d.expectedExtraProfit)}</strong>
-              </p>
-            ) : d.roas > 0 && d.roas < 1 ? (
-              <p style={{ margin: 0, fontSize: 14, color: RED, lineHeight: 1.8 }}>ROAS ต่ำกว่า 1 — โฆษณายังไม่คุ้ม ควรลด/หยุดงบแล้วปรับแคมเปญก่อนเพิ่ม</p>
-            ) : (
-              <p style={{ margin: 0, fontSize: 13.5, color: "#6b7280", lineHeight: 1.8 }}>คงงบปัจจุบันไว้ก่อน — เพิ่มงบเมื่อ ROAS ≥ 3 และเงินสดสูงกว่า Safe Buffer</p>
-            )}
+      {/* ── Lead Funnel ── */}
+      <Section title="Lead Funnel — หลุดตรงขั้นไหน">
+        <Card>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 14, flexWrap: "wrap", marginBottom: 16 }}>
+            <span style={{ fontSize: 13, color: "#6b7280" }}>Lead ทั้งหมด</span>
+            <span style={{ fontSize: 24, fontWeight: 800 }}>{num(la.leads)}</span>
+            <span style={{ fontSize: 13, color: "#6b7280" }}>· มูลค่ารวม (ราคาประเมิน)</span>
+            <span style={{ fontSize: 20, fontWeight: 800, color: BLUE }}>{baht(la.leadValue)}</span>
+          </div>
+          {la.funnel.map((f, i) => {
+            const pct = la.leads > 0 ? Math.round((f.count / la.leads) * 100) : 0;
+            return (
+              <div key={f.label} style={{ marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 5 }}>
+                  <span style={{ color: "#374151", fontWeight: 600 }}>{i + 1}. {f.label}</span>
+                  <span style={{ color: "#111" }}>
+                    <strong>{num(f.count)}</strong>
+                    {f.conv != null && <span style={{ color: f.conv >= 50 ? GREEN : f.conv >= 25 ? GOLD : RED, fontWeight: 700 }}> · ผ่าน {f.conv}%</span>}
+                  </span>
+                </div>
+                <div style={{ height: 16, borderRadius: 5, background: "#eef0f2", overflow: "hidden" }}>
+                  <div style={{ width: `${pct}%`, height: "100%", background: `linear-gradient(90deg, ${GOLD}, ${i === la.funnel.length - 1 ? GREEN : GOLD})`, borderRadius: 5 }} />
+                </div>
+              </div>
+            );
+          })}
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#9ca3af" }}>% ผ่าน = สัดส่วนที่ไปต่อจากขั้นก่อนหน้า — ขั้นที่ % ตกฮวบคือจุดที่หลุดมากสุด</p>
+        </Card>
+      </Section>
+
+      {/* ── Lost Opportunity ── */}
+      <Section title="โอกาสที่เสียไป (Lost Opportunity)">
+        <Grid min={180}>
+          <Mini label="Lead ที่ปิดไม่ได้" value={`${num(la.lostCount)}`} sub={`จาก ${num(la.leads)} leads`} color={RED} />
+          <Mini label="มูลค่าดีลที่เสีย" value={baht(la.lostValue)} sub="ราคาประเมินรวม" color={RED} />
+          <Mini label="กำไรที่พลาด (ประมาณ)" value={baht(lostProfit)} sub={`≈ ${num(la.lostCount)} × ${baht(d.avgProfitPerDevice)}`} color={RED} />
+          <Mini label="Lead → ขายออกจริง" value={`${num(la.soldFromLeads)}`} sub="ปิดจบครบวงจร" color={GREEN} />
+        </Grid>
+        {la.lostByStatus.length > 0 && (
+          <Card style={{ marginTop: 14 }}>
+            <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: "#111" }}>สาเหตุที่หลุด (ตามสถานะ)</p>
+            {la.lostByStatus.map((l, i) => (
+              <div key={l.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: i < la.lostByStatus.length - 1 ? "1px solid #f0f0f2" : "none" }}>
+                <span style={{ fontSize: 13.5, color: "#374151" }}>{l.label}</span>
+                <span style={{ fontSize: 13, color: "#111" }}><strong>{num(l.count)}</strong> <span style={{ color: "#9ca3af" }}>· {baht(l.value)}</span></span>
+              </div>
+            ))}
+            <p style={{ margin: "10px 0 0", fontSize: 12, color: "#9ca3af" }}>* สาเหตุละเอียด (ราคาไม่ตรง / ติด iCloud / เปลี่ยนใจ / ขายที่อื่น) ต้องเพิ่มช่อง &ldquo;เหตุผลที่ยกเลิก&rdquo; ตอนปิดงาน — บอกผมถ้าอยากให้เพิ่ม</p>
           </Card>
+        )}
+      </Section>
 
-          <div style={{ height: 14 }} />
-          <Card>
-            <Progress label="งบโฆษณาที่ใช้ไป" value={d.adSpend} target={d.adsBudget} fmt={baht} />
-            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#9ca3af" }}>* ลูกค้าเกือบทั้งหมดมาจากโฆษณา → ROAS/CPA/ROI สะท้อนผลโฆษณาได้จริง · ความแม่นขึ้นกับการกรอกยอดค่าโฆษณาให้ครบทุกแพลตฟอร์มที่หน้าตั้งค่า</p>
-          </Card>
-        </>
-      )}
+      {/* ── ตัวเลขเฉลี่ย ── */}
+      <Section title="ค่าเฉลี่ย">
+        <Grid min={180}>
+          <Mini label="ราคาซื้อเฉลี่ย/เครื่อง" value={baht(la.avgPurchasePrice)} />
+          <Mini label="เวลาปิดการขายเฉลี่ย" value={la.avgCloseDays > 0 ? `${la.avgCloseDays} วัน` : "—"} sub="lead → ซื้อสำเร็จ" />
+          <Mini label="อัตราปิดการขาย" value={`${la.leads > 0 ? Math.round((la.funnel[3]?.count ?? 0) / la.leads * 100) : 0}%`} sub="ซื้อสำเร็จ / leads" color={GREEN} />
+        </Grid>
+      </Section>
+
+      {/* ── Lead Source ── */}
+      <Section title="แหล่งที่มาของ Lead">
+        <Card>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 8, padding: "0 4px 8px", borderBottom: "1px solid #eef0f2", fontSize: 11, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase" }}>
+            <span>ช่องทาง</span><span style={{ textAlign: "right" }}>Leads</span><span style={{ textAlign: "right" }}>ปิดได้</span><span style={{ textAlign: "right" }}>%</span>
+          </div>
+          {la.bySource.map(s => (
+            <div key={s.label} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 8, padding: "9px 4px", borderBottom: "1px solid #f6f6f8", fontSize: 13, alignItems: "center" }}>
+              <span style={{ color: "#374151", fontWeight: 600 }}>{s.label}</span>
+              <span style={{ textAlign: "right" }}>{num(s.count)}</span>
+              <span style={{ textAlign: "right", color: GREEN, fontWeight: 600 }}>{num(s.completed)}</span>
+              <span style={{ textAlign: "right", color: s.conv >= 50 ? GREEN : GOLD, fontWeight: 700 }}>{s.conv}%</span>
+            </div>
+          ))}
+          <p style={{ margin: "10px 0 0", fontSize: 12, color: "#9ca3af" }}>* แยก Google vs Facebook ละเอียดต้องเก็บ utm ตอนลูกค้ากรอกฟอร์ม — ตอนนี้แยกตามช่องทางหลัก (เว็บ/LINE/FB/โทร)</p>
+        </Card>
+      </Section>
     </>
   );
 }

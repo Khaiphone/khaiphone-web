@@ -364,6 +364,110 @@ export async function fetchMissionControl(): Promise<MissionControl> {
 // baht helper สำหรับสร้างข้อความ insight (ฝั่ง server)
 function baht(n: number) { return "฿" + Math.round(n).toLocaleString("th-TH"); }
 
+// ════════════════════════════════════════════════════════════════════════════
+// LEAD ANALYTICS — funnel, มูลค่า, แหล่งที่มา, โอกาสที่เสีย (เดือนนี้)
+// ════════════════════════════════════════════════════════════════════════════
+const STATUS_RANK: Record<string, number> = {
+  new: 0, pending: 0, contacted: 1, confirmed: 2, pickup_scheduled: 2, en_route: 2,
+  inspecting: 3, price_negotiation: 3, contracting: 4, awaiting_transfer: 4, completed: 5,
+};
+const LOST_STATUS: Record<string, string> = {
+  cancelled: "ลูกค้ายกเลิก", unreachable: "ติดต่อไม่ได้", rejected: "ไม่เข้าเงื่อนไข",
+  no_show: "ไม่มาตามนัด", out_of_area: "นอกพื้นที่",
+};
+const SOURCE_LABEL: Record<string, string> = {
+  website: "เว็บไซต์", line: "LINE OA", facebook: "Facebook", phone: "โทรศัพท์", manual: "หน้าร้าน",
+};
+
+export type LeadAnalytics = {
+  leads: number;
+  leadValue: number;
+  funnel: { label: string; count: number; conv: number | null }[];
+  lostByStatus: { label: string; count: number; value: number }[];
+  lostCount: number; lostValue: number;
+  avgPurchasePrice: number;
+  avgCloseDays: number;
+  soldFromLeads: number;
+  bySource: { label: string; count: number; completed: number; conv: number }[];
+};
+
+export async function fetchLeadAnalytics(): Promise<LeadAnalytics> {
+  await requireOwner();
+  const { from } = thisMonthRange();
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("requests")
+    .select("status, status_log, estimated_price, actual_price, source, created_at, order_number")
+    .gte("created_at", `${from}T00:00:00`);
+  type Row = { status: string | null; status_log: { status: string; timestamp: string }[] | null; estimated_price: number | null; actual_price: number | null; source: string | null; created_at: string | null; order_number: string | null };
+  const rows = (data ?? []) as Row[];
+  const leads = rows.length;
+  const leadValue = rows.reduce((s, r) => s + (r.estimated_price ?? 0), 0);
+
+  // furthest stage ของแต่ละ lead
+  const furthest = (r: Row) => {
+    let m = STATUS_RANK[r.status ?? ""] ?? 0;
+    for (const e of r.status_log ?? []) m = Math.max(m, STATUS_RANK[e.status] ?? 0);
+    return m;
+  };
+  const reached = (rank: number) => rows.filter(r => furthest(r) >= rank).length;
+  // sold linkage
+  const completedOrders = rows.filter(r => r.status === "completed").map(r => r.order_number).filter(Boolean) as string[];
+  let soldFromLeads = 0;
+  if (completedOrders.length) {
+    const { data: st } = await supabase.from("stocks").select("request_ref, status").in("request_ref", completedOrders);
+    const soldRefs = new Set(((st ?? []) as { request_ref: string | null; status: string | null }[]).filter(s => s.status === "ขายแล้ว").map(s => s.request_ref));
+    soldFromLeads = completedOrders.filter(o => soldRefs.has(o)).length;
+  }
+
+  const stages = [
+    { label: "Lead (รับคำขอ)", count: leads },
+    { label: "นัดหมาย", count: reached(2) },
+    { label: "ตรวจ/เสนอราคา", count: reached(3) },
+    { label: "ซื้อสำเร็จ", count: reached(5) },
+    { label: "ขายออก", count: soldFromLeads },
+  ];
+  const funnel = stages.map((s, i) => ({ label: s.label, count: s.count, conv: i === 0 ? null : (stages[i - 1].count > 0 ? Math.round((s.count / stages[i - 1].count) * 100) : 0) }));
+
+  // lost
+  const lostRows = rows.filter(r => r.status && LOST_STATUS[r.status]);
+  const lostMap = new Map<string, { count: number; value: number }>();
+  for (const r of lostRows) {
+    const k = LOST_STATUS[r.status!];
+    const cur = lostMap.get(k) ?? { count: 0, value: 0 };
+    cur.count++; cur.value += r.estimated_price ?? 0;
+    lostMap.set(k, cur);
+  }
+  const lostByStatus = Array.from(lostMap.entries()).map(([label, v]) => ({ label, ...v })).sort((a, b) => b.count - a.count);
+  const lostCount = lostRows.length;
+  const lostValue = lostRows.reduce((s, r) => s + (r.estimated_price ?? 0), 0);
+
+  // avg purchase price + close time (completed)
+  const completed = rows.filter(r => r.status === "completed");
+  const avgPurchasePrice = completed.length ? Math.round(completed.reduce((s, r) => s + (r.actual_price ?? r.estimated_price ?? 0), 0) / completed.length) : 0;
+  const closeDays: number[] = [];
+  for (const r of completed) {
+    const done = (r.status_log ?? []).find(e => e.status === "completed");
+    if (done && r.created_at) {
+      const dd = (new Date(done.timestamp).getTime() - new Date(r.created_at).getTime()) / 86400000;
+      if (dd >= 0 && dd < 365) closeDays.push(dd);
+    }
+  }
+  const avgCloseDays = closeDays.length ? Math.round((closeDays.reduce((s, d) => s + d, 0) / closeDays.length) * 10) / 10 : 0;
+
+  // by source
+  const srcMap = new Map<string, { count: number; completed: number }>();
+  for (const r of rows) {
+    const k = SOURCE_LABEL[r.source ?? ""] ?? (r.source || "ไม่ระบุ");
+    const cur = srcMap.get(k) ?? { count: 0, completed: 0 };
+    cur.count++; if (r.status === "completed") cur.completed++;
+    srcMap.set(k, cur);
+  }
+  const bySource = Array.from(srcMap.entries()).map(([label, v]) => ({ label, count: v.count, completed: v.completed, conv: v.count > 0 ? Math.round((v.completed / v.count) * 100) : 0 })).sort((a, b) => b.count - a.count);
+
+  return { leads, leadValue, funnel, lostByStatus, lostCount, lostValue, avgPurchasePrice, avgCloseDays, soldFromLeads, bySource };
+}
+
 // ── เงินทุน ───────────────────────────────────────────────────────────────────
 export type CeoCapital = {
   cash: number;          // เงินสดสุทธิ (จากกระแสเงินสด)
