@@ -230,9 +230,10 @@ export async function fetchEstimateAnalytics(days = 30): Promise<EstimateAnalyti
   const weekdayCounts = Array.from({ length: 7 }, (_, d) => ({ day: d, label: WEEKDAY_LABELS[d], count: 0 }));
   for (const row of rows) {
     if (row.event !== "start") continue;
-    // JS getDay: 0=Sun,1=Mon…6=Sat → convert to 0=Mon…6=Sun
-    const jsDay = new Date(row.created_at).getDay();
-    const idx = jsDay === 0 ? 6 : jsDay - 1;
+    // เวลาไทย: เลื่อน +7 ชม. แล้วใช้ getUTCDay (server รันเป็น UTC — getDay() จะเพี้ยนช่วงเที่ยงคืน)
+    const bkk = new Date(new Date(row.created_at).getTime() + 7 * 60 * 60 * 1000);
+    const jsDay = bkk.getUTCDay(); // 0=Sun … 6=Sat (เวลาไทย)
+    const idx = jsDay === 0 ? 6 : jsDay - 1; // → 0=Mon … 6=Sun
     weekdayCounts[idx].count++;
   }
   const weekday = weekdayCounts;

@@ -16,7 +16,7 @@ function DailyChart({ daily, c }: { daily: DailyCount[]; c: ReturnType<typeof us
 
   return (
     <div style={{ background: c.card, border: `1px solid ${c.border}`, borderRadius: 16, padding: "20px 24px" }}>
-      <p style={{ color: c.text, fontSize: 14, fontWeight: 700, margin: "0 0 16px" }}>ประเมินรายวัน (14 วันล่าสุด)</p>
+      <p style={{ color: c.text, fontSize: 14, fontWeight: 700, margin: "0 0 16px" }}>ประเมินรายวัน ({last14.length} วันล่าสุด)</p>
 
       {!hasData ? (
         <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center" }}>
