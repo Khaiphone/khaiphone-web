@@ -139,6 +139,21 @@ export default function CeoMarketingPage() {
             <p style={{ margin: "10px 0 0", fontSize: 12, color: "#9ca3af" }}>* สาเหตุละเอียด (ราคาไม่ตรง / ติด iCloud / เปลี่ยนใจ / ขายที่อื่น) ต้องเพิ่มช่อง &ldquo;เหตุผลที่ยกเลิก&rdquo; ตอนปิดงาน — บอกผมถ้าอยากให้เพิ่ม</p>
           </Card>
         )}
+        {/* สถานะคำขอทั้งหมด — วินิจฉัยว่าเคสไปอยู่ถังไหน */}
+        <Card style={{ marginTop: 14 }}>
+          <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: "#111" }}>สถานะคำขอทั้งหมดในช่วงนี้ ({la.statusBreakdown.reduce((s, x) => s + x.count, 0)})</p>
+          {la.statusBreakdown.map((s, i) => {
+            const isLost = ["ลูกค้ายกเลิก", "ติดต่อไม่ได้", "ไม่เข้าเงื่อนไข", "ไม่มาตามนัด", "นอกพื้นที่"].includes(s.label);
+            const isDone = s.label === "เสร็จสิ้น";
+            return (
+              <div key={s.status} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: i < la.statusBreakdown.length - 1 ? "1px solid #f0f0f2" : "none" }}>
+                <span style={{ fontSize: 13.5, color: "#374151" }}>{s.label} <span style={{ color: "#cbd5e1", fontFamily: "monospace", fontSize: 11 }}>({s.status})</span></span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: isDone ? GREEN : isLost ? RED : "#374151" }}>{num(s.count)}</span>
+              </div>
+            );
+          })}
+          <p style={{ margin: "10px 0 0", fontSize: 12, color: "#9ca3af" }}>* ถ้าเคส &ldquo;ติดต่อไม่ได้/นอกพื้นที่&rdquo; ไม่ขึ้นที่นี่ แปลว่ายังไม่ถูกตั้งเป็นสถานะนั้น (อาจกดยกเลิกแทน) — ดูว่าตัวเลขไปกองที่สถานะไหน</p>
+        </Card>
       </Section>
 
       {/* ── ตัวเลขเฉลี่ย ── */}

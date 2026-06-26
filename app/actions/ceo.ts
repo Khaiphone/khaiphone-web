@@ -390,6 +390,15 @@ export type LeadAnalytics = {
   avgCloseDays: number;
   soldFromLeads: number;
   bySource: { label: string; count: number; completed: number; conv: number }[];
+  statusBreakdown: { status: string; label: string; count: number }[]; // ทุกสถานะในช่วงนี้ (ดูว่าเคสไปอยู่ถังไหน)
+};
+
+const ALL_STATUS_LABEL: Record<string, string> = {
+  new: "คำขอใหม่", pending: "รอตรวจสอบ", contacted: "ติดต่อกลับแล้ว", confirmed: "ยืนยันนัดหมาย",
+  pickup_scheduled: "ไรเดอร์รับงาน", en_route: "กำลังเดินทาง", inspecting: "กำลังตรวจ",
+  price_negotiation: "รอยืนยันราคา", contracting: "ทำสัญญา", awaiting_transfer: "รอโอนเงิน",
+  completed: "เสร็จสิ้น", cancelled: "ลูกค้ายกเลิก", no_show: "ไม่มาตามนัด", rejected: "ไม่เข้าเงื่อนไข",
+  unreachable: "ติดต่อไม่ได้", out_of_area: "นอกพื้นที่", merged: "รวมรายการ",
 };
 
 export async function fetchLeadAnalytics(days = 30): Promise<LeadAnalytics> {
@@ -468,7 +477,14 @@ export async function fetchLeadAnalytics(days = 30): Promise<LeadAnalytics> {
   }
   const bySource = Array.from(srcMap.entries()).map(([label, v]) => ({ label, count: v.count, completed: v.completed, conv: v.count > 0 ? Math.round((v.completed / v.count) * 100) : 0 })).sort((a, b) => b.count - a.count);
 
-  return { leads, leadValue, funnel, lostByStatus, lostCount, lostValue, avgPurchasePrice, avgCloseDays, soldFromLeads, bySource };
+  // สถานะทั้งหมดในช่วงนี้ (วินิจฉัย: เคสไปอยู่ถังไหน)
+  const statusMap = new Map<string, number>();
+  for (const r of rows) { const k = r.status ?? "(ไม่มีสถานะ)"; statusMap.set(k, (statusMap.get(k) ?? 0) + 1); }
+  const statusBreakdown = Array.from(statusMap.entries())
+    .map(([status, count]) => ({ status, label: ALL_STATUS_LABEL[status] ?? status, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return { leads, leadValue, funnel, lostByStatus, lostCount, lostValue, avgPurchasePrice, avgCloseDays, soldFromLeads, bySource, statusBreakdown };
 }
 
 // ── สรุป Estimate funnel (หน้าเว็บ) + อัตราสำเร็จรายรุ่น ──────────────────────
