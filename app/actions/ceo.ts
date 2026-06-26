@@ -3,7 +3,7 @@
 import { createServerClient } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/require-auth";
 import { fetchMyProfile } from "@/app/actions/admin-users";
-import { fetchFinanceDashboard, fetchFinanceCashFlow, fetchForecast, fetchStockAging } from "@/app/actions/finance";
+import { fetchFinanceDashboard, fetchFinanceCashFlow, fetchForecast, fetchStockAging, fetchExpenses } from "@/app/actions/finance";
 
 // CEO dashboard = เจ้าของเท่านั้น
 async function requireOwner() {
@@ -19,13 +19,14 @@ export type CeoSettings = {
   targetAcquired: number;  // เป้าจำนวนเครื่องรับซื้อ
   targetSold: number;      // เป้าจำนวนเครื่องขาย
   adsBudget: number;       // งบโฆษณา/เดือน
-  adSpend: number;         // ยอดใช้จ่ายโฆษณาจริงเดือนนี้ (กรอกเอง)
+  adSpend: number;         // ยอดใช้จ่ายโฆษณา (fallback ถ้าไม่ได้ผูกหมวดค่าใช้จ่าย)
+  adsCategory: string;     // หมวดค่าใช้จ่ายใน Finance ที่ถือเป็นค่าโฆษณา → ดึง adSpend อัตโนมัติ
   safeBuffer: number;      // เงินกันชนที่ต้องเหลือ (ห้ามแตะ)
 };
 
 const DEFAULT_SETTINGS: CeoSettings = {
   targetRevenue: 0, targetProfit: 0, targetAcquired: 0, targetSold: 0,
-  adsBudget: 0, adSpend: 0, safeBuffer: 0,
+  adsBudget: 0, adSpend: 0, adsCategory: "", safeBuffer: 0,
 };
 
 export async function getCeoSettings(): Promise<CeoSettings> {
@@ -40,8 +41,19 @@ export async function getCeoSettings(): Promise<CeoSettings> {
     targetSold:     data.target_sold     ?? 0,
     adsBudget:      data.ads_budget       ?? 0,
     adSpend:        data.ad_spend          ?? 0,
+    adsCategory:    data.ads_category      ?? "",
     safeBuffer:     data.safe_buffer       ?? 0,
   };
+}
+
+// หมวดค่าใช้จ่ายทั้งหมด (ให้ CEO เลือกว่าหมวดไหน = ค่าโฆษณา)
+export async function fetchExpenseCategories(): Promise<string[]> {
+  await requireOwner();
+  const supabase = createServerClient();
+  const { data } = await supabase.from("expenses").select("category").not("category", "is", null);
+  const set = new Set<string>();
+  for (const r of (data ?? []) as { category: string | null }[]) if (r.category) set.add(r.category);
+  return Array.from(set).sort();
 }
 
 export async function saveCeoSettings(s: CeoSettings): Promise<{ success: boolean; error?: string }> {
@@ -55,6 +67,7 @@ export async function saveCeoSettings(s: CeoSettings): Promise<{ success: boolea
     target_sold:     s.targetSold,
     ads_budget:      s.adsBudget,
     ad_spend:        s.adSpend,
+    ads_category:    s.adsCategory,
     safe_buffer:     s.safeBuffer,
     updated_at:      new Date().toISOString(),
   }, { onConflict: "id" });
@@ -168,13 +181,14 @@ export async function fetchMissionControl(): Promise<MissionControl> {
   await requireOwner();
   const { from, to, label } = thisMonthRange();
   const supabase = createServerClient();
-  const [d, cf, cfMonth, aging, f, settings, leadsRes, soldMonthRes, recentRes] = await Promise.all([
+  const [d, cf, cfMonth, aging, f, settings, expensesMonth, leadsRes, soldMonthRes, recentRes] = await Promise.all([
     fetchFinanceDashboard(from, to),
     fetchFinanceCashFlow("2020-01-01", to),
     fetchFinanceCashFlow(from, to),
     fetchStockAging(),
     fetchForecast(),
     getCeoSettings(),
+    fetchExpenses(from, to),
     supabase.from("requests").select("status").gte("created_at", `${from}T00:00:00`),
     supabase.from("stocks").select("sale_type").eq("status", "ขายแล้ว").gte("sold_at", from),
     supabase.from("stocks").select("model, storage, sold_price, cost_price, status, sold_at, received_at").order("updated_at", { ascending: false }).limit(6),
@@ -196,7 +210,14 @@ export async function fetchMissionControl(): Promise<MissionControl> {
   const belowBuffer = safeBuffer > 0 && cash < safeBuffer;
 
   // ── ads ──
-  const adSpend = settings.adSpend, adsBudget = settings.adsBudget;
+  // ดึงค่าโฆษณาอัตโนมัติจากค่าใช้จ่าย Finance (หมวดที่เลือก) — ไม่ต้องกรอกซ้ำ
+  const adsCat = settings.adsCategory.trim();
+  const adKeyword = /โฆษณา|ads|การตลาด|marketing|facebook|google/i;
+  const adSpendAuto = expensesMonth
+    .filter(e => e.status !== "rejected" && (adsCat ? e.category === adsCat : adKeyword.test(e.category)))
+    .reduce((s, e) => s + (e.amount ?? 0), 0);
+  const adSpend = adSpendAuto > 0 ? adSpendAuto : settings.adSpend;
+  const adsBudget = settings.adsBudget;
   const roas = adSpend > 0 ? Math.round((revenue / adSpend) * 10) / 10 : 0;
   const costPerAcquired = acquired > 0 && adSpend > 0 ? Math.round(adSpend / acquired) : 0;
   // แนะนำเพิ่มงบ Ads เมื่อ ROAS ดี + เงินทุนแข็งแรง (เพิ่ม ~30% ของงบปัจจุบัน)
