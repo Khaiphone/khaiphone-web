@@ -144,13 +144,21 @@ export async function fetchEstimateAnalytics(days = 30): Promise<EstimateAnalyti
   // Go back (days-1) full days from Bangkok midnight
   const since = new Date(bkkMidnightUTC.getTime() - (days - 1) * 24 * 60 * 60 * 1000);
 
-  const { data } = await supabase
-    .from("estimate_events")
-    .select("session_id, event, model, step_index, created_at, storage, price")
-    .gte("created_at", since.toISOString())
-    .order("created_at", { ascending: true });
-
-  const rows = data ?? [];
+  // ดึงทุกแถวแบบ pagination — กัน Supabase cap ~1000 แถว/query (ไม่งั้นช่วงยาวจะถูกตัดวันล่าสุดทิ้ง)
+  type EvtRow = { session_id: string; event: string; model: string | null; step_index: number | null; created_at: string; storage: string | null; price: number | null };
+  const rows: EvtRow[] = [];
+  const PAGE = 1000;
+  for (let start = 0; ; start += PAGE) {
+    const { data: page } = await supabase
+      .from("estimate_events")
+      .select("session_id, event, model, step_index, created_at, storage, price")
+      .gte("created_at", since.toISOString())
+      .order("created_at", { ascending: true })
+      .range(start, start + PAGE - 1);
+    if (!page || page.length === 0) break;
+    rows.push(...(page as EvtRow[]));
+    if (page.length < PAGE) break;
+  }
 
   // Build per-session summary
   const sessionMap = new Map<string, Session>();
