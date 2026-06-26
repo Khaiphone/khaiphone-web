@@ -134,6 +134,59 @@ function toBkkDate(isoUtc: string): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date(isoUtc));
 }
 
+function buildFunnelFromCounts(counts: number[], total: number): FunnelStep[] {
+  return FUNNEL_STEP_NAMES.map((name, i) => ({
+    stepIndex: i, stepName: name,
+    count: counts[i] ?? 0,
+    pct: total > 0 ? Math.round(((counts[i] ?? 0) / total) * 100) : 0,
+  }));
+}
+
+// แปลงผลสรุปจาก RPC (Postgres นับให้แล้ว) → EstimateAnalytics
+type AggResult = {
+  daily: { date: string; starts: number; priceSeen: number; submits: number }[];
+  funnel: number[];
+  modelFunnels: { model: string; counts: number[] }[];
+  hourly: Record<string, number>;
+  weekday: Record<string, number>;
+  storages: StorageCount[];
+  avgPrices: AvgPrice[];
+};
+function mapAgg(agg: AggResult, days: number, bkkToday: string, bkkMidnightUTC: Date): EstimateAnalytics {
+  const funnelCounts = agg.funnel ?? [];
+  const totalStarts = funnelCounts[0] ?? 0;
+  const funnel = buildFunnelFromCounts(funnelCounts, totalStarts);
+
+  const top = [...(agg.modelFunnels ?? [])].sort((a, b) => (b.counts[0] ?? 0) - (a.counts[0] ?? 0)).slice(0, 10);
+  const models: ModelCount[] = top.map(m => ({ model: m.model, starts: m.counts[0] ?? 0, submits: m.counts[10] ?? 0 }));
+  const modelFunnels: ModelFunnel[] = top.map(m => ({ model: m.model, funnel: buildFunnelFromCounts(m.counts, m.counts[0] ?? 0) }));
+
+  const dailyMap = new Map<string, DailyCount>();
+  for (let i = days - 1; i >= 0; i--) {
+    const dayUTC = new Date(bkkMidnightUTC.getTime() - i * 86400000);
+    const key = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(dayUTC);
+    dailyMap.set(key, { date: key, starts: 0, priceSeen: 0, submits: 0 });
+  }
+  for (const d of agg.daily ?? []) if (dailyMap.has(d.date)) dailyMap.set(d.date, d);
+  const daily = Array.from(dailyMap.values());
+
+  const hourly: HourlyCount[] = Array.from({ length: 24 }, (_, h) => ({ hour: h, count: agg.hourly?.[String(h)] ?? 0 }));
+  const weekday: WeekdayCount[] = Array.from({ length: 7 }, (_, d) => ({ day: d, label: WEEKDAY_LABELS[d], count: agg.weekday?.[String(d + 1)] ?? 0 })); // isodow 1=Mon..7=Sun
+
+  let topDropStep = "ไม่มีข้อมูล", maxDrop = 0;
+  for (let i = 1; i < funnel.length; i++) { const drop = funnel[i - 1].count - funnel[i].count; if (drop > maxDrop) { maxDrop = drop; topDropStep = FUNNEL_STEP_NAMES[i]; } }
+
+  const td = dailyMap.get(bkkToday) ?? { starts: 0, priceSeen: 0, submits: 0, date: bkkToday };
+  return {
+    daily, funnel, models, modelFunnels, hourly, weekday,
+    storages: agg.storages ?? [], avgPrices: agg.avgPrices ?? [],
+    todayStarts: td.starts, todayPriceSeen: td.priceSeen, todaySubmits: td.submits,
+    totalStarts,
+    completionRate: totalStarts > 0 ? Math.round(((funnelCounts[10] ?? 0) / totalStarts) * 100) : 0,
+    topDropStep,
+  };
+}
+
 export async function fetchEstimateAnalytics(days = 30): Promise<EstimateAnalytics> {
   await requireAuth();
   const supabase = createServerClient();
@@ -143,6 +196,11 @@ export async function fetchEstimateAnalytics(days = 30): Promise<EstimateAnalyti
   const bkkMidnightUTC = new Date(bkkToday + "T00:00:00+07:00");
   // Go back (days-1) full days from Bangkok midnight
   const since = new Date(bkkMidnightUTC.getTime() - (days - 1) * 24 * 60 * 60 * 1000);
+
+  // ✅ ทางเร็ว: ให้ Postgres นับให้ (RPC) → คืนแค่ผลสรุป ไม่ดึงดิบหลายหมื่นแถว
+  const { data: agg, error: aggErr } = await supabase.rpc("estimate_analytics", { p_since: since.toISOString() });
+  if (!aggErr && agg) return mapAgg(agg as AggResult, days, bkkToday, bkkMidnightUTC);
+  // ทางสำรอง (ถ้ายังไม่ได้รัน migration RPC) — ดึงดิบแบบ pagination
 
   // ดึงทุกแถวแบบ pagination — กัน Supabase cap ~1000 แถว/query (ไม่งั้นช่วงยาวจะถูกตัดวันล่าสุดทิ้ง)
   type EvtRow = { session_id: string; event: string; model: string | null; step_index: number | null; created_at: string; storage: string | null; price: number | null };
