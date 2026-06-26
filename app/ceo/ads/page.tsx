@@ -15,19 +15,32 @@ export default function CeoMarketingPage() {
   const [la, setLa] = useState<LeadAnalytics | null>(null);
   const [es, setEs] = useState<EstimateSummary | null>(null);
   const [showAllModels, setShowAllModels] = useState(false);
+  const [leadDays, setLeadDays] = useState(30);
   useEffect(() => {
     fetchMissionControl().then(setD).catch(() => {});
-    fetchLeadAnalytics().then(setLa).catch(() => {});
     fetchEstimateSummary(30).then(setEs).catch(() => {});
   }, []);
+  useEffect(() => { fetchLeadAnalytics(leadDays).then(setLa).catch(() => {}); }, [leadDays]);
   if (!d || !la) return <><PageTitle title="การตลาด & Leads" /><Loading /></>;
+
+  const PERIODS = [{ d: 30, l: "30 วัน" }, { d: 90, l: "90 วัน" }, { d: 180, l: "180 วัน" }];
 
   const lostProfit = la.lostCount * d.avgProfitPerDevice;
 
   return (
     <>
-      <PageTitle title="การตลาด & Leads" sub={`เดือน${d.monthLabel} · Lead เข้าพอไหม · หลุดตรงไหน · เงินหายไปกับอะไร`} />
+      <PageTitle title="การตลาด & Leads" sub={`Lead funnel ช่วง ${leadDays} วันล่าสุด · หลุดตรงไหน · เงินหายไปกับอะไร`} />
       <InsightBox insights={d.insights.filter(i => i.text.includes("Ads") || i.text.includes("โฆษณา"))} max={2} />
+
+      {/* ช่วงเวลาของ Lead funnel/Lost/Source */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        {PERIODS.map(p => (
+          <button key={p.d} onClick={() => setLeadDays(p.d)}
+            style={{ padding: "7px 16px", borderRadius: 9, border: `1px solid ${leadDays === p.d ? GOLD : "#e0e0e4"}`, background: leadDays === p.d ? GOLD : "#fff", color: leadDays === p.d ? "#fff" : "#374151", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+            {p.l}
+          </button>
+        ))}
+      </div>
 
       {/* ── ROI โฆษณา ── */}
       <Section title="ผลตอบแทนโฆษณา (จากบิลจริงใน Finance)">

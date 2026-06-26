@@ -392,14 +392,16 @@ export type LeadAnalytics = {
   bySource: { label: string; count: number; completed: number; conv: number }[];
 };
 
-export async function fetchLeadAnalytics(): Promise<LeadAnalytics> {
+export async function fetchLeadAnalytics(days = 30): Promise<LeadAnalytics> {
   await requireOwner();
-  const { from } = thisMonthRange();
+  const bkkToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
+  const fromDate = new Date(new Date(bkkToday + "T00:00:00+07:00").getTime() - (days - 1) * 86400000);
+  const from = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(fromDate);
   const supabase = createServerClient();
   const { data } = await supabase
     .from("requests")
     .select("status, status_log, estimated_price, actual_price, source, created_at, order_number")
-    .gte("created_at", `${from}T00:00:00`);
+    .gte("created_at", `${from}T00:00:00+07:00`);
   type Row = { status: string | null; status_log: { status: string; timestamp: string }[] | null; estimated_price: number | null; actual_price: number | null; source: string | null; created_at: string | null; order_number: string | null };
   const rows = (data ?? []) as Row[];
   const leads = rows.length;
