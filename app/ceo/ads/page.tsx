@@ -164,7 +164,7 @@ export default function CeoMarketingPage() {
         <Card style={{ marginTop: 14 }}>
           <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: "#111" }}>สถานะคำขอทั้งหมดในช่วงนี้ ({la.statusBreakdown.reduce((s, x) => s + x.count, 0)})</p>
           {la.statusBreakdown.map((s, i) => {
-            const isLost = ["ลูกค้ายกเลิก", "ติดต่อไม่ได้", "ไม่เข้าเงื่อนไข", "ไม่มาตามนัด", "นอกพื้นที่"].includes(s.label);
+            const isLost = ["ยกเลิกนัดหมาย", "ติดต่อไม่ได้", "ไม่เข้าเงื่อนไข", "ลูกค้าไม่อยู่", "นอกพื้นที่"].includes(s.label);
             const isDone = s.label === "เสร็จสิ้น";
             return (
               <div key={s.status} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: i < la.statusBreakdown.length - 1 ? "1px solid #f0f0f2" : "none" }}>

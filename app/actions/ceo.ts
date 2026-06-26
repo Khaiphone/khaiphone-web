@@ -373,8 +373,8 @@ const STATUS_RANK: Record<string, number> = {
   inspecting: 3, price_negotiation: 3, contracting: 4, awaiting_transfer: 4, completed: 5,
 };
 const LOST_STATUS: Record<string, string> = {
-  cancelled: "ลูกค้ายกเลิก", unreachable: "ติดต่อไม่ได้", rejected: "ไม่เข้าเงื่อนไข",
-  no_show: "ไม่มาตามนัด", out_of_area: "นอกพื้นที่",
+  cancelled: "ยกเลิกนัดหมาย", unreachable: "ติดต่อไม่ได้", rejected: "ไม่เข้าเงื่อนไข",
+  no_show: "ลูกค้าไม่อยู่", out_of_area: "นอกพื้นที่",
 };
 const SOURCE_LABEL: Record<string, string> = {
   website: "เว็บไซต์", line: "LINE OA", facebook: "Facebook", phone: "โทรศัพท์", manual: "หน้าร้าน",
@@ -401,7 +401,7 @@ const ALL_STATUS_LABEL: Record<string, string> = {
   new: "คำขอใหม่", pending: "รอตรวจสอบ", contacted: "ติดต่อกลับแล้ว", confirmed: "ยืนยันนัดหมาย",
   pickup_scheduled: "ไรเดอร์รับงาน", en_route: "กำลังเดินทาง", inspecting: "กำลังตรวจ",
   price_negotiation: "รอยืนยันราคา", contracting: "ทำสัญญา", awaiting_transfer: "รอโอนเงิน",
-  completed: "เสร็จสิ้น", cancelled: "ลูกค้ายกเลิก", no_show: "ไม่มาตามนัด", rejected: "ไม่เข้าเงื่อนไข",
+  completed: "เสร็จสิ้น", cancelled: "ยกเลิกนัดหมาย", no_show: "ลูกค้าไม่อยู่", rejected: "ไม่เข้าเงื่อนไข",
   unreachable: "ติดต่อไม่ได้", out_of_area: "นอกพื้นที่", merged: "รวมรายการ",
 };
 
