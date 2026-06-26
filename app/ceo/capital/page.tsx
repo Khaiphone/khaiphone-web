@@ -1,34 +1,38 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchCeoCapital, type CeoCapital } from "@/app/actions/ceo";
-import { PageTitle, Card, Kpi, Grid, Loading, baht, GREEN, RED, BLUE, GOLD } from "../ui";
+import { fetchMissionControl, type MissionControl } from "@/app/actions/ceo";
+import { PageTitle, Card, Kpi, Grid, InsightBox, Loading, baht, num, GREEN, RED, BLUE, GOLD } from "../ui";
 
 export default function CeoCapitalPage() {
-  const [d, setD] = useState<CeoCapital | null>(null);
-  useEffect(() => { fetchCeoCapital().then(setD).catch(() => {}); }, []);
+  const [d, setD] = useState<MissionControl | null>(null);
+  useEffect(() => { fetchMissionControl().then(setD).catch(() => {}); }, []);
   if (!d) return <><PageTitle title="เงินทุน" /><Loading /></>;
 
   const low = d.buyingPower <= 0;
 
   return (
     <>
-      <PageTitle title="เงินทุน" sub="เงินสด · เงินพร้อมซื้อ · เงินกันชน · ทุนจมในสต็อก" />
-      <Grid min={220}>
-        <Kpi label="เงินสดสุทธิ" value={baht(d.cash)} sub="จากกระแสเงินสด (รับ − จ่าย สะสม)" accent={GOLD} />
-        <Kpi label="เงินพร้อมซื้อ" value={baht(d.buyingPower)} sub="เงินสด − เงินกันชน" color={low ? RED : GREEN} accent={low ? RED : GREEN} />
+      <PageTitle title="เงินทุน" sub="ซื้อเครื่องได้อีกกี่เครื่อง · เงินกันชนปลอดภัยไหม" />
+      <InsightBox insights={d.insights.filter(i => i.text.includes("เงิน") || i.text.includes("ซื้อ") || i.text.includes("Buffer"))} max={3} />
+
+      <Grid min={210}>
+        <Kpi label="เงินสดสุทธิ" value={baht(d.cash)} sub="รับ − จ่าย สะสม" accent={GOLD} />
+        <Kpi label="เงินพร้อมซื้อ" value={baht(d.buyingPower)} sub="เงินสด − กันชน" color={low ? RED : GREEN} accent={low ? RED : GREEN} />
+        <Kpi label="ซื้อได้อีก" value={`${num(d.devicesCanBuy)} เครื่อง`} sub={`ต้นทุนเฉลี่ย ${baht(d.avgCostPerDevice)}/เครื่อง`} color={BLUE} accent={BLUE} />
         <Kpi label="เงินกันชน (ห้ามแตะ)" value={baht(d.safeBuffer)} sub="ตั้งที่หน้าตั้งค่า" color={BLUE} accent={BLUE} />
-        <Kpi label="ทุนจมในสต็อก" value={baht(d.stockValue)} sub="มูลค่าต้นทุนเครื่องที่ยังไม่ขาย" accent={GOLD} />
       </Grid>
 
       <div style={{ height: 16 }} />
-      <Card>
-        <p style={{ margin: 0, fontSize: 14, color: "#374151", lineHeight: 1.8 }}>
-          เงินสดทั้งหมด <strong>{baht(d.cash)}</strong> · กันไว้เป็นกันชน <strong style={{ color: BLUE }}>{baht(d.safeBuffer)}</strong> ·
-          เหลือ<strong style={{ color: low ? RED : GREEN }}> เงินพร้อมซื้อของ {baht(d.buyingPower)}</strong>
+      <Card style={{ borderLeft: `4px solid ${low ? RED : GREEN}` }}>
+        <p style={{ margin: 0, fontSize: 14, color: "#374151", lineHeight: 1.9 }}>
+          เงินสด <strong>{baht(d.cash)}</strong> · กันชน <strong style={{ color: BLUE }}>{baht(d.safeBuffer)}</strong> →
+          เงินพร้อมซื้อ <strong style={{ color: low ? RED : GREEN }}>{baht(d.buyingPower)}</strong>
+          {!low && d.devicesCanBuy > 0 && <> ≈ <strong>{d.devicesCanBuy} เครื่อง</strong></>}
         </p>
-        {low && <p style={{ margin: "8px 0 0", fontSize: 13, color: RED, fontWeight: 600 }}>⚠ เงินพร้อมซื้อหมด — เงินสดต่ำกว่าเงินกันชนที่ตั้งไว้</p>}
-        {d.safeBuffer === 0 && <p style={{ margin: "8px 0 0", fontSize: 12, color: "#9ca3af" }}>ยังไม่ได้ตั้งเงินกันชน — ตั้งที่หน้า <strong>ตั้งค่า</strong> เพื่อคุมไม่ให้ใช้เงินจนเกินตัว</p>}
+        {low && <p style={{ margin: "8px 0 0", fontSize: 13, color: RED, fontWeight: 600 }}>⚠ เงินสดต่ำกว่าเงินกันชน — ยังไม่ควรซื้อเพิ่ม รอเงินสดเข้าก่อน</p>}
+        <p style={{ margin: "10px 0 0", fontSize: 12, color: "#9ca3af" }}>ทุนจมในสต็อกตอนนี้ {baht(d.stockValue)} ({num(d.stockCount)} เครื่อง) — ระบายออกเพื่อปลดเงินทุน</p>
+        {d.safeBuffer === 0 && <p style={{ margin: "6px 0 0", fontSize: 12, color: "#9ca3af" }}>ยังไม่ได้ตั้งเงินกันชน — ตั้งที่หน้า <strong>ตั้งค่า</strong></p>}
       </Card>
     </>
   );
