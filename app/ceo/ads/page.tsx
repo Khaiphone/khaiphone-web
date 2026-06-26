@@ -1,15 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchMissionControl, fetchLeadAnalytics, type MissionControl, type LeadAnalytics } from "@/app/actions/ceo";
+import { fetchMissionControl, fetchLeadAnalytics, fetchEstimateSummary, type MissionControl, type LeadAnalytics, type EstimateSummary } from "@/app/actions/ceo";
 import { PageTitle, Card, Kpi, Grid, Mini, Section, InsightBox, Loading, baht, num, GOLD, GREEN, RED, BLUE } from "../ui";
+
+function fullAnalyticsUrl() {
+  if (typeof window === "undefined") return "#";
+  const { protocol, host } = window.location;
+  return `${protocol}//stock.${host.replace(/^ceo\./, "")}/stock/analytics`;
+}
 
 export default function CeoMarketingPage() {
   const [d, setD] = useState<MissionControl | null>(null);
   const [la, setLa] = useState<LeadAnalytics | null>(null);
+  const [es, setEs] = useState<EstimateSummary | null>(null);
   useEffect(() => {
     fetchMissionControl().then(setD).catch(() => {});
     fetchLeadAnalytics().then(setLa).catch(() => {});
+    fetchEstimateSummary(30).then(setEs).catch(() => {});
   }, []);
   if (!d || !la) return <><PageTitle title="การตลาด & Leads" /><Loading /></>;
 
@@ -29,6 +37,38 @@ export default function CeoMarketingPage() {
           <Mini label="ต้นทุน/Lead (CPA)" value={la.leads > 0 && d.adSpend > 0 ? baht(Math.round(d.adSpend / la.leads)) : "—"} />
         </Grid>
       </Section>
+
+      {/* ── Estimate funnel (หน้าเว็บ) + อัตราสำเร็จรายรุ่น ── */}
+      {es && es.estimates > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "#374151", letterSpacing: 0.4 }}>คนเข้าเว็บประเมินราคา (30 วัน)</p>
+            <a href={fullAnalyticsUrl()} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: GOLD, fontWeight: 600, textDecoration: "none", border: `1px solid ${GOLD}55`, borderRadius: 8, padding: "3px 10px" }}>ดูตัวเต็ม →</a>
+          </div>
+          <Grid min={160}>
+            <Mini label="เข้าประเมิน" value={num(es.estimates)} sub="คนเปิดเครื่องคิดราคา" color={BLUE} />
+            <Mini label="เห็นราคา" value={num(es.priceSeen)} />
+            <Mini label="ส่งคำขอ" value={num(es.submits)} color={GREEN} />
+            <Mini label="%สำเร็จ" value={`${es.conversionRate}%`} sub={`จุดตก: ${es.topDropStep}`} color={es.conversionRate >= 5 ? GREEN : GOLD} />
+          </Grid>
+          {/* อัตราสำเร็จรายรุ่น */}
+          <Card style={{ marginTop: 14 }}>
+            <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: "#111" }}>อัตราสำเร็จรายรุ่น — รุ่นไหนคนประเมินเยอะแต่ส่งน้อย = ราคาอาจไม่ดึงดูด</p>
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 8, padding: "0 4px 8px", borderBottom: "1px solid #eef0f2", fontSize: 11, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase" }}>
+              <span>รุ่น</span><span style={{ textAlign: "right" }}>เข้าประเมิน</span><span style={{ textAlign: "right" }}>ส่งคำขอ</span><span style={{ textAlign: "right" }}>%สำเร็จ</span>
+            </div>
+            {es.byModel.map(m => (
+              <div key={m.model} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 8, padding: "9px 4px", borderBottom: "1px solid #f6f6f8", fontSize: 13, alignItems: "center" }}>
+                <span style={{ color: "#374151", fontWeight: 600 }}>{m.model}</span>
+                <span style={{ textAlign: "right" }}>{num(m.estimates)}</span>
+                <span style={{ textAlign: "right", color: GREEN, fontWeight: 600 }}>{num(m.submits)}</span>
+                <span style={{ textAlign: "right", color: m.conv >= 5 ? GREEN : m.conv >= 2 ? GOLD : RED, fontWeight: 700 }}>{m.conv}%</span>
+              </div>
+            ))}
+            <p style={{ margin: "10px 0 0", fontSize: 12, color: "#9ca3af" }}>* รุ่นที่ &ldquo;เข้าประเมินเยอะ&rdquo; แต่ &ldquo;%สำเร็จต่ำ (แดง)&rdquo; = น่าทบทวนราคารับซื้อรุ่นนั้น</p>
+          </Card>
+        </div>
+      )}
 
       {/* ── Lead Funnel ── */}
       <Section title="Lead Funnel — หลุดตรงขั้นไหน">

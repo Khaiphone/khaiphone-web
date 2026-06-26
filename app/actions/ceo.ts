@@ -4,6 +4,7 @@ import { createServerClient } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/require-auth";
 import { fetchMyProfile } from "@/app/actions/admin-users";
 import { fetchFinanceDashboard, fetchFinanceCashFlow, fetchForecast, fetchStockAging, fetchExpenses } from "@/app/actions/finance";
+import { fetchEstimateAnalytics } from "@/app/actions/analytics";
 
 // CEO dashboard = เจ้าของเท่านั้น
 async function requireOwner() {
@@ -466,6 +467,37 @@ export async function fetchLeadAnalytics(): Promise<LeadAnalytics> {
   const bySource = Array.from(srcMap.entries()).map(([label, v]) => ({ label, count: v.count, completed: v.completed, conv: v.count > 0 ? Math.round((v.completed / v.count) * 100) : 0 })).sort((a, b) => b.count - a.count);
 
   return { leads, leadValue, funnel, lostByStatus, lostCount, lostValue, avgPurchasePrice, avgCloseDays, soldFromLeads, bySource };
+}
+
+// ── สรุป Estimate funnel (หน้าเว็บ) + อัตราสำเร็จรายรุ่น ──────────────────────
+export type EstimateSummary = {
+  days: number;
+  estimates: number;       // คนเข้าประเมิน
+  priceSeen: number;       // เห็นราคา
+  submits: number;         // ส่งคำขอ
+  conversionRate: number;  // %สำเร็จรวม
+  topDropStep: string;     // จุดที่คนออกมากสุด
+  byModel: { model: string; estimates: number; submits: number; conv: number }[]; // อัตราสำเร็จรายรุ่น
+};
+export async function fetchEstimateSummary(days = 30): Promise<EstimateSummary> {
+  await requireOwner();
+  const a = await fetchEstimateAnalytics(days);
+  const byModel = a.modelFunnels
+    .map(m => {
+      const est = m.funnel[0]?.count ?? 0;
+      const sub = m.funnel[10]?.count ?? 0;
+      return { model: m.model, estimates: est, submits: sub, conv: est > 0 ? Math.round((sub / est) * 100) : 0 };
+    })
+    .sort((x, y) => y.estimates - x.estimates);
+  return {
+    days,
+    estimates: a.totalStarts,
+    priceSeen: a.funnel[9]?.count ?? 0,
+    submits: a.funnel[10]?.count ?? 0,
+    conversionRate: a.completionRate,
+    topDropStep: a.topDropStep,
+    byModel,
+  };
 }
 
 // ── เงินทุน ───────────────────────────────────────────────────────────────────
