@@ -46,7 +46,7 @@ export default function CeoAdsPage() {
           <div style={{ height: 14 }} />
           <Card>
             <Progress label="งบโฆษณาที่ใช้ไป" value={d.adSpend} target={d.adsBudget} fmt={baht} />
-            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#9ca3af" }}>* ROAS เป็นค่าประมาณจากรายได้รวมเทียบค่าโฆษณา (รายได้บางส่วนอาจไม่ได้มาจากโฆษณา)</p>
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#9ca3af" }}>* ลูกค้าเกือบทั้งหมดมาจากโฆษณา → ROAS/CPA/ROI สะท้อนผลโฆษณาได้จริง · ความแม่นขึ้นกับการกรอกยอดค่าโฆษณาให้ครบทุกแพลตฟอร์มที่หน้าตั้งค่า</p>
           </Card>
         </>
       )}
