@@ -4,6 +4,7 @@ import { after } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
 import { Resend } from "resend";
 import { sendPushToNewRequestReceivers } from "./push";
+import { isRiderSlotFull } from "./booking-slots";
 
 interface ExtraDevice {
   model: string;
@@ -62,6 +63,14 @@ export async function submitRequest(data: SubmissionData) {
     .gte("created_at", since);
   if ((dupCount ?? 0) > 0) {
     return { success: false, error: "มีคำขอของเบอร์นี้สำหรับรุ่นนี้อยู่แล้ว กรุณารอ 30 นาทีก่อนส่งใหม่" };
+  }
+
+  // จำกัดคิวรับถึงที่ (rider) ต่อช่วงเวลา — กันคิวเต็มเกินที่รับไหว
+  if (data.appointment.method === "rider" && data.appointment.date && data.appointment.time) {
+    const slot = await isRiderSlotFull(data.appointment.date, data.appointment.time);
+    if (slot.full) {
+      return { success: false, error: "ช่วงเวลานี้มีคิวรับถึงที่เต็มแล้ว กรุณาเลือกเวลาอื่น" };
+    }
   }
 
   const conditionDetails = Object.values(data.selections).filter(Boolean);

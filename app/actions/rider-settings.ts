@@ -18,6 +18,7 @@ export type RiderSystemSettings = {
   sla_arrive_slight_min:  number;
   sla_job_fast_min:       number;
   sla_job_slight_min:     number;
+  rider_slot_capacity:    number;  // จำนวนคิวรับถึงที่สูงสุดต่อช่วงเวลา (หน้าจองลูกค้า)
 };
 
 const DEFAULTS: RiderSystemSettings = {
@@ -34,6 +35,7 @@ const DEFAULTS: RiderSystemSettings = {
   sla_arrive_slight_min:  20,
   sla_job_fast_min:       30,
   sla_job_slight_min:     60,
+  rider_slot_capacity:    3,
 };
 
 export async function fetchRiderSystemSettings(): Promise<RiderSystemSettings> {
@@ -55,6 +57,7 @@ export async function fetchRiderSystemSettings(): Promise<RiderSystemSettings> {
     sla_arrive_slight_min:  parseInt(map.sla_arrive_slight_min    ?? String(DEFAULTS.sla_arrive_slight_min)),
     sla_job_fast_min:       parseInt(map.sla_job_fast_min         ?? String(DEFAULTS.sla_job_fast_min)),
     sla_job_slight_min:     parseInt(map.sla_job_slight_min       ?? String(DEFAULTS.sla_job_slight_min)),
+    rider_slot_capacity:    parseInt(map.rider_slot_capacity      ?? String(DEFAULTS.rider_slot_capacity)),
   };
 }
 

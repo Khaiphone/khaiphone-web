@@ -6,6 +6,7 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { ChevronLeft, Check, Lock, ChevronRight, User, Truck, Calendar, Banknote, ShieldCheck, MapPin, Building2, Clock, Phone, Plus, X } from "lucide-react";
 import Header from "../../components/Header";
 import { submitRequest, submitFunctionalIssueRequest } from "@/app/actions/submit-request";
+import { fetchRiderSlotAvailability } from "@/app/actions/booking-slots";
 import { trackEstimateEvent } from "@/app/actions/analytics";
 import { fetchPublicActiveProducts } from "@/app/actions/products";
 import { fetchPublicPricingConfig } from "@/app/actions/pricing-config";
@@ -958,6 +959,8 @@ function SellModelPageContent() {
     return slots[0] ?? "14:00";
   });
   const [notes, setNotes] = useState("");
+  // คิวรับถึงที่ที่ถูกจองแล้วของวันที่เลือก (เพื่อปิดช่วงเวลาที่เต็ม)
+  const [slotAvail, setSlotAvail] = useState<{ capacity: number; counts: Record<string, number> } | null>(null);
   const [riderAddress, setRiderAddress] = useState("");
   const [pinAddress, setPinAddress] = useState("");
   const [pinCoords, setPinCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -976,12 +979,22 @@ function SellModelPageContent() {
   const [issueSubmitting, setIssueSubmitting] = useState(false);
   const [issueSubmitDone, setIssueSubmitDone] = useState(false);
 
-  // Sync appointment time when date changes — auto-select first valid slot
+  // ดึงคิว "รับถึงที่" ที่จองแล้วของวันที่เลือก เพื่อปิดช่วงเวลาที่เต็ม
+  useEffect(() => {
+    if (!isFormPhase || sellMethod !== "rider") { setSlotAvail(null); return; }
+    let active = true;
+    fetchRiderSlotAvailability(appointDate).then(r => { if (active) setSlotAvail(r); }).catch(() => {});
+    return () => { active = false; };
+  }, [appointDate, sellMethod, isFormPhase]);
+
+  // Sync appointment time — auto-select ช่วงเวลาแรกที่ยังไม่เต็ม เมื่อวันที่/คิวเปลี่ยน
   useEffect(() => {
     if (!isFormPhase) return;
     const slots = getAvailableTimeSlots(appointDate);
-    if (slots.length > 0 && !slots.includes(appointTime)) setAppointTime(slots[0]);
-  }, [appointDate]); // eslint-disable-line react-hooks/exhaustive-deps
+    const isFull = (t: string) => sellMethod === "rider" && slotAvail ? (slotAvail.counts[t] ?? 0) >= slotAvail.capacity : false;
+    const open = slots.filter(t => !isFull(t));
+    if (open.length > 0 && (!slots.includes(appointTime) || isFull(appointTime))) setAppointTime(open[0]);
+  }, [appointDate, slotAvail, sellMethod]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load bundle state from localStorage — re-run when bundle_ts URL param changes (set on return from bundle flow)
   const bundleTs = searchParams.get("bundle_ts");
@@ -2064,16 +2077,30 @@ function SellModelPageContent() {
                             </label>
                             {(() => {
                               const slots = getAvailableTimeSlots(appointDate);
-                              return slots.length > 0 ? (
-                                <select value={appointTime} onChange={e => setAppointTime(e.target.value)}
-                                  className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-white outline-none"
-                                  style={{ border: "1.5px solid #E5E7EB", fontFamily: "inherit", color: "#111" }}>
-                                  {slots.map(t => <option key={t} value={t}>{t} น.</option>)}
-                                </select>
-                              ) : (
-                                <p className="text-xs px-3.5 py-2.5 rounded-xl" style={{ border: "1.5px solid #FECACA", background: "#FEF2F2", color: "#EF4444" }}>
-                                  วันนี้เต็มแล้ว กรุณาเลือกวันอื่น
-                                </p>
+                              const cap = slotAvail?.capacity ?? Infinity;
+                              const isFull = (t: string) => (slotAvail?.counts[t] ?? 0) >= cap;
+                              const openSlots = slots.filter(t => !isFull(t));
+                              if (slots.length === 0)
+                                return (
+                                  <p className="text-xs px-3.5 py-2.5 rounded-xl" style={{ border: "1.5px solid #FECACA", background: "#FEF2F2", color: "#EF4444" }}>
+                                    วันนี้เต็มแล้ว กรุณาเลือกวันอื่น
+                                  </p>
+                                );
+                              if (openSlots.length === 0)
+                                return (
+                                  <p className="text-xs px-3.5 py-2.5 rounded-xl" style={{ border: "1.5px solid #FECACA", background: "#FEF2F2", color: "#EF4444" }}>
+                                    คิวรับถึงที่ของวันนี้เต็มทุกช่วงแล้ว กรุณาเลือกวันอื่น
+                                  </p>
+                                );
+                              return (
+                                <>
+                                  <select value={appointTime} onChange={e => setAppointTime(e.target.value)}
+                                    className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-white outline-none"
+                                    style={{ border: "1.5px solid #E5E7EB", fontFamily: "inherit", color: "#111" }}>
+                                    {slots.map(t => <option key={t} value={t} disabled={isFull(t)}>{t} น.{isFull(t) ? " (เต็ม)" : ""}</option>)}
+                                  </select>
+                                  <p className="text-xs mt-1.5" style={{ color: "#6B7280" }}>ช่วงที่ขึ้น &ldquo;เต็ม&rdquo; มีคิวรับถึงที่ครบแล้ว เลือกเวลาอื่นได้เลย</p>
+                                </>
                               );
                             })()}
                           </div>

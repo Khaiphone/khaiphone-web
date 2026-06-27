@@ -84,9 +84,11 @@ export default function RiderSettingsPage() {
   const [savingOffice,    setSavingOffice]    = useState(false);
   const [savingTracking,  setSavingTracking]  = useState(false);
   const [savingSLA,       setSavingSLA]       = useState(false);
+  const [savingBooking,   setSavingBooking]   = useState(false);
   const [savedOffice,     setSavedOffice]     = useState(false);
   const [savedTracking,   setSavedTracking]   = useState(false);
   const [savedSLA,        setSavedSLA]        = useState(false);
+  const [savedBooking,    setSavedBooking]    = useState(false);
 
   // Local editable copies
   const [officeName,        setOfficeName]        = useState("");
@@ -102,6 +104,7 @@ export default function RiderSettingsPage() {
   const [arriveSlight,      setArriveSlight]      = useState("");
   const [jobFast,           setJobFast]           = useState("");
   const [jobSlight,         setJobSlight]         = useState("");
+  const [slotCap,           setSlotCap]           = useState("");
 
   // ── Push / Notification state ──
   const [pushStatus,    setPushStatus]    = useState<RiderPushStatus[]>([]);
@@ -127,6 +130,7 @@ export default function RiderSettingsPage() {
       setArriveSlight(String(s.sla_arrive_slight_min));
       setJobFast(String(s.sla_job_fast_min));
       setJobSlight(String(s.sla_job_slight_min));
+      setSlotCap(String(s.rider_slot_capacity));
       setPushStatus(ps);
       setLoaded(true);
     });
@@ -169,6 +173,16 @@ export default function RiderSettingsPage() {
     });
     setSavingSLA(false);
     if (res.success) { setSavedSLA(true); setTimeout(() => setSavedSLA(false), 3000); }
+    else alert(res.error);
+  }
+
+  async function saveBooking() {
+    const cap = parseInt(slotCap);
+    if (!Number.isFinite(cap) || cap < 1) { alert("จำนวนคิวต้องเป็นตัวเลขตั้งแต่ 1 ขึ้นไป"); return; }
+    setSavingBooking(true);
+    const res = await updateRiderSystemSettings({ rider_slot_capacity: cap });
+    setSavingBooking(false);
+    if (res.success) { setSavedBooking(true); setTimeout(() => setSavedBooking(false), 3000); }
     else alert(res.error);
   }
 
@@ -314,6 +328,20 @@ export default function RiderSettingsPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14 }}>
             <SaveBtn loading={savingSLA} onClick={saveSLA} />
             {savedSLA && <span style={{ fontSize: 12, color: GREEN, fontWeight: 600 }}>✓ บันทึกแล้ว</span>}
+          </div>
+        </SectionCard>
+
+        {/* ══ คิวนัดรับถึงที่ ══ */}
+        <SectionCard icon={<Clock size={16} />} title="คิวนัดรับถึงที่ (หน้าจองลูกค้า)">
+          <Field
+            label="จำนวนคิวสูงสุดต่อช่วงเวลา"
+            hint="เฉพาะ 'รับถึงที่' (rider) — ถ้าช่วงเวลาใด (เช่น 11:00) มีคนจองครบจำนวนนี้ ลูกค้าจะเลือกเวลานั้นไม่ได้ ต้องเลือกเวลาอื่น · นัดที่สาขา/ส่งพัสดุ ไม่จำกัด"
+          >
+            <Input value={slotCap} onChange={setSlotCap} type="number" placeholder="3" />
+          </Field>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6 }}>
+            <SaveBtn loading={savingBooking} onClick={saveBooking} />
+            {savedBooking && <span style={{ fontSize: 12, color: GREEN, fontWeight: 600 }}>✓ บันทึกแล้ว</span>}
           </div>
         </SectionCard>
 
