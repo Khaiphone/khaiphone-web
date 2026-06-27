@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { fetchMissionControl, type MissionControl } from "@/app/actions/ceo";
 import { PageTitle, Card, Progress, InsightBox, Loading, baht, GOLD, RED } from "../ui";
+import { useCeoMonth } from "../MonthContext";
 
 export default function CeoGoalsPage() {
   const [d, setD] = useState<MissionControl | null>(null);
-  useEffect(() => { fetchMissionControl().then(setD).catch(() => {}); }, []);
+  const { month } = useCeoMonth();
+  useEffect(() => { setD(null); fetchMissionControl(month).then(setD).catch(() => {}); }, [month]);
   if (!d) return <><PageTitle title="เป้าหมายเดือน" /><Loading /></>;
 
   const noTarget = !d.targetRevenue && !d.targetProfit && !d.targetAcquired && !d.targetSold;

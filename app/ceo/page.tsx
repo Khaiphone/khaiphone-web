@@ -4,13 +4,15 @@ import { useEffect, useState } from "react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { fetchMissionControl, type MissionControl } from "@/app/actions/ceo";
 import { PageTitle, Card, Grid, Mini, Section, Progress, InsightBox, Loading, baht, num, GOLD, GREEN, BLUE, RED } from "./ui";
+import { useCeoMonth } from "./MonthContext";
 
 const STATUS_COLOR: Record<string, string> = { "พร้อมขาย": GREEN, "กำลังตรวจสอบ": BLUE, "ซ่อม": "#a855f7", "จองแล้ว": GOLD };
 function statusColor(s: string, i: number) { return STATUS_COLOR[s] ?? ["#9ca3af", BLUE, "#a855f7", GOLD][i % 4]; }
 
 export default function CeoOverviewPage() {
   const [d, setD] = useState<MissionControl | null>(null);
-  useEffect(() => { fetchMissionControl().then(setD).catch(() => {}); }, []);
+  const { month } = useCeoMonth();
+  useEffect(() => { setD(null); fetchMissionControl(month).then(setD).catch(() => {}); }, [month]);
   if (!d) return <><PageTitle title="ภาพรวมธุรกิจวันนี้" /><Loading /></>;
 
   const missionPct = d.targetRevenue > 0 ? Math.min(100, Math.round((d.revenue / d.targetRevenue) * 100)) : d.score;
@@ -21,7 +23,7 @@ export default function CeoOverviewPage() {
 
   return (
     <>
-      <PageTitle title="ภาพรวมธุรกิจวันนี้" sub={`อัปเดตล่าสุด ${new Date().toLocaleDateString("th-TH")} · เหลือ ${d.daysLeft} วัน`} />
+      <PageTitle title={month ? `ภาพรวมธุรกิจ · ${d.monthLabel}` : "ภาพรวมธุรกิจวันนี้"} sub={month ? `สรุปทั้งเดือน (จบเดือนแล้ว)` : `อัปเดตล่าสุด ${new Date().toLocaleDateString("th-TH")} · เหลือ ${d.daysLeft} วัน`} />
 
       {/* ── MISSION + AI Recommendation ── */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14, marginBottom: 18 }} className="md:!grid-cols-[1.4fr_1fr]">

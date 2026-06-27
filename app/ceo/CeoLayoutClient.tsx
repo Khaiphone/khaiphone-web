@@ -7,6 +7,7 @@ import { LayoutDashboard, Target, Megaphone, Wallet, Boxes, TrendingUp, Settings
 import { supabase } from "@/lib/supabase";
 import { fetchMyProfile } from "@/app/actions/admin-users";
 import AppSplash from "@/app/components/AppSplash";
+import { MonthProvider, MonthBar } from "./MonthContext";
 
 const GOLD = "#B8860B";
 const NAV = [
@@ -51,7 +52,11 @@ export default function CeoLayoutClient({ children }: { children: React.ReactNod
 
   if (!ready) return <AppSplash logo="/icon-192.png" name="KP CEO" accent={GOLD} bg="#F5F5F7" light />;
 
+  // แถบเลือกเดือนเฉพาะหน้าที่อิงเดือน (โฆษณามีตัวเลือกช่วงของตัวเอง · ตั้งค่าไม่ต้อง)
+  const showMonthBar = pathname !== "/ceo/ads" && pathname !== "/ceo/settings";
+
   return (
+   <MonthProvider>
     <div style={{ minHeight: "100dvh", background: "#F4F5F7", color: "#111", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", display: "flex" }}>
       {/* Desktop sidebar */}
       <aside className="hidden md:flex" style={{ width: 232, flexShrink: 0, flexDirection: "column", background: "#16161A", color: "#fff", position: "sticky", top: 0, height: "100dvh" }}>
@@ -97,8 +102,12 @@ export default function CeoLayoutClient({ children }: { children: React.ReactNod
       </div>
 
       <main style={{ flex: 1, minWidth: 0, padding: "24px", paddingTop: "calc(env(safe-area-inset-top) + 64px)" }} className="md:!pt-6">
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>{children}</div>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          {showMonthBar && <MonthBar />}
+          {children}
+        </div>
       </main>
     </div>
+   </MonthProvider>
   );
 }

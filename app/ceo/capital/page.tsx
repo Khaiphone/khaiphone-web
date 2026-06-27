@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { fetchMissionControl, type MissionControl } from "@/app/actions/ceo";
 import { PageTitle, Card, Kpi, Grid, InsightBox, Loading, baht, num, GREEN, RED, BLUE, GOLD } from "../ui";
+import { useCeoMonth } from "../MonthContext";
 
 export default function CeoCapitalPage() {
   const [d, setD] = useState<MissionControl | null>(null);
-  useEffect(() => { fetchMissionControl().then(setD).catch(() => {}); }, []);
+  const { month } = useCeoMonth();
+  useEffect(() => { setD(null); fetchMissionControl(month).then(setD).catch(() => {}); }, [month]);
   if (!d) return <><PageTitle title="เงินทุน" /><Loading /></>;
 
   const low = d.buyingPower <= 0;

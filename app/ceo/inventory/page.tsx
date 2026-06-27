@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { fetchMissionControl, type MissionControl } from "@/app/actions/ceo";
 import { PageTitle, Card, Kpi, Grid, InsightBox, Loading, baht, num, GOLD, GREEN, RED, BLUE } from "../ui";
+import { useCeoMonth } from "../MonthContext";
 
 export default function CeoInventoryPage() {
   const [d, setD] = useState<MissionControl | null>(null);
-  useEffect(() => { fetchMissionControl().then(setD).catch(() => {}); }, []);
+  const { month } = useCeoMonth();
+  useEffect(() => { setD(null); fetchMissionControl(month).then(setD).catch(() => {}); }, [month]);
   if (!d) return <><PageTitle title="สต็อก" /><Loading /></>;
 
   // Inventory health: ยิ่งค้างนาน/เงินจมมาก = แย่

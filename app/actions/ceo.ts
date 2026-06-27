@@ -76,12 +76,29 @@ export async function saveCeoSettings(s: CeoSettings): Promise<{ success: boolea
   return { success: true };
 }
 
-function thisMonthRange() {
+// ขอบเขตของ "เดือน" หนึ่ง — รับ month = "YYYY-MM" (ไม่ใส่ = เดือนปัจจุบัน)
+// เดือนปัจจุบัน: to = วันนี้, มีวันเหลือ/พยากรณ์; เดือนที่ผ่านมา: to = สิ้นเดือน, ปิดจบแล้ว (ไม่พยากรณ์)
+function monthRange(month?: string) {
   const now = new Date();
-  const from = new Date(now.getFullYear(), now.getMonth(), 1);
+  let y: number, m: number; // m = 1..12
+  if (month && /^\d{4}-\d{2}$/.test(month)) { const p = month.split("-").map(Number); y = p[0]; m = p[1]; }
+  else { y = now.getFullYear(); m = now.getMonth() + 1; }
   const pad = (n: number) => String(n).padStart(2, "0");
   const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  return { from: iso(from), to: iso(now), label: now.toLocaleDateString("th-TH", { month: "long", year: "numeric" }) };
+  const fromD = new Date(y, m - 1, 1);
+  const monthEndD = new Date(y, m, 0);
+  const nextFromD = new Date(y, m, 1);
+  const isCurrent = y === now.getFullYear() && m - 1 === now.getMonth();
+  const toD = isCurrent ? now : monthEndD;
+  const daysInMonth = monthEndD.getDate();
+  const daysElapsed = isCurrent ? now.getDate() : daysInMonth;
+  const daysLeft = isCurrent ? Math.max(1, daysInMonth - now.getDate() + 1) : 0;
+  return {
+    from: iso(fromD), to: iso(toD), nextFrom: iso(nextFromD),
+    label: fromD.toLocaleDateString("th-TH", { month: "long", year: "numeric" }),
+    monthKey: `${y}-${pad(m)}`,
+    isCurrent, daysInMonth, daysElapsed, daysLeft,
+  };
 }
 
 export type CeoOverview = {
@@ -103,9 +120,9 @@ export type CeoOverview = {
   settings: CeoSettings;
 };
 
-export async function fetchCeoOverview(): Promise<CeoOverview> {
+export async function fetchCeoOverview(month?: string): Promise<CeoOverview> {
   await requireOwner();
-  const { from, to, label } = thisMonthRange();
+  const { from, to, label } = monthRange(month);
   const [d, settings] = await Promise.all([
     fetchFinanceDashboard(from, to),
     getCeoSettings(),
@@ -178,9 +195,9 @@ export type MissionControl = {
 
 const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
 
-export async function fetchMissionControl(): Promise<MissionControl> {
+export async function fetchMissionControl(month?: string): Promise<MissionControl> {
   await requireOwner();
-  const { from, to, label } = thisMonthRange();
+  const { from, to, nextFrom, label, isCurrent, daysInMonth, daysElapsed, daysLeft } = monthRange(month);
   const supabase = createServerClient();
   const [d, cf, cfMonth, aging, f, settings, expensesMonth, leadsRes, soldMonthRes, recentRes] = await Promise.all([
     fetchFinanceDashboard(from, to),
@@ -190,8 +207,8 @@ export async function fetchMissionControl(): Promise<MissionControl> {
     fetchForecast(),
     getCeoSettings(),
     fetchExpenses(from, to),
-    supabase.from("requests").select("status").gte("created_at", `${from}T00:00:00`),
-    supabase.from("stocks").select("sale_type").eq("status", "ขายแล้ว").gte("sold_at", from),
+    supabase.from("requests").select("status").gte("created_at", `${from}T00:00:00`).lt("created_at", `${nextFrom}T00:00:00`),
+    supabase.from("stocks").select("sale_type").eq("status", "ขายแล้ว").gte("sold_at", from).lt("sold_at", nextFrom),
     supabase.from("stocks").select("model, storage, sold_price, cost_price, status, sold_at, received_at").order("updated_at", { ascending: false }).limit(6),
   ]);
 
@@ -234,16 +251,13 @@ export async function fetchMissionControl(): Promise<MissionControl> {
   const slowValue = slow.reduce((s, a) => s + a.totalCost, 0);
 
   // ── growth / goals ──
-  const now = new Date();
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const daysLeft = Math.max(1, daysInMonth - now.getDate() + 1);
+  // เดือนปัจจุบัน = พยากรณ์ทั้งเดือน · เดือนที่ผ่านมา = ใช้ตัวเลขจริง (จบเดือนแล้ว)
   const gap = Math.max(0, settings.targetRevenue - revenue);
-  const requiredPerDay = Math.round(gap / daysLeft);
-  const projectedMonthEnd = Math.round(revenue + f.avgDailyRevenue * (daysLeft - 1));
+  const requiredPerDay = isCurrent ? Math.round(gap / Math.max(1, daysLeft)) : 0;
+  const projectedMonthEnd = isCurrent ? Math.round(revenue + f.avgDailyRevenue * (daysLeft - 1)) : revenue;
   const onTrack = settings.targetRevenue > 0 && projectedMonthEnd >= settings.targetRevenue;
-  const daysElapsed = Math.max(1, now.getDate());
-  const projectedAcquired = Math.round(acquired / daysElapsed * daysInMonth);
-  const projectedProfit = Math.round(grossProfit / daysElapsed * daysInMonth);
+  const projectedAcquired = isCurrent ? Math.round(acquired / Math.max(1, daysElapsed) * daysInMonth) : acquired;
+  const projectedProfit = isCurrent ? Math.round(grossProfit / Math.max(1, daysElapsed) * daysInMonth) : grossProfit;
 
   // ── Mission Control extras ──
   const cashInMonth = cfMonth.summary.totalIn;
@@ -364,6 +378,56 @@ export async function fetchMissionControl(): Promise<MissionControl> {
 
 // baht helper สำหรับสร้างข้อความ insight (ฝั่ง server)
 function baht(n: number) { return "฿" + Math.round(n).toLocaleString("th-TH"); }
+
+// ════════════════════════════════════════════════════════════════════════════
+// MONTHLY TREND — รายได้/กำไร/จำนวนเครื่อง เทียบเดือนต่อเดือน (กราฟการเติบโต)
+// ════════════════════════════════════════════════════════════════════════════
+export type MonthlyTrendPoint = { month: string; label: string; revenue: number; profit: number; acquired: number; sold: number };
+
+export async function fetchMonthlyTrend(months = 6): Promise<MonthlyTrendPoint[]> {
+  await requireOwner();
+  const now = new Date();
+  const ranges = [];
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    ranges.push(monthRange(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`));
+  }
+  // ใช้ fetchFinanceDashboard ต่อเดือน เพื่อให้ตัวเลขตรงกับหน้า Finance เป๊ะ
+  const results = await Promise.all(ranges.map(r => fetchFinanceDashboard(r.from, r.to)));
+  return ranges.map((r, i) => {
+    const f = results[i];
+    const d = new Date(Number(r.monthKey.slice(0, 4)), Number(r.monthKey.slice(5, 7)) - 1, 1);
+    return {
+      month: r.monthKey,
+      label: d.toLocaleDateString("th-TH", { month: "short", year: "2-digit" }),
+      revenue: f.totalRevenue,
+      profit: f.totalRevenue - f.totalCost,
+      acquired: f.purchaseCount,
+      sold: f.soldCount,
+    };
+  });
+}
+
+// รายชื่อเดือนที่มีข้อมูล (ใหม่→เก่า) สำหรับ dropdown เลือกเดือน
+export async function fetchAvailableMonths(): Promise<{ value: string; label: string }[]> {
+  await requireOwner();
+  const supabase = createServerClient();
+  const { data } = await supabase.from("requests").select("created_at").order("created_at", { ascending: true }).limit(1);
+  const now = new Date();
+  let start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const earliest = (data?.[0] as { created_at: string | null } | undefined)?.created_at;
+  if (earliest) { const e = new Date(earliest); start = new Date(e.getFullYear(), e.getMonth(), 1); }
+  const out: { value: string; label: string }[] = [];
+  let d = new Date(now.getFullYear(), now.getMonth(), 1);
+  while (d >= start && out.length < 12) {
+    out.push({
+      value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+      label: d.toLocaleDateString("th-TH", { month: "long", year: "numeric" }),
+    });
+    d = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+  }
+  return out;
+}
 
 // ════════════════════════════════════════════════════════════════════════════
 // LEAD ANALYTICS — funnel, มูลค่า, แหล่งที่มา, โอกาสที่เสีย (เดือนนี้)
@@ -548,7 +612,7 @@ export type CeoCapital = {
 };
 export async function fetchCeoCapital(): Promise<CeoCapital> {
   await requireOwner();
-  const { to } = thisMonthRange();
+  const { to } = monthRange();
   const [cf, d, settings] = await Promise.all([
     fetchFinanceCashFlow("2020-01-01", to),
     fetchFinanceDashboard(),
