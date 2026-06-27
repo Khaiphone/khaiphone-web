@@ -13,6 +13,18 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    id: 11,
+    category: "Apple Watch",
+    date: "2026-06-27",
+    displayDate: "27 มิ.ย. 2569",
+    readTime: "4 นาที",
+    title: "รับซื้อ Apple Watch รุ่นไหนบ้าง — เช็กราคารับซื้อล่าสุด (2569)",
+    excerpt: "เช็กราคารับซื้อ Apple Watch ครบทุกรุ่น ตั้งแต่ Series 6–11, SE และ Ultra พร้อมข้อแตกต่างระหว่างรุ่น GPS กับ GPS+Cellular และปัจจัยที่มีผลต่อราคาก่อนขาย",
+    image: "/apple-watch-series-11.webp",
+    slug: "apple-watch-buyback-price-2026",
+    keywords: ["รับซื้อ Apple Watch", "ขาย Apple Watch ได้เงินเท่าไหร่", "ราคารับซื้อ Apple Watch 2569", "รับซื้อ Apple Watch Ultra", "ราคา Apple Watch มือสอง"],
+  },
+  {
     id: 10,
     category: "iPad",
     date: "2026-06-21",
