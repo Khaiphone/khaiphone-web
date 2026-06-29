@@ -960,7 +960,7 @@ function SellModelPageContent() {
   });
   const [notes, setNotes] = useState("");
   // คิวรับถึงที่ที่ถูกจองแล้วของวันที่เลือก (เพื่อปิดช่วงเวลาที่เต็ม)
-  const [slotAvail, setSlotAvail] = useState<{ capacity: number; counts: Record<string, number> } | null>(null);
+  const [slotAvail, setSlotAvail] = useState<{ capacity: number; counts: Record<string, number>; blockedTimes: string[]; blockedWholeDay: boolean } | null>(null);
   const [riderAddress, setRiderAddress] = useState("");
   const [pinAddress, setPinAddress] = useState("");
   const [pinCoords, setPinCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -987,11 +987,16 @@ function SellModelPageContent() {
     return () => { active = false; };
   }, [appointDate, sellMethod, isFormPhase]);
 
-  // Sync appointment time — auto-select ช่วงเวลาแรกที่ยังไม่เต็ม เมื่อวันที่/คิวเปลี่ยน
+  // Sync appointment time — auto-select ช่วงเวลาแรกที่ยังไม่เต็ม/ไม่ถูกปิด เมื่อวันที่/คิวเปลี่ยน
   useEffect(() => {
     if (!isFormPhase) return;
     const slots = getAvailableTimeSlots(appointDate);
-    const isFull = (t: string) => sellMethod === "rider" && slotAvail ? (slotAvail.counts[t] ?? 0) >= slotAvail.capacity : false;
+    const isFull = (t: string) => {
+      if (sellMethod !== "rider" || !slotAvail) return false;
+      if (slotAvail.blockedWholeDay) return true;
+      if (slotAvail.blockedTimes.includes(t)) return true;
+      return (slotAvail.counts[t] ?? 0) >= slotAvail.capacity;
+    };
     const open = slots.filter(t => !isFull(t));
     if (open.length > 0 && (!slots.includes(appointTime) || isFull(appointTime))) setAppointTime(open[0]);
   }, [appointDate, slotAvail, sellMethod]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -2078,12 +2083,19 @@ function SellModelPageContent() {
                             {(() => {
                               const slots = getAvailableTimeSlots(appointDate);
                               const cap = slotAvail?.capacity ?? Infinity;
-                              const isFull = (t: string) => (slotAvail?.counts[t] ?? 0) >= cap;
+                              const blockedWholeDay = slotAvail?.blockedWholeDay ?? false;
+                              const isFull = (t: string) => blockedWholeDay || (slotAvail?.blockedTimes.includes(t) ?? false) || (slotAvail?.counts[t] ?? 0) >= cap;
                               const openSlots = slots.filter(t => !isFull(t));
                               if (slots.length === 0)
                                 return (
                                   <p className="text-xs px-3.5 py-2.5 rounded-xl" style={{ border: "1.5px solid #FECACA", background: "#FEF2F2", color: "#EF4444" }}>
                                     วันนี้เต็มแล้ว กรุณาเลือกวันอื่น
+                                  </p>
+                                );
+                              if (blockedWholeDay)
+                                return (
+                                  <p className="text-xs px-3.5 py-2.5 rounded-xl" style={{ border: "1.5px solid #FECACA", background: "#FEF2F2", color: "#EF4444" }}>
+                                    วันนี้งดรับถึงที่ กรุณาเลือกวันอื่น
                                   </p>
                                 );
                               if (openSlots.length === 0)

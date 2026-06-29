@@ -2,12 +2,21 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Clock, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Clock, Loader2, Ban, ChevronDown } from "lucide-react";
 import { fetchActiveDashboardData } from "@/app/actions/admin-requests";
+import { fetchDayBlocks, setSlotBlock } from "@/app/actions/booking-slots";
 import type { AdminRequest } from "@/lib/types/admin";
 import { useAdminRole } from "@/app/admin/role-context";
 import { cacheGet, cacheSet } from "@/app/admin/cache";
 import StatusBadge from "../../components/admin/StatusBadge";
+
+// ช่วงเวลารับถึงที่ทั้งหมด (09:00–23:00 ทุก 30 นาที) — ตรงกับหน้าจองลูกค้า
+const ALL_SLOTS: string[] = (() => {
+  const s: string[] = [];
+  for (let h = 9; h <= 23; h++) { s.push(`${String(h).padStart(2, "0")}:00`); if (h < 23) s.push(`${String(h).padStart(2, "0")}:30`); }
+  return s;
+})();
+const NOT_COUNTED_STATUS = new Set(["cancelled", "rejected", "no_show", "out_of_area", "unreachable", "merged"]);
 
 const BG     = "var(--admin-bg)";
 const CARD   = "var(--admin-card)";
@@ -52,6 +61,9 @@ export default function AppointmentsPage() {
   const todayRef   = useRef<HTMLButtonElement>(null);
   const [requests,     setRequests]     = useState<AdminRequest[]>([]);
   const [loading,      setLoading]      = useState(true);
+  const [blocks,       setBlocks]       = useState<{ wholeDay: boolean; times: string[] }>({ wholeDay: false, times: [] });
+  const [blocksOpen,   setBlocksOpen]   = useState(false);
+  const [savingBlock,  setSavingBlock]  = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -75,6 +87,38 @@ export default function AppointmentsPage() {
   const appts = requests
     .filter(r => r.appointment.date === selectedDate)
     .sort((a, b) => a.appointment.time.localeCompare(b.appointment.time));
+
+  // โหลดสถานะการปิดเวลาของวันที่เลือก
+  useEffect(() => {
+    fetchDayBlocks(selectedDate).then(setBlocks).catch(() => {});
+  }, [selectedDate]);
+
+  // จำนวนคิว "รับถึงที่" ที่ยัง active ของแต่ละช่วงเวลา (วันที่เลือก)
+  const riderCount = (t: string) =>
+    requests.filter(r =>
+      r.appointment.date === selectedDate &&
+      r.appointment.method === "rider" &&
+      r.appointment.time === t &&
+      !NOT_COUNTED_STATUS.has(r.status)
+    ).length;
+
+  async function toggleWholeDay() {
+    setSavingBlock(true);
+    const next = !blocks.wholeDay;
+    const res = await setSlotBlock(selectedDate, null, next);
+    if (res.success) setBlocks(await fetchDayBlocks(selectedDate));
+    else alert(res.error);
+    setSavingBlock(false);
+  }
+
+  async function toggleSlot(t: string) {
+    setSavingBlock(true);
+    const next = !blocks.times.includes(t);
+    const res = await setSlotBlock(selectedDate, t, next);
+    if (res.success) setBlocks(await fetchDayBlocks(selectedDate));
+    else alert(res.error);
+    setSavingBlock(false);
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: BG, overflowX: "hidden", maxWidth: "100vw" }}>
@@ -130,6 +174,64 @@ export default function AppointmentsPage() {
         <p style={{ color: TEXT2, fontSize: "13px", margin: 0 }}>
           {new Date(selectedDate + "T00:00:00").toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
         </p>
+      </div>
+
+      {/* จัดการเวลารับถึงที่ (เปิด/ปิดชั่วคราว) */}
+      <div style={{ padding: "0 16px 8px" }}>
+        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, overflow: "hidden" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px" }}>
+            <Ban size={15} color={blocks.wholeDay ? "#EF4444" : GOLD} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: TEXT }}>คิวรับถึงที่ — เปิด/ปิดเวลา</p>
+              <p style={{ margin: "1px 0 0", fontSize: 11, color: TEXT3 }}>
+                {blocks.wholeDay ? "วันนี้งดรับถึงที่ทั้งวัน" : blocks.times.length > 0 ? `ปิดอยู่ ${blocks.times.length} ช่วง` : "เปิดรับปกติ"}
+              </p>
+            </div>
+            <button
+              onClick={toggleWholeDay} disabled={savingBlock}
+              style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, fontFamily: "inherit", padding: "7px 12px", borderRadius: 9, cursor: savingBlock ? "wait" : "pointer",
+                border: `1px solid ${blocks.wholeDay ? "#EF4444" : BORDER}`,
+                background: blocks.wholeDay ? "#FEF2F2" : CARD, color: blocks.wholeDay ? "#EF4444" : TEXT2 }}
+            >
+              {blocks.wholeDay ? "เปิดรับทั้งวัน" : "ปิดรับทั้งวัน"}
+            </button>
+          </div>
+
+          {!blocks.wholeDay && (
+            <>
+              <button
+                onClick={() => setBlocksOpen(o => !o)}
+                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px", borderTop: `1px solid ${BORDER}`, background: "none", border: "none", borderBottomLeftRadius: 14, borderBottomRightRadius: 14, cursor: "pointer", color: GOLD, fontSize: 12, fontWeight: 700, fontFamily: "inherit" }}
+              >
+                จัดการรายช่วงเวลา
+                <ChevronDown size={14} style={{ transform: blocksOpen ? "rotate(180deg)" : "none", transition: "transform .2s" }} />
+              </button>
+              {blocksOpen && (
+                <div style={{ padding: "4px 14px 14px", display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {ALL_SLOTS.map(t => {
+                    const off = blocks.times.includes(t);
+                    const c = riderCount(t);
+                    return (
+                      <button
+                        key={t} onClick={() => toggleSlot(t)} disabled={savingBlock}
+                        title={off ? "ปิดอยู่ — กดเพื่อเปิด" : "เปิดอยู่ — กดเพื่อปิด"}
+                        style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, padding: "6px 9px", borderRadius: 9, cursor: savingBlock ? "wait" : "pointer", fontFamily: "inherit",
+                          border: `1px solid ${off ? "#FECACA" : BORDER}`,
+                          background: off ? "#FEF2F2" : CARD,
+                          color: off ? "#EF4444" : TEXT,
+                          textDecoration: off ? "line-through" : "none" }}
+                      >
+                        <span style={{ fontSize: 12.5, fontWeight: 700 }}>{t}</span>
+                        {c > 0 && <span style={{ fontSize: 9.5, color: off ? "#EF4444" : TEXT3 }}>{c} คิว</span>}
+                      </button>
+                    );
+                  })}
+                  <p style={{ width: "100%", margin: "6px 0 0", fontSize: 11, color: TEXT3 }}>กดช่วงเวลาเพื่อปิด (ลูกค้าจะจองช่วงนั้นไม่ได้) · กดซ้ำเพื่อเปิดคืน · มีผลเฉพาะ &ldquo;รับถึงที่&rdquo;</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* Timeline */}
