@@ -367,11 +367,11 @@ function RequestDetailInner() {
   const [dbStatus,      setDbStatus]      = useState<string>("");
   const [negotiating,   setNegotiating]   = useState<"idle" | "saving" | "error">("idle");
 
-  async function loadFromDb() {
-    if (!id || !phoneParam) return false;
+  async function loadFromDb(): Promise<"found" | "absent" | "error"> {
+    if (!id || !phoneParam) return "error";
     try {
       const dbReq = await fetchRequestByOrderNumber(id, phoneParam);
-      if (!dbReq) return false;
+      if (!dbReq) return "absent"; // server ตอบแล้วว่าไม่มีแถวนี้ (ถูกลบ/ไม่มีจริง) — ไม่ใช่ error
       const fromDb: SubmissionData = {
         orderNumber: dbReq.orderNumber,
         submittedAt: dbReq.createdAt,
@@ -432,16 +432,29 @@ function RequestDetailInner() {
       if (!ts[5] && ts[6]) ts[5] = ts[6];
       setStepTimestamps(ts);
       setState("ok");
-      return true;
-    } catch { return false; }
+      return "found";
+    } catch { return "error"; }
   }
 
   useEffect(() => {
     async function load() {
-      const ok = await loadFromDb();
-      if (ok) return;
+      const res = await loadFromDb();
+      if (res === "found") return;
 
-      // fall back to localStorage
+      // server ยืนยันว่าไม่มีคำขอนี้ (ถูกลบหลังบ้าน) — ล้าง cache เฉพาะ order นี้ แล้วแสดง "ไม่พบ"
+      // ไม่ fall back ไป localStorage เพื่อให้คำขอที่ถูกลบหายไปจากฝั่งลูกค้าด้วย
+      if (res === "absent") {
+        try {
+          const raw = localStorage.getItem("khaiphone_submission");
+          if (raw && (JSON.parse(raw) as SubmissionData).orderNumber === id) {
+            localStorage.removeItem("khaiphone_submission");
+          }
+        } catch {}
+        setState("notfound");
+        return;
+      }
+
+      // res === "error" → ออฟไลน์/เครือข่ายมีปัญหา: ใช้ข้อมูลที่เคยบันทึกในเครื่องชั่วคราว
       try {
         const raw = localStorage.getItem("khaiphone_submission");
         if (!raw) { setState("notfound"); return; }
