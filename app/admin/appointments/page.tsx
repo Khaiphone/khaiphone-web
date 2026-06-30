@@ -125,7 +125,7 @@ export default function AppointmentsPage() {
 
       {/* Header */}
       <div style={{ position: "sticky", top: 0, background: CARD, zIndex: 10, borderBottom: `1px solid ${BORDER}`, overflowX: "hidden", paddingTop: "env(safe-area-inset-top)" }}>
-        <div style={{ padding: "12px 16px 0" }}>
+        <div style={{ padding: "12px 16px 0", maxWidth: 760, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
             <button
               onClick={() => router.back()}
@@ -168,6 +168,9 @@ export default function AppointmentsPage() {
           </div>
         </div>
       </div>
+
+      {/* เนื้อหา — จำกัดความกว้างไม่ให้ยืดเต็มจอ desktop */}
+      <div style={{ maxWidth: 760, margin: "0 auto" }}>
 
       {/* Date heading */}
       <div style={{ padding: "14px 16px 8px" }}>
@@ -289,6 +292,8 @@ export default function AppointmentsPage() {
           ))
         )}
       </div>
+
+      </div>{/* /เนื้อหา */}
 
       {/* FAB */}
       <button
