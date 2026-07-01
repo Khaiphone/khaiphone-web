@@ -142,7 +142,7 @@ export default function RequestsPage() {
     <div style={{ minHeight: "100vh", background: BG, overflowX: "hidden", maxWidth: "100vw" }}>
       {/* Sticky header */}
       <div style={{ position: "sticky", top: 0, background: CARD, zIndex: 10, borderBottom: `1px solid ${BORDER}`, overflowX: "hidden", paddingTop: "env(safe-area-inset-top)" }}>
-        <div style={{ padding: "10px 12px 0", maxWidth: 760, margin: "0 auto" }}>
+        <div style={{ padding: "10px 16px 0", maxWidth: 820 }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
             <button onClick={() => router.push("/admin/dashboard")} style={{ background: "none", border: "none", color: TEXT2, cursor: "pointer", padding: 4, display: "flex" }}>
               <ArrowLeft size={20} />
@@ -201,7 +201,7 @@ export default function RequestsPage() {
         </div>
       </div>
 
-      <div style={{ padding: "10px 12px", maxWidth: 760, margin: "0 auto" }}>
+      <div style={{ padding: "10px 16px", maxWidth: 820 }}>
         {loading ? (
           <div style={{ textAlign: "center", paddingTop: "60px", color: TEXT2 }}>
             <p style={{ fontSize: "15px" }}>กำลังโหลด...</p>
