@@ -636,6 +636,38 @@ export async function fetchEstimateSummary(days = 30, range?: { from: string; to
   return { days, estimates: a.totalStarts, priceSeen: a.funnel[9]?.count ?? 0, submits: a.funnel[10]?.count ?? 0, conversionRate: a.completionRate, topDropStep: a.topDropStep, byModel };
 }
 
+// ── ผลตอบแทนโฆษณาตามช่วงเวลา (งบ/ROAS/ROI ผูกกับช่วงที่เลือก ไม่ใช่เดือนปัจจุบัน) ──
+export type AdsPerformance = { adSpend: number; adsBudget: number; revenue: number; grossProfit: number; roas: number; roi: number };
+
+export async function fetchAdsPerformance(days = 30, range?: { from: string; to: string }): Promise<AdsPerformance> {
+  await requireOwner();
+  const bkkFmt = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" });
+  let from: string, to: string;
+  if (range?.from && range?.to) {
+    from = range.from; to = range.to;
+  } else {
+    to = bkkFmt.format(new Date());
+    from = bkkFmt.format(new Date(new Date(to + "T00:00:00+07:00").getTime() - (days - 1) * 86400000));
+  }
+  const [fin, expenses, settings] = await Promise.all([
+    fetchFinanceDashboard(from, to),
+    fetchExpenses(from, to),
+    getCeoSettings(),
+  ]);
+  // งบโฆษณา = ค่าใช้จ่ายหมวดโฆษณาในช่วงนี้ (เหมือนตรรกะใน Mission Control)
+  const adsCat = settings.adsCategory.trim();
+  const adKeyword = /โฆษณา|ads|การตลาด|marketing|facebook|google/i;
+  const adSpendAuto = expenses
+    .filter(e => e.status !== "rejected" && (adsCat ? e.category === adsCat : adKeyword.test(e.category)))
+    .reduce((s, e) => s + (e.amount ?? 0), 0);
+  const adSpend = adSpendAuto > 0 ? adSpendAuto : (range ? 0 : settings.adSpend);
+  const revenue = fin.totalRevenue;
+  const grossProfit = fin.totalRevenue - fin.totalCost;
+  const roas = adSpend > 0 ? Math.round((revenue / adSpend) * 10) / 10 : 0;
+  const roi = adSpend > 0 ? Math.round((grossProfit / adSpend) * 100) : 0;
+  return { adSpend, adsBudget: settings.adsBudget, revenue, grossProfit, roas, roi };
+}
+
 // ── เงินทุน ───────────────────────────────────────────────────────────────────
 export type CeoCapital = {
   cash: number;          // เงินสดสุทธิ (จากกระแสเงินสด)

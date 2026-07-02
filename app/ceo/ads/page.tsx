@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchMissionControl, fetchLeadAnalytics, fetchEstimateSummary, type MissionControl, type LeadAnalytics, type EstimateSummary } from "@/app/actions/ceo";
+import { fetchMissionControl, fetchLeadAnalytics, fetchEstimateSummary, fetchAdsPerformance, type MissionControl, type LeadAnalytics, type EstimateSummary, type AdsPerformance } from "@/app/actions/ceo";
 import { PageTitle, Card, Kpi, Grid, Mini, Section, InsightBox, Loading, baht, num, GOLD, GREEN, RED, BLUE } from "../ui";
 
 function fullAnalyticsUrl() {
@@ -14,6 +14,7 @@ export default function CeoMarketingPage() {
   const [d, setD] = useState<MissionControl | null>(null);
   const [la, setLa] = useState<LeadAnalytics | null>(null);
   const [es, setEs] = useState<EstimateSummary | null>(null);
+  const [ap, setAp] = useState<AdsPerformance | null>(null);
   const [showAllModels, setShowAllModels] = useState(false);
   const [leadDays, setLeadDays] = useState(30);
   const [customOpen, setCustomOpen] = useState(false);
@@ -28,6 +29,7 @@ export default function CeoMarketingPage() {
     const range = useCustom ? { from, to } : undefined;
     fetchLeadAnalytics(leadDays, range).then(setLa).catch(() => {});
     fetchEstimateSummary(leadDays, range).then(setEs).catch(() => {});
+    fetchAdsPerformance(leadDays, range).then(setAp).catch(() => {});
   }, [leadDays, useCustom, rangeKey]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!d || !la) return <><PageTitle title="การตลาด & Leads" /><Loading /></>;
 
@@ -81,13 +83,13 @@ export default function CeoMarketingPage() {
         </div>
       )}
 
-      {/* ── ROI โฆษณา ── */}
-      <Section title="ผลตอบแทนโฆษณา (จากบิลจริงใน Finance)">
+      {/* ── ROI โฆษณา (ผูกกับช่วงวันที่ที่เลือก) ── */}
+      <Section title={`ผลตอบแทนโฆษณา · ${periodLabel} (จากบิลจริงใน Finance)`}>
         <Grid min={160}>
-          <Mini label="ใช้งบโฆษณา" value={baht(d.adSpend)} sub={d.adsBudget ? `เป้า ${baht(d.adsBudget)}` : undefined} color={RED} />
-          <Mini label="ROAS" value={d.roas ? `${d.roas}x` : "—"} color={d.roas >= 3 ? GREEN : d.roas >= 1 ? GOLD : RED} />
-          <Mini label="ROI" value={d.roi ? `${d.roi}%` : "—"} color={d.roi >= 100 ? GREEN : GOLD} />
-          <Mini label="ต้นทุน/Lead (CPA)" value={la.leads > 0 && d.adSpend > 0 ? baht(Math.round(d.adSpend / la.leads)) : "—"} />
+          <Mini label="ใช้งบโฆษณา" value={baht(ap?.adSpend ?? 0)} sub={ap?.adsBudget ? `เป้า/เดือน ${baht(ap.adsBudget)}` : undefined} color={RED} />
+          <Mini label="ROAS" value={ap?.roas ? `${ap.roas}x` : "—"} color={(ap?.roas ?? 0) >= 3 ? GREEN : (ap?.roas ?? 0) >= 1 ? GOLD : RED} />
+          <Mini label="ROI" value={ap?.roi ? `${ap.roi}%` : "—"} color={(ap?.roi ?? 0) >= 100 ? GREEN : GOLD} />
+          <Mini label="ต้นทุน/Lead (CPA)" value={la.leads > 0 && (ap?.adSpend ?? 0) > 0 ? baht(Math.round((ap!.adSpend) / la.leads)) : "—"} />
         </Grid>
       </Section>
 
