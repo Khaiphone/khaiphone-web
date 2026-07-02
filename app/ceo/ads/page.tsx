@@ -16,31 +16,70 @@ export default function CeoMarketingPage() {
   const [es, setEs] = useState<EstimateSummary | null>(null);
   const [showAllModels, setShowAllModels] = useState(false);
   const [leadDays, setLeadDays] = useState(30);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+
+  const useCustom = customOpen && !!from && !!to && from <= to;
+  const rangeKey = useCustom ? `${from}_${to}` : "";
+
+  useEffect(() => { fetchMissionControl().then(setD).catch(() => {}); }, []);
   useEffect(() => {
-    fetchMissionControl().then(setD).catch(() => {});
-    fetchEstimateSummary(30).then(setEs).catch(() => {});
-  }, []);
-  useEffect(() => { fetchLeadAnalytics(leadDays).then(setLa).catch(() => {}); }, [leadDays]);
+    const range = useCustom ? { from, to } : undefined;
+    fetchLeadAnalytics(leadDays, range).then(setLa).catch(() => {});
+    fetchEstimateSummary(leadDays, range).then(setEs).catch(() => {});
+  }, [leadDays, useCustom, rangeKey]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!d || !la) return <><PageTitle title="การตลาด & Leads" /><Loading /></>;
 
   const PERIODS = [{ d: 30, l: "30 วัน" }, { d: 90, l: "90 วัน" }, { d: 180, l: "180 วัน" }];
+  const fmtThai = (s: string) => s ? new Date(s + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short" }) : "";
+  const periodLabel = useCustom ? `${fmtThai(from)} – ${fmtThai(to)}` : `${leadDays} วันล่าสุด`;
+  function openCustom() {
+    if (!from || !to) {
+      const today = new Date();
+      const dd = (n: number) => String(n).padStart(2, "0");
+      const iso = (dt: Date) => `${dt.getFullYear()}-${dd(dt.getMonth() + 1)}-${dd(dt.getDate())}`;
+      setTo(iso(today));
+      setFrom(iso(new Date(today.getTime() - 29 * 86400000)));
+    }
+    setCustomOpen(true);
+  }
 
   const lostProfit = la.lostCount * d.avgProfitPerDevice;
 
   return (
     <>
-      <PageTitle title="การตลาด & Leads" sub={`Lead funnel ช่วง ${leadDays} วันล่าสุด · หลุดตรงไหน · เงินหายไปกับอะไร`} />
+      <PageTitle title="การตลาด & Leads" sub={`Lead funnel ช่วง ${periodLabel} · หลุดตรงไหน · เงินหายไปกับอะไร`} />
       <InsightBox insights={d.insights.filter(i => i.text.includes("Ads") || i.text.includes("โฆษณา"))} max={2} />
 
       {/* ช่วงเวลาของ Lead funnel/Lost/Source */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        {PERIODS.map(p => (
-          <button key={p.d} onClick={() => setLeadDays(p.d)}
-            style={{ padding: "7px 16px", borderRadius: 9, border: `1px solid ${leadDays === p.d ? GOLD : "#e0e0e4"}`, background: leadDays === p.d ? GOLD : "#fff", color: leadDays === p.d ? "#fff" : "#374151", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-            {p.l}
-          </button>
-        ))}
+      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+        {PERIODS.map(p => {
+          const active = !useCustom && leadDays === p.d;
+          return (
+            <button key={p.d} onClick={() => { setCustomOpen(false); setLeadDays(p.d); }}
+              style={{ padding: "7px 16px", borderRadius: 9, border: `1px solid ${active ? GOLD : "#e0e0e4"}`, background: active ? GOLD : "#fff", color: active ? "#fff" : "#374151", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+              {p.l}
+            </button>
+          );
+        })}
+        <button onClick={openCustom}
+          style={{ padding: "7px 16px", borderRadius: 9, border: `1px solid ${useCustom ? GOLD : "#e0e0e4"}`, background: useCustom ? GOLD : "#fff", color: useCustom ? "#fff" : "#374151", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+          📅 กำหนดเอง
+        </button>
       </div>
+
+      {customOpen && (
+        <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "center", flexWrap: "wrap", background: "#fff", border: "1px solid #e7e7ea", borderRadius: 12, padding: "12px 14px" }}>
+          <span style={{ fontSize: 12.5, color: "#6b7280", fontWeight: 600 }}>ตั้งแต่</span>
+          <input type="date" value={from} max={to || undefined} onChange={e => setFrom(e.target.value)}
+            style={{ padding: "7px 10px", borderRadius: 9, border: "1px solid #e0e0e4", fontSize: 13, fontFamily: "inherit", color: "#111", outline: "none" }} />
+          <span style={{ fontSize: 12.5, color: "#6b7280", fontWeight: 600 }}>ถึง</span>
+          <input type="date" value={to} min={from || undefined} onChange={e => setTo(e.target.value)}
+            style={{ padding: "7px 10px", borderRadius: 9, border: "1px solid #e0e0e4", fontSize: 13, fontFamily: "inherit", color: "#111", outline: "none" }} />
+          {from && to && from > to && <span style={{ fontSize: 12, color: RED, fontWeight: 600 }}>วันเริ่มต้องไม่เกินวันสิ้นสุด</span>}
+        </div>
+      )}
 
       {/* ── ROI โฆษณา ── */}
       <Section title="ผลตอบแทนโฆษณา (จากบิลจริงใน Finance)">
@@ -56,7 +95,7 @@ export default function CeoMarketingPage() {
       {es && es.estimates > 0 && (
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-            <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "#374151", letterSpacing: 0.4 }}>คนเข้าเว็บประเมินราคา (30 วัน)</p>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "#374151", letterSpacing: 0.4 }}>คนเข้าเว็บประเมินราคา ({periodLabel})</p>
             <a href={fullAnalyticsUrl()} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: GOLD, fontWeight: 600, textDecoration: "none", border: `1px solid ${GOLD}55`, borderRadius: 8, padding: "3px 10px" }}>ดูตัวเต็ม →</a>
           </div>
           <Grid min={160}>

@@ -469,16 +469,25 @@ const ALL_STATUS_LABEL: Record<string, string> = {
   unreachable: "ติดต่อไม่ได้", out_of_area: "นอกพื้นที่", merged: "รวมรายการ",
 };
 
-export async function fetchLeadAnalytics(days = 30): Promise<LeadAnalytics> {
+export async function fetchLeadAnalytics(days = 30, range?: { from: string; to: string }): Promise<LeadAnalytics> {
   await requireOwner();
-  const bkkToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
-  const fromDate = new Date(new Date(bkkToday + "T00:00:00+07:00").getTime() - (days - 1) * 86400000);
-  const from = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(fromDate);
+  const bkkFmt = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" });
+  let from: string, toExclusive: string | null = null;
+  if (range?.from && range?.to) {
+    from = range.from;
+    // to แบบรวมวันสุดท้าย → ตัดที่เที่ยงคืนของวันถัดไป
+    toExclusive = bkkFmt.format(new Date(new Date(range.to + "T00:00:00+07:00").getTime() + 86400000));
+  } else {
+    const bkkToday = bkkFmt.format(new Date());
+    from = bkkFmt.format(new Date(new Date(bkkToday + "T00:00:00+07:00").getTime() - (days - 1) * 86400000));
+  }
   const supabase = createServerClient();
-  const { data } = await supabase
+  let q = supabase
     .from("requests")
     .select("status, status_log, estimated_price, actual_price, source, created_at, order_number")
     .gte("created_at", `${from}T00:00:00+07:00`);
+  if (toExclusive) q = q.lt("created_at", `${toExclusive}T00:00:00+07:00`);
+  const { data } = await q;
   type Row = { status: string | null; status_log: { status: string; timestamp: string }[] | null; estimated_price: number | null; actual_price: number | null; source: string | null; created_at: string | null; order_number: string | null };
   const rows = (data ?? []) as Row[];
   const leads = rows.length;
@@ -575,14 +584,38 @@ export type EstimateSummary = {
 };
 const ESTIMATE_STEP_NAMES = ["เริ่มต้น", "Model", "ประกัน", "ตัวเครื่อง", "หน้าจอ", "การแสดงภาพ", "แบตเตอรี่", "อุปกรณ์เสริม", "iCloud", "เห็นราคา", "นัดหมายสำเร็จ"];
 
-export async function fetchEstimateSummary(days = 30): Promise<EstimateSummary> {
+type EstAgg = { funnel?: number[]; modelFunnels?: { model: string; counts: number[] }[] };
+// ผลต่างของ 2 ช่วง (since→now) − (afterTo→now) = ช่วง [from, to] พอดี (ไม่ต้องแก้ RPC)
+function subtractAgg(a: EstAgg, b: EstAgg): EstAgg {
+  const funnel = (a.funnel ?? []).map((v, i) => (v ?? 0) - (b.funnel?.[i] ?? 0));
+  const bMap = new Map<string, number[]>((b.modelFunnels ?? []).map(m => [m.model, m.counts]));
+  const modelFunnels = (a.modelFunnels ?? [])
+    .map(m => { const bc = bMap.get(m.model) ?? []; return { model: m.model, counts: m.counts.map((v, i) => (v ?? 0) - (bc[i] ?? 0)) }; })
+    .filter(m => (m.counts[0] ?? 0) > 0);
+  return { funnel, modelFunnels };
+}
+
+export async function fetchEstimateSummary(days = 30, range?: { from: string; to: string }): Promise<EstimateSummary> {
   await requireOwner();
   const supabase = createServerClient();
   const bkkToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
-  const since = new Date(new Date(bkkToday + "T00:00:00+07:00").getTime() - (days - 1) * 86400000).toISOString();
+
+  let since: string, untilExclusive: string | null = null;
+  if (range?.from && range?.to) {
+    since = new Date(range.from + "T00:00:00+07:00").toISOString();
+    untilExclusive = new Date(new Date(range.to + "T00:00:00+07:00").getTime() + 86400000).toISOString();
+    days = Math.max(1, Math.round((new Date(range.to + "T00:00:00+07:00").getTime() - new Date(range.from + "T00:00:00+07:00").getTime()) / 86400000) + 1);
+  } else {
+    since = new Date(new Date(bkkToday + "T00:00:00+07:00").getTime() - (days - 1) * 86400000).toISOString();
+  }
 
   // เรียก RPC ตรง → ได้ modelFunnels ทุกรุ่น (ไม่ตัด top 10)
-  const { data: agg } = await supabase.rpc("estimate_analytics", { p_since: since });
+  const { data: aggSince } = await supabase.rpc("estimate_analytics", { p_since: since });
+  let agg = aggSince as EstAgg | null;
+  if (agg && untilExclusive) {
+    const { data: aggAfter } = await supabase.rpc("estimate_analytics", { p_since: untilExclusive });
+    agg = subtractAgg(agg, (aggAfter as EstAgg | null) ?? {});
+  }
   if (agg) {
     const funnel = (agg.funnel ?? []) as number[];
     const mf = (agg.modelFunnels ?? []) as { model: string; counts: number[] }[];
