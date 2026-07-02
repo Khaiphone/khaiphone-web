@@ -323,6 +323,47 @@ export async function updateStockSale(
   return { success: true };
 }
 
+// ยกเลิกการขาย (กรณีบันทึกขายผิดตัว) — คืนสถานะเป็น "พร้อมขาย" และล้างข้อมูลการขายทั้งหมด
+export async function undoStockSale(id: string, by = "admin"): Promise<{ success: boolean; error?: string }> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const now = new Date().toISOString();
+  const { data: current } = await supabase
+    .from("stocks")
+    .select("status, status_log, audit_log, request_ref, sold_price")
+    .eq("id", id)
+    .single();
+  if (!current) return { success: false, error: "ไม่พบรายการ" };
+  if (current.status !== "ขายแล้ว") return { success: false, error: "ยกเลิกได้เฉพาะรายการที่ขายแล้ว" };
+
+  const newStatusLog = [...(current.status_log ?? []), { status: "พร้อมขาย", timestamp: now, note: "ยกเลิกการขาย (บันทึกผิด)", by }];
+  const newAuditLog: AuditEntry[] = [...(current.audit_log ?? []), {
+    action: "ยกเลิกการขาย",
+    detail: `คืนสถานะเป็นพร้อมขาย · ล้างยอดขาย ฿${(current.sold_price ?? 0).toLocaleString("th-TH")}`,
+    timestamp: now, by,
+  }];
+
+  const { error } = await supabase.from("stocks").update({
+    status: "พร้อมขาย",
+    sold_at: null, sold_price: null, sold_cost_snapshot: null,
+    buyer_name: null, buyer_phone: null, sold_by: null,
+    sale_type: null, partner_name: null,
+    delivery_channel: null, delivery_status: null,
+    delivery_address: null, tracking_number: null, slip_urls: null,
+    status_log: newStatusLog, audit_log: newAuditLog, updated_at: now,
+  }).eq("id", id);
+  if (error) return { success: false, error: error.message };
+
+  // คืนค่าใน requests เพื่อให้ Finance เอายอดขายออก (สะท้อนว่ายังไม่ได้ขาย)
+  if (current.request_ref) {
+    await supabase.from("requests").update({
+      sell_price: null, sell_date: null, stock_status: "in_stock",
+    }).eq("order_number", current.request_ref);
+  }
+
+  return { success: true };
+}
+
 export async function fetchStockStaff(): Promise<string[]> {
   await requireAuth();
   const supabase = createServerClient();

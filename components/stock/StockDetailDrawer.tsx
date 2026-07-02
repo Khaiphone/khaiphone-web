@@ -2,12 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Edit2, Upload, RefreshCw, Tag, Printer, CheckSquare, Save, ChevronLeft, ExternalLink, Truck } from "lucide-react";
+import { X, Edit2, Upload, RefreshCw, Tag, Printer, CheckSquare, Save, ChevronLeft, ExternalLink, Truck, RotateCcw } from "lucide-react";
 import { useThemeColors, useStockTheme } from "./ThemeContext";
 import StockStatusBadge, { GradeBadge } from "./StatusBadge";
 import type { StockItem, StockStatus } from "@/lib/stock/types";
 import { STOCK_STATUS_COLORS } from "@/lib/stock/constants";
-import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos, updateStockDocuments, logDocumentView, confirmDelivery, confirmStockRecheck, addStockSlips, getStockDocumentSignedUrl } from "@/app/actions/stocks";
+import { updateStockStatus, updateStockPrice, updateStockItem, updateStockPhotos, updateStockDocuments, logDocumentView, confirmDelivery, confirmStockRecheck, addStockSlips, getStockDocumentSignedUrl, undoStockSale } from "@/app/actions/stocks";
 import { fetchOverheadPerUnit } from "@/app/actions/finance";
 import SellModal from "./SellModal";
 import { supabase } from "@/lib/supabase";
@@ -89,6 +89,8 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
   const [uploadDocErr, setUploadDocErr] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
+  const [confirmUndo, setConfirmUndo] = useState(false);
+  const [undoing, setUndoing] = useState(false);
   const [showSellModal, setShowSellModal] = useState(false);
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [priceDraftModal, setPriceDraftModal] = useState("");
@@ -188,6 +190,16 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
     onUpdate({ ...item!, status });
     setShowStatusMenu(false);
     setSaving(false);
+  }
+
+  async function handleUndoSale() {
+    setUndoing(true);
+    const res = await undoStockSale(item!.id, "admin");
+    setUndoing(false);
+    if (!res.success) { alert(res.error ?? "เกิดข้อผิดพลาด กรุณาลองใหม่"); return; }
+    setConfirmUndo(false);
+    onUpdate({ ...item!, status: "พร้อมขาย" });
+    onClose();
   }
 
   async function handlePriceSave() {
@@ -1153,12 +1165,12 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                 </div>
               )}
 
-              <div style={{ display: "grid", gridTemplateColumns: item.status === "ขายแล้ว" ? "1fr" : "1fr 1fr", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 <button onClick={() => printPriceTag(item)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "11px 8px", borderRadius: 10, border: `1px solid ${c.border}`, background: "none", color: c.text2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
                   <Printer size={14} />
                   พิมพ์หน้าราคา
                 </button>
-                {item.status !== "ขายแล้ว" && (
+                {item.status !== "ขายแล้ว" ? (
                   <button
                     onClick={openSellModal}
                     style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "11px 8px", borderRadius: 10, border: "none", background: "rgba(34,197,94,0.15)", color: "#22c55e", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
@@ -1166,8 +1178,33 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                     <CheckSquare size={14} />
                     บันทึกการขาย
                   </button>
+                ) : (
+                  <button
+                    onClick={() => setConfirmUndo(v => !v)}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "11px 8px", borderRadius: 10, border: "none", background: "rgba(239,68,68,0.12)", color: "#ef4444", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                  >
+                    <RotateCcw size={14} />
+                    ยกเลิกการขาย
+                  </button>
                 )}
               </div>
+
+              {/* ยืนยันยกเลิกการขาย (กันกดผิด — ย้อนยอดขาย/การเงิน) */}
+              {confirmUndo && item.status === "ขายแล้ว" && (
+                <div style={{ marginTop: 8, padding: 12, borderRadius: 10, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)" }}>
+                  <p style={{ margin: "0 0 10px", fontSize: 12.5, color: c.text, fontWeight: 600, lineHeight: 1.5 }}>
+                    ยกเลิกการขายรายการนี้? เครื่องจะกลับไปเป็น <b>&ldquo;พร้อมขาย&rdquo;</b> และยอดขายจะถูกลบออกจากรายงาน/การเงิน
+                  </p>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <button onClick={() => setConfirmUndo(false)} disabled={undoing} style={{ padding: "10px 8px", borderRadius: 10, border: `1px solid ${c.border}`, background: "none", color: c.text2, fontSize: 12, fontWeight: 600, cursor: undoing ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+                      ไม่ยกเลิก
+                    </button>
+                    <button onClick={handleUndoSale} disabled={undoing} style={{ padding: "10px 8px", borderRadius: 10, border: "none", background: "#ef4444", color: "#fff", fontSize: 12, fontWeight: 700, cursor: undoing ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: undoing ? 0.6 : 1 }}>
+                      {undoing ? "กำลังยกเลิก..." : "ยืนยันยกเลิกการขาย"}
+                    </button>
+                  </div>
+                </div>
+              )}
               {item.deliveryStatus === "รอจัดส่ง" && (
                 <button
                   onClick={() => { setTrackingDraft(""); setDeliveryAddressDraft(item.deliveryAddress ?? ""); setDeliveryChannelDraft(item.deliveryChannel ?? "หน้าร้าน"); setShowDeliveryModal(true); }}
