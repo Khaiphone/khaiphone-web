@@ -20,7 +20,7 @@ export const blogPosts: BlogPost[] = [
     readTime: "5 นาที",
     title: "ขาย iPhone ที่ไหนดี? รับถึงบ้าน จ่ายสดทันที ปลอดภัย 100%",
     excerpt: "เทียบชัดๆ ขายกับร้านรับซื้อ vs ประกาศขายเอง vs เทรดอินศูนย์ — แบบไหนได้เงินไว ปลอดภัย ไม่โดนกดราคา พร้อมวิธีขาย iPhone ให้ได้ราคาดีที่สุดโดยไม่ต้องออกจากบ้าน",
-    image: "/blog_iphone-tradein.webp",
+    image: "/blog_where-to-sell.webp",
     slug: "where-to-sell-iphone",
     keywords: ["ขาย iPhone ที่ไหนดี", "รับซื้อ iPhone ถึงบ้าน", "ร้านรับซื้อ iPhone น่าเชื่อถือ", "ขาย iPhone จ่ายสด", "รับซื้อ iPhone กรุงเทพ", "ขาย iPhone ปลอดภัย"],
   },
