@@ -16,34 +16,39 @@ export default function CeoMarketingPage() {
   const [es, setEs] = useState<EstimateSummary | null>(null);
   const [ap, setAp] = useState<AdsPerformance | null>(null);
   const [showAllModels, setShowAllModels] = useState(false);
+  const [monthMode, setMonthMode] = useState(true); // เริ่มต้น = เดือนนี้
   const [leadDays, setLeadDays] = useState(30);
   const [customOpen, setCustomOpen] = useState(false);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
+  // ช่วง "เดือนนี้" = วันที่ 1 ของเดือน → วันนี้
+  const dd = (n: number) => String(n).padStart(2, "0");
+  const isoOf = (dt: Date) => `${dt.getFullYear()}-${dd(dt.getMonth() + 1)}-${dd(dt.getDate())}`;
+  const now = new Date();
+  const monthFrom = isoOf(new Date(now.getFullYear(), now.getMonth(), 1));
+  const todayIso = isoOf(now);
+
   const useCustom = customOpen && !!from && !!to && from <= to;
-  const rangeKey = useCustom ? `${from}_${to}` : "";
+  const useMonth = !useCustom && monthMode;
+  const effRange = useCustom ? { from, to } : useMonth ? { from: monthFrom, to: todayIso } : undefined;
+  const effKey = effRange ? `${effRange.from}_${effRange.to}` : `d${leadDays}`;
 
   useEffect(() => { fetchMissionControl().then(setD).catch(() => {}); }, []);
   useEffect(() => {
-    const range = useCustom ? { from, to } : undefined;
-    fetchLeadAnalytics(leadDays, range).then(setLa).catch(() => {});
-    fetchEstimateSummary(leadDays, range).then(setEs).catch(() => {});
-    fetchAdsPerformance(leadDays, range).then(setAp).catch(() => {});
-  }, [leadDays, useCustom, rangeKey]); // eslint-disable-line react-hooks/exhaustive-deps
+    fetchLeadAnalytics(leadDays, effRange).then(setLa).catch(() => {});
+    fetchEstimateSummary(leadDays, effRange).then(setEs).catch(() => {});
+    fetchAdsPerformance(leadDays, effRange).then(setAp).catch(() => {});
+  }, [effKey]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!d || !la) return <><PageTitle title="การตลาด & Leads" /><Loading /></>;
 
   const PERIODS = [{ d: 30, l: "30 วัน" }, { d: 90, l: "90 วัน" }, { d: 180, l: "180 วัน" }];
   const fmtThai = (s: string) => s ? new Date(s + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short" }) : "";
-  const periodLabel = useCustom ? `${fmtThai(from)} – ${fmtThai(to)}` : `${leadDays} วันล่าสุด`;
+  const monthLabel = now.toLocaleDateString("th-TH", { month: "long", year: "numeric" });
+  const periodLabel = useCustom ? `${fmtThai(from)} – ${fmtThai(to)}` : useMonth ? `เดือนนี้ (${monthLabel})` : `${leadDays} วันล่าสุด`;
   function openCustom() {
-    if (!from || !to) {
-      const today = new Date();
-      const dd = (n: number) => String(n).padStart(2, "0");
-      const iso = (dt: Date) => `${dt.getFullYear()}-${dd(dt.getMonth() + 1)}-${dd(dt.getDate())}`;
-      setTo(iso(today));
-      setFrom(iso(new Date(today.getTime() - 29 * 86400000)));
-    }
+    if (!from || !to) { setTo(todayIso); setFrom(isoOf(new Date(now.getTime() - 29 * 86400000))); }
+    setMonthMode(false);
     setCustomOpen(true);
   }
 
@@ -56,10 +61,14 @@ export default function CeoMarketingPage() {
 
       {/* ช่วงเวลาของ Lead funnel/Lost/Source */}
       <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+        <button onClick={() => { setCustomOpen(false); setMonthMode(true); }}
+          style={{ padding: "7px 16px", borderRadius: 9, border: `1px solid ${useMonth ? GOLD : "#e0e0e4"}`, background: useMonth ? GOLD : "#fff", color: useMonth ? "#fff" : "#374151", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+          เดือนนี้
+        </button>
         {PERIODS.map(p => {
-          const active = !useCustom && leadDays === p.d;
+          const active = !useCustom && !useMonth && leadDays === p.d;
           return (
-            <button key={p.d} onClick={() => { setCustomOpen(false); setLeadDays(p.d); }}
+            <button key={p.d} onClick={() => { setCustomOpen(false); setMonthMode(false); setLeadDays(p.d); }}
               style={{ padding: "7px 16px", borderRadius: 9, border: `1px solid ${active ? GOLD : "#e0e0e4"}`, background: active ? GOLD : "#fff", color: active ? "#fff" : "#374151", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
               {p.l}
             </button>
