@@ -410,7 +410,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         </aside>
 
         {/* ── Content column (mobile: flex col filling remaining height) ── */}
-        <div className="admin-content-col" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        <div className="admin-content-col" style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
           <main
             className="md:block admin-main-content"
             style={{ flex: 1, minHeight: "100vh", paddingBottom: 0, transition: "margin-left 0.2s ease" }}

@@ -139,7 +139,7 @@ export default function RequestsPage() {
   }, [requests]);
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, overflowX: "hidden", maxWidth: "100vw" }}>
+    <div style={{ minHeight: "100vh", background: BG, overflowX: "hidden", maxWidth: "100%", minWidth: 0 }}>
       {/* Sticky header */}
       <div style={{ position: "sticky", top: 0, background: CARD, zIndex: 10, borderBottom: `1px solid ${BORDER}`, overflowX: "hidden", paddingTop: "env(safe-area-inset-top)" }}>
         <div style={{ padding: "10px 16px 0" }}>
@@ -215,10 +215,8 @@ export default function RequestsPage() {
             </p>
           </div>
         ) : (
-          // desktop: จัดหลายคอลัมน์อัตโนมัติให้เต็มความกว้าง · มือถือ: คอลัมน์เดียว
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 440px), 1fr))", gap: 12, alignItems: "start" }}>
-            {filtered.map(r => <RequestCard key={r.id} request={r} />)}
-          </div>
+          // คอลัมน์เดียว — การ์ดยืดเต็มความกว้างพอดีขอบขวา (ไม่ล้น)
+          filtered.map(r => <RequestCard key={r.id} request={r} />)
         )}
       </div>
 
