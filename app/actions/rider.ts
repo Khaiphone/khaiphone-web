@@ -103,7 +103,7 @@ export async function fetchRiderHomeData(riderId: string) {
 const RIDER_LIST_SELECT =
   "id, order_number, status, created_at, customer_name, customer_phone, customer_email, customer_address, " +
   "device_model, device_storage, device_color, device_condition, device_condition_details, estimated_price, actual_price, price_range, " +
-  "appt_date, appt_time, appt_location, appt_method, " +
+  "appt_date, appt_time, appt_location, appt_method, appt_lat, appt_lng, " +
   "payment_method, payment_bank, payment_account_name, payment_account_number, payment_slip_url, contract_signed_at, " +
   "customer_notes, source, assigned_to, assigned_to_name, rider_id, distance_km, return_submitted_at, returned_to_office_at";
 
@@ -1122,6 +1122,9 @@ function mapRow(row: any) {
       time:     row.appt_time     ?? "",
       location: row.appt_location ?? "",
       method:   row.appt_method   ?? "rider",
+      // พิกัดหมุดที่ลูกค้าปักจริง — ใช้สร้างลิงก์นำทางให้ตรงหมุด (ไม่ให้ Google เดาจากข้อความ)
+      lat:      row.appt_lat      ?? null,
+      lng:      row.appt_lng      ?? null,
     },
     payment: {
       method:           row.payment_method         ?? "cash",

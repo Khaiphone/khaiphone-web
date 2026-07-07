@@ -1958,7 +1958,8 @@ export default function JobWizardPage() {
   const isCash    = job.payment.method === "cash";
   const deviceImg = getDeviceImage(job.device.model);
   const apptDest  = (job.appointment.lat != null && job.appointment.lng != null) ? `${job.appointment.lat},${job.appointment.lng}` : encodeURIComponent(job.appointment.location);
-  const mapsUrl   = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent("เดอะแพลนท์ วงแหวน-รังสิต อำเภอธัญบุรี ปทุมธานี 12110")}&destination=${apptDest}`;
+  // ไม่ใส่ origin → Google Maps ใช้ตำแหน่งปัจจุบันของไรเดอร์เป็นต้นทางอัตโนมัติ
+  const mapsUrl   = `https://www.google.com/maps/dir/?api=1&destination=${apptDest}`;
 
   const isCancelled = job.status === "cancelled";
   const isCompleted = job.status === "completed";
