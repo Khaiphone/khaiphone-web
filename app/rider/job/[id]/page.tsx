@@ -295,6 +295,69 @@ function CheckRow({ label, pass, onToggle, c }: { label: string; pass: boolean |
   );
 }
 
+// ── สรุปที่ลูกค้าประเมินไว้ (เหมือนที่ admin เห็นในคำขอ) — ใช้เทียบตอนตรวจเครื่อง ──
+function CustomerSummaryCard({ job, c }: { job: AdminRequest; c: TC }) {
+  const [open, setOpen] = useState(true);
+  const details = job.device.conditionDetails ?? [];
+  const extras = job.extraDevices ?? [];
+  return (
+    <div style={{ background: c.CARD, borderRadius: 14, border: `1.5px solid ${c.ACCENT}`, overflow: "hidden" }}>
+      <button onClick={() => setOpen(o => !o)}
+        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "rgba(74,222,128,0.10)", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: c.ACCENT }}>📋 สรุปที่ลูกค้าประเมินไว้</span>
+        <span style={{ fontSize: 12, color: c.TEXT2 }}>{open ? "ซ่อน ▲" : "แสดง ▼"}</span>
+      </button>
+      {open && (
+        <div style={{ padding: "12px 16px" }}>
+          {/* ราคา + สภาพรวม */}
+          <div style={{ display: "flex", gap: 8, marginBottom: details.length ? 12 : 0 }}>
+            <div style={{ flex: 1, background: c.CARD2, borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
+              <p style={{ margin: "0 0 2px", fontSize: 10, color: c.TEXT2 }}>ราคาประเมิน</p>
+              <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: c.ACCENT }}>฿{job.device.estimatedPrice.toLocaleString("th-TH")}</p>
+              {job.device.priceRange && <p style={{ margin: "2px 0 0", fontSize: 10, color: c.TEXT2 }}>{job.device.priceRange}</p>}
+            </div>
+            {job.device.condition && (
+              <div style={{ flex: 1, background: c.CARD2, borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
+                <p style={{ margin: "0 0 2px", fontSize: 10, color: c.TEXT2 }}>สภาพรวมที่แจ้ง</p>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: c.TEXT }}>{job.device.condition}</p>
+              </div>
+            )}
+          </div>
+          {/* รายละเอียดสภาพเครื่องที่ลูกค้าเลือก (ชุดเดียวกับที่ admin เห็น) */}
+          {details.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {details.map((d, i) => (
+                <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                  <span style={{ color: c.ACCENT, fontSize: 12, lineHeight: 1.6 }}>•</span>
+                  <span style={{ fontSize: 13, color: c.TEXT, lineHeight: 1.6 }}>{d}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* เครื่องเพิ่มเติมที่แจ้งมาพร้อมกัน */}
+          {extras.length > 0 && (
+            <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px dashed ${c.BORDER}` }}>
+              <p style={{ margin: "0 0 6px", fontSize: 11, fontWeight: 700, color: "#FF9F0A" }}>📦 มีเครื่องเพิ่มเติมอีก {extras.length} เครื่อง</p>
+              {extras.map((d, i) => (
+                <p key={i} style={{ margin: "0 0 3px", fontSize: 12.5, color: c.TEXT }}>
+                  {d.model} {d.storage} · <span style={{ fontWeight: 700 }}>฿{d.estimatedPrice.toLocaleString("th-TH")}</span>
+                </p>
+              ))}
+            </div>
+          )}
+          {/* หมายเหตุจากลูกค้า */}
+          {job.customerNotes && (
+            <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px dashed ${c.BORDER}` }}>
+              <p style={{ margin: "0 0 4px", fontSize: 11, fontWeight: 700, color: c.TEXT2 }}>💬 หมายเหตุจากลูกค้า</p>
+              <p style={{ margin: 0, fontSize: 13, color: c.TEXT, lineHeight: 1.5 }}>{job.customerNotes}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Inspect Step (stateful component) ─────────────────────────────────────────
 function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void; c: TC }) {
   const [slotPhotos, setSlotPhotos] = useState<Partial<Record<string, string>>>(() => {
@@ -692,6 +755,10 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
           </div>
         </div>
       )}
+
+      {/* สรุปการประเมินของลูกค้า — ให้ไรเดอร์เห็นเหมือน admin ใช้เทียบกับเครื่องจริง */}
+      <CustomerSummaryCard job={job} c={c} />
+
       {/* Photos */}
       <div ref={photoSlotsRef}>
         <SectionLabel c={c}>รูปสภาพเครื่อง</SectionLabel>
