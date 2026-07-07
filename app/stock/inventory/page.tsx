@@ -10,7 +10,7 @@ import MetricCard from "@/components/stock/MetricCard";
 import StockStatusBadge, { GradeBadge } from "@/components/stock/StatusBadge";
 import StockDetailDrawer from "@/components/stock/StockDetailDrawer";
 import { useThemeColors } from "@/components/stock/ThemeContext";
-import { fetchStockItems, deleteStockItem, confirmDelivery } from "@/app/actions/stocks";
+import { fetchStockItems, fetchStockItem, deleteStockItem, confirmDelivery } from "@/app/actions/stocks";
 import { cacheGet, cacheSet } from "@/app/stock/cache";
 import { thaiDateStr } from "@/lib/thai-date";
 import SellModal from "@/components/stock/SellModal";
@@ -104,6 +104,18 @@ function StockInventoryInner() {
   useEffect(() => {
     fetchStockItems().then(data => { setStocks(data); cacheSet("stock:inventory", data); setLoading(false); });
   }, []);
+
+  // ลิสต์ใช้ projection เบา (ไม่มีเอกสาร/โน้ต/ประวัติ) — เปิด drawer แล้วเติมข้อมูลเต็มตามหลัง
+  useEffect(() => {
+    const id = selected?.id;
+    if (!id) return;
+    let active = true;
+    fetchStockItem(id).then(full => {
+      if (active && full) setSelected(prev => (prev?.id === id ? full : prev));
+    }).catch(() => {});
+    return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected?.id]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);

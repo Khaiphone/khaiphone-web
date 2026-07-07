@@ -98,6 +98,15 @@ export async function fetchRiderHomeData(riderId: string) {
   return _riderHomeData(createServerClient(), riderId);
 }
 
+// projection สำหรับลิสต์งานหน้า home — ตัด JSONB หนักที่การ์ดไม่ใช้
+// (inspection, status_log, extra_devices, notes, device_selections) · หน้า detail ใช้ fetchRiderJob แบบเต็ม
+const RIDER_LIST_SELECT =
+  "id, order_number, status, created_at, customer_name, customer_phone, customer_email, customer_address, " +
+  "device_model, device_storage, device_color, device_condition, device_condition_details, estimated_price, actual_price, price_range, " +
+  "appt_date, appt_time, appt_location, appt_method, " +
+  "payment_method, payment_bank, payment_account_name, payment_account_number, payment_slip_url, contract_signed_at, " +
+  "customer_notes, source, assigned_to, assigned_to_name, rider_id, distance_km, return_submitted_at, returned_to_office_at";
+
 // internal — ไม่เรียก requireAuth (ใช้ร่วมกับ fetchRiderBootstrap เพื่อ auth ครั้งเดียว)
 async function _riderHomeData(supabase: ReturnType<typeof createServerClient>, riderId: string) {
   const startOfMonth = startOfThaiMonth(thaiMonthStr());
@@ -105,9 +114,9 @@ async function _riderHomeData(supabase: ReturnType<typeof createServerClient>, r
   const IN_PROGRESS = ["pickup_scheduled", "en_route", "inspecting", "price_negotiation", "contracting", "awaiting_transfer"];
 
   const [{ data: pendingData }, { data: inProgressData }, { data: statsData }] = await Promise.all([
-    supabase.from("requests").select("*").eq("rider_id", riderId)
+    supabase.from("requests").select(RIDER_LIST_SELECT).eq("rider_id", riderId)
       .in("status", ["confirmed"]).order("appt_date", { ascending: true }),
-    supabase.from("requests").select("*").eq("rider_id", riderId)
+    supabase.from("requests").select(RIDER_LIST_SELECT).eq("rider_id", riderId)
       .in("status", IN_PROGRESS).order("appt_date", { ascending: true }),
     supabase.from("requests")
       .select("status, actual_price, estimated_price")
@@ -116,7 +125,7 @@ async function _riderHomeData(supabase: ReturnType<typeof createServerClient>, r
 
   // Fetch completed-but-not-returned jobs separately so a column error doesn't wipe the whole list
   const { data: completedPrimary, error: completedErr } = await supabase
-    .from("requests").select("*").eq("rider_id", riderId)
+    .from("requests").select(RIDER_LIST_SELECT).eq("rider_id", riderId)
     .eq("status", "completed").is("returned_to_office_at", null)
     .order("appt_date", { ascending: true });
 
@@ -125,7 +134,7 @@ async function _riderHomeData(supabase: ReturnType<typeof createServerClient>, r
     // Column may not exist in DB yet — fall back to jobs completed in the last 7 days
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const { data: fallback } = await supabase
-      .from("requests").select("*").eq("rider_id", riderId)
+      .from("requests").select(RIDER_LIST_SELECT).eq("rider_id", riderId)
       .eq("status", "completed").gte("updated_at", weekAgo)
       .order("updated_at", { ascending: false });
     completedActiveData = fallback;

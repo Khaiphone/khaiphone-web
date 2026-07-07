@@ -13,7 +13,7 @@ import StockStatusBadge from "@/components/stock/StatusBadge";
 import { useThemeColors } from "@/components/stock/ThemeContext";
 import { useStockRole } from "@/app/stock/role-context";
 import { useStockNavReady } from "@/app/stock/nav-ready-context";
-import { fetchStockItems, fetchRevenueData, fetchCategoryData } from "@/app/actions/stocks";
+import { fetchStockDashboard } from "@/app/actions/stocks";
 import type { StockItem } from "@/lib/stock/types";
 import type { RevenuePoint, CategoryPoint } from "@/app/actions/stocks";
 
@@ -53,9 +53,11 @@ export default function StockDashboard() {
   const [notifStatus, setNotifStatus] = useState<"default" | "granted" | "denied" | "unsupported" | "loading">("loading");
 
   useEffect(() => {
-    fetchStockItems().then(d => { setStocks(d); markFirstScreenReady(); });
-    fetchRevenueData().then(setRevenueData);
-    fetchCategoryData().then(setCategoryData);
+    // bundle เดียว: สแกน stocks 1 ครั้ง + auth 1 ครั้ง (เดิม 3 actions = 3 สแกน)
+    fetchStockDashboard().then(({ items, revenue, category }) => {
+      setStocks(items); setRevenueData(revenue); setCategoryData(category);
+      markFirstScreenReady();
+    });
   }, [markFirstScreenReady]);
 
   useEffect(() => {
@@ -70,7 +72,8 @@ export default function StockDashboard() {
     if (Notification.permission !== "granted") return;
     (async () => {
       try {
-        const reg = await navigator.serviceWorker.register("/sw.js");
+        // layout ลงทะเบียน sw.js ไปแล้ว — ใช้ ready แทนการ register ซ้ำ
+        const reg = await navigator.serviceWorker.ready;
         const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
         if (!vapidKey) return;
         const key = Uint8Array.from(atob(vapidKey.replace(/-/g, "+").replace(/_/g, "/")), ch => ch.charCodeAt(0));

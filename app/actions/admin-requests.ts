@@ -218,6 +218,24 @@ export async function fetchRequests(assignedToUserId?: string): Promise<AdminReq
   return (data ?? []).map(mapRow);
 }
 
+// ─── นับคำขอใหม่อย่างเดียว (badge) — HEAD count ไม่ดึงแถว, scoping เหมือน fetchRequests ──
+export async function fetchNewRequestCount(): Promise<number> {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+  const { data: profile } = await supabase
+    .from("admin_users").select("role, permissions").eq("user_id", user.id).single();
+  const role = (profile?.role ?? "owner") as AdminRole;
+  const perms = (profile?.permissions ?? []) as Permission[];
+  const canSeeAll = role !== "staff" || perms.includes("receive_new_requests");
+  let query = supabase.from("requests")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "new")
+    .neq("source", "manual");
+  if (!canSeeAll) query = query.eq("assigned_to", user.id);
+  const { count } = await query;
+  return count ?? 0;
+}
+
 // ─── Fetch requests scoped to the caller (identity from session, not param) ──
 // Owner / staff with "receive_new_requests" → all; other staff → assigned-only.
 // Used by the notifications page so each user only sees their own notifications.
@@ -343,31 +361,38 @@ export async function fetchDashboardBundle(): Promise<{
   const supabase = createServerClient();
   const cutoff = new Date(Date.now() - 90 * 86_400_000).toISOString();
 
-  const { data: profile } = await supabase
-    .from("admin_users").select("role, permissions").eq("user_id", userId).single();
+  // profile / requests / activity ไม่พึ่งพากัน (role ใช้กรองใน JS ทีหลัง) → ยิงขนานลด waterfall
+  const [{ data: profile }, { data: reqData }, { data: activityAll }] = await Promise.all([
+    supabase.from("admin_users").select("role, permissions").eq("user_id", userId).single(),
+    supabase.from("requests").select(LIST_SELECT)
+      .neq("source", "manual")
+      .or(`updated_at.gte.${cutoff},status.in.(${ACTIVE_STATUSES.join(",")})`)
+      .order("created_at", { ascending: false }),
+    supabase.from("request_activity_logs")
+      .select("id, order_number, action, detail, performed_by_name, created_at")
+      .order("created_at", { ascending: false }).limit(20),
+  ]);
   const role = (profile?.role ?? "owner") as AdminRole;
   const permissions = (profile?.permissions ?? []) as Permission[];
   const isStaff = role === "staff";
   const canSeeAll = !isStaff || permissions.includes("receive_new_requests");
 
-  const { data: reqData } = await supabase.from("requests").select(LIST_SELECT)
-    .neq("source", "manual")
-    .or(`updated_at.gte.${cutoff},status.in.(${ACTIVE_STATUSES.join(",")})`)
-    .order("created_at", { ascending: false });
   const allReqs = (reqData ?? []).map(mapRow);
   const requests = canSeeAll ? allReqs : allReqs.filter(r => r.assignedTo === userId);
 
-  let actQuery = supabase.from("request_activity_logs")
-    .select("id, order_number, action, detail, performed_by_name, created_at")
-    .order("created_at", { ascending: false }).limit(20);
+  // staff ที่เห็นเฉพาะงานตัวเอง → ดึง activity เฉพาะ order ของตัวเอง (path นี้เท่านั้นที่ยิงเพิ่ม)
+  let activity = activityAll;
   if (!canSeeAll) {
     const orderNumbers = requests.map(r => r.orderNumber).filter(Boolean);
     if (orderNumbers.length === 0) {
       return { role, permissions, requests, staffUserId: userId, recentActivity: [] };
     }
-    actQuery = actQuery.in("order_number", orderNumbers);
+    const { data: staffActivity } = await supabase.from("request_activity_logs")
+      .select("id, order_number, action, detail, performed_by_name, created_at")
+      .in("order_number", orderNumbers)
+      .order("created_at", { ascending: false }).limit(20);
+    activity = staffActivity;
   }
-  const { data: activity } = await actQuery;
 
   return { role, permissions, requests, staffUserId: isStaff ? userId : undefined, recentActivity: activity ?? [] };
 }

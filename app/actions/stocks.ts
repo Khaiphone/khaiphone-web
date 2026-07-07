@@ -73,12 +73,16 @@ export async function checkImeiExists(imei: string): Promise<{ exists: boolean; 
   return { exists: true, stockId: data.id, model: data.model, status: data.status };
 }
 
+// projection สำหรับลิสต์ — ตัด JSONB หนักที่โตไม่จำกัด (status_log, audit_log, inspection_snapshot,
+// documents, notes, slip_urls, physical_checks) ซึ่งลิสต์ไม่ได้ใช้; หน้า detail ใช้ fetchStockItem(id) แบบเต็ม
+const STOCK_LIST_SELECT = "id, model, storage, color, imei, serial, grade, battery_health, cycle_count, icloud_status, carrier_lock, accessories, cost_price, shipping_cost, other_cost, selling_price, status, source_channel, request_ref, seller_name, seller_phone, received_at, inspector, photos, sold_at, sold_price, buyer_name, buyer_phone, sold_by, sale_type, partner_name, delivery_channel, delivery_status, tracking_number, delivery_address";
+
 export async function fetchStockItems(): Promise<StockItem[]> {
   await requireAuth();
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from("stocks")
-    .select("*")
+    .select(STOCK_LIST_SELECT)
     .order("received_at", { ascending: false });
   if (error) return [];
   return (data ?? []).map(mapRow);
@@ -457,17 +461,12 @@ export async function confirmStockRecheck(
 export interface RevenuePoint { date: string; revenue: number; cost: number; profit: number; }
 export interface CategoryPoint { name: string; count: number; value: number; }
 
-export async function fetchRevenueData(): Promise<RevenuePoint[]> {
-  await requireAuth();
-  const supabase = createServerClient();
+// สร้างจุดกราฟรายได้ 30 วันจากแถวที่มีอยู่แล้ว (แชร์ระหว่าง fetchRevenueData และ bundle)
+type RevenueRow = { status?: string | null; sold_at: string | null; sold_price: number | null; cost_price: number | null; shipping_cost: number | null; other_cost: number | null };
+function buildRevenuePoints(rows: RevenueRow[]): RevenuePoint[] {
   const todayRevStr = thaiDateStr();
   const sinceRevStr = thaiDateOffset(todayRevStr, -29);
-
-  const { data } = await supabase
-    .from("stocks")
-    .select("sold_at, sold_price, cost_price, shipping_cost, other_cost")
-    .eq("status", "ขายแล้ว")
-    .gte("sold_at", startOfThaiDay(sinceRevStr));
+  const sinceIso = startOfThaiDay(sinceRevStr);
 
   const map = new Map<string, { revenue: number; cost: number }>();
   // pre-fill all 30 days so chart has no gaps
@@ -478,7 +477,8 @@ export async function fetchRevenueData(): Promise<RevenuePoint[]> {
     map.set(key, { revenue: 0, cost: 0 });
   }
 
-  for (const row of data ?? []) {
+  for (const row of rows) {
+    if (!row.sold_at || row.sold_at < sinceIso) continue;
     const ds = thaiDateStr(new Date(row.sold_at));
     const [, m, day] = ds.split("-");
     const key = `${parseInt(day)}/${parseInt(m)}`;
@@ -494,15 +494,25 @@ export async function fetchRevenueData(): Promise<RevenuePoint[]> {
   }));
 }
 
-export async function fetchCategoryData(): Promise<CategoryPoint[]> {
+export async function fetchRevenueData(): Promise<RevenuePoint[]> {
   await requireAuth();
   const supabase = createServerClient();
+  const todayRevStr = thaiDateStr();
+  const sinceRevStr = thaiDateOffset(todayRevStr, -29);
+
   const { data } = await supabase
     .from("stocks")
-    .select("model, selling_price, status");
+    .select("sold_at, sold_price, cost_price, shipping_cost, other_cost")
+    .eq("status", "ขายแล้ว")
+    .gte("sold_at", startOfThaiDay(sinceRevStr));
 
+  return buildRevenuePoints(data ?? []);
+}
+
+type CategoryRow = { model: string | null; selling_price: number | null; status: string | null };
+function buildCategoryPoints(rows: CategoryRow[]): CategoryPoint[] {
   const map = new Map<string, { count: number; value: number }>();
-  for (const row of data ?? []) {
+  for (const row of rows) {
     // extract series: "iPhone 15 Pro Max" → "iPhone 15 Series"
     const match = row.model?.match(/iPhone\s+(\d+)/i);
     const series = match ? `iPhone ${match[1]} Series` : (row.model ?? "อื่นๆ");
@@ -518,6 +528,35 @@ export async function fetchCategoryData(): Promise<CategoryPoint[]> {
     .map(([name, { count, value }]) => ({ name, count, value }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 8);
+}
+
+export async function fetchCategoryData(): Promise<CategoryPoint[]> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("stocks")
+    .select("model, selling_price, status");
+
+  return buildCategoryPoints(data ?? []);
+}
+
+// ─── Dashboard bundle: สแกน stocks ครั้งเดียว → items + กราฟรายได้ + หมวดหมู่ ───
+// เดิม dashboard ยิง 3 actions (3 สแกน + 3 auth round-trips) — รวมเหลือ 1
+export async function fetchStockDashboard(): Promise<{ items: StockItem[]; revenue: RevenuePoint[]; category: CategoryPoint[] }> {
+  await requireAuth();
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from("stocks")
+    .select(STOCK_LIST_SELECT)
+    .order("received_at", { ascending: false });
+  if (error) return { items: [], revenue: buildRevenuePoints([]), category: buildCategoryPoints([]) };
+  const rows = data ?? [];
+  return {
+    items: rows.map(mapRow),
+    // เงื่อนไขเดิมของ fetchRevenueData: เฉพาะสถานะ "ขายแล้ว" (ช่วง 30 วันกรองใน buildRevenuePoints)
+    revenue: buildRevenuePoints(rows.filter(r => r.status === "ขายแล้ว")),
+    category: buildCategoryPoints(rows),
+  };
 }
 
 // ─── Sales page ──────────────────────────────────────────────────────────────

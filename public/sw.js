@@ -1,4 +1,5 @@
-const STATIC_CACHE = "kp-static-v1";
+const STATIC_CACHE = "kp-static-v2";
+const PAGE_CACHE = "kp-pages-v1"; // สำเนา HTML ล่าสุดไว้ fallback ตอนเน็ตช้า/หลุด (network-first เสมอ)
 
 self.addEventListener("install", () => self.skipWaiting());
 
@@ -26,7 +27,28 @@ self.addEventListener("fetch", (event) => {
   const isNextStatic = p.startsWith("/_next/static/");
   const isAsset = /\.(?:png|jpe?g|webp|svg|gif|ico|woff2?|ttf)$/.test(p);
   const isManifest = p.endsWith("manifest.json") || p.endsWith(".webmanifest");
-  // RSC/HTML/dynamic → ไม่แคช
+
+  // การเปิดหน้า (navigation) → network-first เสมอ (ได้ของสดเหมือนเดิม)
+  // แต่เก็บสำเนาไว้ตอบแทนเมื่อเน็ตหลุด/ล่ม — แอพยังเปิดขึ้น ไม่ค้างจอขาว
+  if (req.mode === "navigate") {
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(PAGE_CACHE);
+        try {
+          const res = await fetch(req);
+          if (res.ok) cache.put(req, res.clone());
+          return res;
+        } catch {
+          const hit = await cache.match(req, { ignoreSearch: true });
+          if (hit) return hit;
+          throw new Error("offline and no cached page");
+        }
+      })()
+    );
+    return;
+  }
+
+  // RSC/dynamic อื่นๆ → ไม่แคช
   if (!isNextStatic && !isAsset && !isManifest) return;
 
   if (isNextStatic) {

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, ClipboardList, CalendarDays, Bell, MoreHorizontal } from "lucide-react";
-import { fetchRequests } from "@/app/actions/admin-requests";
+import { fetchNewRequestCount } from "@/app/actions/admin-requests";
 import { useAdminTheme } from "@/lib/admin-theme";
 import { cacheGet } from "@/app/admin/cache";
 import type { AdminRequest } from "@/lib/types/admin";
@@ -32,9 +32,10 @@ export default function BottomTabNav() {
   useEffect(() => {
     if (!navReady) return; // เลื่อน refresh badge ออกจาก critical path ตอนเปิดแอป
     const end = perfStart("bottom-nav:badge-fetch");
-    fetchRequests().then(reqs => {
+    // นับอย่างเดียว (HEAD count) — เดิมดึงทั้งตารางมาแค่ filter นับ ซ้ำกับข้อมูล dashboard
+    fetchNewRequestCount().then(count => {
       end();
-      setNewCount(reqs.filter(r => r.status === "new").length);
+      setNewCount(count);
     });
   }, [pathname, navReady]);
 
