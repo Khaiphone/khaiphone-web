@@ -48,18 +48,19 @@ const TIER_CONFIG: Record<RiderTier, { label: string; emoji: string; color: stri
 function ProgressBar({ value, max, color, label, sub }: {
   value: number; max: number; color: string; label: string; sub?: string;
 }) {
+  const t = useRiderTheme();
   const pctNum = max > 0 ? Math.min(100, (value / max) * 100) : 0;
   const done   = value >= max;
   return (
     <div style={{ marginBottom: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: done ? color : "#374151" }}>{label}</span>
-        <span style={{ fontSize: 12, color: done ? color : "#6b7280" }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: done ? color : t.TEXT }}>{label}</span>
+        <span style={{ fontSize: 12, color: done ? color : t.TEXT2 }}>
           {sub ?? `${value} / ${max}`}
           {done && " ✓"}
         </span>
       </div>
-      <div style={{ height: 8, borderRadius: 99, background: "#e5e7eb", overflow: "hidden" }}>
+      <div style={{ height: 8, borderRadius: 99, background: t.CARD2, overflow: "hidden" }}>
         <div style={{ height: "100%", width: `${pctNum}%`, borderRadius: 99, background: color, transition: "width 0.5s ease" }} />
       </div>
     </div>
@@ -69,14 +70,15 @@ function ProgressBar({ value, max, color, label, sub }: {
 // ── Rate pill ─────────────────────────────────────────────────────────────────
 
 function RatePill({ label, value, target, good }: { label: string; value: number | null; target?: number | null; good?: boolean }) {
+  const t = useRiderTheme();
   const pctNum = value != null ? Math.min(100, Math.round(value * 100)) : null;
   const isGood = good !== undefined ? good : (target != null && value != null ? value >= target : true);
-  const color  = pctNum == null ? "#9ca3af" : isGood ? "#16a34a" : "#dc2626";
+  const color  = pctNum == null ? t.TEXT3 : isGood ? t.GREEN : t.RED;
   return (
-    <div style={{ background: "#fff", border: `1px solid #e5e7eb`, borderRadius: 12, padding: "14px 12px", textAlign: "center" }}>
-      <p style={{ margin: "0 0 4px", fontSize: 11, color: "#6b7280", fontWeight: 600 }}>{label}</p>
+    <div style={{ background: t.CARD, border: `1px solid ${t.BORDER}`, borderRadius: 12, padding: "14px 12px", textAlign: "center" }}>
+      <p style={{ margin: "0 0 4px", fontSize: 11, color: t.TEXT2, fontWeight: 600 }}>{label}</p>
       <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color }}>{pctNum != null ? `${pctNum}%` : "—"}</p>
-      {target != null && <p style={{ margin: "2px 0 0", fontSize: 10, color: "#9ca3af" }}>เป้า {Math.round(target * 100)}%</p>}
+      {target != null && <p style={{ margin: "2px 0 0", fontSize: 10, color: t.TEXT3 }}>เป้า {Math.round(target * 100)}%</p>}
     </div>
   );
 }
@@ -84,7 +86,7 @@ function RatePill({ label, value, target, good }: { label: string; value: number
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function StatsPage() {
-  const { CARD, BORDER, ACCENT, GREEN, RED, TEXT, TEXT2 } = useRiderTheme();
+  const { CARD, CARD2, BORDER, ACCENT, GREEN, RED, TEXT, TEXT2 } = useRiderTheme();
   const { userId, riderName, riderEmail } = useRiderSession();
 
   const curMonthStr = (() => {
@@ -393,7 +395,7 @@ export default function StatsPage() {
             {/* Show own position if outside top 5 */}
             {myPosition >= 5 && (
               <>
-                <div style={{ padding: "6px 16px", background: "#f9fafb" }}>
+                <div style={{ padding: "6px 16px", background: CARD2 }}>
                   <p style={{ margin: 0, fontSize: 10, color: TEXT2, textAlign: "center" }}>· · ·</p>
                 </div>
                 <div style={{ padding: "10px 16px", background: `${ACCENT}08`, display: "flex", alignItems: "center", gap: 12 }}>
@@ -450,7 +452,7 @@ export default function StatsPage() {
               return (
                 <div key={i} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: CARD2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <Package size={16} color={isDone ? ACCENT : TEXT2} />
                     </div>
                     <div style={{ minWidth: 0 }}>
@@ -466,7 +468,7 @@ export default function StatsPage() {
                         ฿{fmt(j.actual_price ?? j.estimated_price ?? 0)}
                       </p>
                     ) : (
-                      <span style={{ fontSize: 11, fontWeight: 600, color: TEXT2, background: "#f3f4f6", borderRadius: 6, padding: "3px 8px" }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: TEXT2, background: CARD2, borderRadius: 6, padding: "3px 8px" }}>
                         {j.status === "cancelled" ? "ยกเลิก" : j.status === "no_show" ? "ไม่มา" : "ปฏิเสธ"}
                       </span>
                     )}

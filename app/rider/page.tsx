@@ -122,7 +122,10 @@ export default function RiderHomePage() {
       const jid = shift.currentJobId;
       startTracking(async (payload) => {
         await riderPingLocation({ ...payload, shiftId: sid, currentJobId: jid });
-      }).catch(() => {}); // GPS may be denied — silently skip, rider can retry via toggle
+      }).catch(() => {
+        // GPS ถูกปฏิเสธ/เปิดไม่ได้ — เดิมเงียบทำให้คิดว่าออนไลน์แต่ตำแหน่งไม่ส่ง
+        alert("⚠️ เปิด GPS ไม่สำเร็จ — ตำแหน่งของคุณจะไม่ถูกส่งเข้าระบบ\nกรุณาเปิดสิทธิ์ Location ให้แอพ แล้วปิด-เปิดสถานะออนไลน์ใหม่");
+      });
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, isOnline]);
