@@ -23,7 +23,7 @@ interface SubmissionData {
   priceMin: number;
   priceMax: number;
   customer: { name: string; phone: string; email?: string };
-  appointment: { method: string; date: string; time: string; location: string; lat?: number; lng?: number };
+  appointment: { method: string; date: string; time: string; location: string; lat?: number; lng?: number; province?: string; zone?: string; serviceFee?: number };
   payment: {
     method: string;
     bankName?: string;
@@ -93,6 +93,9 @@ export async function submitRequest(data: SubmissionData) {
     appt_method:            data.appointment.method,
     appt_lat:               data.appointment.lat ?? null,
     appt_lng:               data.appointment.lng ?? null,
+    appt_province:          data.appointment.province ?? null,
+    pickup_zone:            data.appointment.zone ?? null,
+    service_fee:            data.appointment.serviceFee ?? null,
     payment_method:         data.payment.method,
     payment_bank:           data.payment.bankName  || null,
     payment_account_name:   data.payment.accountName   || null,

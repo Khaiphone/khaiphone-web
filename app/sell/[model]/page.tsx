@@ -14,6 +14,7 @@ import { fetchPublicPricingConfig } from "@/app/actions/pricing-config";
 import { getModelTypeOpts, DEFAULT_PRICING_CONFIG } from "@/lib/pricing-defaults";
 import type { PricingOption } from "@/lib/pricing-defaults";
 import { calcPrice, calcPriceRange, formatPrice } from "@/lib/pricing";
+import { classifyZone, extractProvince, PROVINCE_GROUPS, ROUND_INTERVAL_DAYS } from "@/lib/zones";
 
 const BUNDLE_KEY = "khaiphone_extra_devices";
 const BUNDLE_RETURN_KEY = "khaiphone_bundle_return";
@@ -951,7 +952,7 @@ function SellModelPageContent() {
       if (saved) setFormData(JSON.parse(saved));
     } catch {}
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const [errors, setErrors] = useState({ name: false, phone: false, terms: false, riderAddress: false, bankName: false, bankAccount: false, bankAccountName: false });
+  const [errors, setErrors] = useState({ name: false, phone: false, terms: false, riderAddress: false, province: false, bankName: false, bankAccount: false, bankAccountName: false });
   const [submitting, setSubmitting] = useState(false);
   const [sellMethod, setSellMethod] = useState<"branch" | "rider" | "parcel">("rider");
   const [payMethod, setPayMethod] = useState<"cash" | "transfer">("cash");
@@ -973,6 +974,7 @@ function SellModelPageContent() {
   // คิวรับถึงที่ที่ถูกจองแล้วของวันที่เลือก (เพื่อปิดช่วงเวลาที่เต็ม)
   const [slotAvail, setSlotAvail] = useState<{ capacity: number; counts: Record<string, number>; blockedTimes: string[]; blockedWholeDay: boolean } | null>(null);
   const [riderAddress, setRiderAddress] = useState("");
+  const [province, setProvince] = useState("");
   const [pinAddress, setPinAddress] = useState("");
   const [pinCoords, setPinCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
@@ -1170,6 +1172,23 @@ function SellModelPageContent() {
     return () => clearTimeout(t);
   }, [locationModal]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // หมุด = ความจริง → reverse-geocode พิกัดเป็น "จังหวัด" แล้วปรับ dropdown อัตโนมัติ (กันเลือกผิด)
+  useEffect(() => {
+    if (!pinCoords) return;
+    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+    if (!key) return;
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${pinCoords.lat},${pinCoords.lng}&language=th&key=${key}`);
+        const data = await res.json() as { results?: Array<{ address_components?: Array<{ long_name: string; short_name?: string; types: string[] }> }> };
+        const prov = extractProvince(data.results?.[0]?.address_components);
+        if (active && prov) { setProvince(prov); setErrors(er => ({ ...er, province: false })); }
+      } catch {}
+    })();
+    return () => { active = false; };
+  }, [pinCoords]);
+
   function handleAddToBundle(finalPicks?: (number | null)[]) {
     if (!product) return;
     const fp = finalPicks ?? picks;
@@ -1221,7 +1240,8 @@ function SellModelPageContent() {
       name:            !name,
       phone:           !phone,
       terms:           !acceptTerms,
-      riderAddress:    sellMethod === "rider" && !riderAddress.trim(),
+      riderAddress:    sellMethod === "rider" && zoneInfo.zone !== "far" && !riderAddress.trim(),
+      province:        sellMethod === "rider" && !province,
       bankName:        payMethod === "transfer" && !bankName,
       bankAccount:     payMethod === "transfer" && !bankAccount.trim(),
       bankAccountName: payMethod === "transfer" && !bankAccountName.trim(),
@@ -1231,7 +1251,7 @@ function SellModelPageContent() {
       const firstEl: HTMLElement | null =
         newErrors.name            ? nameRef.current :
         newErrors.phone           ? phoneRef.current :
-        newErrors.riderAddress    ? riderSectionRef.current :
+        (newErrors.province || newErrors.riderAddress) ? riderSectionRef.current :
         (newErrors.bankName || newErrors.bankAccount || newErrors.bankAccountName) ? bankSectionRef.current :
         newErrors.terms           ? termsSectionRef.current : null;
       firstEl?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -1239,6 +1259,12 @@ function SellModelPageContent() {
     }
     // Validate appointment time is still at least 1 hour in the future —
     // only for channels that actually schedule one (parcel has no appointment).
+    // โซนไกล + Rider → ต้องเปลี่ยนเป็นส่งพัสดุก่อน
+    if (sellMethod === "rider" && zoneInfo.zone === "far") {
+      riderSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      alert("พื้นที่ของคุณอยู่นอกเขตรับถึงที่ กรุณาเลือกช่องทาง “ส่งเครื่องทางพัสดุ”");
+      return;
+    }
     if (sellMethod !== "parcel") {
       const validSlots = getAvailableTimeSlots(appointDate);
       if (validSlots.length === 0 || !validSlots.includes(appointTime)) {
@@ -1288,6 +1314,11 @@ function SellModelPageContent() {
         time:   appointTime,
         location,
         ...(pinCoords ? { lat: pinCoords.lat, lng: pinCoords.lng } : {}),
+        ...(sellMethod === "rider" ? {
+          province,
+          zone: zoneInfo.zone,
+          ...(zoneInfo.fee > 0 ? { serviceFee: zoneInfo.fee } : {}),
+        } : {}),
       },
       payment: {
         method:        payMethod,
@@ -1344,6 +1375,8 @@ function SellModelPageContent() {
   const nextDayStr = (iso: string) => { const d = new Date(iso + "T00:00:00"); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${ddp(d.getMonth() + 1)}-${ddp(d.getDate())}`; };
   const effectiveAppointDate = (isLateNight(appointTime) && appointDate === todayStr) ? nextDayStr(appointDate) : appointDate;
   const isRolledLateNight = effectiveAppointDate !== appointDate;
+  // โซนรับถึงที่ (จำแนกจากจังหวัด) — คุมค่าบริการ/flow ของช่องทาง Rider
+  const zoneInfo = classifyZone(province);
 
   // URL helpers
   function urlWith(key: string, value: string) {
@@ -2138,6 +2171,51 @@ function SellModelPageContent() {
                           </div>
                           <h3 className="font-bold text-black">นัดหมายรับถึงที่</h3>
                         </div>
+                        {/* จังหวัด — คัดโซน (ปักหมุดแล้วระบบจะปรับให้อัตโนมัติ) */}
+                        <div className="mb-4">
+                          <label className="block text-xs font-semibold mb-1.5" style={{ color: "#374151" }}>
+                            จังหวัดของคุณ <span style={{ color: "#EF4444" }}>*</span>
+                          </label>
+                          <select value={province} onChange={e => { setProvince(e.target.value); if (e.target.value) setErrors(er => ({ ...er, province: false })); }}
+                            className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-white outline-none"
+                            style={{ border: `1.5px solid ${errors.province ? "#EF4444" : "#E5E7EB"}`, fontFamily: "inherit", color: province ? "#111" : "#9CA3AF" }}>
+                            <option value="">-- เลือกจังหวัด --</option>
+                            {PROVINCE_GROUPS.map(g => (
+                              <optgroup key={g.label} label={g.label}>
+                                {g.provinces.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                              </optgroup>
+                            ))}
+                          </select>
+                          {errors.province && <p className="text-xs mt-1" style={{ color: "#EF4444" }}>กรุณาเลือกจังหวัด</p>}
+                          {province && zoneInfo.zone === "core" && (
+                            <p className="text-xs mt-1.5 font-medium" style={{ color: "#059669" }}>
+                              🛵 {zoneInfo.partial ? "บางพื้นที่ในจังหวัดนี้รับถึงที่ฟรี — ทีมงานยืนยันอีกครั้งหลังจอง" : "พื้นที่บริการหลัก — รับถึงที่ฟรี ไม่มีค่าบริการ"}
+                            </p>
+                          )}
+                        </div>
+                        {zoneInfo.zone === "far" ? (
+                          <div className="rounded-xl p-4" style={{ background: "#EFF6FF", border: "1px solid #BFDBFE" }}>
+                            <p className="font-semibold text-sm mb-1" style={{ color: "#1D4ED8" }}>📦 พื้นที่นี้แนะนำ &ldquo;ส่งพัสดุ&rdquo;</p>
+                            <p className="text-xs leading-relaxed mb-3" style={{ color: "#374151" }}>ยังไม่มีรอบเข้ารับพื้นที่คุณ แต่ขายได้สบายๆ ผ่านการส่งพัสดุ — ราคาล็อกไว้ก่อนส่ง ตรวจแล้วโอนทันที</p>
+                            <button type="button" onClick={() => setSellMethod("parcel")}
+                              className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: "#1D4ED8", border: "none", cursor: "pointer" }}>
+                              เปลี่ยนเป็นส่งพัสดุ →
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            {zoneInfo.zone === "round" && (
+                              <div className="rounded-xl p-4 mb-4" style={{ background: "#FFF7ED", border: "1px solid #F59E0B" }}>
+                                <p className="font-semibold text-sm mb-1" style={{ color: "#B45309" }}>📅 {province} — เราเข้ารับทุกๆ {ROUND_INTERVAL_DAYS} วัน</p>
+                                <p className="text-xs leading-relaxed" style={{ color: "#374151" }}>เลือกวันที่คุณสะดวกด้านล่างได้เลย — แอดมินจะติดต่อกลับเพื่อยืนยันรอบเข้ารับที่ใกล้เคียงที่สุด ราคาที่ประเมินถูกล็อกไว้ให้</p>
+                                {zoneInfo.fee > 0 && (
+                                  <div className="mt-3 rounded-lg px-3 py-2.5" style={{ background: "#fff", border: "1px dashed #F59E0B" }}>
+                                    <p className="text-xs font-bold" style={{ color: "#B45309" }}>ค่าบริการเข้ารับ ฿{zoneInfo.fee.toLocaleString()} · หักจากยอดรับซื้อ</p>
+                                    <p className="text-[11px] mt-0.5" style={{ color: "#6B7280" }}>ยอดสุทธิโดยประมาณ ฿{(price - zoneInfo.fee).toLocaleString()} (จากยอด ฿{price.toLocaleString()})</p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                         {/* Address */}
                         <div ref={riderSectionRef} className="mb-4">
                           <label className="block text-xs font-semibold mb-1.5" style={{ color: "#374151" }}>
@@ -2225,6 +2303,8 @@ function SellModelPageContent() {
                             })()}
                           </div>
                         </div>
+                          </>
+                        )}
                       </div>
                     )}
 

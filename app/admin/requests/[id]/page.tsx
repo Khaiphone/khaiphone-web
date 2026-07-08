@@ -1946,6 +1946,21 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                     <p style={{ color: TEXT2, fontSize: "13px", margin: 0, wordBreak: "break-all" }}>{request.appointment.location}</p>
                   )}
                 </div>
+                {request.appointment.method === "rider" && request.appointment.zone && (
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginTop: 10 }}>
+                    {request.appointment.province && <span style={{ fontSize: 12, color: TEXT2 }}>{request.appointment.province}</span>}
+                    {(() => {
+                      const z = request.appointment.zone;
+                      const cfg = z === "core" ? { l: "โซนหลัก · ฟรี", c: "#166534", bg: "#F0FDF4", bd: "#86efac" }
+                        : z === "round" ? { l: "เข้ารับเป็นรอบ", c: "#9a3412", bg: "#FFF7ED", bd: "#fdba74" }
+                        : { l: "นอกพื้นที่", c: "#1e40af", bg: "#EFF6FF", bd: "#bfdbfe" };
+                      return <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 6, color: cfg.c, background: cfg.bg, border: `1px solid ${cfg.bd}` }}>{cfg.l}</span>;
+                    })()}
+                    {request.appointment.serviceFee ? (
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 6, color: "#9a3412", background: "#FFF7ED", border: "1px solid #fdba74" }}>ค่าบริการ ฿{request.appointment.serviceFee.toLocaleString()} · หักจากยอด</span>
+                    ) : null}
+                  </div>
+                )}
               </>
             ) : (
               <>
