@@ -1429,6 +1429,29 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                         </div>
                       </div>
                     )}
+                    {(() => {
+                      const rh = (request.inspection as { repairHistory?: { status: string; parts?: string[]; partType?: string; note?: string } }).repairHistory;
+                      if (!rh) return null;
+                      const yes = rh.status === "yes";
+                      const ptLabel: Record<string, string> = { genuine: "อะไหล่แท้ (Apple)", aftermarket: "อะไหล่เทียม", unsure: "ไม่แน่ใจชนิดอะไหล่" };
+                      return (
+                        <div style={{ marginBottom: 16 }}>
+                          <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>ประวัติการซ่อม / อะไหล่</p>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center" }}>
+                            <span style={{ padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: yes ? "#FFF7ED" : rh.status === "unsure" ? "#F9FAFB" : "#F0FDF4", border: `1px solid ${yes ? "#fdba74" : rh.status === "unsure" ? "#e5e7eb" : "#86efac"}`, color: yes ? "#9a3412" : rh.status === "unsure" ? "#6b7280" : "#166534" }}>
+                              {rh.status === "no" ? "ไม่เคยซ่อม" : rh.status === "unsure" ? "ไม่แน่ใจ" : "เคยซ่อม"}
+                            </span>
+                            {yes && (rh.parts ?? []).map((p, i) => (
+                              <span key={i} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, background: "#FFF7ED", border: "1px solid #fdba74", color: "#9a3412" }}>{p}</span>
+                            ))}
+                            {yes && rh.partType && (
+                              <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, fontWeight: 600, background: rh.partType === "aftermarket" ? "#FEF2F2" : rh.partType === "genuine" ? "#F0FDF4" : "#F9FAFB", border: `1px solid ${rh.partType === "aftermarket" ? "#fca5a5" : rh.partType === "genuine" ? "#86efac" : "#e5e7eb"}`, color: rh.partType === "aftermarket" ? "#991b1b" : rh.partType === "genuine" ? "#166534" : "#6b7280" }}>{ptLabel[rh.partType] ?? rh.partType}</span>
+                            )}
+                          </div>
+                          {rh.note && <p style={{ margin: "6px 0 0", fontSize: 12, color: TEXT2 }}>📝 {rh.note}</p>}
+                        </div>
+                      );
+                    })()}
                     <div style={{ marginBottom: 16 }}>
                       <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>ปัญหาที่พบ</p>
                       {(request.inspection.issues ?? []).length === 0
@@ -1782,6 +1805,31 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                       </div>
                     </div>
                   )}
+
+                  {/* Repair history */}
+                  {(() => {
+                    const rh = (request.inspection as { repairHistory?: { status: string; parts?: string[]; partType?: string; note?: string } }).repairHistory;
+                    if (!rh) return null;
+                    const yes = rh.status === "yes";
+                    const ptLabel: Record<string, string> = { genuine: "อะไหล่แท้ (Apple)", aftermarket: "อะไหล่เทียม", unsure: "ไม่แน่ใจชนิดอะไหล่" };
+                    return (
+                      <div style={{ marginBottom: 16 }}>
+                        <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: TEXT3 }}>ประวัติการซ่อม / อะไหล่</p>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center" }}>
+                          <span style={{ padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: yes ? "#FFF7ED" : rh.status === "unsure" ? "#F9FAFB" : "#F0FDF4", border: `1px solid ${yes ? "#fdba74" : rh.status === "unsure" ? "#e5e7eb" : "#86efac"}`, color: yes ? "#9a3412" : rh.status === "unsure" ? "#6b7280" : "#166534" }}>
+                            {rh.status === "no" ? "ไม่เคยซ่อม" : rh.status === "unsure" ? "ไม่แน่ใจ" : "เคยซ่อม"}
+                          </span>
+                          {yes && (rh.parts ?? []).map((p, i) => (
+                            <span key={i} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, background: "#FFF7ED", border: "1px solid #fdba74", color: "#9a3412" }}>{p}</span>
+                          ))}
+                          {yes && rh.partType && (
+                            <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, fontWeight: 600, background: rh.partType === "aftermarket" ? "#FEF2F2" : rh.partType === "genuine" ? "#F0FDF4" : "#F9FAFB", border: `1px solid ${rh.partType === "aftermarket" ? "#fca5a5" : rh.partType === "genuine" ? "#86efac" : "#e5e7eb"}`, color: rh.partType === "aftermarket" ? "#991b1b" : rh.partType === "genuine" ? "#166534" : "#6b7280" }}>{ptLabel[rh.partType] ?? rh.partType}</span>
+                          )}
+                        </div>
+                        {rh.note && <p style={{ margin: "6px 0 0", fontSize: 12, color: TEXT2 }}>📝 {rh.note}</p>}
+                      </div>
+                    );
+                  })()}
 
                   {/* Accessories */}
                   {((request.inspection as { accessories?: string[] }).accessories ?? []).length > 0 && (

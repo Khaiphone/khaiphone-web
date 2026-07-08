@@ -113,6 +113,12 @@ export interface InspectionData {
   accessories?: string[];
   extraInspections?: ExtraDeviceInspection[];
   sickw_report?: string;
+  repairHistory?: {
+    status: "no" | "yes" | "unsure";
+    parts?: string[];
+    partType?: "genuine" | "aftermarket" | "unsure";
+    note?: string;
+  };
 }
 
 export interface AdminRequest {

@@ -40,6 +40,19 @@ const PHOTO_SLOTS = [
   { key: "screen", label: "หน้าจอ"  },
 ] as const;
 
+// รูปหน้าจอตั้งค่า = หลักฐาน (กันข้อพิพาทภายหลัง)
+const PROOF_SLOTS = [
+  { key: "scr-icloud",  label: "หน้า iCloud" },
+  { key: "scr-battery", label: "Battery Health" },
+  { key: "scr-about",   label: "หน้าเกี่ยวกับ" },
+] as const;
+// ประวัติชิ้นส่วน — iOS แสดงเฉพาะเครื่องที่เคยเปลี่ยนอะไหล่ → ถ่ายเมื่อระบุว่า "เคยซ่อม"
+const PARTS_SLOT = { key: "scr-parts", label: "ประวัติชิ้นส่วน" } as const;
+// ทุก key ที่ถือเป็น "ช่องรูป" (ใช้ hydrate/filter แยกจากรูปตำหนิ)
+const ALL_SLOT_KEYS: string[] = [...PHOTO_SLOTS, ...PROOF_SLOTS, PARTS_SLOT].map(s => s.key);
+
+const REPAIR_PARTS = ["จอ", "แบตเตอรี่", "กล้อง", "พอร์ตชาร์จ", "ฝาหลัง", "บอร์ด/ชิป"];
+
 const INSPECT_KEYS = ["body", "screen", "display", "battery", "warranty", "icloud"] as const;
 const INSPECT_LABELS: Record<string, string> = {
   body: "สภาพตัวเครื่องภายนอก", screen: "หน้าจอ", display: "การแสดงผล",
@@ -48,17 +61,27 @@ const INSPECT_LABELS: Record<string, string> = {
 
 const FUNCTIONAL_DEFAULTS: FunctionalTest[] = [
   { label: "Face ID / Touch ID", pass: true },
+  { label: "True Tone", pass: true },
   { label: "กล้องหลัง (ถ่ายภาพ/วิดีโอ)", pass: true },
   { label: "กล้องหน้า (Selfie)", pass: true },
+  { label: "แฟลช / ไฟฉาย", pass: true },
   { label: "ลำโพง (Speaker)", pass: true },
+  { label: "หูฟังสนทนา (Earpiece)", pass: true },
   { label: "ไมโครโฟน", pass: true },
+  { label: "พร็อกซิมิตี้ (จอดับตอนแนบหู)", pass: true },
+  { label: "เซนเซอร์วัดแสง / ปรับแสงอัตโนมัติ", pass: true },
+  { label: "จอภาพ (ไม่เบิร์น/ไม่มีเส้น/จุดเสีย)", pass: true },
   { label: "Wi-Fi", pass: true },
-  { label: "Cellular / SIM", pass: true },
   { label: "Bluetooth", pass: true },
+  { label: "Cellular / SIM", pass: true },
+  { label: "NFC (ทาบจ่าย)", pass: true },
   { label: "GPS", pass: true },
   { label: "Haptic / Vibration", pass: true },
-  { label: "ชาร์จพอร์ต", pass: true },
-  { label: "ปุ่มด้านข้าง / Volume", pass: true },
+  { label: "ชาร์จพอร์ต (สายชาร์จ)", pass: true },
+  { label: "ชาร์จไร้สาย / MagSafe", pass: true },
+  { label: "ปุ่ม Power / Side", pass: true },
+  { label: "ปุ่ม Volume ขึ้น-ลง", pass: true },
+  { label: "สวิตช์ปิดเสียง / Action Button", pass: true },
 ];
 
 const GRADE_OPTIONS: { value: string; color: string }[] = [
@@ -364,13 +387,13 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
     const existing = (job.inspection as { photos?: string[] } | undefined)?.photos ?? [];
     const slots: Partial<Record<string, string>> = {};
     for (const url of existing)
-      for (const s of PHOTO_SLOTS)
-        if (url.includes(`/slot-${s.key}-`)) { slots[s.key] = url; break; }
+      for (const key of ALL_SLOT_KEYS)
+        if (url.includes(`/slot-${key}-`)) { slots[key] = url; break; }
     return slots;
   });
   const [defectPhotos, setDefectPhotos] = useState<string[]>(() => {
     const existing = (job.inspection as { photos?: string[] } | undefined)?.photos ?? [];
-    return existing.filter(url => !PHOTO_SLOTS.some(s => url.includes(`/slot-${s.key}-`)));
+    return existing.filter(url => !ALL_SLOT_KEYS.some(key => url.includes(`/slot-${key}-`)));
   });
   const defectRef = useRef<HTMLInputElement>(null!);
   const [uploading, setUploading] = useState(false);
@@ -411,6 +434,13 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   const [conditionGrade, setConditionGrade] = useState<string>((job.inspection as { conditionGrade?: string } | undefined)?.conditionGrade ?? "");
   const [conditionLabel, setConditionLabel] = useState<string>((job.inspection as { conditionLabel?: string } | undefined)?.conditionLabel ?? "");
   const [inspectNote, setInspectNote] = useState<string>((job.inspection as { note?: string } | undefined)?.note ?? "");
+  // ประวัติการซ่อม / เปลี่ยนอะไหล่
+  const savedRepair = (job.inspection as { repairHistory?: { status?: string; parts?: string[]; partType?: string; note?: string } } | undefined)?.repairHistory;
+  const [repairedStatus, setRepairedStatus] = useState<"" | "no" | "yes" | "unsure">((savedRepair?.status as "no" | "yes" | "unsure") ?? "");
+  const [repairedParts, setRepairedParts] = useState<string[]>(savedRepair?.parts ?? []);
+  const [repairedPartType, setRepairedPartType] = useState<"" | "genuine" | "aftermarket" | "unsure">((savedRepair?.partType as "genuine" | "aftermarket" | "unsure") ?? "");
+  const [repairNote, setRepairNote] = useState<string>(savedRepair?.note ?? "");
+  const repairRef = useRef<HTMLDivElement>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const revisionNote = (job.inspection as { revisionNote?: string } | undefined)?.revisionNote ?? "";
@@ -422,6 +452,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   }, [revisionNote]);
 
   const photoSlotsRef  = useRef<HTMLDivElement>(null);
+  const proofSlotsRef  = useRef<HTMLDivElement>(null);
   const serialRef      = useRef<HTMLDivElement>(null);
   const colorRef       = useRef<HTMLDivElement>(null);
   const batteryRef     = useRef<HTMLDivElement>(null);
@@ -591,6 +622,14 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
         conditionGrade: conditionGrade || undefined,
         conditionLabel: conditionLabel || undefined,
         note: inspectNote.trim() || undefined,
+        repairHistory: repairedStatus ? {
+          status: repairedStatus,
+          ...(repairedStatus === "yes" ? {
+            parts: repairedParts.length ? repairedParts : undefined,
+            partType: repairedPartType || undefined,
+          } : {}),
+          note: repairNote.trim() || undefined,
+        } : undefined,
       });
       if (!result.success) { setError((result as { success: false; error?: string }).error ?? "เกิดข้อผิดพลาด"); return; }
       setIsEditingInspection(false);
@@ -646,6 +685,11 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
               insp.imei   ? ["IMEI",   insp.imei]   : null,
               insp.serial ? ["Serial", insp.serial]  : null,
               insp.batteryHealth ? ["Battery", `${insp.batteryHealth}%`] : null,
+              (() => {
+                const rh = (insp as { repairHistory?: { status: string; parts?: string[] } }).repairHistory;
+                if (!rh) return null;
+                return ["ประวัติซ่อม", rh.status === "no" ? "ไม่เคยซ่อม" : rh.status === "unsure" ? "ไม่แน่ใจ" : `เคยซ่อม${rh.parts?.length ? `: ${rh.parts.join(", ")}` : ""}`] as [string, string];
+              })(),
             ].filter((x): x is [string, string] => !!x).map(([label, value]) => (
               <div key={label as string} style={{ background: c.CARD, borderRadius: 8, padding: "8px 10px" }}>
                 <p style={{ margin: "0 0 2px", fontSize: 10, color: c.TEXT2 }}>{label}</p>
@@ -785,6 +829,24 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
         {/* No capture attr → lets the rider pick from gallery or camera (defect photos only) */}
         <input ref={defectRef} type="file" accept="image/*" multiple style={{ display: "none" }}
           onChange={e => { if (e.target.files?.length) handleDefectPhotos(e.target.files); }} />
+      </div>
+
+      {/* Proof screenshots — หลักฐานหน้าจอตั้งค่า */}
+      <div ref={proofSlotsRef}>
+        <SectionLabel c={c}>รูปหน้าจอ (หลักฐาน)</SectionLabel>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+          {PROOF_SLOTS.map(slot => (
+            <SmallPhotoBox key={slot.key} slotKey={slot.key} label={slot.label}
+              url={slotPhotos[slot.key]} onCapture={f => handleSlotPhoto(slot.key, f)} uploading={uploading} c={c} />
+          ))}
+          {repairedStatus === "yes" && (
+            <SmallPhotoBox key={PARTS_SLOT.key} slotKey={PARTS_SLOT.key} label={PARTS_SLOT.label}
+              url={slotPhotos[PARTS_SLOT.key]} onCapture={f => handleSlotPhoto(PARTS_SLOT.key, f)} uploading={uploading} c={c} />
+          )}
+        </div>
+        <p style={{ margin: "6px 0 0", fontSize: 11, color: c.TEXT2, lineHeight: 1.5 }}>
+          iCloud: ตั้งค่า &gt; [ชื่อบัญชี] · Battery: ตั้งค่า &gt; แบตเตอรี่ &gt; สุขภาพแบตเตอรี่ · เกี่ยวกับ: ตั้งค่า &gt; ทั่วไป &gt; เกี่ยวกับ
+        </p>
       </div>
 
       {/* Device info */}
@@ -995,13 +1057,81 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
 
       {/* Functional tests */}
       <div ref={functionalRef}>
-        <SectionLabel c={c}>ฟังก์ชันการใช้งาน</SectionLabel>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <SectionLabel c={c}>ฟังก์ชันการใช้งาน</SectionLabel>
+          <button onClick={() => setFunctional(prev => prev.map(t => t.pass === null ? { ...t, pass: true } : t))}
+            style={{ padding: "5px 12px", borderRadius: 8, border: `1px solid ${c.ACCENT}`, background: "rgba(74,222,128,0.12)", color: c.ACCENT, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+            ✓ ที่เหลือ = ปกติ
+          </button>
+        </div>
         <Card c={c}>
           <div style={{ padding: "0 16px" }}>
             {functional.map((test, i) => (
               <CheckRow key={test.label} label={test.label} pass={test.pass}
                 onToggle={v => setFunctional(prev => prev.map((t,j) => j===i ? {...t,pass:v} : t))} c={c} />
             ))}
+          </div>
+        </Card>
+      </div>
+
+      {/* Repair history */}
+      <div ref={repairRef}>
+        <SectionLabel c={c}>ประวัติการซ่อม / เปลี่ยนอะไหล่</SectionLabel>
+        <Card c={c}>
+          <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", gap: 6 }}>
+              {([{ v: "no", l: "ไม่เคย" }, { v: "yes", l: "เคย" }, { v: "unsure", l: "ไม่แน่ใจ" }] as const).map(o => {
+                const active = repairedStatus === o.v;
+                const col = o.v === "no" ? c.ACCENT : o.v === "yes" ? "#F59E0B" : c.TEXT2;
+                return (
+                  <button key={o.v} onClick={() => setRepairedStatus(active ? "" : o.v)}
+                    style={{ flex: 1, padding: "9px 0", borderRadius: 9, border: `2px solid ${active ? col : c.BORDER}`, background: active ? `${col}22` : c.CARD2, color: active ? col : c.TEXT2, fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
+                    {o.l}
+                  </button>
+                );
+              })}
+            </div>
+            {repairedStatus === "yes" && (
+              <>
+                <div>
+                  <p style={{ margin: "0 0 6px", fontSize: 11, color: c.TEXT2, fontWeight: 600 }}>อะไหล่ที่เปลี่ยน</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {REPAIR_PARTS.map(p => {
+                      const on = repairedParts.includes(p);
+                      return (
+                        <button key={p} onClick={() => setRepairedParts(prev => on ? prev.filter(x => x !== p) : [...prev, p])}
+                          style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${on ? "#F59E0B" : c.BORDER}`, background: on ? "rgba(245,158,11,0.12)" : c.CARD, color: on ? "#F59E0B" : c.TEXT2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+                          {p}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <p style={{ margin: "0 0 6px", fontSize: 11, color: c.TEXT2, fontWeight: 600 }}>ชนิดอะไหล่</p>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {([{ v: "genuine", l: "แท้ (Apple)" }, { v: "aftermarket", l: "เทียม" }, { v: "unsure", l: "ไม่แน่ใจ" }] as const).map(o => {
+                      const active = repairedPartType === o.v;
+                      const col = o.v === "genuine" ? c.ACCENT : o.v === "aftermarket" ? c.RED : c.TEXT2;
+                      return (
+                        <button key={o.v} onClick={() => setRepairedPartType(active ? "" : o.v)}
+                          style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: `2px solid ${active ? col : c.BORDER}`, background: active ? `${col}22` : c.CARD2, color: active ? col : c.TEXT2, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+                          {o.l}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <p style={{ margin: 0, fontSize: 11, color: c.TEXT2, lineHeight: 1.5 }}>
+                  💡 เช็คของแท้/เทียมได้ที่ <b>ตั้งค่า &gt; ทั่วไป &gt; เกี่ยวกับ &gt; ประวัติชิ้นส่วนและบริการ</b> แล้วถ่ายรูปหน้านี้ในส่วน &ldquo;รูปหน้าจอ (หลักฐาน)&rdquo;
+                </p>
+              </>
+            )}
+            {(repairedStatus === "yes" || repairedStatus === "unsure") && (
+              <textarea value={repairNote} onChange={e => setRepairNote(e.target.value)} rows={2} maxLength={500}
+                placeholder="ระบุเพิ่มเติม เช่น ร้านที่ซ่อม / อาการก่อนซ่อม / ที่ลูกค้าแจ้ง"
+                style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 9, border: `1px solid ${c.BORDER}`, background: c.CARD2, color: c.TEXT, fontSize: 13, fontFamily: "inherit", resize: "vertical", lineHeight: 1.5 }} />
+            )}
           </div>
         </Card>
       </div>
@@ -1104,11 +1234,14 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
 
         const missing: Array<{ label: string; ref: React.RefObject<HTMLDivElement | null> }> = [];
         if (!PHOTO_SLOTS.every(s => !!slotPhotos[s.key])) missing.push({ label: "รูปภาพครบทุกด้าน", ref: photoSlotsRef });
+        if (!PROOF_SLOTS.every(s => !!slotPhotos[s.key])) missing.push({ label: "รูปหน้าจอหลักฐาน (iCloud/Battery/เกี่ยวกับ)", ref: proofSlotsRef });
+        if (repairedStatus === "yes" && !slotPhotos[PARTS_SLOT.key]) missing.push({ label: "รูปประวัติชิ้นส่วน", ref: proofSlotsRef });
         if (!serial.trim())                          missing.push({ label: "Serial Number",                         ref: serialRef });
         if (!color.trim())                           missing.push({ label: "สีตัวเครื่อง",                         ref: colorRef });
         if (!battery.trim())                         missing.push({ label: "Battery Health",                        ref: batteryRef });
         if (!warrantyStatus)                         missing.push({ label: "สถานะประกัน",                          ref: warrantyRef });
         if (functional.some(t => t.pass === null))   missing.push({ label: "ฟังก์ชันการใช้งาน (ยังมีที่ไม่ได้เลือก)", ref: functionalRef });
+        if (!repairedStatus)                         missing.push({ label: "ประวัติการซ่อม (เคย/ไม่เคย)",           ref: repairRef });
         if (!conditionGrade)                         missing.push({ label: "เกรดสภาพ",                             ref: gradeRef });
 
         function scrollToFirst() {

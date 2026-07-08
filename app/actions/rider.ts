@@ -60,6 +60,15 @@ async function autoCreateStock(requestId: string) {
     physical_checks: [
       ...(insp.criteria ?? []).map((c: { label: string; pass: boolean; actual?: string }) => ({ label: c.label, condition: c.pass ? "ปกติ" : (c.actual?.trim() || "มีตำหนิ") })),
       ...(insp.functionalTests ?? []).map((t: { label: string; pass: boolean }) => ({ label: t.label, condition: t.pass ? "ปกติ" : "มีปัญหา" })),
+      ...(() => {
+        const r = (insp as { repairHistory?: { status: string; parts?: string[]; partType?: string } }).repairHistory;
+        if (!r) return [];
+        const partTypeLabel: Record<string, string> = { genuine: "อะไหล่แท้", aftermarket: "อะไหล่เทียม", unsure: "ไม่แน่ใจชนิดอะไหล่" };
+        const cond = r.status === "no" ? "ไม่เคยซ่อม"
+          : r.status === "unsure" ? "ไม่แน่ใจ"
+          : `เคยซ่อม: ${(r.parts ?? []).join(", ") || "ไม่ระบุชิ้นส่วน"}${r.partType ? ` (${partTypeLabel[r.partType] ?? r.partType})` : ""}`;
+        return [{ label: "ประวัติการซ่อม", condition: cond }];
+      })(),
     ],
     cost_price:     current.actual_price ?? current.estimated_price ?? 0,
     shipping_cost:  0, other_cost: 0, selling_price: 0,
@@ -86,6 +95,7 @@ async function autoCreateStock(requestId: string) {
       functionalTests: insp.functionalTests ?? [],
       issues:          insp.issues          ?? [],
       accessories:     Array.isArray(insp.accessories) ? insp.accessories : [],
+      repairHistory:   (insp as { repairHistory?: unknown }).repairHistory ?? null,
     },
     notes:      [],
     status_log: [{ status: "รอตรวจ", timestamp: now, note: `สร้างอัตโนมัติจาก ${current.order_number} (ไรเดอร์)`, by: "system" }],
@@ -438,6 +448,12 @@ export async function riderSaveInspection(id: string, inspection: {
   conditionGrade?: string;
   conditionLabel?: string;
   note?: string; // หมายเหตุอิสระจากไรเดอร์ถึงแอดมิน
+  repairHistory?: {
+    status: "no" | "yes" | "unsure";
+    parts?: string[];
+    partType?: "genuine" | "aftermarket" | "unsure";
+    note?: string;
+  };
 }) {
   const user = await requireAuth();
   const supabase = createServerClient();
