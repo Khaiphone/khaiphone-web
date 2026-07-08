@@ -394,6 +394,7 @@ export async function confirmStockRecheck(
     note?: string;
     recheckCriteria?: { label: string; stockActual: string; pass: boolean }[];
     recheckFunctionalTests?: { label: string; pass: boolean }[];
+    recheckAccessories?: { label: string; present: boolean }[];
   },
 ): Promise<{ success: boolean; error?: string }> {
   await requireAuth();
@@ -427,6 +428,7 @@ export async function confirmStockRecheck(
   const newPhysicalChecks = [
     ...(data.recheckCriteria ?? []).map(c => ({ label: c.label, condition: c.pass ? "ปกติ" : (c.stockActual?.trim() || "มีตำหนิ") })),
     ...(data.recheckFunctionalTests ?? []).map(t => ({ label: t.label, condition: t.pass ? "ปกติ" : "มีปัญหา" })),
+    ...(data.recheckAccessories ?? []).map(a => ({ label: a.label, condition: a.present ? "มีครบ" : "ขาด/ไม่มี" })),
   ];
 
   // Keep original criteria/functionalTests untouched; store recheck results separately
@@ -434,6 +436,7 @@ export async function confirmStockRecheck(
     ...(current?.inspection_snapshot ?? {}),
     recheckCriteria:        data.recheckCriteria        ?? [],
     recheckFunctionalTests: data.recheckFunctionalTests ?? [],
+    recheckAccessories:     data.recheckAccessories     ?? [],
     recheckBy:              data.inspector,
     recheckAt:              now,
   };

@@ -110,6 +110,7 @@ export interface StockItem {
     issues?: string[];
     recheckCriteria?: { label: string; stockActual: string; pass: boolean }[];
     recheckFunctionalTests?: { label: string; pass: boolean }[];
+    recheckAccessories?: { label: string; present: boolean }[];
     recheckBy?: string;
     recheckAt?: string;
     conditionGrade?: string | null;

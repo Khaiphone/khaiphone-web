@@ -85,6 +85,7 @@ async function autoCreateStock(requestId: string) {
       criteria:        insp.criteria        ?? [],
       functionalTests: insp.functionalTests ?? [],
       issues:          insp.issues          ?? [],
+      accessories:     Array.isArray(insp.accessories) ? insp.accessories : [],
     },
     notes:      [],
     status_log: [{ status: "รอตรวจ", timestamp: now, note: `สร้างอัตโนมัติจาก ${current.order_number} (ไรเดอร์)`, by: "system" }],

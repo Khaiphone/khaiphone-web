@@ -118,6 +118,8 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
   const [recheckFunctional, setRecheckFunctional] = useState<{ label: string; pass: boolean; verified: boolean }[]>(
     (item?.inspectionSnapshot?.functionalTests ?? []).map(t => ({ ...t, verified: false }))
   );
+  // อุปกรณ์ที่รับมา (กล่อง/สาย ฯลฯ) — pass = มี/ครบ
+  const [recheckAccessories, setRecheckAccessories] = useState<{ label: string; pass: boolean; verified: boolean }[]>([]);
   const [recheckSaving, setRecheckSaving] = useState(false);
   const [recheckErr, setRecheckErr] = useState<string | null>(null);
   const [slipUploading, setSlipUploading] = useState(false);
@@ -135,6 +137,26 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
       }
     });
   }, []);
+
+  // ลิสต์สต็อกใช้ projection เบา (ไม่มี inspection_snapshot) แล้ว hydrate เต็มตอนเปิด drawer —
+  // เติมรายการเทียบของรีเช็กเมื่อ snapshot มาถึง (เฉพาะตอนยังว่าง จะได้ไม่ทับที่กรอกไว้)
+  useEffect(() => {
+    const snap = item?.inspectionSnapshot;
+    setRecheckCriteria(prev => prev.length ? prev :
+      (snap?.criteria ?? []).map(cr => ({ label: cr.label, stated: cr.stated, fieldActual: cr.actual, stockActual: cr.actual, pass: cr.pass, verified: false })));
+    setRecheckFunctional(prev => prev.length ? prev :
+      (snap?.functionalTests ?? []).map(t => ({ ...t, verified: false })));
+    // อุปกรณ์: ใช้จาก snapshot ก่อน ถ้าไม่มีก็ fallback จากฟิลด์ accessories (string) ของสต็อก
+    setRecheckAccessories(prev => {
+      if (prev.length) return prev;
+      const fromSnap = snap?.accessories;
+      const list = (fromSnap && fromSnap.length)
+        ? fromSnap
+        : (item?.accessories ?? "").split(",").map(s => s.trim()).filter(Boolean);
+      return list.map(label => ({ label, pass: true, verified: false }));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item?.id, item?.inspectionSnapshot, item?.accessories]);
 
   if (!item) return null;
 
@@ -645,6 +667,45 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                             </div>
                           )}
 
+                          {/* ─── อุปกรณ์ที่รับมา (เทียบกับที่แจ้ง เช่น กล่อง สาย) ─── */}
+                          {recheckAccessories.length > 0 && (() => {
+                              const verifiedAcc = recheckAccessories.filter(a => a.verified).length;
+                              return (
+                                <div style={{ marginBottom: 14 }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+                                    <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: c.text }}>อุปกรณ์ที่รับมา</p>
+                                    <span style={{ fontSize: 10, color: verifiedAcc === recheckAccessories.length ? "#16a34a" : c.text3 }}>
+                                      {verifiedAcc}/{recheckAccessories.length} ยืนยันแล้ว
+                                    </span>
+                                  </div>
+                                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                    {recheckAccessories.map((a, i) => {
+                                      const btnStyle: React.CSSProperties = a.verified
+                                        ? a.pass
+                                          ? { background: "#16a34a", color: "#fff", border: "1px solid #16a34a" }
+                                          : { background: "#dc2626", color: "#fff", border: "1px solid #dc2626" }
+                                        : { background: "transparent", color: c.text3, border: `1px solid ${c.border2}` };
+                                      return (
+                                        <button
+                                          key={i}
+                                          onClick={() => setRecheckAccessories(prev => prev.map((x, j) => {
+                                            if (j !== i) return x;
+                                            if (!x.verified) return { ...x, verified: true, pass: true };
+                                            if (x.pass) return { ...x, pass: false };
+                                            return { ...x, verified: false, pass: true };
+                                          }))}
+                                          style={{ fontSize: 11, fontWeight: 600, padding: "5px 12px", borderRadius: 20, cursor: "pointer", ...btnStyle }}
+                                        >
+                                          {!a.verified ? a.label : a.pass ? `✓ ${a.label}` : `✗ ${a.label} (ขาด)`}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                  <p style={{ margin: "6px 0 0", fontSize: 10, color: c.text3 }}>กดครั้งแรก = มีครบ · กดซ้ำ = ขาด/ไม่มี · กดอีกครั้ง = ยกเลิกยืนยัน</p>
+                                </div>
+                              );
+                          })()}
+
                           {recheckErr && <p style={{ color: "#dc2626", fontSize: 12, margin: "0 0 10px" }}>{recheckErr}</p>}
 
                           <button
@@ -665,6 +726,9 @@ export default function StockDetailDrawer({ item, onClose, onUpdate }: Props) {
                                   : undefined,
                                 recheckFunctionalTests: recheckFunctional.length > 0
                                   ? recheckFunctional.map(t => ({ label: t.label, pass: t.pass }))
+                                  : undefined,
+                                recheckAccessories: recheckAccessories.length > 0
+                                  ? recheckAccessories.map(a => ({ label: a.label, present: a.pass }))
                                   : undefined,
                               });
                               setRecheckSaving(false);
