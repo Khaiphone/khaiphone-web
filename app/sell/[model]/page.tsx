@@ -1689,6 +1689,16 @@ function SellModelPageContent() {
                           : <p className="text-sm font-medium mt-0.5" style={{ color: "#B8860B" }}>กำลังคำนวณราคา…</p>}
                       </div>
                     </div>
+
+                    {/* แถบการันตี — ลดความลังเลหลังเห็นราคา */}
+                    <div className="mt-4 pt-4 flex flex-wrap gap-x-4 gap-y-2" style={{ borderTop: "1px solid #F3F4F6" }}>
+                      {["การันตีราคาตามสภาพที่แจ้ง", "ไม่กดราคาหน้างาน", "ฟรี ไม่มีข้อผูกมัด"].map(t => (
+                        <span key={t} className="inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: "#059669" }}>
+                          <Check size={14} strokeWidth={3} style={{ color: "#059669" }} />
+                          {t}
+                        </span>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Device card — mobile only; tabs when multiple devices */}

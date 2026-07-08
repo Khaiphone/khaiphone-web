@@ -132,13 +132,14 @@ export default function CookieConsent() {
   }, []);
 
   useEffect(() => {
-    if (visible && isMobile) {
+    // ล็อกสกรอลล์เฉพาะตอนกางตั้งค่าเต็ม — แถบเล็ก default ไม่บังจอ ให้เลื่อนดูเนื้อหาได้
+    if (visible && isMobile && customizing) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
     }
     return () => { document.body.style.overflow = ""; };
-  }, [visible, isMobile]);
+  }, [visible, isMobile, customizing]);
 
   function dismiss() {
     setVisible(false);
@@ -361,91 +362,80 @@ export default function CookieConsent() {
               <style>{`
                 .cookie-sheet::-webkit-scrollbar { display: none; }
               `}</style>
-              <div className="cookie-sheet" style={{ padding: "22px 20px 16px" }}>
-                {/* Icon + title */}
-                <div style={{ textAlign: "center", marginBottom: "12px" }}>
-                  <span style={{ fontSize: "2rem", lineHeight: 1 }}>🍪</span>
-                  <p style={{ fontSize: "1.0625rem", fontWeight: 700, color: "#111111", marginTop: "8px", lineHeight: 1.4 }}>
-                    เราใช้คุกกี้เพื่อปรับปรุง
-                    <br />ประสบการณ์ใช้งาน
-                  </p>
-                  <p style={{ fontSize: "0.8125rem", color: "#6B7280", lineHeight: 1.65, marginTop: "6px" }}>
-                    เพื่อช่วยให้เว็บไซต์ทำงานได้ดีขึ้น วิเคราะห์การใช้งาน
-                    และปรับปรุงประสบการณ์ใช้งาน
-                  </p>
-                  <Link
-                    href="/privacy"
-                    style={{ fontSize: "0.8125rem", color: GOLD, display: "inline-block", marginTop: "5px", textDecoration: "underline", textUnderlineOffset: "3px" }}
-                  >
-                    นโยบายความเป็นส่วนตัว
-                  </Link>
-                </div>
 
-                {/* Divider */}
-                <div style={{ borderTop: "1px solid #F3F4F6", margin: "12px 0" }} />
-
-                {/* Cookie options — stacked vertically */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "13px", marginBottom: "20px" }}>
-                  {COOKIE_OPTIONS.map((opt) => (
-                    <OptionRow key={opt.key} opt={opt} />
-                  ))}
-                </div>
-
-                {/* Buttons */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
+              {!customizing ? (
+                /* ── แถบเล็ก (default) — ไม่บังจอ เลื่อนดูเนื้อหาได้ ── */
+                <div style={{ padding: "14px 16px 12px" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", marginBottom: "12px" }}>
+                    <span style={{ fontSize: "1.25rem", lineHeight: 1.2, flexShrink: 0 }}>🍪</span>
+                    <p style={{ fontSize: "0.8125rem", color: "#374151", lineHeight: 1.5, margin: 0 }}>
+                      เราใช้คุกกี้เพื่อปรับปรุงประสบการณ์ใช้งานและวิเคราะห์การเข้าชม{" "}
+                      <Link href="/privacy" style={{ color: GOLD, textDecoration: "underline", textUnderlineOffset: "2px" }}>
+                        นโยบายความเป็นส่วนตัว
+                      </Link>
+                    </p>
+                  </div>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button
+                      onClick={handleRejectAll}
+                      style={{ flex: 1, background: "transparent", color: "#374151", border: "1.5px solid #E5E7EB", borderRadius: "9999px", padding: "10px 16px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}
+                    >
+                      ปฏิเสธ
+                    </button>
+                    <button
+                      onClick={handleAcceptAll}
+                      style={{ flex: 1, background: "#111111", color: "#ffffff", border: "none", borderRadius: "9999px", padding: "10px 16px", fontSize: "0.875rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+                    >
+                      ยอมรับทั้งหมด
+                    </button>
+                  </div>
                   <button
-                    onClick={customizing ? handleSaveCustom : handleAcceptAll}
-                    style={{
-                      background: "#111111",
-                      color: "#ffffff",
-                      border: "none",
-                      borderRadius: "9999px",
-                      padding: "12px 24px",
-                      fontSize: "0.9375rem",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      width: "100%",
-                      fontFamily: "inherit",
-                    }}
+                    onClick={() => setCustomizing(true)}
+                    style={{ display: "block", margin: "8px auto 0", background: "transparent", border: "none", color: "#6B7280", fontSize: "0.8125rem", cursor: "pointer", padding: "4px 8px", fontFamily: "inherit", textDecoration: "underline", textUnderlineOffset: "3px" }}
                   >
-                    {customizing ? "บันทึกการตั้งค่า" : "ยอมรับทั้งหมด"}
-                  </button>
-                  <button
-                    onClick={handleRejectAll}
-                    style={{
-                      background: "transparent",
-                      color: "#374151",
-                      border: "1.5px solid #E5E7EB",
-                      borderRadius: "9999px",
-                      padding: "12px 24px",
-                      fontSize: "0.9375rem",
-                      fontWeight: 500,
-                      cursor: "pointer",
-                      width: "100%",
-                      fontFamily: "inherit",
-                    }}
-                  >
-                    ปฏิเสธทั้งหมด
-                  </button>
-                  <button
-                    onClick={() => setCustomizing(!customizing)}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      color: GOLD,
-                      fontSize: "0.875rem",
-                      cursor: "pointer",
-                      padding: "6px 0",
-                      textAlign: "center",
-                      fontFamily: "inherit",
-                      textDecoration: "underline",
-                      textUnderlineOffset: "3px",
-                    }}
-                  >
-                    {customizing ? "ซ่อนการตั้งค่า" : "⚙ ปรับแต่งคุกกี้"}
+                    ⚙ ตั้งค่าคุกกี้
                   </button>
                 </div>
-              </div>
+              ) : (
+                /* ── กางเต็ม — ตัวเลือกละเอียด ── */
+                <div className="cookie-sheet" style={{ padding: "22px 20px 16px" }}>
+                  <div style={{ textAlign: "center", marginBottom: "12px" }}>
+                    <span style={{ fontSize: "2rem", lineHeight: 1 }}>🍪</span>
+                    <p style={{ fontSize: "1.0625rem", fontWeight: 700, color: "#111111", marginTop: "8px", lineHeight: 1.4 }}>
+                      ตั้งค่าคุกกี้
+                    </p>
+                    <Link
+                      href="/privacy"
+                      style={{ fontSize: "0.8125rem", color: GOLD, display: "inline-block", marginTop: "5px", textDecoration: "underline", textUnderlineOffset: "3px" }}
+                    >
+                      นโยบายความเป็นส่วนตัว
+                    </Link>
+                  </div>
+
+                  <div style={{ borderTop: "1px solid #F3F4F6", margin: "12px 0" }} />
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "13px", marginBottom: "20px" }}>
+                    {COOKIE_OPTIONS.map((opt) => (
+                      <OptionRow key={opt.key} opt={opt} />
+                    ))}
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
+                    <button
+                      onClick={handleSaveCustom}
+                      style={{ background: "#111111", color: "#ffffff", border: "none", borderRadius: "9999px", padding: "12px 24px", fontSize: "0.9375rem", fontWeight: 600, cursor: "pointer", width: "100%", fontFamily: "inherit" }}
+                    >
+                      บันทึกการตั้งค่า
+                    </button>
+                    <button
+                      onClick={() => setCustomizing(false)}
+                      style={{ background: "transparent", border: "none", color: GOLD, fontSize: "0.875rem", cursor: "pointer", padding: "6px 0", textAlign: "center", fontFamily: "inherit", textDecoration: "underline", textUnderlineOffset: "3px" }}
+                    >
+                      ← กลับ
+                    </button>
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
         </>
