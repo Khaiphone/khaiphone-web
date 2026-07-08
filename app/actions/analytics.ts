@@ -30,6 +30,18 @@ export async function trackEstimateEvent(params: {
   });
 }
 
+// public (ไม่ต้อง auth) — จำนวนคนที่เห็นราคาใน 30 วันล่าสุด สำหรับ social proof หน้าฟอร์มขาย
+export async function fetchRecentPriceCheckCount(): Promise<number> {
+  const supabase = createServerClient();
+  const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  const { count } = await supabase
+    .from("estimate_events")
+    .select("*", { count: "exact", head: true })
+    .eq("event", "price_seen")
+    .gte("created_at", since);
+  return count ?? 0;
+}
+
 export interface DailyCount {
   date: string;
   starts: number;

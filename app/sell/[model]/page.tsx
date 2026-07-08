@@ -7,7 +7,7 @@ import { ChevronLeft, Check, Lock, ChevronRight, User, Truck, Calendar, Banknote
 import Header from "../../components/Header";
 import { submitRequest, submitFunctionalIssueRequest } from "@/app/actions/submit-request";
 import { fetchRiderSlotAvailability } from "@/app/actions/booking-slots";
-import { trackEstimateEvent } from "@/app/actions/analytics";
+import { trackEstimateEvent, fetchRecentPriceCheckCount } from "@/app/actions/analytics";
 import { fetchPublicActiveProducts } from "@/app/actions/products";
 import { fetchPublicPricingConfig } from "@/app/actions/pricing-config";
 import { getModelTypeOpts, DEFAULT_PRICING_CONFIG } from "@/lib/pricing-defaults";
@@ -945,7 +945,7 @@ function SellModelPageContent() {
   const [errors, setErrors] = useState({ name: false, phone: false, terms: false, riderAddress: false, bankName: false, bankAccount: false, bankAccountName: false });
   const [submitting, setSubmitting] = useState(false);
   const [sellMethod, setSellMethod] = useState<"branch" | "rider" | "parcel">("rider");
-  const [payMethod, setPayMethod] = useState<"cash" | "transfer">("transfer");
+  const [payMethod, setPayMethod] = useState<"cash" | "transfer">("cash");
   const [appointDate, setAppointDate] = useState(() => {
     const d = new Date();
     const dd = (n: number) => String(n).padStart(2, "0");
@@ -959,6 +959,8 @@ function SellModelPageContent() {
     return slots[0] ?? "14:00";
   });
   const [notes, setNotes] = useState("");
+  // social proof — จำนวนคนเห็นราคา 30 วัน (เลขจริง)
+  const [priceCheckCount, setPriceCheckCount] = useState<number | null>(null);
   // คิวรับถึงที่ที่ถูกจองแล้วของวันที่เลือก (เพื่อปิดช่วงเวลาที่เต็ม)
   const [slotAvail, setSlotAvail] = useState<{ capacity: number; counts: Record<string, number>; blockedTimes: string[]; blockedWholeDay: boolean } | null>(null);
   const [riderAddress, setRiderAddress] = useState("");
@@ -978,6 +980,12 @@ function SellModelPageContent() {
   const [issueContact, setIssueContact] = useState({ name: "", phone: "" });
   const [issueSubmitting, setIssueSubmitting] = useState(false);
   const [issueSubmitDone, setIssueSubmitDone] = useState(false);
+
+  // ดึงจำนวนคนเห็นราคา 30 วัน (social proof) — โหลดครั้งเดียวเมื่อเข้าหน้าฟอร์ม
+  useEffect(() => {
+    if (!isFormPhase || priceCheckCount !== null) return;
+    fetchRecentPriceCheckCount().then(setPriceCheckCount).catch(() => {});
+  }, [isFormPhase, priceCheckCount]);
 
   // ดึงคิว "รับถึงที่" ที่จองแล้วของวันที่เลือก เพื่อปิดช่วงเวลาที่เต็ม
   useEffect(() => {
@@ -1318,6 +1326,8 @@ function SellModelPageContent() {
   const { min: priceMin, max: priceMax } = calcPriceRange(price);
   const summaryRows = product ? buildSummaryRows(picks, storages, effectiveGroupOptions[0]) : [];
   const totalBundlePrice = price + extraDevices.reduce((sum, d) => sum + d.estimatedPrice, 0);
+  // ราคานี้ล็อก 7 วัน (แสดงวันที่แบบไทย)
+  const priceLockDate = new Date(Date.now() + 7 * 86400000).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" });
 
   // URL helpers
   function urlWith(key: string, value: string) {
@@ -1699,6 +1709,43 @@ function SellModelPageContent() {
                         </span>
                       ))}
                     </div>
+
+                    {/* Price lock — ล็อกราคา 7 วัน (ข้อเท็จจริงตลาด ไม่เร่ง) */}
+                    <div className="mt-3 rounded-xl px-3.5 py-2.5" style={{ background: "rgba(184,134,11,0.07)", border: "1px solid rgba(184,134,11,0.25)" }}>
+                      <p className="text-xs font-bold flex items-center gap-1.5" style={{ color: "#B8860B" }}>
+                        🔒 ราคานี้ล็อกไว้ให้ถึง {priceLockDate}
+                      </p>
+                      <p className="text-xs mt-0.5" style={{ color: "#8a6a13" }}>
+                        หลังจากนั้นประเมินใหม่ตามราคาตลาด ซึ่งปรับเฉลี่ยทุกสัปดาห์
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* ความน่าเชื่อถือ + ขั้นตอนหลังจอง — ตอบคำถามที่ลูกค้าถามบ่อย (เจ้าหน้าที่เราเอง? จ่ายเมื่อไหร่?) */}
+                  <div className="bg-white rounded-2xl p-4" style={{ border: "1px solid #E5E7EB" }}>
+                    <div className="flex items-start gap-2.5 pb-3 mb-3" style={{ borderBottom: "1px solid #F3F4F6" }}>
+                      <ShieldCheck size={18} style={{ color: "#059669", flexShrink: 0, marginTop: 1 }} />
+                      <p className="text-xs font-semibold leading-relaxed" style={{ color: "#111" }}>
+                        เจ้าหน้าที่ของเราเอง · ตรวจเครื่องแล้ว<span style={{ color: "#059669" }}>จ่ายเงินสดครบหน้างาน</span> — ไม่เอาเครื่องไปก่อน
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between gap-1">
+                      {[
+                        { icon: Calendar, t: "นัดหมาย" },
+                        { icon: Truck,    t: "ไรเดอร์รับถึงบ้าน" },
+                        { icon: Banknote, t: "ตรวจ + รับเงินสด" },
+                      ].map((s, i, arr) => (
+                        <Fragment key={s.t}>
+                          <div className="flex flex-col items-center gap-1 flex-1 text-center">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: "rgba(184,134,11,0.1)" }}>
+                              <s.icon size={15} style={{ color: "#B8860B" }} />
+                            </div>
+                            <span className="text-[11px] font-medium leading-tight" style={{ color: "#374151" }}>{s.t}</span>
+                          </div>
+                          {i < arr.length - 1 && <ChevronRight size={14} style={{ color: "#D1D5DB", flexShrink: 0 }} />}
+                        </Fragment>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Device card — mobile only; tabs when multiple devices */}
@@ -1964,9 +2011,19 @@ function SellModelPageContent() {
                               style={{ borderColor: sellMethod === opt.id ? "#B8860B" : "#D1D5DB", background: sellMethod === opt.id ? "#B8860B" : "transparent" }}>
                               {sellMethod === opt.id && <Check size={9} color="#fff" strokeWidth={3} />}
                             </div>
-                            <div>
-                              <p className="font-semibold text-sm text-black leading-snug">{opt.label}</p>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-sm text-black leading-snug flex items-center gap-1.5 flex-wrap">
+                                {opt.label}
+                                {opt.id === "rider" && (
+                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: "rgba(5,150,105,0.12)", color: "#059669" }}>ฟรี</span>
+                                )}
+                              </p>
                               <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{opt.sub}</p>
+                              {opt.id === "rider" && (
+                                <p className="text-xs mt-1 font-medium" style={{ color: "#059669" }}>
+                                  🛵 รับถึงที่ฟรี ทั่วกรุงเทพฯ–ปริมณฑล · ไม่มีค่าบริการเข้ารับ
+                                </p>
+                              )}
                             </div>
                           </button>
                         ))}
@@ -2000,6 +2057,7 @@ function SellModelPageContent() {
                               onChange={e => setAppointDate(e.target.value)}
                               className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-white outline-none"
                               style={{ border: "1.5px solid #E5E7EB", fontFamily: "inherit", color: "#111" }} />
+                            <p className="text-[11px] mt-1" style={{ color: "#6B7280" }}>เลือกวันเวลาที่คุณสะดวก · จองล่วงหน้าได้</p>
                           </div>
                           <div>
                             <label className="block text-xs font-semibold mb-1.5" style={{ color: "#374151" }}>
@@ -2085,6 +2143,7 @@ function SellModelPageContent() {
                               onChange={e => setAppointDate(e.target.value)}
                               className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-white outline-none"
                               style={{ border: "1.5px solid #E5E7EB", fontFamily: "inherit", color: "#111" }} />
+                            <p className="text-[11px] mt-1" style={{ color: "#6B7280" }}>เลือกวันเวลาที่คุณสะดวก · จองล่วงหน้าได้</p>
                           </div>
                           <div>
                             <label className="block text-xs font-semibold mb-1.5" style={{ color: "#374151" }}>
@@ -2315,6 +2374,13 @@ function SellModelPageContent() {
                       </label>
                       {errors.terms && <p className="text-xs mt-2 ml-8" style={{ color: "#EF4444" }}>กรุณายอมรับเงื่อนไขก่อนดำเนินการต่อ</p>}
                     </div>
+
+                    {/* social proof — เลขจริง คนเห็นราคา 30 วัน (แสดงเมื่อโหลดเลขได้แล้ว) */}
+                    {priceCheckCount != null && priceCheckCount > 100 && (
+                      <p className="text-center text-xs font-medium" style={{ color: "#6B7280" }}>
+                        ⭐ มีคนเช็คราคากับเราแล้ว <span className="font-bold" style={{ color: "#B8860B" }}>{priceCheckCount.toLocaleString("th-TH")}</span> คน ใน 30 วันที่ผ่านมา
+                      </p>
+                    )}
 
                     {/* Desktop action buttons */}
                     <div className="hidden md:flex gap-3">
