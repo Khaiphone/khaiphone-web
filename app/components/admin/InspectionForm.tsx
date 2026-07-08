@@ -41,7 +41,6 @@ const FUNCTIONAL_DEFAULTS: FunctionalTest[] = [
   { label: "กล้องหน้า (Selfie)",               pass: true },
   { label: "แฟลช / ไฟฉาย",                     pass: true },
   { label: "ลำโพง (Speaker)",                  pass: true },
-  { label: "หูฟังสนทนา (Earpiece)",            pass: true },
   { label: "ไมโครโฟน",                         pass: true },
   { label: "พร็อกซิมิตี้ (จอดับตอนแนบหู)",     pass: true },
   { label: "เซนเซอร์วัดแสง / ปรับแสงอัตโนมัติ", pass: true },
