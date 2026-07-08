@@ -3,7 +3,7 @@
 import { after } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
 import { Resend } from "resend";
-import { sendPushToNewRequestReceivers } from "./push";
+import { sendPushToNewRequestReceivers, sendPushToOwners } from "./push";
 import { isRiderSlotFull } from "./booking-slots";
 
 interface ExtraDevice {
@@ -106,6 +106,14 @@ export async function submitRequest(data: SubmissionData) {
 
   if (error) {
     console.error("submitRequest error:", error);
+    // เตือนเจ้าของทันทีเมื่อบันทึกคำขอไม่สำเร็จ — กัน "ล้มเหลวเงียบ" (ลูกค้าอาจคิดว่าจองแล้ว)
+    // แนบเบอร์ + รุ่น เพื่อโทรกลับได้เลย ไม่เสียดีลโดยไม่รู้ตัว
+    after(() => sendPushToOwners({
+      title: "⚠️ คำขอจองบันทึกไม่สำเร็จ — รีบติดต่อลูกค้า",
+      body:  `${data.customer.name} · ${data.customer.phone} · ${data.model} ${data.storage} (฿${data.estimatedPrice.toLocaleString("th-TH")})`,
+      url:   "/admin/requests",
+      tag:   "submit-failed",
+    }).catch(e => console.error("fail-alert push error:", e)));
     return { success: false, error: error.message };
   }
 
