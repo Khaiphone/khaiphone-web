@@ -409,12 +409,13 @@ function getAvailableTimeSlots(selectedDate: string): string[] {
     slots.push(`${dd(h)}:00`);
     slots.push(`${dd(h)}:30`);
   }
-  // ช่วงดึกถึงตี 2 (ต่อเนื่องจากคืนนี้)
+  // อนาคต (พรุ่งนี้+) โชว์แค่ 09:00–23:30 — กันความสับสนว่า "ตี 1" คือคืนไหน
+  if (selectedDate !== today) return slots;
+  // วันนี้เท่านั้น: ต่อช่วงดึกถึงตี 2 (คืนนี้)
   for (let h = 0; h <= 2; h++) {
     slots.push(`${dd(h)}:00`);
     if (h < 2) slots.push(`${dd(h)}:30`);
   }
-  if (selectedDate !== today) return slots;
   const minMinutes = now.getHours() * 60 + now.getMinutes() + 60;
   return slots.filter(s => {
     const [h, m] = s.split(":").map(Number);
@@ -1283,7 +1284,7 @@ function SellModelPageContent() {
       customer: sellerData,
       appointment: {
         method: sellMethod,
-        date:   appointDate,
+        date:   effectiveAppointDate,
         time:   appointTime,
         location,
         ...(pinCoords ? { lat: pinCoords.lat, lng: pinCoords.lng } : {}),
@@ -1336,6 +1337,13 @@ function SellModelPageContent() {
   const totalBundlePrice = price + extraDevices.reduce((sum, d) => sum + d.estimatedPrice, 0);
   // ราคานี้ล็อก 7 วัน (แสดงวันที่แบบไทย)
   const priceLockDate = new Date(Date.now() + 7 * 86400000).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" });
+  // ตี 0–2 ที่เลือกจาก "วันนี้" = เช้ามืดของวันถัดไปตามปฏิทิน → เลื่อนวันจริงที่จะเก็บ/นับคิว/แสดง
+  const ddp = (n: number) => String(n).padStart(2, "0");
+  const todayStr = (() => { const d = new Date(); return `${d.getFullYear()}-${ddp(d.getMonth() + 1)}-${ddp(d.getDate())}`; })();
+  const isLateNight = (t: string) => Number((t || "").split(":")[0]) <= 2;
+  const nextDayStr = (iso: string) => { const d = new Date(iso + "T00:00:00"); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${ddp(d.getMonth() + 1)}-${ddp(d.getDate())}`; };
+  const effectiveAppointDate = (isLateNight(appointTime) && appointDate === todayStr) ? nextDayStr(appointDate) : appointDate;
+  const isRolledLateNight = effectiveAppointDate !== appointDate;
 
   // URL helpers
   function urlWith(key: string, value: string) {
@@ -2085,11 +2093,18 @@ function SellModelPageContent() {
                             {(() => {
                               const slots = getAvailableTimeSlots(appointDate);
                               return slots.length > 0 ? (
-                                <select value={appointTime} onChange={e => setAppointTime(e.target.value)}
-                                  className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-white outline-none"
-                                  style={{ border: "1.5px solid #E5E7EB", fontFamily: "inherit", color: "#111" }}>
-                                  {slots.map(t => <option key={t} value={t}>{t} น.</option>)}
-                                </select>
+                                <>
+                                  <select value={appointTime} onChange={e => setAppointTime(e.target.value)}
+                                    className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-white outline-none"
+                                    style={{ border: "1.5px solid #E5E7EB", fontFamily: "inherit", color: "#111" }}>
+                                    {slots.map(t => <option key={t} value={t}>{t} น.</option>)}
+                                  </select>
+                                  {isRolledLateNight && (
+                                    <p className="text-xs mt-1.5 flex items-center gap-1 font-medium" style={{ color: "#B8860B" }}>
+                                      🌙 ช่วงหลังเที่ยงคืน — นัดจริงคือเช้ามืดวันที่ {new Date(effectiveAppointDate + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "long" })}
+                                    </p>
+                                  )}
+                                </>
                               ) : (
                                 <p className="text-xs px-3.5 py-2.5 rounded-xl" style={{ border: "1.5px solid #FECACA", background: "#FEF2F2", color: "#EF4444" }}>
                                   วันนี้เต็มแล้ว กรุณาเลือกวันอื่น
@@ -2200,6 +2215,11 @@ function SellModelPageContent() {
                                     {slots.map(t => <option key={t} value={t} disabled={isFull(t)}>{t} น.{isFull(t) ? " (เต็ม)" : ""}</option>)}
                                   </select>
                                   <p className="text-xs mt-1.5" style={{ color: "#6B7280" }}>ช่วงที่ขึ้น &ldquo;เต็ม&rdquo; มีคิวรับถึงที่ครบแล้ว เลือกเวลาอื่นได้เลย</p>
+                                  {isRolledLateNight && (
+                                    <p className="text-xs mt-1.5 flex items-center gap-1 font-medium" style={{ color: "#B8860B" }}>
+                                      🌙 ช่วงหลังเที่ยงคืน — นัดจริงคือเช้ามืดวันที่ {new Date(effectiveAppointDate + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "long" })}
+                                    </p>
+                                  )}
                                 </>
                               );
                             })()}
@@ -2661,8 +2681,8 @@ function SellModelPageContent() {
                           <a href="#section-appointment" className="text-xs font-semibold" style={{ color: "#B8860B" }}>แก้ไข &gt;</a>
                         </div>
                         <p className="text-xs" style={{ color: "#6B7280" }}>
-                          {appointDate ? new Date(appointDate + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" }) : "—"}
-                          {" • "}{appointTime} น.
+                          {effectiveAppointDate ? new Date(effectiveAppointDate + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                          {" • "}{appointTime} น.{isRolledLateNight ? " (เช้ามืด)" : ""}
                         </p>
                         {sellMethod === "rider"
                           ? <p className="text-xs truncate" style={{ color: "#6B7280" }}>{riderAddress || "ยังไม่ได้ระบุที่อยู่"}</p>
