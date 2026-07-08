@@ -4,6 +4,7 @@ import { Fragment, useState, useRef, useEffect, Suspense } from "react";
 import Image from "next/image";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { ChevronLeft, Check, Lock, ChevronRight, User, Truck, Calendar, Banknote, ShieldCheck, MapPin, Building2, Clock, Phone, Plus, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import Header from "../../components/Header";
 import { submitRequest, submitFunctionalIssueRequest } from "@/app/actions/submit-request";
 import { fetchRiderSlotAvailability } from "@/app/actions/booking-slots";
@@ -406,13 +407,20 @@ function getAvailableTimeSlots(selectedDate: string): string[] {
   const slots: string[] = [];
   for (let h = 9; h <= 23; h++) {
     slots.push(`${dd(h)}:00`);
-    if (h < 23) slots.push(`${dd(h)}:30`);
+    slots.push(`${dd(h)}:30`);
+  }
+  // ช่วงดึกถึงตี 2 (ต่อเนื่องจากคืนนี้)
+  for (let h = 0; h <= 2; h++) {
+    slots.push(`${dd(h)}:00`);
+    if (h < 2) slots.push(`${dd(h)}:30`);
   }
   if (selectedDate !== today) return slots;
   const minMinutes = now.getHours() * 60 + now.getMinutes() + 60;
   return slots.filter(s => {
     const [h, m] = s.split(":").map(Number);
-    return h * 60 + m >= minMinutes;
+    // ช่วง 00:00–02:00 = ต่อเนื่องจากคืนนี้ → นับ +24 ชม. จะได้ไม่ถูกกรองว่า "ผ่านแล้ว" ตอนกลางคืน
+    const eff = h <= 2 ? (h + 24) * 60 + m : h * 60 + m;
+    return eff >= minMinutes;
   });
 }
 
@@ -1400,7 +1408,16 @@ function SellModelPageContent() {
           <>
             {/* ── Wizard ──────────────────────────────────────────────── */}
             {isWizard && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5" style={{ overflow: "hidden" }}>
+                {/* เนื้อหาแต่ละขั้นสลับแบบสมูท (fade + slide) แทนการกระโดด */}
+                <AnimatePresence mode="wait">
+                <motion.div
+                  key={step}
+                  initial={{ opacity: 0, x: 14 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -14 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
+                >
                 <h2 className="text-lg font-bold text-black mb-4">{STEP_TITLES[step]}</h2>
 
                 <div className="flex flex-col gap-3">
@@ -1449,6 +1466,8 @@ function SellModelPageContent() {
                     );
                   })}
                 </div>
+                </motion.div>
+                </AnimatePresence>
 
                 {/* Next / back / iCloud-locked / functional-issues */}
                 <div className="mt-5">
