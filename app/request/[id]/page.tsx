@@ -438,16 +438,37 @@ function RequestDetailInner() {
 
   useEffect(() => {
     async function load() {
-      const res = await loadFromDb();
+      let res = await loadFromDb();
       if (res === "found") return;
 
-      // server ยืนยันว่าไม่มีคำขอนี้ (ถูกลบหลังบ้าน) — ล้าง cache เฉพาะ order นี้ แล้วแสดง "ไม่พบ"
-      // ไม่ fall back ไป localStorage เพื่อให้คำขอที่ถูกลบหายไปจากฝั่งลูกค้าด้วย
+      // absent = server อ่านไม่เจอแถวนี้ → อาจเป็น (ก) เพิ่งจอง DB ยังไม่ sync/lag หรือ (ข) ถูกลบจริง
+      // retry ก่อนสรุป (กันเด้งลูกค้าที่เพิ่งจองสำเร็จเพราะ DB อ่านไม่ทัน — เหมือนหน้า success ที่ retry อยู่แล้ว)
       if (res === "absent") {
+        for (const d of [700, 1500, 3000]) {
+          await new Promise(r => setTimeout(r, d));
+          res = await loadFromDb();
+          if (res === "found") return;
+          if (res === "error") break;
+        }
+      }
+
+      if (res === "absent") {
+        // ยังไม่เจอหลัง retry — ถ้ามีสำเนาในเครื่องที่ "เพิ่งส่งจริง" (ภายใน 1 ชม.) แสดงจากสำเนานั้นไว้ก่อน
+        // (realtime จะอัปเดตเมื่อ DB พร้อม) เพื่อไม่ให้ลูกค้าที่จองสำเร็จถูกเด้งไป /track
         try {
           const raw = localStorage.getItem("khaiphone_submission");
-          if (raw && (JSON.parse(raw) as SubmissionData).orderNumber === id) {
-            localStorage.removeItem("khaiphone_submission");
+          if (raw) {
+            const parsed = JSON.parse(raw) as SubmissionData & { submittedAt?: string };
+            const mine    = parsed.orderNumber === id;
+            const phoneOk = !!phoneParam && normalizePhone(parsed.customer.phone) === normalizePhone(phoneParam);
+            const recent  = parsed.submittedAt ? (Date.now() - Date.parse(parsed.submittedAt) < 60 * 60 * 1000) : false;
+            if (mine && phoneOk && recent) {
+              if (!parsed.extraDevices) parsed.extraDevices = [];
+              setSub(parsed); setDoneUpTo(0); setState("ok");
+              return;
+            }
+            // สำเนาเก่า/ไม่ตรง = คำขอถูกลบจริง → ล้างทิ้ง (คงพฤติกรรม fix เดิม เรื่องคำขอที่ถูกลบ)
+            if (mine) localStorage.removeItem("khaiphone_submission");
           }
         } catch {}
         setState("notfound");
