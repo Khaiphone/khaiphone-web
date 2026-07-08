@@ -1117,47 +1117,67 @@ export async function buybackStock(
   await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
-  const { data: current } = await supabase.from("stocks").select("status, status_log, audit_log, model, storage").eq("id", id).single();
+  const { data: current } = await supabase.from("stocks")
+    .select("status, status_log, audit_log, model, storage, sold_at, sold_price, sold_cost_snapshot, request_ref, cost_price")
+    .eq("id", id).single();
   if (!current) return { success: false, error: "ไม่พบสินค้า" };
+
+  // ขายและซื้อคืน "เดือนเดียวกัน" (เวลาไทย) = การคืนสินค้า → กลับรายการขายทั้งหมด (ไม่นับยอดขาย/ไม่หักซ้ำ)
+  // ข้ามเดือน → เก็บ sold_price/sold_at ไว้ (รายได้เดือนก่อนคงเดิม) + บันทึกซื้อคืนเป็นค่าใช้จ่ายเดือนนี้
+  const bkkMonth = (iso?: string | null) => iso ? new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit" }).format(new Date(iso)) : null;
+  const sameMonth = !!current.sold_at && bkkMonth(current.sold_at) === bkkMonth(now);
+
   const newStatus: StockStatus = "รับคืนแล้ว";
-  const detail = `ซื้อคืนในราคา ฿${buybackPrice.toLocaleString("th-TH")}${reason ? ` เหตุผล: ${reason}` : ""}`;
+  const reasonTxt = reason ? ` เหตุผล: ${reason}` : "";
+  const detail = sameMonth
+    ? `ซื้อคืน ฿${buybackPrice.toLocaleString("th-TH")} · ขาย+ซื้อคืนเดือนเดียวกัน → กลับรายการขาย (ไม่นับยอดขาย/ไม่หักค่าใช้จ่ายซ้ำ)${reasonTxt}`
+    : `ซื้อคืนในราคา ฿${buybackPrice.toLocaleString("th-TH")}${reasonTxt}`;
   const newStatusLog = [...(current.status_log ?? []), { status: newStatus, timestamp: now, note: detail, by }];
   const newAuditLog: AuditEntry[] = [...(current.audit_log ?? []), { action: "ซื้อคืน", detail, timestamp: now, by }];
 
-  // Update cost_price to buyback price — this is now the new cost basis for any future re-sale
-  // Keep sold_price/sold_at as historical facts so Finance can show Month A's revenue correctly
-  // Clear delivery/buyer fields (no longer relevant) but preserve financial history
-  const { error } = await supabase.from("stocks").update({
+  const update: Record<string, unknown> = {
     status: newStatus,
-    cost_price: buybackPrice,
-    shipping_cost: 0,
-    other_cost: 0,
-    buyer_name: null,
-    buyer_phone: null,
-    sold_by: null,
-    sale_type: null,
-    partner_name: null,
-    delivery_status: null,
-    delivery_channel: null,
-    tracking_number: null,
-    status_log: newStatusLog,
-    audit_log: newAuditLog,
-    updated_at: now,
-  }).eq("id", id);
+    buyer_name: null, buyer_phone: null, sold_by: null, sale_type: null, partner_name: null,
+    delivery_status: null, delivery_channel: null, tracking_number: null,
+    shipping_cost: 0, other_cost: 0,
+    status_log: newStatusLog, audit_log: newAuditLog, updated_at: now,
+  };
+
+  if (sameMonth) {
+    // กลับรายการขาย: ล้างการขาย + คืนต้นทุนเดิม (จาก snapshot) — เหมือนดีลนี้ไม่เคยเกิด เครื่องกลับเข้าสต็อก
+    update.sold_price = null;
+    update.sold_at = null;
+    update.sold_cost_snapshot = null;
+    update.cost_price = current.sold_cost_snapshot ?? current.cost_price;
+  } else {
+    // ต้นทุนใหม่ = ราคาซื้อคืน (เป็น cost basis ของการขายรอบถัดไป) · เก็บ sold_price/sold_at ไว้
+    update.cost_price = buybackPrice;
+  }
+
+  const { error } = await supabase.from("stocks").update(update).eq("id", id);
   if (error) return { success: false, error: error.message };
 
-  // Record buyback as Finance expense so cashflow shows the outflow
-  const product = `ซื้อคืน ${current.model} ${current.storage} (${id})`;
-  await supabase.from("expenses").insert({
-    date: now.slice(0, 10),
-    ref_number: `BUY-${id}`,
-    product,
-    category: "ซื้อคืน",
-    amount: buybackPrice,
-    status: "approved",
-    notes: reason || `ซื้อคืน ${id}`,
-    updated_at: now,
-  });
+  // เดือนเดียวกัน → sync คำขอที่ผูกไว้ให้กลับเป็น "ยังไม่ขาย" (เอาออกจาก KPI ขายออก/รายได้)
+  if (sameMonth && current.request_ref) {
+    await supabase.from("requests")
+      .update({ stock_status: "in_stock", sell_price: null, sell_date: null })
+      .eq("order_number", current.request_ref);
+  }
+
+  // ค่าใช้จ่ายซื้อคืน: บันทึกเฉพาะข้ามเดือน (เดือนเดียวกันเงินเข้า-ออกหักล้างกันแล้ว จะบันทึก = หักซ้ำ)
+  if (!sameMonth) {
+    const product = `ซื้อคืน ${current.model} ${current.storage} (${id})`;
+    await supabase.from("expenses").insert({
+      date: now.slice(0, 10),
+      ref_number: `BUY-${id}`,
+      product,
+      category: "ซื้อคืน",
+      amount: buybackPrice,
+      status: "approved",
+      notes: reason || `ซื้อคืน ${id}`,
+      updated_at: now,
+    });
+  }
 
   return { success: true };
 }
