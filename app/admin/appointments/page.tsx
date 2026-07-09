@@ -94,7 +94,7 @@ export default function AppointmentsPage() {
     r.appointment.zone === "round" && ["new", "pending", "contacted"].includes(r.status);
 
   const appts = requests
-    .filter(r => r.appointment.date === selectedDate && !isPendingRound(r))
+    .filter(r => r.appointment.date === selectedDate)
     .sort((a, b) => a.appointment.time.localeCompare(b.appointment.time));
 
   // โหลดสถานะการปิดเวลาของวันที่เลือก
@@ -296,6 +296,11 @@ export default function AppointmentsPage() {
                     )}
                     {r.appointment.method === "rider" && (
                       <span style={{ fontSize: 10, fontWeight: 700, color: "#5B21B6", background: "#EDE9FE", padding: "1px 6px", borderRadius: 5, whiteSpace: "nowrap" }}>🛵 รับถึงที่</span>
+                    )}
+                    {r.appointment.zone === "round" && (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "#B45309", background: "#FFF7ED", border: "1px solid #F59E0B", padding: "1px 6px", borderRadius: 5, whiteSpace: "nowrap" }}>
+                        🔶 จัดรอบ{r.appointment.serviceFee ? ` · ฿${r.appointment.serviceFee.toLocaleString()}` : ""}{isPendingRound(r) ? " · รอจัดรอบ" : ""}
+                      </span>
                     )}
                   </div>
                   <StatusBadge status={r.status} size="xs" />
