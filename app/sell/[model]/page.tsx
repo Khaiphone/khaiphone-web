@@ -14,7 +14,7 @@ import { fetchPublicPricingConfig } from "@/app/actions/pricing-config";
 import { getModelTypeOpts, DEFAULT_PRICING_CONFIG } from "@/lib/pricing-defaults";
 import type { PricingOption } from "@/lib/pricing-defaults";
 import { calcPrice, calcPriceRange, formatPrice } from "@/lib/pricing";
-import { classifyZone, extractProvince, PROVINCE_GROUPS, ROUND_INTERVAL_DAYS } from "@/lib/zones";
+import { classifyZone, extractProvince, PROVINCE_GROUPS, ROUND_ETA_LABEL } from "@/lib/zones";
 
 const BUNDLE_KEY = "khaiphone_extra_devices";
 const BUNDLE_RETURN_KEY = "khaiphone_bundle_return";
@@ -2206,8 +2206,8 @@ function SellModelPageContent() {
                           <>
                             {zoneInfo.zone === "round" && (
                               <div className="rounded-xl p-4 mb-4" style={{ background: "#FFF7ED", border: "1px solid #F59E0B" }}>
-                                <p className="font-semibold text-sm mb-1" style={{ color: "#B45309" }}>📅 {province} — เราเข้ารับทุกๆ {ROUND_INTERVAL_DAYS} วัน</p>
-                                <p className="text-xs leading-relaxed" style={{ color: "#374151" }}>เลือกวันที่คุณสะดวกด้านล่างได้เลย — แอดมินจะติดต่อกลับเพื่อยืนยันรอบเข้ารับที่ใกล้เคียงที่สุด ราคาที่ประเมินถูกล็อกไว้ให้</p>
+                                <p className="font-semibold text-sm mb-1" style={{ color: "#B45309" }}>📅 {province} — เข้ารับเป็นรอบ (ปกติภายใน {ROUND_ETA_LABEL})</p>
+                                <p className="text-xs leading-relaxed" style={{ color: "#374151" }}>เลือกวันที่คุณสะดวกด้านล่างได้เลย — แอดมินจะติดต่อกลับเพื่อยืนยันวันเข้ารับ (ปกติภายใน {ROUND_ETA_LABEL}) ราคาที่ประเมินถูกล็อกไว้ให้</p>
                                 {zoneInfo.fee > 0 && (
                                   <div className="mt-3 rounded-lg px-3 py-2.5" style={{ background: "#fff", border: "1px dashed #F59E0B" }}>
                                     <p className="text-xs font-bold" style={{ color: "#B45309" }}>ค่าบริการเข้ารับ ฿{zoneInfo.fee.toLocaleString()} · หักจากยอดรับซื้อ</p>

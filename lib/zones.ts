@@ -9,8 +9,8 @@ export const CORE_FULL = ["กรุงเทพมหานคร", "นนท�
 export const CORE_PARTIAL = ["สมุทรสาคร", "นครปฐม", "พระนครศรีอยุธยา", "สระบุรี"];
 // โซนเข้ารับเป็นรอบ — ค่าบริการตายตัว (บาท) หักจากยอดรับซื้อ
 export const ROUND_FEE: Record<string, number> = { "ชลบุรี": 500, "ฉะเชิงเทรา": 300 };
-// ความถี่รอบเข้ารับ (วัน)
-export const ROUND_INTERVAL_DAYS = 3;
+// กรอบเวลาเข้ารับ (แสดงให้ลูกค้า) — แอดมินยืนยันวันจริงตอนติดต่อกลับ
+export const ROUND_ETA_LABEL = "1–2 วัน";
 
 export interface ZoneInfo {
   zone: PickupZone;
