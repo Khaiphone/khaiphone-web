@@ -1260,7 +1260,7 @@ function SellModelPageContent() {
     // Validate appointment time is still at least 1 hour in the future —
     // only for channels that actually schedule one (parcel has no appointment).
     // โซนไกล + Rider → ต้องเปลี่ยนเป็นส่งพัสดุก่อน
-    if (sellMethod === "rider" && zoneInfo.zone === "far") {
+    if (sellMethod === "rider" && province && zoneInfo.zone === "far") {
       riderSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       alert("พื้นที่ของคุณอยู่นอกเขตรับถึงที่ กรุณาเลือกช่องทาง “ส่งเครื่องทางพัสดุ”");
       return;
@@ -2193,7 +2193,7 @@ function SellModelPageContent() {
                             </p>
                           )}
                         </div>
-                        {zoneInfo.zone === "far" ? (
+                        {province && zoneInfo.zone === "far" ? (
                           <div className="rounded-xl p-4" style={{ background: "#EFF6FF", border: "1px solid #BFDBFE" }}>
                             <p className="font-semibold text-sm mb-1" style={{ color: "#1D4ED8" }}>📦 พื้นที่นี้แนะนำ &ldquo;ส่งพัสดุ&rdquo;</p>
                             <p className="text-xs leading-relaxed mb-3" style={{ color: "#374151" }}>ยังไม่มีรอบเข้ารับพื้นที่คุณ แต่ขายได้สบายๆ ผ่านการส่งพัสดุ — ราคาล็อกไว้ก่อนส่ง ตรวจแล้วโอนทันที</p>
