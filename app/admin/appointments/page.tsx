@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Clock, Loader2, Ban, ChevronDown } from "lucide-react";
 import { fetchActiveDashboardData } from "@/app/actions/admin-requests";
 import { fetchDayBlocks, setSlotBlock } from "@/app/actions/booking-slots";
+import { fetchRoundPendingCount } from "@/app/actions/pickup-rounds";
 import type { AdminRequest } from "@/lib/types/admin";
 import { useAdminRole } from "@/app/admin/role-context";
 import { cacheGet, cacheSet } from "@/app/admin/cache";
@@ -64,6 +65,9 @@ export default function AppointmentsPage() {
   const [blocks,       setBlocks]       = useState<{ wholeDay: boolean; times: string[] }>({ wholeDay: false, times: [] });
   const [blocksOpen,   setBlocksOpen]   = useState(false);
   const [savingBlock,  setSavingBlock]  = useState(false);
+  const [roundCount,   setRoundCount]   = useState(0);
+
+  useEffect(() => { fetchRoundPendingCount().then(setRoundCount).catch(() => {}); }, []);
 
   useEffect(() => {
     if (!userId) return;
@@ -134,6 +138,15 @@ export default function AppointmentsPage() {
               <ArrowLeft size={22} />
             </button>
             <h1 style={{ color: TEXT, fontSize: "18px", fontWeight: 700, margin: 0, flex: 1 }}>นัดหมาย</h1>
+          </div>
+
+          {/* Sub-tabs: ปฏิทินคิว | จัดรอบเข้าพื้นที่ */}
+          <div style={{ display: "flex", gap: 22, marginBottom: 4 }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: GOLD, paddingBottom: 9, borderBottom: `2.5px solid ${GOLD}` }}>ปฏิทินคิว</span>
+            <button onClick={() => router.push("/admin/rounds")} style={{ fontFamily: "inherit", fontSize: 13, fontWeight: 600, color: TEXT2, background: "none", border: "none", borderBottom: "2.5px solid transparent", paddingBottom: 9, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+              จัดรอบเข้าพื้นที่
+              {roundCount > 0 && <span style={{ minWidth: 17, height: 17, padding: "0 4px", borderRadius: 9, background: "#F59E0B", color: "#3d2600", fontSize: 10, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{roundCount}</span>}
+            </button>
           </div>
 
           {/* Date tabs */}
