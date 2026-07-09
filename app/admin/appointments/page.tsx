@@ -88,8 +88,13 @@ export default function AppointmentsPage() {
     }
   }, []);
 
+  // คำขอโซน "เข้ารับเป็นรอบ" ที่ยังรอจัดรอบ = ยังไม่ยืนยัน → ไม่โชว์ในปฏิทินคิว
+  // (อยู่ในแท็บ "จัดรอบเข้าพื้นที่" จนกว่าจะจัดรอบ แล้วสถานะเป็น confirmed จึงโผล่ในวันจริง)
+  const isPendingRound = (r: AdminRequest) =>
+    r.appointment.zone === "round" && ["new", "pending", "contacted"].includes(r.status);
+
   const appts = requests
-    .filter(r => r.appointment.date === selectedDate)
+    .filter(r => r.appointment.date === selectedDate && !isPendingRound(r))
     .sort((a, b) => a.appointment.time.localeCompare(b.appointment.time));
 
   // โหลดสถานะการปิดเวลาของวันที่เลือก
@@ -103,6 +108,7 @@ export default function AppointmentsPage() {
       r.appointment.date === selectedDate &&
       r.appointment.method === "rider" &&
       r.appointment.time === t &&
+      !isPendingRound(r) &&
       !NOT_COUNTED_STATUS.has(r.status)
     ).length;
 
