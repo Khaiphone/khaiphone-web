@@ -2207,7 +2207,7 @@ function SellModelPageContent() {
                             {zoneInfo.zone === "round" && (
                               <div className="rounded-xl p-4 mb-4" style={{ background: "#FFF7ED", border: "1px solid #F59E0B" }}>
                                 <p className="font-semibold text-sm mb-1" style={{ color: "#B45309" }}>📅 {province} — เข้ารับเป็นรอบ (ปกติภายใน {ROUND_ETA_LABEL})</p>
-                                <p className="text-xs leading-relaxed" style={{ color: "#374151" }}>เลือกวันที่คุณสะดวกด้านล่างได้เลย — แอดมินจะติดต่อกลับเพื่อยืนยันวันเข้ารับ (ปกติภายใน {ROUND_ETA_LABEL}) ราคาที่ประเมินถูกล็อกไว้ให้</p>
+                                <p className="text-xs leading-relaxed" style={{ color: "#374151" }}>เลือกวันที่คุณสะดวกด้านล่างได้เลย — เจ้าหน้าที่จะติดต่อกลับทันทีเพื่อยืนยันวันเข้ารับ (โดยปกติเข้ารับได้ภายใน {ROUND_ETA_LABEL}) ราคาที่ประเมินถูกล็อกไว้ให้</p>
                                 {zoneInfo.fee > 0 && (
                                   <div className="mt-3 rounded-lg px-3 py-2.5" style={{ background: "#fff", border: "1px dashed #F59E0B" }}>
                                     <p className="text-xs font-bold" style={{ color: "#B45309" }}>ค่าบริการเข้ารับ ฿{zoneInfo.fee.toLocaleString()} · หักจากยอดรับซื้อ</p>
