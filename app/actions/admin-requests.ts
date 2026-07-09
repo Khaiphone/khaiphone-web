@@ -92,7 +92,7 @@ export async function fetchRecentActivity(limit = 20) {
 const LIST_SELECT =
   "id, order_number, status, created_at, customer_name, customer_phone, customer_email, customer_line_id, customer_address, " +
   "device_model, device_storage, device_color, device_condition, device_condition_details, estimated_price, actual_price, price_range, " +
-  "appt_date, appt_time, appt_location, appt_method, appt_lat, appt_lng, " +
+  "appt_date, appt_time, appt_location, appt_method, appt_lat, appt_lng, appt_province, pickup_zone, service_fee, " +
   "payment_method, payment_bank, payment_account_name, payment_account_number, payment_slip_url, contract_signed_at, " +
   "customer_notes, extra_devices, notes, status_log, source, contract_url, receipt_url, " +
   "assigned_to, assigned_to_name, rider_id, rider_name, distance_km, " +
@@ -131,6 +131,9 @@ function mapRow(row: any): AdminRequest {
       method:   (row.appt_method  ?? "branch") as SellMethod,
       lat:      row.appt_lat      ?? null,
       lng:      row.appt_lng      ?? null,
+      province:   row.appt_province ?? null,
+      zone:       row.pickup_zone   ?? null,
+      serviceFee: row.service_fee   ?? null,
     },
     payment: {
       method:           (row.payment_method ?? "cash") as PayMethod,

@@ -151,6 +151,9 @@ export interface AdminRequest {
     method: SellMethod;
     lat?: number | null;
     lng?: number | null;
+    province?: string | null;
+    zone?: string | null;      // 'core' | 'round' | 'far'
+    serviceFee?: number | null;
   };
   payment: {
     method: PayMethod;
