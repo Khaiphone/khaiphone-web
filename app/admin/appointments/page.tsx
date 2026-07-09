@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Clock, Loader2, Ban, ChevronDown } from "lucide-react";
 import { fetchActiveDashboardData } from "@/app/actions/admin-requests";
 import { fetchDayBlocks, setSlotBlock } from "@/app/actions/booking-slots";
+import { fetchRoundPendingCount } from "@/app/actions/pickup-rounds";
 import type { AdminRequest } from "@/lib/types/admin";
 import { useAdminRole } from "@/app/admin/role-context";
 import { cacheGet, cacheSet } from "@/app/admin/cache";
@@ -64,6 +65,9 @@ export default function AppointmentsPage() {
   const [blocks,       setBlocks]       = useState<{ wholeDay: boolean; times: string[] }>({ wholeDay: false, times: [] });
   const [blocksOpen,   setBlocksOpen]   = useState(false);
   const [savingBlock,  setSavingBlock]  = useState(false);
+  const [roundCount,   setRoundCount]   = useState(0);
+
+  useEffect(() => { fetchRoundPendingCount().then(setRoundCount).catch(() => {}); }, []);
 
   useEffect(() => {
     if (!userId) return;
@@ -84,6 +88,11 @@ export default function AppointmentsPage() {
     }
   }, []);
 
+  // คำขอโซน "เข้ารับเป็นรอบ" ที่ยังรอจัดรอบ = ยังไม่ยืนยัน → ไม่โชว์ในปฏิทินคิว
+  // (อยู่ในแท็บ "จัดรอบเข้าพื้นที่" จนกว่าจะจัดรอบ แล้วสถานะเป็น confirmed จึงโผล่ในวันจริง)
+  const isPendingRound = (r: AdminRequest) =>
+    r.appointment.zone === "round" && ["new", "pending", "contacted"].includes(r.status);
+
   const appts = requests
     .filter(r => r.appointment.date === selectedDate)
     .sort((a, b) => a.appointment.time.localeCompare(b.appointment.time));
@@ -99,6 +108,7 @@ export default function AppointmentsPage() {
       r.appointment.date === selectedDate &&
       r.appointment.method === "rider" &&
       r.appointment.time === t &&
+      !isPendingRound(r) &&
       !NOT_COUNTED_STATUS.has(r.status)
     ).length;
 
@@ -134,6 +144,15 @@ export default function AppointmentsPage() {
               <ArrowLeft size={22} />
             </button>
             <h1 style={{ color: TEXT, fontSize: "18px", fontWeight: 700, margin: 0, flex: 1 }}>นัดหมาย</h1>
+          </div>
+
+          {/* Sub-tabs: ปฏิทินคิว | จัดรอบเข้าพื้นที่ */}
+          <div style={{ display: "flex", gap: 22, marginBottom: 4 }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: GOLD, paddingBottom: 9, borderBottom: `2.5px solid ${GOLD}` }}>ปฏิทินคิว</span>
+            <button onClick={() => router.push("/admin/rounds")} style={{ fontFamily: "inherit", fontSize: 13, fontWeight: 600, color: TEXT2, background: "none", border: "none", borderBottom: "2.5px solid transparent", paddingBottom: 9, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+              จัดรอบเข้าพื้นที่
+              {roundCount > 0 && <span style={{ minWidth: 17, height: 17, padding: "0 4px", borderRadius: 9, background: "#F59E0B", color: "#3d2600", fontSize: 10, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{roundCount}</span>}
+            </button>
           </div>
 
           {/* Date tabs */}
@@ -277,6 +296,11 @@ export default function AppointmentsPage() {
                     )}
                     {r.appointment.method === "rider" && (
                       <span style={{ fontSize: 10, fontWeight: 700, color: "#5B21B6", background: "#EDE9FE", padding: "1px 6px", borderRadius: 5, whiteSpace: "nowrap" }}>🛵 รับถึงที่</span>
+                    )}
+                    {r.appointment.zone === "round" && (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "#B45309", background: "#FFF7ED", border: "1px solid #F59E0B", padding: "1px 6px", borderRadius: 5, whiteSpace: "nowrap" }}>
+                        🔶 จัดรอบ{r.appointment.serviceFee ? ` · ฿${r.appointment.serviceFee.toLocaleString()}` : ""}{isPendingRound(r) ? " · รอจัดรอบ" : ""}
+                      </span>
                     )}
                   </div>
                   <StatusBadge status={r.status} size="xs" />
