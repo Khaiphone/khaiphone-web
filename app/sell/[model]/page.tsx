@@ -2321,7 +2321,7 @@ function SellModelPageContent() {
                       <div className="grid grid-cols-2 gap-3 mb-4">
                         {([
                           { id: "cash",     label: "เงินสด",       sub: "รับทันทีหลังตรวจสอบ", Icon: Banknote },
-                          { id: "transfer", label: "โอนเข้าบัญชี", sub: "โอนเข้าบัญชีธนาคาร",  Icon: Building2 },
+                          { id: "transfer", label: "โอนเข้าบัญชี", sub: "โอนเข้าบัญชีทันทีหน้างาน หลังตรวจเครื่อง",  Icon: Building2 },
                         ] as const).map(({ id, label, sub, Icon }) => {
                           const active = payMethod === id;
                           return (
