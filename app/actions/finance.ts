@@ -136,8 +136,28 @@ function pct(curr: number, prev: number): number | null {
   return Math.round(((curr - prev) / Math.abs(prev)) * 1000) / 10;
 }
 
-function normFromRequest(r: { sell_price: number; sell_date: string; actual_price?: number; estimated_price?: number; device_model?: string }): NormSoldItem {
-  return { sell_price: r.sell_price, sell_date: r.sell_date, cost: r.actual_price ?? r.estimated_price ?? 0, model: r.device_model ?? "Unknown" };
+function normFromRequest(
+  r: { sell_price: number; sell_date: string; actual_price?: number; estimated_price?: number; device_model?: string },
+  overrideCost?: number,
+): NormSoldItem {
+  return { sell_price: r.sell_price, sell_date: r.sell_date, cost: overrideCost ?? r.actual_price ?? r.estimated_price ?? 0, model: r.device_model ?? "Unknown" };
+}
+
+// ทุน "ณ ตอนขายจริง" จาก stock ที่ผูก request (แม่นกว่า requests.actual_price เพราะรวมซื้อคืน/ค่าส่ง/ค่าอื่น
+// — เครื่องที่ซื้อคืนต้นทุนเปลี่ยน แต่ actual_price เดิมไม่อัปเดต) → keyed by request_ref
+async function linkedStockCostMap(supabase: ReturnType<typeof createServerClient>): Promise<Map<string, number>> {
+  const { data } = await supabase.from("stocks")
+    .select("request_ref, cost_price, shipping_cost, other_cost, sold_cost_snapshot")
+    .not("request_ref", "is", null)
+    .not("sold_price", "is", null);
+  const m = new Map<string, number>();
+  for (const s of (data ?? [])) {
+    const ref = s.request_ref as string | null;
+    if (!ref) continue;
+    const cost = (s.sold_cost_snapshot as number | null) ?? ((s.cost_price ?? 0) + (s.shipping_cost ?? 0) + (s.other_cost ?? 0));
+    m.set(ref, cost);
+  }
+  return m;
 }
 
 function normFromStock(s: { sold_price: number; sold_at: string; cost_price?: number; shipping_cost?: number; other_cost?: number; sold_cost_snapshot?: number | null; model?: string }): NormSoldItem {
@@ -148,10 +168,10 @@ function normFromStock(s: { sold_price: number; sold_at: string; cost_price?: nu
 export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string): Promise<FinanceDashboard> {
   await requireAuth();
   const supabase = createServerClient();
-  const [{ data }, { data: expenseData }, { data: directSoldStocks }, { data: unsoldStockData }] = await Promise.all([
+  const [{ data }, { data: expenseData }, { data: directSoldStocks }, { data: unsoldStockData }, costMap] = await Promise.all([
     supabase
       .from("requests")
-      .select("id, device_model, actual_price, estimated_price, sell_price, sell_date, stock_status, created_at, contract_signed_at")
+      .select("id, order_number, device_model, actual_price, estimated_price, sell_price, sell_date, stock_status, created_at, contract_signed_at")
       .eq("status", "completed"),
     supabase
       .from("expenses")
@@ -167,12 +187,13 @@ export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string):
       .from("stocks")
       .select("cost_price, shipping_cost, other_cost")
       .not("status", "in", '("ขายแล้ว","ส่งคืน","ตีกลับ/ไม่รับซื้อ")'),
+    linkedStockCostMap(supabase),
   ]);
 
   const rows = data ?? [];
   const fromRequests = rows
     .filter((r) => r.stock_status === "sold" && r.sell_price != null && r.sell_date != null)
-    .map(normFromRequest);
+    .map((r) => normFromRequest(r, costMap.get(r.order_number as string)));
   const fromStocks = (directSoldStocks ?? []).map(normFromStock);
   const allNorm = [...fromRequests, ...fromStocks];
 
@@ -304,15 +325,20 @@ export async function fetchFinanceIncome(dateFrom = "", dateTo = ""): Promise<Fi
     })(),
     supabase
       .from("stocks")
-      .select("request_ref, buyer_name")
+      .select("request_ref, buyer_name, cost_price, shipping_cost, other_cost, sold_cost_snapshot")
       .not("request_ref", "is", null)
       .eq("status", "ขายแล้ว"),
   ]);
 
   const buyerMap = new Map((buyerData ?? []).map((s) => [s.request_ref as string, s.buyer_name as string ?? ""]));
+  // ทุนจริงจาก stock ที่ผูก request (รวมซื้อคืน) — ใช้แทน actual_price ที่เป็นราคาซื้อเดิม
+  const costMap = new Map((buyerData ?? []).map((s) => [
+    s.request_ref as string,
+    (s.sold_cost_snapshot as number | null) ?? ((s.cost_price ?? 0) + (s.shipping_cost ?? 0) + (s.other_cost ?? 0)),
+  ]));
 
   const fromRequests: FinanceIncome[] = (data ?? []).map((row) => {
-    const cost = row.actual_price ?? row.estimated_price ?? 0;
+    const cost = costMap.get(row.order_number) ?? row.actual_price ?? row.estimated_price ?? 0;
     const sell = row.sell_price ?? 0;
     return {
       id: row.id,
@@ -489,11 +515,11 @@ export async function fetchFinanceProfitByModel(dateFrom = "", dateTo = ""): Pro
   await requireAuth();
   const supabase = createServerClient();
   const dateFilter = dateFrom && dateTo;
-  const [{ data }, { data: directData }] = await Promise.all([
+  const [{ data }, { data: directData }, costMap] = await Promise.all([
     (() => {
       let q = supabase
         .from("requests")
-        .select("device_model, actual_price, estimated_price, sell_price")
+        .select("order_number, device_model, actual_price, estimated_price, sell_price")
         .eq("status", "completed")
         .eq("stock_status", "sold")
         .not("sell_price", "is", null);
@@ -510,11 +536,12 @@ export async function fetchFinanceProfitByModel(dateFrom = "", dateTo = ""): Pro
       if (dateFilter) q = q.gte("sold_at", dateFrom).lte("sold_at", endOfThaiDay(dateTo));
       return q;
     })(),
+    linkedStockCostMap(supabase),
   ]);
 
   type Entry = { model: string; cost: number; sell: number };
   const entries: Entry[] = [
-    ...(data ?? []).map((r) => ({ model: r.device_model ?? "Unknown", cost: r.actual_price ?? r.estimated_price ?? 0, sell: r.sell_price ?? 0 })),
+    ...(data ?? []).map((r) => ({ model: r.device_model ?? "Unknown", cost: costMap.get(r.order_number as string) ?? r.actual_price ?? r.estimated_price ?? 0, sell: r.sell_price ?? 0 })),
     ...(directData ?? []).map((s) => ({ model: s.model ?? "Unknown", cost: s.sold_cost_snapshot ?? ((s.cost_price ?? 0) + (s.shipping_cost ?? 0) + (s.other_cost ?? 0)), sell: s.sold_price ?? 0 })),
   ];
 
