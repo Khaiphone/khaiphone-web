@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { fetchPublicActiveProducts } from "@/app/actions/products";
 import { blogPosts } from "@/lib/blogData";
+import { fetchPublishedArticleCards } from "@/lib/articles";
 import { iphones } from "@/lib/products";
 
 function toSlug(model: string) {
@@ -41,12 +42,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
   }
 
-  const blogPages: MetadataRoute.Sitemap = blogPosts.map((post) => ({
-    url: `${base}/blog/${post.slug}`,
-    lastModified: new Date(post.date),
-    changeFrequency: "monthly" as const,
-    priority: 0.65,
-  }));
+  const dbArticles = await fetchPublishedArticleCards().catch(() => []);
+  const blogSlugs = new Set<string>();
+  const blogPages: MetadataRoute.Sitemap = [...blogPosts, ...dbArticles]
+    .filter((post) => { if (blogSlugs.has(post.slug)) return false; blogSlugs.add(post.slug); return true; })
+    .map((post) => ({
+      url: `${base}/blog/${post.slug}`,
+      lastModified: new Date(post.date),
+      changeFrequency: "monthly" as const,
+      priority: 0.65,
+    }));
 
   const locationPages: MetadataRoute.Sitemap = [
     "rangsit", "pathumthani", "lamlukka", "donmueang", "bangkhen",

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { blogPosts } from "@/lib/blogData";
+import { blogPosts, type BlogPost } from "@/lib/blogData";
+import { fetchPublishedArticleCards } from "@/lib/articles";
 import BlogSearch from "./BlogSearch";
 
 export const metadata: Metadata = {
@@ -11,11 +12,7 @@ export const metadata: Metadata = {
     "รวมบทความ ข่าวสาร และเทคนิคการขาย iPhone iPad MacBook มือสอง อัปเดตทุกสัปดาห์",
 };
 
-// ── Posts — sorted newest first ────────────────────────────────────────────────
-
-const posts = [...blogPosts].sort(
-  (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-);
+export const revalidate = 3600; // ISR — บทความ DB ใหม่โผล่ในลิสต์
 
 const faqs = [
   { q: "ขาย iPhone ต้องเตรียมอะไรบ้าง?",    a: "เตรียม 3 อย่าง ได้แก่ (1) บัตรประชาชนตัวจริง (2) ออก iCloud และ Apple ID ให้เรียบร้อยก่อนส่งมอบ และ (3) กล่องและอุปกรณ์ที่มีอยู่ เช่น สายชาร์จ adapter" },
@@ -52,7 +49,18 @@ const latestPrices = [
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-export default function BlogPage() {
+export default async function BlogPage() {
+  // รวมบทความ static เดิม + บทความ published จาก DB (ล่าสุดก่อน)
+  const dbCards = await fetchPublishedArticleCards().catch(() => []);
+  const dbPosts: BlogPost[] = dbCards.map((c, i) => ({
+    id: 100000 + i, category: c.category, date: c.date, displayDate: c.displayDate,
+    readTime: c.readTime ?? "5 นาที", title: c.title, excerpt: c.excerpt,
+    image: c.image, slug: c.slug, keywords: c.keywords,
+  }));
+  const posts = [...blogPosts, ...dbPosts].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+
   return (
     <div className="min-h-screen bg-white pb-16 md:pb-0">
       <Header />

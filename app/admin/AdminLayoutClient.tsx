@@ -356,6 +356,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                     {[
                       { href: "/admin/price-settings", label: "ตั้งค่าราคา" },
                       { href: "/admin/reports",        label: "รายงาน"       },
+                      { href: "/admin/articles",       label: "บทความ"       },
                       { href: "/admin/staff",          label: "จัดการทีม"   },
                       { href: "/admin/activity",       label: "กิจกรรม"      },
                     ].map(({ href, label }) => {
