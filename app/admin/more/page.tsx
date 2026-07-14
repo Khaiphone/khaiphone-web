@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import {
   Users, CreditCard, BarChart2, Settings,
   UserCircle, LogOut, ChevronRight, ArrowLeft, SlidersHorizontal, UsersRound,
-  Package, BookOpen,
+  Package, BookOpen, FileText,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAdminRole } from "@/app/admin/role-context";
@@ -30,6 +30,7 @@ export default function MorePage() {
     { icon: Users,             label: "ลูกค้า",        sub: "จัดการข้อมูลลูกค้า",        href: "/admin/customers",      color: "#3B82F6" },
     { icon: CreditCard,        label: "การชำระเงิน",   sub: "ประวัติการจ่ายเงิน",         href: "/admin/payments",       color: "#8B5CF6" },
     { icon: BarChart2,         label: "รายงาน",        sub: "สถิติและสรุปผล",            href: "/admin/reports",        color: "#F97316" },
+    { icon: FileText,          label: "บทความ",        sub: "เขียน / อนุมัติบทความ blog", href: "/admin/articles",       color: "#EC4899" },
     { icon: Settings,          label: "ตั้งค่า",       sub: "การตั้งค่าระบบ",             href: "/admin/settings",       color: "#6B7280" },
     { icon: UsersRound,        label: "จัดการทีม",     sub: "เพิ่ม / จัดการพนักงาน",      href: "/admin/staff",          color: "#06B6D4" },
   ];
