@@ -109,7 +109,15 @@ export async function uploadArticleImage(form: FormData): Promise<{ url?: string
   if (!file) return { error: "ไม่พบไฟล์" };
   const supabase = createServerClient();
   const ext = (file.name.split(".").pop() ?? "webp").toLowerCase();
-  const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  // เก็บชื่อไฟล์เดิมแบบ SEO-friendly (slug อังกฤษ) + ต่อท้ายกันชื่อชน — Google Images อ่านชื่อไฟล์ด้วย
+  const base = file.name
+    .replace(/\.[^.]+$/, "")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+  const path = `${base || "blog-image"}-${Date.now().toString(36)}.${ext}`;
   const { error } = await supabase.storage.from("blog").upload(path, file, { upsert: true, contentType: file.type });
   if (error) return { error: error.message };
   const { data } = supabase.storage.from("blog").getPublicUrl(path);
