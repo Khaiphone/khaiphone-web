@@ -8,6 +8,7 @@ import { Truck, Banknote, Clock, ShieldCheck, ChevronDown, ChevronRight, Lock } 
 import HowToSellSection from "./components/HowToSellSection";
 import ReviewSection from "./components/ReviewSection";
 import { blogPosts } from "@/lib/blogData";
+import { fetchPublishedArticleCards } from "@/lib/articles";
 import { fetchPublicActiveProducts } from "@/app/actions/products";
 
 export const metadata: Metadata = {
@@ -54,9 +55,21 @@ function IconShield({ className, style }: IconProps) {
 
 
 
-const latestPosts = [...blogPosts]
-  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  .slice(0, 4);
+// บทความล่าสุด = static เดิม + published จาก DB (pipeline) — 4 อันใหม่สุด
+async function getLatestPosts() {
+  const dbCards = await fetchPublishedArticleCards().catch(() => []);
+  const dbPosts = dbCards.map((c) => ({
+    id: c.slug, category: c.category, date: c.date, displayDate: c.displayDate, excerpt: c.excerpt,
+    title: c.title, image: c.image, slug: c.slug,
+  }));
+  const staticPosts = blogPosts.map((p) => ({
+    id: p.slug, category: p.category, date: p.date, displayDate: p.displayDate, excerpt: p.excerpt,
+    title: p.title, image: p.image, slug: p.slug,
+  }));
+  return [...staticPosts, ...dbPosts]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 4);
+}
 
 const faqs = [
   { q: "รับซื้อ iPhone รุ่นไหนบ้าง?", a: "รับซื้อ iPhone ทุกรุ่น ตั้งแต่ iPhone 11 ถึง iPhone 17 Series ทั้ง Pro Max, Pro, Plus, Air รวมถึง iPad, MacBook และ Apple Watch ทุกรุ่น ทั้ง TH/A และ ZP/A" },
@@ -69,7 +82,8 @@ const faqs = [
   { q: "ข้อมูลในเครื่องจะถูกลบไหม?", a: "ลูกค้า backup และลบข้อมูลเองก่อนส่งมอบ และเจ้าหน้าที่จะล้างเครื่องให้อีกครั้ง" },
 ];
 
-function BlogSection() {
+async function BlogSection() {
+  const latestPosts = await getLatestPosts();
   return (
     <section className="py-8 md:py-16 px-4 bg-white">
       <div className="max-w-6xl mx-auto">

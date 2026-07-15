@@ -5,6 +5,10 @@ import { withSentryConfig } from "@sentry/nextjs";
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.1.122"],
   outputFileTracingRoot: path.resolve(__dirname),
+  // รูปบทความจาก Supabase storage (bucket blog) — ให้ next/image optimize ได้
+  images: {
+    remotePatterns: [{ protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" }],
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: "15mb",
