@@ -1,4 +1,6 @@
 import type { MetadataRoute } from "next";
+
+export const revalidate = 3600; // รีเฟรชรายชม. — บทความใหม่จาก DB เข้า sitemap เอง
 import { fetchPublicActiveProducts } from "@/app/actions/products";
 import { blogPosts } from "@/lib/blogData";
 import { fetchPublishedArticleCards } from "@/lib/articles";

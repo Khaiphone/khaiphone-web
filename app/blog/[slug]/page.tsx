@@ -44,11 +44,12 @@ export async function generateMetadata({
   const post = await getArticle(slug);
   if (!post) return { title: "ไม่พบบทความ | Khaiphone.com" };
   const canonical = `${SITE_URL}/blog/${post.slug}`;
-  const title = post.metaTitle ?? post.title;
+  // ตัดแบรนด์ที่ปนมาท้าย metaTitle — layout template ต่อ "| Khaiphone.com" ให้อยู่แล้ว (กันซ้ำซ้อน)
+  const title = (post.metaTitle ?? post.title).replace(/\s*\|\s*Khaiphone(\.com)?\s*$/i, "");
   const description = post.metaDescription ?? post.excerpt;
   const ogImage = post.image ? absImageUrl(post.image) : `${SITE_URL}/og-default.webp`;
   return {
-    title: `${title} | Khaiphone.com`,
+    title,
     description,
     keywords: post.keywords,
     alternates: { canonical },

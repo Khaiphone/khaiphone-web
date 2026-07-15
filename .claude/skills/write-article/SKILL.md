@@ -34,7 +34,7 @@ description: เขียนบทความ SEO ภาษาไทยลง b
 - เว้น **ช่องรูปว่าง 1–2 จุด** ที่ควรมีภาพ: block `image` โดย `src: ""` + ใส่ `alt` อธิบาย (ดีต่อ SEO) — เจ้าของอัปโหลดรูปทีหลัง
 
 **meta:**
-- `metaTitle` ≤ ~60 ตัวอักษร มีคีย์เวิร์ดหลัก
+- `metaTitle` ≤ ~60 ตัวอักษร มีคีย์เวิร์ดหลัก — **ห้ามใส่ "| Khaiphone" ต่อท้าย** (ระบบต่อแบรนด์ให้อัตโนมัติ)
 - `metaDescription` ≤ ~155 ตัวอักษร ชวนคลิก มีคีย์เวิร์ด
 - `keywords` 5–8 วลี รวมวลีพื้นที่
 - `slug` อังกฤษ-ขีดกลาง สื่อความ ไม่ซ้ำของเดิม (เช่น `buy-iphone-rangsit`)
@@ -64,7 +64,7 @@ node scripts/insert-article.mjs <path-to-article.json>
   "displayDate": "14 กรกฎาคม 2569",
   "articleDate": "2026-07-14",
   "keywords": ["รับซื้อ iPhone รังสิต", "ขาย iPhone ปทุมธานี", "..."],
-  "metaTitle": "รับซื้อ iPhone รังสิต–ปทุมธานี | Khaiphone",
+  "metaTitle": "รับซื้อ iPhone รังสิต–ปทุมธานี รับถึงที่ จ่ายสด",
   "metaDescription": "...",
   "content": [
     { "type": "paragraph", "text": "ย่อหน้าเปิด มีคีย์เวิร์ดพื้นที่ ..." },

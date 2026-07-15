@@ -136,6 +136,7 @@ export async function approveArticle(id: string): Promise<{ success: boolean; er
     .update({ status: "published", published_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) return { success: false, error: error.message };
+  revalidatePath("/");        // หน้าแรก — section "บทความล่าสุด"
   revalidatePath("/blog");
   revalidatePath(`/blog/${a.slug}`);
   revalidatePath("/sitemap.xml");
@@ -149,6 +150,7 @@ export async function unpublishArticle(id: string): Promise<{ success: boolean; 
   const { error } = await supabase
     .from("articles").update({ status: "pending_review", updated_at: new Date().toISOString() }).eq("id", id);
   if (error) return { success: false, error: error.message };
+  revalidatePath("/");
   revalidatePath("/blog");
   if (a?.slug) revalidatePath(`/blog/${a.slug}`);
   return { success: true };
@@ -160,6 +162,6 @@ export async function deleteArticle(id: string): Promise<{ success: boolean; err
   const { data: a } = await supabase.from("articles").select("slug, status").eq("id", id).single();
   const { error } = await supabase.from("articles").delete().eq("id", id);
   if (error) return { success: false, error: error.message };
-  if (a?.status === "published") { revalidatePath("/blog"); if (a?.slug) revalidatePath(`/blog/${a.slug}`); }
+  if (a?.status === "published") { revalidatePath("/"); revalidatePath("/blog"); if (a?.slug) revalidatePath(`/blog/${a.slug}`); }
   return { success: true };
 }
