@@ -347,7 +347,16 @@ export default function RiderHomePage() {
                   disabled={submittingReturn === job.id}
                   onClick={async () => {
                     setSubmittingReturn(job.id);
-                    const res = await riderSubmitReturn(job.id);
+                    // ขอ GPS ตอนกด — server ตรวจ geofence 500 ม. จากร้าน (กดได้เมื่อถึงออฟฟิศจริง)
+                    const gps = await new Promise<{ lat: number; lng: number } | null>((resolve) => {
+                      if (!navigator.geolocation) { resolve(null); return; }
+                      navigator.geolocation.getCurrentPosition(
+                        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                        () => resolve(null),
+                        { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 },
+                      );
+                    });
+                    const res = await riderSubmitReturn(job.id, gps);
                     if (!res.success) alert((res as { success: false; error: string }).error);
                     if (userId) loadData(userId);
                     setSubmittingReturn(null);

@@ -341,6 +341,27 @@ export async function riderStartJob(id: string) {
     };
   }
 
+  // ตรวจจับ "ต่องานโดยไม่แวะร้าน": มีงานเสร็จวันนี้ที่ยังไม่แจ้งส่งคืน/ยังไม่ถูกยืนยันรับเครื่อง
+  // = ไรเดอร์ยังถือเครื่องอยู่แล้วออกงานใหม่ → log direct_chain ให้งานก่อนหน้า (สูตรระยะทางนับ งานA→งานB ตรง)
+  const { thaiDateStr } = await import("@/lib/thai-date");
+  const today = thaiDateStr();
+  const { data: holding } = await supabase
+    .from("requests")
+    .select("id, status_log")
+    .eq("rider_id", user.id)
+    .in("status", ["completed", "awaiting_transfer"])
+    .eq("appt_date", today)
+    .is("return_submitted_at", null)
+    .is("returned_to_office_at", null)
+    .neq("id", id);
+  for (const prev of holding ?? []) {
+    const log = (prev.status_log as Array<{ status?: string }> | null) ?? [];
+    if (log.some(l => l.status === "direct_chain")) continue; // มีอยู่แล้ว (เช่น กดไปงานถัดไปเอง)
+    await supabase.from("requests")
+      .update({ status_log: [...log, { status: "direct_chain", timestamp: now, note: "ต่องานถัดไปโดยไม่แวะร้าน (ตรวจจับอัตโนมัติ)" }], updated_at: now })
+      .eq("id", prev.id);
+  }
+
   const newLog = [
     ...(req?.status_log ?? []),
     { status: "en_route", timestamp: now, note: "ไรเดอร์ออกเดินทางแล้ว" },
@@ -1184,10 +1205,22 @@ async function updateRiderStatus(id: string, status: string, note: string, userI
 }
 
 // ─── Rider submits device return to office ────────────────────────────────────
-export async function riderSubmitReturn(id: string) {
+const RETURN_GEOFENCE_KM = 0.5; // กดส่งคืนได้เมื่ออยู่ในระยะ 500 ม. จากร้านเท่านั้น
+
+export async function riderSubmitReturn(id: string, gps?: { lat: number; lng: number } | null) {
   const user = await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
+
+  // Geofence — บังคับฝั่ง server เสมอ (client ส่ง GPS ตอนกดปุ่ม)
+  if (!gps || gps.lat == null || gps.lng == null) {
+    return { success: false as const, error: "ต้องเปิดตำแหน่ง (GPS) เพื่อยืนยันว่าถึงออฟฟิศแล้ว จึงจะแจ้งส่งคืนได้" };
+  }
+  const { haversineKm, OFFICE_LAT, OFFICE_LNG } = await import("@/lib/geo-utils");
+  const distKm = haversineKm(gps.lat, gps.lng, OFFICE_LAT, OFFICE_LNG);
+  if (distKm > RETURN_GEOFENCE_KM) {
+    return { success: false as const, error: `กดส่งคืนได้เมื่อถึงออฟฟิศแล้วเท่านั้น (ตอนนี้อยู่ห่าง ${distKm.toFixed(1)} กม.)` };
+  }
 
   const { data: req } = await supabase
     .from("requests")
