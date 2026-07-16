@@ -3,6 +3,7 @@
 import { requireAuth } from "@/lib/require-auth";
 import { createServerClient } from "@/lib/supabase-server";
 import { computeTier, computeStreak, computeBadges, computeMonthlyTier } from "@/lib/rider-kpi";
+import { chainDistanceKm, toDistanceJob } from "@/lib/chain-distance";
 import { thaiMonthStr, startOfThaiMonth, startOfNextThaiMonth } from "@/lib/thai-date";
 import type { RiderTier, Badge, RankConfig } from "@/lib/rider-kpi";
 export type { RiderTier, BadgeId, Badge, RankConfig } from "@/lib/rider-kpi";
@@ -55,13 +56,13 @@ export async function fetchMyMonthlyStats(month: string): Promise<{ stats: Month
   const [{ data: shifts }, { data: requests }, { data: userRow }, { data: rankRows }] = await Promise.all([
     supabase
       .from("rider_shifts")
-      .select("jobs_attempted, jobs_declined, total_distance_km")
+      .select("jobs_attempted, jobs_declined")
       .eq("rider_id", user.id)
       .gte("clocked_in_at", start)
       .lt("clocked_in_at", end),
     supabase
       .from("requests")
-      .select("actual_price, distance_km")
+      .select("actual_price, distance_km, status, appt_lat, appt_lng, status_log")
       .eq("rider_id", user.id)
       .in("status", ["completed", "cancelled", "no_show", "rejected"])
       .gte("appt_date", month + "-01")
@@ -77,10 +78,10 @@ export async function fetchMyMonthlyStats(month: string): Promise<{ stats: Month
   const jobsCompleted  = (requests ?? []).length;
   const jobsAttempted  = (shifts ?? []).reduce((s, sh) => s + (sh.jobs_attempted ?? 0), 0);
   const jobsDeclined   = (shifts ?? []).reduce((s, sh) => s + (sh.jobs_declined  ?? 0), 0);
-  const distanceKm     = (shifts ?? []).reduce((s, sh) => s + (sh.total_distance_km ?? 0), 0);
+  // ระยะทางจากเส้นทางงานจริง (ร้าน→งาน→ร้าน / ต่องาน direct_chain) — ไม่ใช้ shift GPS ที่ไม่มีข้อมูล
+  const { totalKm: distanceKm, travelledTrips } = chainDistanceKm((requests ?? []).map(toDistanceJob));
   const goodsValueThb  = (requests ?? []).reduce((s, r) => s + (r.actual_price ?? 0), 0);
   const totalOffered   = jobsAttempted + jobsDeclined;
-  const reqDistTotal   = (requests ?? []).reduce((s, r) => s + (r.distance_km ?? 0), 0);
 
   const configs: RankConfig[] = (rankRows ?? []).map(r => ({
     tier: r.tier as RiderTier, label_th: r.label_th,
@@ -96,7 +97,7 @@ export async function fetchMyMonthlyStats(month: string): Promise<{ stats: Month
       jobsCompleted, jobsAttempted, jobsDeclined, distanceKm, goodsValueThb, monthlyTier, rankConfig,
       acceptanceRate: totalOffered > 0  ? jobsAttempted / totalOffered  : null,
       completionRate: jobsAttempted > 0 ? jobsCompleted / jobsAttempted : null,
-      avgDistPerJob:  jobsCompleted > 0 ? reqDistTotal  / jobsCompleted  : null,
+      avgDistPerJob:  travelledTrips > 0 ? distanceKm / travelledTrips  : null,
     },
     targets: {
       monthly_jobs_target:     userRow?.monthly_jobs_target     ?? null,
@@ -116,21 +117,21 @@ export async function fetchMyLifetimeStats(): Promise<{
   const user = await requireAuth();
   const supabase = createServerClient();
 
-  const [{ data: allShifts }, { count: completedCount }] = await Promise.all([
+  const [{ data: allShifts }, { data: allClosed }] = await Promise.all([
     supabase
       .from("rider_shifts")
-      .select("clocked_in_at, jobs_completed, jobs_attempted, jobs_declined, total_distance_km")
+      .select("clocked_in_at, jobs_completed, jobs_attempted, jobs_declined")
       .eq("rider_id", user.id)
       .order("clocked_in_at", { ascending: false }),
     supabase
       .from("requests")
-      .select("*", { count: "exact", head: true })
+      .select("status, appt_lat, appt_lng, distance_km, status_log")
       .eq("rider_id", user.id)
       .in("status", ["completed", "cancelled", "no_show", "rejected"]),
   ]);
 
-  const lifetimeCompleted  = completedCount ?? 0;
-  const lifetimeDistanceKm = (allShifts ?? []).reduce((s, sh) => s + (sh.total_distance_km ?? 0), 0);
+  const lifetimeCompleted  = (allClosed ?? []).length;
+  const lifetimeDistanceKm = chainDistanceKm((allClosed ?? []).map(toDistanceJob)).totalKm;
   const currentStreak      = computeStreak(allShifts ?? []);
   const tier               = computeTier(lifetimeCompleted);
 
@@ -153,33 +154,33 @@ export async function fetchLeaderboard(month: string): Promise<LeaderboardEntry[
   const supabase = createServerClient();
   const { start, end } = monthBounds(month);
 
-  const [{ data: shifts }, { data: riders }, { data: requests }] = await Promise.all([
-    supabase
-      .from("rider_shifts")
-      .select("rider_id, jobs_completed, total_distance_km")
-      .gte("clocked_in_at", start)
-      .lt("clocked_in_at", end),
+  const [{ data: riders }, { data: requests }] = await Promise.all([
     supabase.from("admin_users").select("user_id, name").eq("is_rider", true),
     supabase
       .from("requests")
-      .select("rider_id, actual_price")
+      .select("rider_id, actual_price, status, appt_lat, appt_lng, distance_km, status_log")
       .in("status", ["completed", "cancelled", "no_show", "rejected"])
       .gte("appt_date", month + "-01")
       .lte("appt_date", month + "-31"),
   ]);
 
   const map = new Map<string, LeaderboardEntry>();
+  const jobsByRider = new Map<string, NonNullable<typeof requests>>();
   for (const r of riders ?? []) {
     map.set(r.user_id, { riderId: r.user_id, name: r.name, jobsCompleted: 0, distanceKm: 0, earningsThb: 0 });
-  }
-  for (const s of shifts ?? []) {
-    const e = map.get(s.rider_id);
-    if (e) { e.distanceKm += s.total_distance_km ?? 0; }
   }
   for (const r of requests ?? []) {
     if (!r.rider_id) continue;
     const e = map.get(r.rider_id);
     if (e) { e.jobsCompleted += 1; e.earningsThb += r.actual_price ?? 0; }
+    const list = jobsByRider.get(r.rider_id) ?? [];
+    list.push(r);
+    jobsByRider.set(r.rider_id, list);
+  }
+  // ระยะทางจากเส้นทางงานจริงต่อไรเดอร์ (ฟังก์ชันกลางเดียวกับหน้าผลงาน — เลขตรงกันทุกหน้า)
+  for (const [riderId, jobs] of jobsByRider) {
+    const e = map.get(riderId);
+    if (e) e.distanceKm = chainDistanceKm(jobs.map(toDistanceJob)).totalKm;
   }
 
   return Array.from(map.values()).sort((a, b) => b.jobsCompleted - a.jobsCompleted);
@@ -234,13 +235,13 @@ export async function fetchRiderKpiForAdmin(riderId: string, month: string): Pro
   const [{ data: shifts }, { data: requests }, { data: userRow }, { data: rankRows }] = await Promise.all([
     supabase
       .from("rider_shifts")
-      .select("jobs_attempted, jobs_declined, total_distance_km")
+      .select("jobs_attempted, jobs_declined")
       .eq("rider_id", riderId)
       .gte("clocked_in_at", start)
       .lt("clocked_in_at", end),
     supabase
       .from("requests")
-      .select("actual_price, distance_km")
+      .select("actual_price, distance_km, status, appt_lat, appt_lng, status_log")
       .eq("rider_id", riderId)
       .in("status", ["completed", "cancelled", "no_show", "rejected"])
       .gte("appt_date", month + "-01")
@@ -256,10 +257,10 @@ export async function fetchRiderKpiForAdmin(riderId: string, month: string): Pro
   const jobsCompleted  = (requests ?? []).length;
   const jobsAttempted  = (shifts ?? []).reduce((s, sh) => s + (sh.jobs_attempted ?? 0), 0);
   const jobsDeclined   = (shifts ?? []).reduce((s, sh) => s + (sh.jobs_declined  ?? 0), 0);
-  const distanceKm     = (shifts ?? []).reduce((s, sh) => s + (sh.total_distance_km ?? 0), 0);
+  // ระยะทางจากเส้นทางงานจริง — ฟังก์ชันกลางเดียวกับหน้าผลงานไรเดอร์ (เลขตรงกันทุกหน้า)
+  const { totalKm: distanceKm, travelledTrips } = chainDistanceKm((requests ?? []).map(toDistanceJob));
   const goodsValueThb  = (requests ?? []).reduce((s, r) => s + (r.actual_price ?? 0), 0);
   const totalOffered   = jobsAttempted + jobsDeclined;
-  const reqDistTotal   = (requests ?? []).reduce((s, r) => s + (r.distance_km ?? 0), 0);
 
   const configs: RankConfig[] = (rankRows ?? []).map(r => ({
     tier: r.tier as RiderTier, label_th: r.label_th,
@@ -275,7 +276,7 @@ export async function fetchRiderKpiForAdmin(riderId: string, month: string): Pro
       jobsCompleted, jobsAttempted, jobsDeclined, distanceKm, goodsValueThb, monthlyTier, rankConfig,
       acceptanceRate: totalOffered > 0  ? jobsAttempted / totalOffered  : null,
       completionRate: jobsAttempted > 0 ? jobsCompleted / jobsAttempted : null,
-      avgDistPerJob:  jobsCompleted > 0 ? reqDistTotal  / jobsCompleted : null,
+      avgDistPerJob:  travelledTrips > 0 ? distanceKm / travelledTrips : null,
     },
     targets: {
       monthly_jobs_target:     userRow?.monthly_jobs_target     ?? null,
@@ -314,21 +315,21 @@ export async function fetchRiderLifetimeForAdmin(riderId: string): Promise<{
   await requireAuth();
   const supabase = createServerClient();
 
-  const [{ data: allShifts }, { count: completedCount }] = await Promise.all([
+  const [{ data: allShifts }, { data: allClosed }] = await Promise.all([
     supabase
       .from("rider_shifts")
-      .select("clocked_in_at, jobs_completed, jobs_attempted, jobs_declined, total_distance_km")
+      .select("clocked_in_at, jobs_completed, jobs_attempted, jobs_declined")
       .eq("rider_id", riderId)
       .order("clocked_in_at", { ascending: false }),
     supabase
       .from("requests")
-      .select("*", { count: "exact", head: true })
+      .select("status, appt_lat, appt_lng, distance_km, status_log")
       .eq("rider_id", riderId)
       .in("status", ["completed", "cancelled", "no_show", "rejected"]),
   ]);
 
-  const lifetimeCompleted  = completedCount ?? 0;
-  const lifetimeDistanceKm = (allShifts ?? []).reduce((s, sh) => s + (sh.total_distance_km ?? 0), 0);
+  const lifetimeCompleted  = (allClosed ?? []).length;
+  const lifetimeDistanceKm = chainDistanceKm((allClosed ?? []).map(toDistanceJob)).totalKm;
   const currentStreak      = computeStreak(allShifts ?? []);
   const tier               = computeTier(lifetimeCompleted);
   const badges = computeBadges({ lifetimeCompleted, lifetimeDistanceKm, currentStreak, monthAcceptanceRate: null, monthAttempted: 0 });

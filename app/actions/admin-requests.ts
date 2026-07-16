@@ -12,6 +12,7 @@ import type { Permission } from "@/lib/admin-permissions";
 import type { AdminRole } from "@/app/actions/admin-users";
 import { createStockItem } from "@/app/actions/stocks";
 import type { SourceChannel } from "@/lib/stock/types";
+import { OFFICE_LAT, OFFICE_LNG } from "@/lib/geo-utils";
 
 const STATUS_LABEL: Record<string, string> = {
   new:               "คำขอใหม่",
@@ -624,16 +625,34 @@ async function geocodeLocation(location: string): Promise<{ lat: number; lng: nu
   return null;
 }
 
+// ระยะถนน ร้าน→ปลายทาง ผ่าน Routes API (Distance Matrix รุ่นเก่าถูก Google ปิดแล้ว — คืน REQUEST_DENIED)
+// destination รับได้ทั้งที่อยู่ข้อความ และพิกัด "lat, lng" (ใช้หมุดลูกค้าซึ่งแม่นกว่า)
 async function fetchDistanceKm(destination: string): Promise<number | null> {
   const key = process.env.GOOGLE_MAPS_SERVER_KEY ?? process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
-  if (!key || !destination) return null;
+  if (!key || !destination.trim()) return null;
   try {
-    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(STORE_ADDRESS)}&destinations=${encodeURIComponent(destination)}&key=${key}&mode=driving&language=th`;
-    const res  = await fetch(url, { cache: "no-store" });
+    const coordMatch = destination.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+    const destSpec = coordMatch
+      ? { location: { latLng: { latitude: parseFloat(coordMatch[1]), longitude: parseFloat(coordMatch[2]) } } }
+      : { address: destination };
+    const res = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": key,
+        "X-Goog-FieldMask": "routes.distanceMeters",
+      },
+      body: JSON.stringify({
+        origin: { location: { latLng: { latitude: OFFICE_LAT, longitude: OFFICE_LNG } } },
+        destination: destSpec,
+        travelMode: "DRIVE",
+      }),
+      cache: "no-store",
+    });
     const data = await res.json();
-    const el   = data?.rows?.[0]?.elements?.[0];
-    if (el?.status === "OK" && el?.distance?.value) {
-      return Math.round(el.distance.value / 100) / 10; // meters → km (1 decimal)
+    const meters = data?.routes?.[0]?.distanceMeters;
+    if (typeof meters === "number" && meters > 0) {
+      return Math.round(meters / 100) / 10; // meters → km (1 decimal)
     }
   } catch { /* ignore */ }
   return null;
@@ -824,7 +843,7 @@ export async function assignRider(id: string, riderId: string | null, riderName:
   // Fetch address, current rider, and status for this request
   const { data: req } = await supabase
     .from("requests")
-    .select("order_number, device_model, appt_location, status, rider_id, rider_name")
+    .select("order_number, device_model, appt_location, appt_lat, appt_lng, status, rider_id, rider_name")
     .eq("id", id)
     .single();
 
@@ -832,8 +851,11 @@ export async function assignRider(id: string, riderId: string | null, riderName:
     return { success: false as const, error: "ต้องยืนยันนัดหมายก่อนมอบหมายไรเดอร์" };
   }
 
-  // Calculate distance from store → customer address
-  const distanceKm = riderId ? await fetchDistanceKm(req?.appt_location ?? "") : null;
+  // Calculate distance from store → customer (พิกัดหมุดก่อน แม่นกว่าที่อยู่ข้อความ)
+  const dest = req?.appt_lat != null && req?.appt_lng != null
+    ? `${req.appt_lat}, ${req.appt_lng}`
+    : req?.appt_location ?? "";
+  const distanceKm = riderId ? await fetchDistanceKm(dest) : null;
 
   const now = new Date().toISOString();
   const updatePayload: Record<string, unknown> = {
