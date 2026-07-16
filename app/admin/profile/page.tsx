@@ -1,5 +1,6 @@
 "use client";
 
+import { unsubscribeDeviceFromPush } from "@/lib/push-client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, UserCircle, Mail, Shield, LogOut, Key } from "lucide-react";
@@ -56,6 +57,7 @@ export default function ProfilePage() {
   }
 
   async function handleLogout() {
+    await unsubscribeDeviceFromPush(); // ถอน push ของเครื่องก่อน (ต้องใช้ session)
     await supabase.auth.signOut();
     router.push("/admin/login");
   }

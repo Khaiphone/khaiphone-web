@@ -1,5 +1,6 @@
 "use client";
 
+import { unsubscribeDeviceFromPush } from "@/lib/push-client";
 import { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { UserCircle, LogOut, Wifi, WifiOff, ChevronRight, Moon, Sun, ShieldX, Camera } from "lucide-react";
@@ -127,6 +128,7 @@ export default function AccountPage() {
 
   async function handleLogout() {
     if (userId) await setRiderOnlineStatus(false).catch(() => {});
+    await unsubscribeDeviceFromPush(); // ถอน push ของเครื่องก่อน (ต้องใช้ session)
     await supabase.auth.signOut();
     router.replace("/admin/login");
   }

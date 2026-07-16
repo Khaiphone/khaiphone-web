@@ -1,5 +1,6 @@
 "use client";
 
+import { unsubscribeDeviceFromPush } from "@/lib/push-client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, ShieldCheck, X } from "lucide-react";
@@ -44,6 +45,7 @@ export default function ConsentPage() {
     await saveLocationConsent(false);
     // Sign out — can't use app without consent
     const { supabase } = await import("@/lib/supabase");
+    await unsubscribeDeviceFromPush(); // ถอน push ของเครื่องก่อน (ต้องใช้ session)
     await supabase.auth.signOut();
     router.replace("/admin/login");
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import EnablePushBanner from "@/app/components/EnablePushBanner";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -127,6 +128,7 @@ export default function StockLayoutClient({ children }: { children: React.ReactN
     <StockThemeProvider>
       <StockRoleProvider value={{ role, permissions, canViewFinance: role === "owner" || permissions.includes("view_finance") }}>
         <MobileMenuProvider>
+          <EnablePushBanner app="stock" />
           <StockLayoutInner>{children}</StockLayoutInner>
         </MobileMenuProvider>
       </StockRoleProvider>

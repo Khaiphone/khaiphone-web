@@ -8,6 +8,7 @@ import { Home, Clock, BarChart2, UserCircle, Bell } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { fetchRiderNotifications, fetchRiderBootstrap } from "@/app/actions/rider";
 import { saveSubscription } from "@/app/actions/push";
+import EnablePushBanner from "@/app/components/EnablePushBanner";
 import { RiderThemeProvider, useRiderTheme } from "@/app/rider/theme";
 import { RiderSessionContext } from "@/app/rider/context";
 import { RiderNavReadyContext } from "@/app/rider/nav-ready-context";
@@ -112,39 +113,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
       vp.content = vp.content + ", interactive-widget=resizes-content";
     }
 
-    if ("serviceWorker" in navigator && "PushManager" in window) {
-      navigator.serviceWorker.register("/sw.js").then(async (reg) => {
-        // iOS: requestPermission นอก user gesture จะไม่คืน "granted" → ถ้า granted แล้วข้ามไป
-        const permission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
-        if (permission !== "granted") return;
-        const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-        if (!vapidKey) return;
-        const key = Uint8Array.from(atob(vapidKey.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
-        const existing = await reg.pushManager.getSubscription();
-        if (existing) {
-          const existingKeyBuf = existing.options.applicationServerKey;
-          if (existingKeyBuf) {
-            const existingKey = new Uint8Array(existingKeyBuf);
-            if (key.length === existingKey.length && key.every((v, i) => v === existingKey[i])) {
-              // same key — upsert เพื่อบันทึก app tag (sub เก่าอาจยังไม่มี app)
-              const json = existing.toJSON();
-              if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
-                const { data: { session } } = await supabase.auth.getSession();
-                await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, userId: session?.user?.id, app: "rider" });
-              }
-              return;
-            }
-          }
-          await existing.unsubscribe();
-        }
-        const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
-        const json = sub.toJSON();
-        if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
-          const { data: { session } } = await supabase.auth.getSession();
-          await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, userId: session?.user?.id, app: "rider" });
-        }
-      }).catch(e => console.error("SW registration error:", e));
-    }
+    // Push subscribe ย้ายไป lib/push-client.ts ผ่าน <EnablePushBanner app="rider" />
   }, []);
 
   useEffect(() => {
@@ -353,6 +322,7 @@ function RiderLayoutInner({ children }: { children: React.ReactNode }) {
 export default function RiderLayoutClient({ children }: { children: React.ReactNode }) {
   return (
     <RiderThemeProvider>
+      <EnablePushBanner app="rider" />
       <RiderLayoutInner>{children}</RiderLayoutInner>
     </RiderThemeProvider>
   );

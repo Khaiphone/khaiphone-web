@@ -7,7 +7,7 @@ import { requireAuth } from "@/lib/require-auth";
 type PushPayload = { title: string; body: string; url?: string; tag?: string };
 type SubRow = { endpoint: string; p256dh: string; auth: string };
 // แอปปลายทางของการแจ้งเตือน — กันเด้งซ้ำข้ามแอป (owner ติดตั้งหลาย PWA, endpoint คนละตัว แต่ user เดียว)
-export type PushApp = "admin" | "rider" | "stock";
+export type PushApp = "admin" | "rider" | "stock" | "finance" | "ceo";
 
 function getWebPush() {
   const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -56,6 +56,14 @@ export async function saveSubscription(subscription: {
     },
     { onConflict: "endpoint" },
   );
+}
+
+// ลบ subscription ของเครื่องตาม endpoint — เรียกก่อน signOut (ต้องมี session)
+// กันเครื่องเก่าที่ล็อกเอาต์แล้วยังได้แจ้งเตือน (Web Push ผูกกับเครื่อง ไม่ใช่การล็อกอิน)
+export async function deleteSubscriptionByEndpoint(endpoint: string) {
+  await requireAuth();
+  const supabase = createServerClient();
+  await supabase.from("push_subscriptions").delete().eq("endpoint", endpoint);
 }
 
 export async function sendPushToAll(payload: PushPayload) {

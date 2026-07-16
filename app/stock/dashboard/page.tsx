@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Package, TrendingUp, DollarSign, CheckCircle, Clock, ShoppingBag, Wallet, Truck, BadgeDollarSign, Calendar, Bell } from "lucide-react";
-import { saveSubscription } from "@/app/actions/push";
+import { subscribeDeviceToPush } from "@/lib/push-client";
 import { thaiDateStr, thaiDateOffset } from "@/lib/thai-date";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion } from "framer-motion";
@@ -65,46 +65,11 @@ export default function StockDashboard() {
     setNotifStatus(Notification.permission as "default" | "granted" | "denied");
   }, []);
 
-  // ถ้า permission granted อยู่แล้ว → re-tag subscription เป็น "stock" เงียบๆ ตอนเปิดแอป
-  // (ไม่เรียก requestPermission จึงไม่ต้องมี user gesture) — กัน noti ของแอปอื่นรั่วเข้าสต็อก
-  useEffect(() => {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return;
-    if (Notification.permission !== "granted") return;
-    (async () => {
-      try {
-        // layout ลงทะเบียน sw.js ไปแล้ว — ใช้ ready แทนการ register ซ้ำ
-        const reg = await navigator.serviceWorker.ready;
-        const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-        if (!vapidKey) return;
-        const key = Uint8Array.from(atob(vapidKey.replace(/-/g, "+").replace(/_/g, "/")), ch => ch.charCodeAt(0));
-        let sub = await reg.pushManager.getSubscription();
-        if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
-        const json = sub.toJSON();
-        if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
-          await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, app: "stock" });
-        }
-      } catch { /* เงียบไว้ — ปุ่มเปิดแจ้งเตือนยังใช้ได้ */ }
-    })();
-  }, []);
-
-  // iOS requires Notification.requestPermission() to be called from a user gesture (tap).
+  // subscribe/re-tag รวมศูนย์ที่ lib/push-client.ts (EnablePushBanner ใน StockLayoutClient จัดการ auto-attempt แล้ว)
+  // ปุ่มนี้เหลือไว้เป็น gesture entry อีกทาง (iOS ต้องแตะถึงขอสิทธิ์ได้)
   async function enableNotifications() {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
-    const permission = await Notification.requestPermission();
-    setNotifStatus(permission as "default" | "granted" | "denied");
-    if (permission !== "granted") return;
-    try {
-      const reg = await navigator.serviceWorker.register("/sw.js");
-      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-      if (!vapidKey) return;
-      const key = Uint8Array.from(atob(vapidKey.replace(/-/g, "+").replace(/_/g, "/")), ch => ch.charCodeAt(0));
-      let sub = await reg.pushManager.getSubscription();
-      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
-      const json = sub.toJSON();
-      if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
-        await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, app: "stock" });
-      }
-    } catch (e) { console.error("push setup error:", e); }
+    const result = await subscribeDeviceToPush("stock");
+    setNotifStatus(result === "subscribed" ? "granted" : result === "denied" ? "denied" : "default");
   }
 
   const { dateFrom, dateTo } = useMemo(

@@ -12,7 +12,8 @@ import BottomTabNav from "../components/admin/BottomTabNav";
 import { supabase } from "@/lib/supabase";
 import { fetchMyProfile } from "@/app/actions/admin-users";
 import { perfStart } from "@/lib/perf";
-import { saveSubscription } from "@/app/actions/push";
+import { unsubscribeDeviceFromPush } from "@/lib/push-client";
+import EnablePushBanner from "@/app/components/EnablePushBanner";
 import { AdminRoleProvider } from "./role-context";
 import { AdminNavReadyContext } from "./nav-ready-context";
 import { shouldRedirect } from "@/lib/route-guard";
@@ -102,49 +103,8 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     setMeta("apple-mobile-web-app-title", "KP Admin");
     setMeta("theme-color", "#B8860B");
 
-    // Register service worker + subscribe to push notifications
-    if ("serviceWorker" in navigator && "PushManager" in window) {
-      navigator.serviceWorker.register("/sw.js").then(async (reg) => {
-        // iOS: requestPermission นอก user gesture จะไม่คืน "granted" → ถ้า granted แล้วข้ามไปเลย
-        // (มิฉะนั้น effect จะ return ก่อนถึง saveSubscription → sub ไม่เคยถูก re-tag เป็น admin)
-        const permission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
-        if (permission !== "granted") return;
-
-        const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-        if (!vapidKey) return;
-
-        // PushManager requires Uint8Array, not raw base64url string
-        const key = Uint8Array.from(atob(vapidKey.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
-
-        const existing = await reg.pushManager.getSubscription();
-        if (existing) {
-          // If VAPID key changed (or key not readable on iOS), unsubscribe and resubscribe
-          const existingKeyBuf = existing.options.applicationServerKey;
-          if (existingKeyBuf) {
-            const existingKey = new Uint8Array(existingKeyBuf);
-            const keyMatches = key.length === existingKey.length && key.every((v, i) => v === existingKey[i]);
-            if (keyMatches) {
-              // same key — subscription ยังใช้ได้ แต่ upsert เพื่อบันทึก app tag (sub เก่าอาจยังไม่มี app)
-              const json = existing.toJSON();
-              if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
-                const { data: { session } } = await supabase.auth.getSession();
-                await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, userId: session?.user?.id, app: "admin" });
-              }
-              return;
-            }
-          }
-          await existing.unsubscribe();
-        }
-
-        const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
-
-        const json = sub.toJSON();
-        if (json.endpoint && json.keys?.p256dh && json.keys?.auth) {
-          const { data: { session } } = await supabase.auth.getSession();
-          await saveSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, userId: session?.user?.id, app: "admin" });
-        }
-      }).catch(e => console.error("SW registration error:", e));
-    }
+    // Push subscribe ย้ายไป lib/push-client.ts ผ่าน <EnablePushBanner app="admin" />
+    // (auto-attempt + แถบให้แตะเมื่อ iOS ไม่ให้ขอสิทธิ์นอก gesture)
   }, []);
 
   useEffect(() => {
@@ -219,6 +179,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     <AdminNavReadyContext.Provider value={{ navReady, markFirstScreenReady }}>
     <AdminRoleProvider value={{ role, permissions, loading: !ready, userId, userName: profileName ?? "", userEmail }}>
       <div className="admin-shell" style={{ minHeight: "100vh", background: dark ? "#0F0F11" : "#F5F5F7", display: "flex", "--admin-sidebar-w": `${sidebarW}px`, ...adminCssVars(dark) } as React.CSSProperties}>
+        <EnablePushBanner app="admin" />
 
         {/* ── Desktop Sidebar (md+) ── */}
         <aside
@@ -392,7 +353,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                   {!isCollapsed && (dark ? "Light Mode" : "Dark Mode")}
                 </button>
                 <button
-                  onClick={() => { localStorage.removeItem("kp_admin_role"); supabase.auth.signOut().then(() => router.push("/admin/login")); }}
+                  onClick={async () => { localStorage.removeItem("kp_admin_role"); await unsubscribeDeviceFromPush(); supabase.auth.signOut().then(() => router.push("/admin/login")); }}
                   title={isCollapsed ? "ออกจากระบบ" : undefined}
                   style={{
                     width: "100%", padding: "9px 12px", borderRadius: "10px",

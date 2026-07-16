@@ -1,5 +1,6 @@
 "use client";
 
+import EnablePushBanner from "@/app/components/EnablePushBanner";
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
@@ -57,6 +58,7 @@ export default function CeoLayoutClient({ children }: { children: React.ReactNod
 
   return (
    <MonthProvider>
+    <EnablePushBanner app="ceo" />
     <div style={{ minHeight: "100dvh", background: "#F4F5F7", color: "#111", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", display: "flex" }}>
       {/* Desktop sidebar */}
       <aside className="hidden md:flex" style={{ width: 232, flexShrink: 0, flexDirection: "column", background: "#16161A", color: "#fff", position: "sticky", top: 0, height: "100dvh" }}>

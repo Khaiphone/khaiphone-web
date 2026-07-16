@@ -1,5 +1,6 @@
 "use client";
 
+import { unsubscribeDeviceFromPush } from "@/lib/push-client";
 import { useRouter } from "next/navigation";
 import {
   Users, CreditCard, BarChart2, Settings,
@@ -42,6 +43,7 @@ export default function MorePage() {
   const items = role === "owner" ? [...OWNER_ITEMS, ...COMMON_ITEMS] : COMMON_ITEMS;
 
   async function handleLogout() {
+    await unsubscribeDeviceFromPush(); // ถอน push ของเครื่องก่อน (ต้องใช้ session)
     await supabase.auth.signOut();
     router.push("/admin/login");
   }

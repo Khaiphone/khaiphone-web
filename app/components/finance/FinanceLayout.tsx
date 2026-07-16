@@ -1,5 +1,6 @@
 'use client'
 
+import EnablePushBanner from "@/app/components/EnablePushBanner";
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -327,6 +328,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
 
   return (
     <FinanceDateContext.Provider value={{ dateFrom, dateTo }}>
+      <EnablePushBanner app="finance" />
       <div style={{ minHeight: '100vh', background: 'var(--f-bg)', display: 'flex' }}>
 
         {/* Desktop Sidebar */}
