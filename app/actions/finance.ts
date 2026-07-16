@@ -162,7 +162,7 @@ async function linkedStockCostMap(supabase: ReturnType<typeof createServerClient
 
 function normFromStock(s: { sold_price: number; sold_at: string; cost_price?: number; shipping_cost?: number; other_cost?: number; sold_cost_snapshot?: number | null; model?: string }): NormSoldItem {
   const cost = s.sold_cost_snapshot ?? ((s.cost_price ?? 0) + (s.shipping_cost ?? 0) + (s.other_cost ?? 0));
-  return { sell_price: s.sold_price, sell_date: s.sold_at.slice(0, 10), cost, model: s.model ?? "Unknown" };
+  return { sell_price: s.sold_price, sell_date: thaiDateStr(new Date(s.sold_at)), cost, model: s.model ?? "Unknown" };
 }
 
 export async function fetchFinanceDashboard(dateFrom?: string, dateTo?: string): Promise<FinanceDashboard> {
@@ -359,7 +359,7 @@ export async function fetchFinanceIncome(dateFrom = "", dateTo = ""): Promise<Fi
     const sell = s.sold_price ?? 0;
     return {
       id: s.id,
-      date: s.sold_at.slice(0, 10),
+      date: thaiDateStr(new Date(s.sold_at)),
       refNumber: s.id,
       model: s.model ?? "",
       storage: s.storage ?? "",
@@ -1129,7 +1129,7 @@ export async function fetchStaffPerformance(dateFrom?: string, dateTo?: string):
 
   const rows = (data ?? []).filter((r) => {
     if (!r.sold_at) return false;
-    const day = r.sold_at.slice(0, 10);
+    const day = thaiDateStr(new Date(r.sold_at));
     if (dateFrom && day < dateFrom) return false;
     if (dateTo && day > dateTo) return false;
     return true;
@@ -1184,7 +1184,7 @@ export async function fetchStaffSoldItems(
   return (data ?? [])
     .filter((r) => {
       if (!r.sold_at) return false;
-      const day = r.sold_at.slice(0, 10);
+      const day = thaiDateStr(new Date(r.sold_at));
       if (dateFrom && day < dateFrom) return false;
       if (dateTo && day > dateTo) return false;
       return true;
@@ -1238,7 +1238,7 @@ export async function fetchTaxSummary(dateFrom?: string, dateTo?: string): Promi
 
   const filtered = (soldStocks ?? []).filter((r) => {
     if (!r.sold_at) return false;
-    const day = r.sold_at.slice(0, 10);
+    const day = thaiDateStr(new Date(r.sold_at));
     if (dateFrom && day < dateFrom) return false;
     if (dateTo && day > dateTo) return false;
     return true;
@@ -1246,7 +1246,7 @@ export async function fetchTaxSummary(dateFrom?: string, dateTo?: string): Promi
 
   const monthMap = new Map<string, number>();
   for (const r of filtered) {
-    const key = r.sold_at.slice(0, 7);
+    const key = thaiDateStr(new Date(r.sold_at)).slice(0, 7);
     monthMap.set(key, (monthMap.get(key) ?? 0) + (r.sold_price ?? 0));
   }
 
@@ -1383,7 +1383,7 @@ export async function fetchForecast(): Promise<ForecastData> {
 
   const dayMap = new Map<string, number>();
   for (const r of data ?? []) {
-    const day = r.sold_at.slice(0, 10);
+    const day = thaiDateStr(new Date(r.sold_at));
     dayMap.set(day, (dayMap.get(day) ?? 0) + (r.sold_price ?? 0));
   }
 
@@ -1585,7 +1585,7 @@ export async function fetchSaleDocument(id: string): Promise<SaleDocument | null
   const whtAmount = Math.round(amount * whtRate / 100);
   return {
     refNumber,
-    date: (stock.sold_at ?? "").slice(0, 10),
+    date: stock.sold_at ? thaiDateStr(new Date(stock.sold_at)) : "",
     model: stock.model ?? "",
     storage: stock.storage ?? "",
     color: stock.color ?? "",
@@ -1632,7 +1632,7 @@ export async function fetchPurchaseDocument(id: string): Promise<PurchaseDocumen
 
   return {
     refNumber: req.order_number ?? "",
-    date: (req.created_at ?? "").slice(0, 10),
+    date: req.created_at ? thaiDateStr(new Date(req.created_at)) : "",
     model: req.device_model ?? "",
     storage: req.device_storage ?? "",
     color: stock?.color ?? "",

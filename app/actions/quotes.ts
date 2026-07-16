@@ -204,7 +204,7 @@ export async function fetchQuoteDocument(id: string): Promise<QuoteDocument | nu
   if (!quote) return null;
   return {
     id: quote.id,
-    date: quote.created_at.slice(0, 10),
+    date: thaiDateStr(new Date(quote.created_at)),
     validUntil: quote.valid_until ?? null,
     status: quote.status,
     customerName: quote.customer_name,
@@ -255,7 +255,7 @@ export async function fetchQuotePipeline(): Promise<QuotePipeline> {
   const sentCount = sent.length;
   const sentValue = sent.reduce((s, r) => s + (r.total ?? 0), 0);
 
-  const recent = rows.filter((r) => (r.created_at ?? "").slice(0, 10) >= thirtyDaysAgo);
+  const recent = rows.filter((r) => (r.created_at ? thaiDateStr(new Date(r.created_at)) : "") >= thirtyDaysAgo);
   const recentAccepted = recent.filter((r) => r.status === "accepted").length;
   const recentDecided = recent.filter((r) => r.status === "accepted" || r.status === "rejected").length;
   const conversionRate = recentDecided > 0 ? Math.round((recentAccepted / recentDecided) * 100) : null;
