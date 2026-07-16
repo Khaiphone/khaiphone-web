@@ -1068,9 +1068,13 @@ function SellModelPageContent() {
 
       setPinAddress(address);
       setLocationModal({ lat: latitude, lng: longitude, address });
-    } catch {
+    } catch (err) {
       // ห้ามใส่ข้อความ error ลงช่องที่อยู่ — เคยมีลูกค้าส่งฟอร์มโดยมีข้อความนี้ค้างเป็น "ที่อยู่" จริง (KH-2026-79984)
-      setLocationError("ดึงตำแหน่งอัตโนมัติไม่สำเร็จ — กรุณาอนุญาตการเข้าถึงตำแหน่ง หรือพิมพ์ที่อยู่ในช่องด้านบน");
+      // เบราว์เซอร์ไม่ยอมให้เด้ง prompt ซ้ำหลังผู้ใช้กดปฏิเสธ — ต้องบอกวิธีเปิดเองให้ชัด
+      const denied = (err as GeolocationPositionError)?.code === 1; // PERMISSION_DENIED
+      setLocationError(denied
+        ? "การเข้าถึงตำแหน่งถูกปิดไว้ — เปิดได้ที่ไอคอน 🔒 หรือ “AA” ข้างช่องที่อยู่เว็บ > อนุญาตตำแหน่ง แล้วกดปุ่มนี้อีกครั้ง · หรือพิมพ์ที่อยู่/ค้นหาสถานที่ในช่องด้านบนได้เลย"
+        : "ดึงตำแหน่งอัตโนมัติไม่สำเร็จ — ลองอีกครั้ง หรือพิมพ์ที่อยู่ในช่องด้านบน");
     } finally {
       setLocationLoading(false);
     }
