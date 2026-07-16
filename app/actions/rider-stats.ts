@@ -9,7 +9,8 @@ import type { RiderTier, Badge, RankConfig } from "@/lib/rider-kpi";
 export type { RiderTier, BadgeId, Badge, RankConfig } from "@/lib/rider-kpi";
 
 export type MonthlyStats = {
-  jobsCompleted:  number;
+  jobsCompleted:  number;   // ซื้อสำเร็จจริง (completed) — ใช้กับแรงค์/โบนัส/เป้า
+  jobsClosed:     number;   // งานปิดทุกสถานะ (completed+cancelled+no_show+rejected) — ไว้แสดงประกอบ
   jobsAttempted:  number;
   jobsDeclined:   number;
   distanceKm:     number;
@@ -75,7 +76,9 @@ export async function fetchMyMonthlyStats(month: string): Promise<{ stats: Month
     supabase.from("rank_configs").select("*"),
   ]);
 
-  const jobsCompleted  = (requests ?? []).length;
+  // งานสำเร็จ = ซื้อสำเร็จจริงเท่านั้น (ใช้กับแรงค์/โบนัส/เป้า) — งานปิดทุกสถานะแยกไว้ที่ jobsClosed
+  const jobsCompleted  = (requests ?? []).filter(r => r.status === "completed").length;
+  const jobsClosed     = (requests ?? []).length;
   const jobsAttempted  = (shifts ?? []).reduce((s, sh) => s + (sh.jobs_attempted ?? 0), 0);
   const jobsDeclined   = (shifts ?? []).reduce((s, sh) => s + (sh.jobs_declined  ?? 0), 0);
   // ระยะทางจากเส้นทางงานจริง (ร้าน→งาน→ร้าน / ต่องาน direct_chain) — ไม่ใช้ shift GPS ที่ไม่มีข้อมูล
@@ -94,7 +97,7 @@ export async function fetchMyMonthlyStats(month: string): Promise<{ stats: Month
 
   return {
     stats: {
-      jobsCompleted, jobsAttempted, jobsDeclined, distanceKm, goodsValueThb, monthlyTier, rankConfig,
+      jobsCompleted, jobsClosed, jobsAttempted, jobsDeclined, distanceKm, goodsValueThb, monthlyTier, rankConfig,
       acceptanceRate: totalOffered > 0  ? jobsAttempted / totalOffered  : null,
       completionRate: jobsAttempted > 0 ? jobsCompleted / jobsAttempted : null,
       avgDistPerJob:  travelledTrips > 0 ? distanceKm / travelledTrips  : null,
@@ -130,7 +133,7 @@ export async function fetchMyLifetimeStats(): Promise<{
       .in("status", ["completed", "cancelled", "no_show", "rejected"]),
   ]);
 
-  const lifetimeCompleted  = (allClosed ?? []).length;
+  const lifetimeCompleted  = (allClosed ?? []).filter(r => r.status === "completed").length; // ซื้อสำเร็จจริง
   const lifetimeDistanceKm = chainDistanceKm((allClosed ?? []).map(toDistanceJob)).totalKm;
   const currentStreak      = computeStreak(allShifts ?? []);
   const tier               = computeTier(lifetimeCompleted);
@@ -172,7 +175,7 @@ export async function fetchLeaderboard(month: string): Promise<LeaderboardEntry[
   for (const r of requests ?? []) {
     if (!r.rider_id) continue;
     const e = map.get(r.rider_id);
-    if (e) { e.jobsCompleted += 1; e.earningsThb += r.actual_price ?? 0; }
+    if (e && r.status === "completed") { e.jobsCompleted += 1; e.earningsThb += r.actual_price ?? 0; }
     const list = jobsByRider.get(r.rider_id) ?? [];
     list.push(r);
     jobsByRider.set(r.rider_id, list);
@@ -254,7 +257,9 @@ export async function fetchRiderKpiForAdmin(riderId: string, month: string): Pro
     supabase.from("rank_configs").select("*"),
   ]);
 
-  const jobsCompleted  = (requests ?? []).length;
+  // งานสำเร็จ = ซื้อสำเร็จจริงเท่านั้น (ใช้กับแรงค์/โบนัส/เป้า) — งานปิดทุกสถานะแยกไว้ที่ jobsClosed
+  const jobsCompleted  = (requests ?? []).filter(r => r.status === "completed").length;
+  const jobsClosed     = (requests ?? []).length;
   const jobsAttempted  = (shifts ?? []).reduce((s, sh) => s + (sh.jobs_attempted ?? 0), 0);
   const jobsDeclined   = (shifts ?? []).reduce((s, sh) => s + (sh.jobs_declined  ?? 0), 0);
   // ระยะทางจากเส้นทางงานจริง — ฟังก์ชันกลางเดียวกับหน้าผลงานไรเดอร์ (เลขตรงกันทุกหน้า)
@@ -273,7 +278,7 @@ export async function fetchRiderKpiForAdmin(riderId: string, month: string): Pro
 
   return {
     stats: {
-      jobsCompleted, jobsAttempted, jobsDeclined, distanceKm, goodsValueThb, monthlyTier, rankConfig,
+      jobsCompleted, jobsClosed, jobsAttempted, jobsDeclined, distanceKm, goodsValueThb, monthlyTier, rankConfig,
       acceptanceRate: totalOffered > 0  ? jobsAttempted / totalOffered  : null,
       completionRate: jobsAttempted > 0 ? jobsCompleted / jobsAttempted : null,
       avgDistPerJob:  travelledTrips > 0 ? distanceKm / travelledTrips : null,
@@ -328,7 +333,7 @@ export async function fetchRiderLifetimeForAdmin(riderId: string): Promise<{
       .in("status", ["completed", "cancelled", "no_show", "rejected"]),
   ]);
 
-  const lifetimeCompleted  = (allClosed ?? []).length;
+  const lifetimeCompleted  = (allClosed ?? []).filter(r => r.status === "completed").length; // ซื้อสำเร็จจริง
   const lifetimeDistanceKm = chainDistanceKm((allClosed ?? []).map(toDistanceJob)).totalKm;
   const currentStreak      = computeStreak(allShifts ?? []);
   const tier               = computeTier(lifetimeCompleted);

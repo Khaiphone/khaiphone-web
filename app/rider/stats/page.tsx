@@ -327,9 +327,9 @@ export default function StatsPage() {
         <>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "14px 12px" }}>
-              <p style={{ margin: "0 0 4px", fontSize: 11, color: TEXT2, fontWeight: 600 }}>งานทั้งหมด</p>
+              <p style={{ margin: "0 0 4px", fontSize: 11, color: TEXT2, fontWeight: 600 }}>งานสำเร็จ</p>
               <p style={{ margin: 0, fontSize: 26, fontWeight: 800, color: GREEN }}>{stats.jobsCompleted}</p>
-              <p style={{ margin: 0, fontSize: 10, color: TEXT2 }}>งาน</p>
+              <p style={{ margin: 0, fontSize: 10, color: TEXT2 }}>{stats.jobsClosed > stats.jobsCompleted ? `จากงานทั้งหมด ${stats.jobsClosed} งาน` : "งาน"}</p>
             </div>
             <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "14px 12px" }}>
               <p style={{ margin: "0 0 4px", fontSize: 11, color: TEXT2, fontWeight: 600 }}>มูลค่าสินค้า</p>

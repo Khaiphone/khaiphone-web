@@ -510,7 +510,7 @@ export default function RiderDetailPage() {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0 }}>
                 {[
-                  { label: "งานสำเร็จ", value: String(kpiStats.jobsCompleted), target: kpiTargets?.monthly_jobs_target != null ? `/ ${kpiTargets.monthly_jobs_target}` : undefined, color: GREEN },
+                  { label: "งานสำเร็จ", value: String(kpiStats.jobsCompleted), target: kpiTargets?.monthly_jobs_target != null ? `/ ${kpiTargets.monthly_jobs_target}` : (kpiStats.jobsClosed > kpiStats.jobsCompleted ? `ปิดทั้งหมด ${kpiStats.jobsClosed}` : undefined), color: GREEN },
                   { label: "ระยะทาง",   value: `${Math.round(kpiStats.distanceKm)} กม.`, target: kpiTargets?.monthly_distance_target != null ? `/ ${kpiTargets.monthly_distance_target}` : undefined, color: ACCENT },
                   { label: "รับงาน",    value: kpiStats.acceptanceRate != null ? `${Math.round(kpiStats.acceptanceRate * 100)}%` : "—", target: kpiTargets?.min_acceptance_rate != null ? `เป้า ${Math.round(kpiTargets.min_acceptance_rate * 100)}%` : undefined, color: kpiStats.acceptanceRate != null && kpiTargets?.min_acceptance_rate != null ? (kpiStats.acceptanceRate >= kpiTargets.min_acceptance_rate ? GREEN : RED) : TEXT },
                   { label: "สำเร็จ",    value: kpiStats.completionRate != null ? `${Math.round(kpiStats.completionRate * 100)}%` : "—", color: TEXT },
@@ -695,7 +695,7 @@ export default function RiderDetailPage() {
             <>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 {[
-                  { label: "งานสำเร็จ", value: statsKpi.jobsCompleted,                    unit: "งาน",    color: R_GREEN  },
+                  { label: "งานสำเร็จ", value: statsKpi.jobsCompleted,                    unit: statsKpi.jobsClosed > statsKpi.jobsCompleted ? `จากทั้งหมด ${statsKpi.jobsClosed} งาน` : "งาน", color: R_GREEN  },
                   { label: "มูลค่าสินค้า", value: `฿${fmt(statsKpi.goodsValueThb)}`,       unit: "บาท",    color: R_GOLD, isStr: true },
                   { label: "ระยะทาง",   value: Math.round(statsKpi.distanceKm),           unit: "กม.",    color: R_ACCENT },
                   { label: "เฉลี่ย/งาน", value: statsKpi.avgDistPerJob != null ? statsKpi.avgDistPerJob.toFixed(1) : "—", unit: "กม./งาน", color: R_ORANGE, isStr: true },
