@@ -273,7 +273,8 @@ export async function riderRejectJob(id: string) {
 }
 
 // ─── Accept job (confirmed → pickup_scheduled) ────────────────────────────────
-export async function riderAcceptJob(id: string) {
+// gps = best-effort จาก client (ห้ามบล็อกการรับงานถ้า GPS ช้า/ปิด)
+export async function riderAcceptJob(id: string, gps?: { lat: number; lng: number } | null) {
   const user = await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
@@ -295,6 +296,36 @@ export async function riderAcceptJob(id: string) {
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
 
+  // ── กะดูแลตัวเอง: รับงานโดยไม่ได้กดเปิดกะ → เปิดกะให้อัตโนมัติ ────────────────
+  // (ตัวนับ jobs_attempted/declined ผูกกับ shift_id — ไม่มีกะ = อัตรารับงาน/สำเร็จเป็น "—" ตลอด)
+  let openedShiftId: string | null = null;
+  const { data: openShiftRow } = await supabase
+    .from("rider_shifts")
+    .select("id")
+    .eq("rider_id", user.id)
+    .is("clocked_out_at", null)
+    .limit(1);
+  if (!openShiftRow || openShiftRow.length === 0) {
+    const { data: newShift } = await supabase
+      .from("rider_shifts")
+      .insert({ rider_id: user.id, clock_in_lat: gps?.lat ?? null, clock_in_lng: gps?.lng ?? null })
+      .select("id")
+      .single();
+    if (newShift) {
+      openedShiftId = newShift.id;
+      await supabase.from("rider_locations").upsert({
+        rider_id: user.id,
+        ...(gps ? { lat: gps.lat, lng: gps.lng } : {}),
+        is_online: true,
+        tracking_mode: "idle",
+        shift_id: newShift.id,
+        last_heartbeat: now,
+        updated_at: now,
+      }, { onConflict: "rider_id" });
+      await supabase.from("admin_users").update({ is_online: true, last_seen_at: now }).eq("user_id", user.id);
+    }
+  }
+
   // Keep rider_locations.current_job_id in sync so the planner map reflects the accepted job
   await supabase.from("rider_locations")
     .update({ current_job_id: id, updated_at: now })
@@ -311,7 +342,7 @@ export async function riderAcceptJob(id: string) {
     }).catch(console.error);
   });
 
-  return { success: true as const, patch };
+  return { success: true as const, patch, openedShiftId };
 }
 
 // ─── Start job (pickup_scheduled → en_route) ──────────────────────────────────

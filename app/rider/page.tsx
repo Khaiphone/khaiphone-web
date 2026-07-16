@@ -196,8 +196,26 @@ export default function RiderHomePage() {
 
   async function acceptJob(jobId: string) {
     setAccepting(jobId);
-    const res = await riderAcceptJob(jobId);
+    // GPS แบบ best-effort (timeout สั้น) — ห้ามบล็อกการรับงานถ้า GPS ช้า/ปิด
+    const gps = await new Promise<{ lat: number; lng: number } | null>((resolve) => {
+      if (!("geolocation" in navigator)) { resolve(null); return; }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: 4_000, maximumAge: 60_000 },
+      );
+    });
+    const res = await riderAcceptJob(jobId, gps);
     if (res.success) {
+      // รับงานโดยไม่ได้เปิดกะ → server เปิดกะให้แล้ว — sync สถานะออนไลน์ + เริ่ม tracking
+      if (res.openedShiftId) {
+        setShiftId(res.openedShiftId);
+        setIsOnline(true);
+        const sid = res.openedShiftId;
+        startTracking(async (payload) => {
+          await riderPingLocation({ ...payload, shiftId: sid, currentJobId: jobId });
+        }).catch(() => {});
+      }
       const job = pendingJobs.find(j => j.id === jobId);
       if (job) {
         setPendingJobs(prev => prev.filter(j => j.id !== jobId));

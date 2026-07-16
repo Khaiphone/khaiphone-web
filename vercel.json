@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/warm",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/close-stale-shifts",
+      "schedule": "0 21 * * *"
     }
   ]
 }
