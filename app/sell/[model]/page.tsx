@@ -974,6 +974,7 @@ function SellModelPageContent() {
   // คิวรับถึงที่ที่ถูกจองแล้วของวันที่เลือก (เพื่อปิดช่วงเวลาที่เต็ม)
   const [slotAvail, setSlotAvail] = useState<{ capacity: number; counts: Record<string, number>; blockedTimes: string[]; blockedWholeDay: boolean } | null>(null);
   const [riderAddress, setRiderAddress] = useState("");
+  const [locationError, setLocationError] = useState(""); // error ปุ่ม "ตำแหน่งปัจจุบัน" — แสดงแยก ห้ามใส่ลงช่องที่อยู่
   const [province, setProvince] = useState("");
   const [pinAddress, setPinAddress] = useState("");
   const [pinCoords, setPinCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -1032,7 +1033,8 @@ function SellModelPageContent() {
   }, [bundleTs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchCurrentLocation() {
-    if (!navigator.geolocation) { setRiderAddress("เบราว์เซอร์ไม่รองรับการระบุตำแหน่ง"); return; }
+    if (!navigator.geolocation) { setLocationError("เบราว์เซอร์ไม่รองรับการระบุตำแหน่ง — พิมพ์ที่อยู่ในช่องด้านบนได้เลย"); return; }
+    setLocationError("");
     setLocationLoading(true);
     try {
       const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
@@ -1067,7 +1069,8 @@ function SellModelPageContent() {
       setPinAddress(address);
       setLocationModal({ lat: latitude, lng: longitude, address });
     } catch {
-      setRiderAddress("ไม่สามารถดึงตำแหน่งได้อัตโนมัติ กรุณากรอกที่อยู่เอง");
+      // ห้ามใส่ข้อความ error ลงช่องที่อยู่ — เคยมีลูกค้าส่งฟอร์มโดยมีข้อความนี้ค้างเป็น "ที่อยู่" จริง (KH-2026-79984)
+      setLocationError("ดึงตำแหน่งอัตโนมัติไม่สำเร็จ — กรุณาอนุญาตการเข้าถึงตำแหน่ง หรือพิมพ์ที่อยู่ในช่องด้านบน");
     } finally {
       setLocationLoading(false);
     }
@@ -1240,7 +1243,9 @@ function SellModelPageContent() {
       name:            !name,
       phone:           !phone,
       terms:           !acceptTerms,
-      riderAddress:    sellMethod === "rider" && zoneInfo.zone !== "far" && !riderAddress.trim(),
+      // ข้อความ error จากปุ่มตำแหน่ง (โค้ดเวอร์ชันเก่าที่อาจ cache อยู่) ไม่นับเป็นที่อยู่จริง
+      riderAddress:    sellMethod === "rider" && zoneInfo.zone !== "far" &&
+                       (!riderAddress.trim() || /ไม่สามารถดึงตำแหน่ง|เบราว์เซอร์ไม่รองรับ/.test(riderAddress)),
       province:        sellMethod === "rider" && !province,
       bankName:        payMethod === "transfer" && !bankName,
       bankAccount:     payMethod === "transfer" && !bankAccount.trim(),
@@ -2242,6 +2247,7 @@ function SellModelPageContent() {
                             </button>
                           </div>
                           {errors.riderAddress && <p className="text-xs mt-1" style={{ color: "#EF4444" }}>กรุณากรอกสถานที่รับเครื่อง</p>}
+                          {locationError && <p className="text-xs mt-1" style={{ color: "#EF4444" }}>⚠️ {locationError}</p>}
                           <p className="text-xs mt-1.5" style={{ color: "#6B7280" }}>เจ้าหน้าที่จะโทรยืนยันก่อนเดินทาง</p>
                         </div>
                         {/* Date + Time */}
