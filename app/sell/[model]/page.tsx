@@ -1493,7 +1493,7 @@ function SellModelPageContent() {
                           newPicks[step] = i;
                           saveWizard(step, newPicks);
                           // iCloud locked, functional issue path, or bundle last step — don't auto-advance
-                          const isICloudLocked    = step === ICLOUD_STEP    && i === 1;
+                          const isICloudLocked    = step === ICLOUD_STEP    && i >= 1;
                           const isFunctionalIssue = step === FUNCTIONAL_STEP && i === 1;
                           const isBundleLastStep  = step === TOTAL_STEPS - 1 && !!bundleReturn;
                           if (!isICloudLocked && !isFunctionalIssue && !isBundleLastStep) {
@@ -1531,7 +1531,7 @@ function SellModelPageContent() {
 
                 {/* Next / back / iCloud-locked / functional-issues */}
                 <div className="mt-5">
-                  {step === ICLOUD_STEP && localPick === 1 ? (
+                  {step === ICLOUD_STEP && localPick !== null && localPick >= 1 ? (
                     <>
                       {step > 0 && (
                         <button
@@ -1550,10 +1550,17 @@ function SellModelPageContent() {
                           </svg>
                         </div>
                         <p className="font-bold text-black mb-1">ไม่สามารถรับซื้อได้</p>
-                        <p className="text-xs leading-relaxed mb-4" style={{ color: "#6B7280" }}>
-                          เครื่องที่ติด iCloud / Activation Lock ทางร้านไม่สามารถรับซื้อได้<br />
-                          กรุณาออก iCloud ก่อน แล้วค่อยนำมาขายใหม่
-                        </p>
+                        {localPick === 2 ? (
+                          <p className="text-xs leading-relaxed mb-4" style={{ color: "#6B7280" }}>
+                            เครื่องที่ติดล็อคองค์กร / โรงเรียน (MDM / Remote Management) ทางร้านไม่สามารถรับซื้อได้<br />
+                            ต้องให้องค์กรปลดเครื่องออกจากระบบก่อน แล้วค่อยนำมาขายใหม่
+                          </p>
+                        ) : (
+                          <p className="text-xs leading-relaxed mb-4" style={{ color: "#6B7280" }}>
+                            เครื่องที่ติด iCloud / Activation Lock ทางร้านไม่สามารถรับซื้อได้<br />
+                            กรุณาออก iCloud ก่อน แล้วค่อยนำมาขายใหม่
+                          </p>
+                        )}
                         <a
                           href="https://line.me/ti/p/~@khaiphone"
                           target="_blank"

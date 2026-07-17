@@ -135,8 +135,14 @@ export function getBodyOpts(model: string, configOpts: PricingOption[]): Pricing
   );
 }
 
+// iPad มือสองเจอเครื่ององค์กร/โรงเรียนติด MDM บ่อย — ยกขึ้นมาถามตรงๆ (ทั้ง 2 เคสหยุดรับซื้อ)
 export function getICloudOpts(model: string, configOpts: PricingOption[]): PricingOption[] | null {
-  return null; // iPad override มาใน commit ถัดไป
+  if (getDeviceCategory(model) !== "ipad") return null;
+  return [
+    { label: configOpts[0]?.label ?? "สามารถออก iCloud ได้", sub: "ไม่ติด Activation Lock / ไม่ติดล็อคองค์กร (MDM) หรือ ติดผ่อน", ded: configOpts[0]?.ded ?? 0 },
+    { label: "ติด iCloud / Activation Lock", sub: "ไม่เข้าเงื่อนไขการรับซื้อ", ded: configOpts[1]?.ded ?? -8000 },
+    { label: "ติดล็อคองค์กร / โรงเรียน (MDM)", sub: "ไม่เข้าเงื่อนไขการรับซื้อ", ded: configOpts[1]?.ded ?? -8000 },
+  ];
 }
 
 /** รวมทุก override ต่อรุ่น/ประเภทสินค้า — index ตรงกับ DEFAULT_PRICING_CONFIG.groups */
