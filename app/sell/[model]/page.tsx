@@ -11,7 +11,7 @@ import { fetchRiderSlotAvailability } from "@/app/actions/booking-slots";
 import { trackEstimateEvent, fetchRecentPriceCheckCount } from "@/app/actions/analytics";
 import { fetchPublicActiveProducts } from "@/app/actions/products";
 import { fetchPublicPricingConfig } from "@/app/actions/pricing-config";
-import { getModelTypeOpts, DEFAULT_PRICING_CONFIG } from "@/lib/pricing-defaults";
+import { getEffectiveGroupOptions, DEFAULT_PRICING_CONFIG } from "@/lib/pricing-defaults";
 import { getIpadSubtitle } from "@/lib/ipad-model-info";
 import type { PricingOption } from "@/lib/pricing-defaults";
 import { calcPrice, calcPriceRange, formatPrice } from "@/lib/pricing";
@@ -1378,7 +1378,7 @@ function SellModelPageContent() {
   }
 
   const effectiveGroupOptions: PricingOption[][] = product
-    ? [getModelTypeOpts(product.model, groupOptions[0]) ?? groupOptions[0], ...groupOptions.slice(1)]
+    ? getEffectiveGroupOptions(product.model, groupOptions)
     : groupOptions;
 
   const price = (product && pricesLoaded) ? calcPrice(product, picks, effectiveGroupOptions, storageMultiplier, storagePrices, floorPct) : 0;

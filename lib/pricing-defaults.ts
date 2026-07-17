@@ -1,3 +1,5 @@
+import { ipadShowsBatteryHealth } from "./ipad-model-info";
+
 export type PricingOption = { label: string; sub?: string; ded: number };
 export type PricingGroup  = { key: string; title: string; options: PricingOption[] };
 export type PricingConfig = { storageMultiplier: number; floorPct: number; groups: PricingGroup[] };
@@ -99,3 +101,48 @@ export const DEFAULT_PRICING_CONFIG: PricingConfig = {
     },
   ],
 };
+
+// ─── Category-aware option overrides ─────────────────────────────────────────
+// แพทเทิร์นเดียวกับ getModelTypeOpts: คืน null = ใช้ configOpts เดิม (ค่า ded จาก DB ยังไหลผ่าน)
+
+export type DeviceCategory = "iphone" | "ipad" | "macbook" | "watch";
+
+export function getDeviceCategory(model: string): DeviceCategory {
+  if (model.startsWith("iPad")) return "ipad";
+  if (model.startsWith("MacBook") || model.startsWith("Mac mini") || model.startsWith("iMac")) return "macbook";
+  if (model.includes("Apple Watch")) return "watch";
+  return "iphone";
+}
+
+// iPad รุ่นเก่าดูเปอร์เซ็นต์แบตในเครื่องไม่ได้ → ถามเชิงคุณภาพ (รุ่นปี 2024+ ใช้ % เดิม)
+export function getBatteryOpts(model: string, configOpts: PricingOption[]): PricingOption[] | null {
+  if (getDeviceCategory(model) !== "ipad" || ipadShowsBatteryHealth(model)) return null;
+  return [
+    { label: "แบตเตอรี่ใช้งานได้ปกติ",    sub: "ใช้งานได้ทั้งวันตามปกติ",                 ded: configOpts[0]?.ded ?? 0 },
+    { label: "แบตหมดเร็วผิดปกติ / เสื่อม", sub: "ต้องชาร์จบ่อยกว่าปกติมาก",                ded: configOpts[4]?.ded ?? -2000 },
+    { label: "เคยเปลี่ยนแบตเตอรี่มาแล้ว",  sub: "เปลี่ยนจากศูนย์หรือร้านนอก",              ded: configOpts[3]?.ded ?? -1000 },
+    { label: "ไม่แน่ใจ ให้ทางร้านตรวจสอบ", sub: "iPad รุ่นนี้ดูเปอร์เซ็นต์แบตในเครื่องไม่ได้", ded: configOpts[2]?.ded ?? -500 },
+  ];
+}
+
+export function getBodyOpts(model: string, configOpts: PricingOption[]): PricingOption[] | null {
+  return null; // iPad override มาใน commit ถัดไป
+}
+
+export function getICloudOpts(model: string, configOpts: PricingOption[]): PricingOption[] | null {
+  return null; // iPad override มาใน commit ถัดไป
+}
+
+/** รวมทุก override ต่อรุ่น/ประเภทสินค้า — index ตรงกับ DEFAULT_PRICING_CONFIG.groups */
+export function getEffectiveGroupOptions(model: string, groups: PricingOption[][]): PricingOption[][] {
+  return [
+    getModelTypeOpts(model, groups[0]) ?? groups[0],
+    groups[1],
+    getBodyOpts(model, groups[2]) ?? groups[2],
+    groups[3],
+    groups[4],
+    getBatteryOpts(model, groups[5]) ?? groups[5],
+    groups[6],
+    getICloudOpts(model, groups[7]) ?? groups[7],
+  ];
+}
