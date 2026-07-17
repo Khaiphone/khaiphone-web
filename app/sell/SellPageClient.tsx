@@ -7,6 +7,7 @@ import Image from "next/image";
 import Header from "../components/Header";
 import { ChevronRight, RotateCcw, Clock, Lock } from "lucide-react";
 import { getIpadSubtitle } from "@/lib/ipad-model-info";
+import IpadModelHelp from "./IpadModelHelp";
 
 type IconProps = { className?: string; style?: React.CSSProperties };
 
@@ -179,6 +180,7 @@ function SellPageContent({ categories }: { categories: SellCategory[] }) {
             <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#B8860B" }}>
               ขั้นตอนที่ 2 — เลือกรุ่น
             </p>
+            {activeCat === "ipad" && <IpadModelHelp />}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50">
               {currentProducts.map(p => {
                 const active = activeModelSlug === p.slug;
