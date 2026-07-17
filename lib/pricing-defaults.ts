@@ -125,8 +125,14 @@ export function getBatteryOpts(model: string, configOpts: PricingOption[]): Pric
   ];
 }
 
+// iPad ฝาหลังอะลูมิเนียมไม่มีกระจกแตก แต่เครื่องบางงอ/บุบง่าย — แทนที่ตัวเลือกสุดท้ายตัวเดียว
 export function getBodyOpts(model: string, configOpts: PricingOption[]): PricingOption[] | null {
-  return null; // iPad override มาใน commit ถัดไป
+  if (getDeviceCategory(model) !== "ipad") return null;
+  return configOpts.map((o, i) =>
+    i === 4
+      ? { label: "ตัวเครื่องงอ / บุบ / ฝาหลังบุบเบี้ยว", sub: o.sub ?? "สภาพเสีย", ded: o.ded }
+      : o
+  );
 }
 
 export function getICloudOpts(model: string, configOpts: PricingOption[]): PricingOption[] | null {
