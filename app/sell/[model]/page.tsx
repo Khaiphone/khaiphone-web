@@ -485,6 +485,8 @@ const STEP_OPTS: (Opt[] | null)[] = [
 
 const TOTAL_STEPS = 10;
 const TOTAL_MAIN_STEPS = 9;
+const DISPLAY_STEP = 5;
+const DEAD_DISPLAY_PICK = 3; // "หน้าจอไม่แสดงผล / จอดับ" — ไม่รับซื้อ → เข้าเส้น ISS
 const ICLOUD_STEP = 8;
 const FUNCTIONAL_STEP = 9;
 
@@ -1561,8 +1563,9 @@ function SellModelPageContent() {
                           // iCloud locked, functional issue path, or bundle last step — don't auto-advance
                           const isICloudLocked    = step === ICLOUD_STEP    && i >= 1;
                           const isFunctionalIssue = step === FUNCTIONAL_STEP && i === 1;
+                          const isDeadDisplay     = step === DISPLAY_STEP && i === DEAD_DISPLAY_PICK;
                           const isBundleLastStep  = step === TOTAL_STEPS - 1 && !!bundleReturn;
-                          if (!isICloudLocked && !isFunctionalIssue && !isBundleLastStep) {
+                          if (!isICloudLocked && !isFunctionalIssue && !isDeadDisplay && !isBundleLastStep) {
                             if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
                             autoAdvanceTimerRef.current = setTimeout(() => { goNext(i); }, 400);
                           }
@@ -1645,7 +1648,7 @@ function SellModelPageContent() {
                         </a>
                       </div>
                     </>
-                  ) : step === FUNCTIONAL_STEP && localPick === 1 ? (
+                  ) : (step === FUNCTIONAL_STEP && localPick === 1) || (step === DISPLAY_STEP && localPick === DEAD_DISPLAY_PICK) ? (
                     <>
                       {step > 0 && (
                         <button
@@ -1686,10 +1689,21 @@ function SellModelPageContent() {
                         </div>
                       ) : (
                         <div className="rounded-2xl border border-gray-200 p-4" style={{ background: "#FAFAFA" }}>
-                          <p className="font-semibold text-sm text-black mb-1">กรุณาเลือกปัญหาที่พบ</p>
-                          <p className="text-xs mb-3" style={{ color: "#6B7280" }}>
-                            ทีมงานจะติดต่อกลับเพื่อนัดตรวจประเมินพิเศษ ไม่โชว์ราคาทันที
-                          </p>
+                          {step === DISPLAY_STEP && localPick === DEAD_DISPLAY_PICK ? (
+                            <>
+                              <p className="font-semibold text-sm text-black mb-1">เครื่องหน้าจอไม่แสดงผล / จอดับ — ต้องตรวจประเมินพิเศษ</p>
+                              <p className="text-xs mb-3" style={{ color: "#6B7280" }}>
+                                เคสนี้แจ้งราคาทันทีไม่ได้ ทีมงานจะติดต่อกลับเพื่อประเมิน — มีปัญหาอื่นเพิ่มติ๊กได้เลย
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="font-semibold text-sm text-black mb-1">กรุณาเลือกปัญหาที่พบ</p>
+                              <p className="text-xs mb-3" style={{ color: "#6B7280" }}>
+                                ทีมงานจะติดต่อกลับเพื่อนัดตรวจประเมินพิเศษ ไม่โชว์ราคาทันที
+                              </p>
+                            </>
+                          )}
                           <div className="flex flex-col gap-2 mb-3">
                             {(product && getDeviceCategory(product.model) === "ipad" ? FUNCTIONAL_ISSUES_IPAD : FUNCTIONAL_ISSUES_IPHONE).map(issue => {
                               const checked = functionalIssues.includes(issue);
@@ -1770,7 +1784,7 @@ function SellModelPageContent() {
 
                           <button
                             type="button"
-                            disabled={issueSubmitting || (functionalIssues.length === 0 && !functionalOther.trim()) || !issueContact.name.trim() || !issueContact.phone.trim()}
+                            disabled={issueSubmitting || (functionalIssues.length === 0 && !functionalOther.trim() && picks[DISPLAY_STEP] !== DEAD_DISPLAY_PICK) || !issueContact.name.trim() || !issueContact.phone.trim()}
                             onClick={async () => {
                               setIssueSubmitting(true);
                               const orderNumber = `ISS${Date.now()}`;
@@ -1779,7 +1793,7 @@ function SellModelPageContent() {
                                 orderNumber,
                                 model:        product?.model ?? params.model,
                                 storage,
-                                issues:       functionalIssues,
+                                issues:       picks[DISPLAY_STEP] === DEAD_DISPLAY_PICK ? ["หน้าจอไม่แสดงผล / จอดับ", ...functionalIssues] : functionalIssues,
                                 otherIssue:   functionalOther,
                                 contactName:  issueContact.name.trim(),
                                 contactPhone: issueContact.phone.trim(),
@@ -1789,9 +1803,9 @@ function SellModelPageContent() {
                             }}
                             className="flex items-center justify-center w-full py-3.5 rounded-full font-bold text-sm text-white"
                             style={{
-                              background: issueSubmitting || (functionalIssues.length === 0 && !functionalOther.trim()) || !issueContact.name.trim() || !issueContact.phone.trim()
+                              background: issueSubmitting || (functionalIssues.length === 0 && !functionalOther.trim() && picks[DISPLAY_STEP] !== DEAD_DISPLAY_PICK) || !issueContact.name.trim() || !issueContact.phone.trim()
                                 ? "#D1D5DB" : "#B8860B",
-                              cursor: issueSubmitting || (functionalIssues.length === 0 && !functionalOther.trim()) || !issueContact.name.trim() || !issueContact.phone.trim()
+                              cursor: issueSubmitting || (functionalIssues.length === 0 && !functionalOther.trim() && picks[DISPLAY_STEP] !== DEAD_DISPLAY_PICK) || !issueContact.name.trim() || !issueContact.phone.trim()
                                 ? "not-allowed" : "pointer",
                             }}
                           >
