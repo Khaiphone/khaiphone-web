@@ -11,7 +11,7 @@ import { fetchRiderSlotAvailability } from "@/app/actions/booking-slots";
 import { trackEstimateEvent, fetchRecentPriceCheckCount } from "@/app/actions/analytics";
 import { fetchPublicActiveProducts } from "@/app/actions/products";
 import { fetchPublicPricingConfig } from "@/app/actions/pricing-config";
-import { getEffectiveGroupOptions, DEFAULT_PRICING_CONFIG } from "@/lib/pricing-defaults";
+import { getEffectiveGroupOptions, getDeviceCategory, DEFAULT_PRICING_CONFIG } from "@/lib/pricing-defaults";
 import { getIpadSubtitle } from "@/lib/ipad-model-info";
 import type { PricingOption } from "@/lib/pricing-defaults";
 import { calcPrice, calcPriceRange, formatPrice } from "@/lib/pricing";
@@ -440,7 +440,7 @@ const STEP_TITLES = [
   "การทำงานของฟังก์ชัน",
 ];
 
-const FUNCTIONAL_ISSUES = [
+const FUNCTIONAL_ISSUES_IPHONE = [
   "ปุ่ม Power / Side ไม่ทำงาน",
   "ปุ่ม Volume ค้าง / เสีย",
   "ลำโพงเสียงแตก / ไม่มีเสียง",
@@ -448,6 +448,19 @@ const FUNCTIONAL_ISSUES = [
   "Face ID / Touch ID ไม่ทำงาน",
   "กล้องมีปัญหา (ภาพมัว / ค้าง)",
   "พอร์ตชาร์จหลวม / ชาร์จไม่เข้า",
+  "WiFi หรือ Bluetooth มีปัญหา",
+  "เครื่องร้อนผิดปกติ / รีสตาร์ทเองบ่อย",
+];
+
+const FUNCTIONAL_ISSUES_IPAD = [
+  "ปุ่ม Power / Volume ไม่ทำงาน",
+  "ลำโพงเสียงแตก / ไม่มีเสียง",
+  "ไมโครโฟนมีปัญหา",
+  "Face ID / Touch ID ไม่ทำงาน",
+  "กล้องมีปัญหา (ภาพมัว / ค้าง)",
+  "พอร์ตชาร์จหลวม / ชาร์จไม่เข้า",
+  "ทัชสกรีนบางจุดไม่ตอบสนอง",
+  "Apple Pencil / คีย์บอร์ดไม่เชื่อมต่อ",
   "WiFi หรือ Bluetooth มีปัญหา",
   "เครื่องร้อนผิดปกติ / รีสตาร์ทเองบ่อย",
 ];
@@ -1625,7 +1638,7 @@ function SellModelPageContent() {
                             ทีมงานจะติดต่อกลับเพื่อนัดตรวจประเมินพิเศษ ไม่โชว์ราคาทันที
                           </p>
                           <div className="flex flex-col gap-2 mb-3">
-                            {FUNCTIONAL_ISSUES.map(issue => {
+                            {(product && getDeviceCategory(product.model) === "ipad" ? FUNCTIONAL_ISSUES_IPAD : FUNCTIONAL_ISSUES_IPHONE).map(issue => {
                               const checked = functionalIssues.includes(issue);
                               return (
                                 <label key={issue} className="flex items-center gap-2.5 cursor-pointer">
