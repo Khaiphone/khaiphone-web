@@ -481,17 +481,17 @@ function shortenModelLabel(label: string) {
   return label.replace(/ รุ่น[\s\d,]+/g, "");
 }
 
-function buildSummaryRows(picks: (number | null)[], storages: string[], modelTypeOpts: Opt[]) {
+function buildSummaryRows(picks: (number | null)[], storages: string[], groups: Opt[][]) {
   return [
     { title: "ความจุ",     value: picks[0] !== null ? (storages[picks[0]] ?? null) : null },
-    { title: "Model",      value: picks[1] !== null ? (shortenModelLabel(modelTypeOpts[picks[1]]?.label ?? "")) || null : null },
-    { title: "ประกัน",     value: picks[2] !== null ? (WARRANTY_OPTS[picks[2]]?.label ?? null) : null },
-    { title: "ตัวเครื่อง", value: picks[3] !== null ? (BODY_OPTS[picks[3]]?.label ?? null) : null },
-    { title: "หน้าจอ",     value: picks[4] !== null ? (SCREEN_OPTS[picks[4]]?.label ?? null) : null },
-    { title: "ภาพหน้าจอ",  value: picks[5] !== null ? (DISPLAY_OPTS[picks[5]]?.label ?? null) : null },
-    { title: "แบตเตอรี่",  value: picks[6] !== null ? (BATTERY_OPTS[picks[6]]?.label ?? null) : null },
-    { title: "อุปกรณ์",    value: picks[7] !== null ? (ACCESSORY_OPTS[picks[7]]?.label ?? null) : null },
-    { title: "iCloud",     value: picks[8] !== null ? (ICLOUD_OPTS[picks[8]]?.label ?? null) : null },
+    { title: "Model",      value: picks[1] !== null ? (shortenModelLabel(groups[0]?.[picks[1]]?.label ?? "")) || null : null },
+    { title: "ประกัน",     value: picks[2] !== null ? (groups[1]?.[picks[2]]?.label ?? null) : null },
+    { title: "ตัวเครื่อง", value: picks[3] !== null ? (groups[2]?.[picks[3]]?.label ?? null) : null },
+    { title: "หน้าจอ",     value: picks[4] !== null ? (groups[3]?.[picks[4]]?.label ?? null) : null },
+    { title: "ภาพหน้าจอ",  value: picks[5] !== null ? (groups[4]?.[picks[5]]?.label ?? null) : null },
+    { title: "แบตเตอรี่",  value: picks[6] !== null ? (groups[5]?.[picks[6]]?.label ?? null) : null },
+    { title: "อุปกรณ์",    value: picks[7] !== null ? (groups[6]?.[picks[7]]?.label ?? null) : null },
+    { title: "iCloud",     value: picks[8] !== null ? (groups[7]?.[picks[8]]?.label ?? null) : null },
     { title: "ฟังก์ชัน",   value: picks[9] !== null ? (FUNCTIONAL_OPTS[picks[9]]?.label ?? null) : null },
   ].filter((r): r is { title: string; value: string } => r.value !== null);
 }
@@ -1209,7 +1209,7 @@ function SellModelPageContent() {
   function handleAddToBundle(finalPicks?: (number | null)[]) {
     if (!product) return;
     const fp = finalPicks ?? picks;
-    const finalRows = buildSummaryRows(fp, storages, effectiveGroupOptions[0]);
+    const finalRows = buildSummaryRows(fp, storages, effectiveGroupOptions);
     const device: ExtraDevice = {
       model: product.model,
       storage: fp[0] !== null ? storages[fp[0]] : "",
@@ -1310,17 +1310,17 @@ function SellModelPageContent() {
       orderNumber,
       model: product!.model,
       storage: picks[0] !== null ? storages[picks[0]] : "",
-      condition: picks[3] !== null ? BODY_OPTS[picks[3]]?.sub ?? "" : "",
+      condition: picks[3] !== null ? effectiveGroupOptions[2]?.[picks[3]]?.sub ?? "" : "",
       selections: {
         storage:     picks[0] !== null ? storages[picks[0]] : "",
         modelType:   picks[1] !== null ? effectiveGroupOptions[0][picks[1]]?.label ?? "" : "",
-        warranty:    picks[2] !== null ? WARRANTY_OPTS[picks[2]]?.label ?? "" : "",
-        body:        picks[3] !== null ? BODY_OPTS[picks[3]]?.label ?? "" : "",
-        screen:      picks[4] !== null ? SCREEN_OPTS[picks[4]]?.label ?? "" : "",
-        display:     picks[5] !== null ? DISPLAY_OPTS[picks[5]]?.label ?? "" : "",
-        battery:     picks[6] !== null ? BATTERY_OPTS[picks[6]]?.label ?? "" : "",
-        accessories: picks[7] !== null ? ACCESSORY_OPTS[picks[7]]?.label ?? "" : "",
-        icloud:      picks[8] !== null ? ICLOUD_OPTS[picks[8]]?.label ?? "" : "",
+        warranty:    picks[2] !== null ? effectiveGroupOptions[1]?.[picks[2]]?.label ?? "" : "",
+        body:        picks[3] !== null ? effectiveGroupOptions[2]?.[picks[3]]?.label ?? "" : "",
+        screen:      picks[4] !== null ? effectiveGroupOptions[3]?.[picks[4]]?.label ?? "" : "",
+        display:     picks[5] !== null ? effectiveGroupOptions[4]?.[picks[5]]?.label ?? "" : "",
+        battery:     picks[6] !== null ? effectiveGroupOptions[5]?.[picks[6]]?.label ?? "" : "",
+        accessories: picks[7] !== null ? effectiveGroupOptions[6]?.[picks[7]]?.label ?? "" : "",
+        icloud:      picks[8] !== null ? effectiveGroupOptions[7]?.[picks[8]]?.label ?? "" : "",
         functional:  picks[9] !== null ? FUNCTIONAL_OPTS[picks[9]]?.label ?? "" : "",
       },
       estimatedPrice: price,
@@ -1383,7 +1383,7 @@ function SellModelPageContent() {
 
   const price = (product && pricesLoaded) ? calcPrice(product, picks, effectiveGroupOptions, storageMultiplier, storagePrices, floorPct) : 0;
   const { min: priceMin, max: priceMax } = calcPriceRange(price);
-  const summaryRows = product ? buildSummaryRows(picks, storages, effectiveGroupOptions[0]) : [];
+  const summaryRows = product ? buildSummaryRows(picks, storages, effectiveGroupOptions) : [];
   const totalBundlePrice = price + extraDevices.reduce((sum, d) => sum + d.estimatedPrice, 0);
   // ราคานี้ล็อก 7 วัน (แสดงวันที่แบบไทย)
   const priceLockDate = new Date(Date.now() + 7 * 86400000).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" });
@@ -1866,7 +1866,7 @@ function SellModelPageContent() {
                             <p className="font-bold text-black text-base leading-snug">{product.model}</p>
                             <p className="text-sm mt-0.5" style={{ color: "#6B7280" }}>
                               {picks[0] !== null ? storages[picks[0]] : ""}
-                              {picks[3] !== null ? ` • ${BODY_OPTS[picks[3]]?.sub ?? ""}` : ""}
+                              {picks[3] !== null ? ` • ${effectiveGroupOptions[2]?.[picks[3]]?.sub ?? ""}` : ""}
                             </p>
                           </div>
                         </div>
@@ -2463,7 +2463,7 @@ function SellModelPageContent() {
                           {
                             label: "อุปกรณ์ตามที่แจ้งไว้",
                             sub: picks[7] !== null
-                              ? `คุณแจ้งว่า "${ACCESSORY_OPTS[picks[7]]?.label ?? ""}" — นำมาตามที่กรอกไว้`
+                              ? `คุณแจ้งว่า "${effectiveGroupOptions[6]?.[picks[7]]?.label ?? ""}" — นำมาตามที่กรอกไว้`
                               : "นำกล่องและอุปกรณ์ตามที่แจ้งไว้มาด้วย",
                             required: true,
                           },
@@ -2691,7 +2691,7 @@ function SellModelPageContent() {
                               <p className="text-sm font-semibold text-black leading-snug truncate">{product.model}</p>
                               <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>
                                 {picks[0] !== null ? storages[picks[0]] : ""}
-                                {picks[3] !== null ? ` • ${BODY_OPTS[picks[3]]?.sub ?? ""}` : ""}
+                                {picks[3] !== null ? ` • ${effectiveGroupOptions[2]?.[picks[3]]?.sub ?? ""}` : ""}
                               </p>
                             </div>
                           </div>
@@ -2923,7 +2923,7 @@ function SellModelPageContent() {
                       <p className="font-bold text-black text-lg leading-snug">{product.model}</p>
                       <p className="text-sm mt-0.5" style={{ color: "#6B7280" }}>
                         {picks[0] !== null ? storages[picks[0]] : ""}
-                        {picks[3] !== null ? ` • ${BODY_OPTS[picks[3]]?.sub ?? ""}` : ""}
+                        {picks[3] !== null ? ` • ${effectiveGroupOptions[2]?.[picks[3]]?.sub ?? ""}` : ""}
                       </p>
                     </div>
                   </div>
