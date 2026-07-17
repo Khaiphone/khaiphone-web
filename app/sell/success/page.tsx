@@ -912,9 +912,23 @@ function SellSuccessInner() {
   );
 }
 
+// Fallback ต้องยืนยันความสำเร็จ "ทันที" ที่เปลี่ยนหน้า — เดิม Suspense ไม่มี fallback
+// บนเน็ตมือถืออ่อนจอจะขาวค้างหลายวินาที ลูกค้าคิดว่าแค่เด้งขึ้นบนสุดแล้วสับสนว่าส่งสำเร็จไหม
+function SuccessFallback() {
+  return (
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 text-center">
+      <div className="w-16 h-16 rounded-full flex items-center justify-center mb-5" style={{ background: "#22C55E" }}>
+        <Check size={30} color="#fff" strokeWidth={3} />
+      </div>
+      <h1 className="text-2xl font-bold text-black mb-2">ส่งคำขอสำเร็จแล้ว</h1>
+      <p className="text-sm" style={{ color: "#6B7280" }}>กำลังโหลดรายละเอียดคำขอของคุณ...</p>
+    </div>
+  );
+}
+
 export default function SellSuccessPage() {
   return (
-    <Suspense>
+    <Suspense fallback={<SuccessFallback />}>
       <SellSuccessInner />
     </Suspense>
   );

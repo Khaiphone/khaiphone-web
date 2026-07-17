@@ -999,6 +999,11 @@ function SellModelPageContent() {
     fetchRecentPriceCheckCount().then(setPriceCheckCount).catch(() => {});
   }, [isFormPhase, priceCheckCount]);
 
+  // Prefetch หน้า success ตั้งแต่เข้าฟอร์ม — ตอนกดยืนยันจะเปลี่ยนหน้าทันที ไม่มีช่วงจอขาวให้ลูกค้าสับสน
+  useEffect(() => {
+    if (isFormPhase) router.prefetch("/sell/success");
+  }, [isFormPhase, router]);
+
   // ดึงคิว "รับถึงที่" ที่จองแล้วของวันที่เลือก เพื่อปิดช่วงเวลาที่เต็ม
   useEffect(() => {
     if (!isFormPhase || sellMethod !== "rider") { setSlotAvail(null); return; }
