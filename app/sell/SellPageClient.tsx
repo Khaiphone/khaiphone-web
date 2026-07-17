@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Header from "../components/Header";
 import { ChevronRight, RotateCcw, Clock, Lock } from "lucide-react";
+import { getIpadSubtitle } from "@/lib/ipad-model-info";
 
 type IconProps = { className?: string; style?: React.CSSProperties };
 
@@ -219,6 +220,10 @@ function SellPageContent({ categories }: { categories: SellCategory[] }) {
                       {p.discontinued && (
                         <span className="text-xs" style={{ color: "#D1D5DB" }}>ไม่รับซื้อรุ่นนี้</span>
                       )}
+                      {!p.discontinued && (() => {
+                        const sub = getIpadSubtitle(p.model);
+                        return sub ? <span className="text-xs block truncate" style={{ color: "#6B7280" }}>{sub}</span> : null;
+                      })()}
                     </div>
 
                     <div className="flex-shrink-0">

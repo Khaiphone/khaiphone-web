@@ -12,6 +12,7 @@ import { trackEstimateEvent, fetchRecentPriceCheckCount } from "@/app/actions/an
 import { fetchPublicActiveProducts } from "@/app/actions/products";
 import { fetchPublicPricingConfig } from "@/app/actions/pricing-config";
 import { getModelTypeOpts, DEFAULT_PRICING_CONFIG } from "@/lib/pricing-defaults";
+import { getIpadSubtitle } from "@/lib/ipad-model-info";
 import type { PricingOption } from "@/lib/pricing-defaults";
 import { calcPrice, calcPriceRange, formatPrice } from "@/lib/pricing";
 import { classifyZone, extractProvince, PROVINCE_GROUPS, ROUND_ETA_LABEL } from "@/lib/zones";
@@ -710,6 +711,10 @@ function BottomContextBar({ product }: { product: Product }) {
         <div className="flex-1 min-w-0">
           <p className="text-xs leading-tight" style={{ color: "#6B7280" }}>กำลังประเมิน</p>
           <p className="text-sm font-bold text-black truncate leading-tight">{product.model}</p>
+          {(() => {
+            const sub = getIpadSubtitle(product.model);
+            return sub ? <p className="text-xs truncate leading-tight" style={{ color: "#9CA3AF" }}>{sub}</p> : null;
+          })()}
         </div>
         <a
           href="/sell"
