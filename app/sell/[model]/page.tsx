@@ -757,6 +757,7 @@ function SellModelPageContent() {
   const [storagePrices, setStoragePrices] = useState<Record<string, number> | null>(null);
   const [hasCustomDed, setHasCustomDed]   = useState(false);
   const [pricesLoaded, setPricesLoaded]   = useState(false);
+  const [accessoryOptions, setAccessoryOptions] = useState<{ model: string; price: number }[]>([]);
 
   useEffect(() => {
     const modelSlug = params.model;
@@ -769,6 +770,11 @@ function SellModelPageContent() {
           })
         );
       }
+      setAccessoryOptions(
+        dbProducts
+          .filter(d => d.category === "accessory" && d.active && d.price_good > 0)
+          .map(d => ({ model: d.model, price: d.price_good }))
+      );
       setStorageMultiplier(cfg.storageMultiplier);
       setFloorPct(cfg.floorPct);
       const match = dbProducts.find(d => toSlug(d.model) === modelSlug);
@@ -1250,9 +1256,56 @@ function SellModelPageContent() {
     try { localStorage.setItem(BUNDLE_KEY, JSON.stringify(updated)); } catch {}
   }
 
+  function toggleAccessory(model: string, accPrice: number) {
+    const exists = extraDevices.some(d => d.model === model);
+    const updated = exists
+      ? extraDevices.filter(d => d.model !== model)
+      : [...extraDevices, { model, storage: "—", estimatedPrice: accPrice, details: [{ title: "ประเภท", value: "อุปกรณ์เสริม" }] }];
+    setExtraDevices(updated);
+    try { localStorage.setItem(BUNDLE_KEY, JSON.stringify(updated)); } catch {}
+  }
+
+  // การ์ดชวนขาย Pencil/Keyboard พ่วง — โชว์เฉพาะ iPad และเมื่อแอดมินตั้งราคาแล้ว
+  function renderAccessoryAddOn(compact?: boolean) {
+    if (!product || getDeviceCategory(product.model) !== "ipad" || accessoryOptions.length === 0) return null;
+    return (
+      <div className={compact ? "px-5 py-3" : "mt-3 pt-3"} style={compact ? { borderBottom: "1px solid #F3F4F6" } : { borderTop: "1px dashed #E5E7EB" }}>
+        <p className="text-xs font-bold text-black mb-0.5">ขาย Apple Pencil / คีย์บอร์ดพ่วงด้วยไหม?</p>
+        <p className="text-xs mb-2" style={{ color: "#6B7280" }}>เลือกได้เลย — รวมในนัดหมายเดียวกัน</p>
+        <div className="flex flex-col gap-1.5">
+          {accessoryOptions.map(a => {
+            const checked = extraDevices.some(d => d.model === a.model);
+            return (
+              <label key={a.model} className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggleAccessory(a.model, a.price)}
+                  className="w-4 h-4 flex-shrink-0 accent-[#B8860B]"
+                />
+                <span className="flex-1 text-xs" style={{ color: "#374151" }}>{a.model}</span>
+                <span className="text-xs font-semibold flex-shrink-0" style={{ color: checked ? "#B8860B" : "#9CA3AF" }}>
+                  +฿{a.price.toLocaleString("th-TH")}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   function handleRemoveMain() {
     if (extraDevices.length === 0) return;
-    const [newMain, ...remaining] = extraDevices;
+    // อุปกรณ์เสริมเป็นเครื่องหลักไม่ได้ (ไม่มีหน้า wizard ของตัวเอง) — ดันเครื่องจริงตัวแรกขึ้นแทน
+    const idx = extraDevices.findIndex(d => !d.details?.some(x => x.value === "อุปกรณ์เสริม"));
+    if (idx === -1) {
+      try { localStorage.removeItem(BUNDLE_KEY); localStorage.removeItem(BUNDLE_RETURN_KEY); } catch {}
+      window.location.href = "/sell";
+      return;
+    }
+    const newMain = extraDevices[idx];
+    const remaining = extraDevices.filter((_, i) => i !== idx);
     try {
       localStorage.setItem(BUNDLE_KEY, JSON.stringify(remaining));
       if (remaining.length === 0) localStorage.removeItem(BUNDLE_RETURN_KEY);
@@ -2025,6 +2078,8 @@ function SellModelPageContent() {
                     >
                       <Plus size={14} /> ประเมินสินค้าเพิ่ม
                     </a>
+
+                    {renderAccessoryAddOn()}
                   </div>
 
                   {/* Form */}
@@ -2781,6 +2836,8 @@ function SellModelPageContent() {
                         <Plus size={13} /> ประเมินสินค้าเพิ่ม
                       </a>
                     </div>
+
+                    {renderAccessoryAddOn(true)}
 
                     {/* Sell method */}
                     <div className="px-5 py-3.5" style={{ borderBottom: "1px solid #F3F4F6" }}>
