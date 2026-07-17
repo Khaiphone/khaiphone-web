@@ -164,13 +164,14 @@ export async function bulkUpdateProductPrices(
 
 export async function syncProductsFromLib() {
   await requireAuth();
-  const { iphones, ipads, macbooks, watches } = await import("@/lib/products");
+  const { iphones, ipads, macbooks, watches, accessories } = await import("@/lib/products");
 
   const categoryMap: Array<{ key: string; list: typeof iphones }> = [
     { key: "iphone",  list: iphones  },
     { key: "ipad",    list: ipads    },
     { key: "macbook", list: macbooks },
     { key: "watch",   list: watches  },
+    { key: "accessory", list: accessories },
   ];
 
   const supabase = createServerClient();
@@ -203,13 +204,14 @@ export async function syncProductsFromLib() {
 
 export async function syncStorageFromLib() {
   await requireAuth();
-  const { iphones, ipads, macbooks, watches } = await import("@/lib/products");
+  const { iphones, ipads, macbooks, watches, accessories } = await import("@/lib/products");
 
   const categoryMap: Array<{ key: string; list: typeof iphones }> = [
     { key: "iphone",  list: iphones  },
     { key: "ipad",    list: ipads    },
     { key: "macbook", list: macbooks },
     { key: "watch",   list: watches  },
+    { key: "accessory", list: accessories },
   ];
 
   const supabase = createServerClient();
