@@ -702,6 +702,15 @@ export async function adminConfirmReturn(id: string) {
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
 
+  // backstop: ถ้าไรเดอร์ยังค้างโหมด "กลับออฟฟิศ" อยู่ ให้จบโหมดเมื่อออฟฟิศรับเครื่องแล้ว
+  if (req?.rider_id) {
+    await supabase
+      .from("rider_locations")
+      .update({ tracking_mode: "idle", current_job_id: null, updated_at: now })
+      .eq("rider_id", req.rider_id)
+      .eq("tracking_mode", "return");
+  }
+
   // If stock already exists (created by updateStatus "completed"), patch the fields
   // that adminConfirmReturn knows better: inspector name and inspection color.
   // Keep everything else (inspection_snapshot, icloud_status, physical_checks) from the

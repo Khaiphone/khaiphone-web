@@ -1267,6 +1267,13 @@ export async function riderSubmitReturn(id: string, gps?: { lat: number; lng: nu
     .eq("id", id).eq("rider_id", user.id);
   if (error) return { success: false as const, error: error.message };
 
+  // ถึงออฟฟิศแล้ว (ผ่าน geofence) — จบโหมดเดินทางกลับ ไม่ให้ป้าย "กลับออฟฟิศ" ค้าง
+  await supabase
+    .from("rider_locations")
+    .update({ tracking_mode: "idle", current_job_id: null, updated_at: now })
+    .eq("rider_id", user.id)
+    .eq("tracking_mode", "return");
+
   after(async () => {
     await broadcastRequestUpdate(id);
     await sendPushToOwners({
