@@ -285,7 +285,7 @@ export async function fetchAllRidersShifts(date: string) {
 
   const { data: shifts } = await supabase
     .from("rider_shifts")
-    .select("id, rider_id, clocked_in_at, clocked_out_at, jobs_completed, total_distance_km, ended_reason")
+    .select("id, rider_id, clocked_in_at, clocked_out_at, jobs_completed, jobs_attempted, total_distance_km, ended_reason")
     .gte("clocked_in_at", start)
     .lte("clocked_in_at", end)
     .order("clocked_in_at", { ascending: false });
@@ -474,7 +474,7 @@ export async function fetchRiderShiftStats(riderId: string, dateFrom: string, da
 
   const { data } = await supabase
     .from("rider_shifts")
-    .select("id, clocked_in_at, clocked_out_at, jobs_completed, total_distance_km, ended_reason")
+    .select("id, clocked_in_at, clocked_out_at, jobs_completed, jobs_attempted, total_distance_km, ended_reason")
     .eq("rider_id", riderId)
     .gte("clocked_in_at", startOfThaiDay(dateFrom))
     .lte("clocked_in_at", endOfThaiDay(dateTo))
