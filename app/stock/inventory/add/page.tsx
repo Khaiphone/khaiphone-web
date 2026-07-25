@@ -11,20 +11,13 @@ import { createStockItem, checkImeiExists } from "@/app/actions/stocks";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compress-image";
 import type { AddStockForm, PhysicalCondition } from "@/lib/stock/types";
+import { CATEGORIES, allProducts } from "@/lib/products";
 
 const STEPS = ["ข้อมูลเครื่อง", "สภาพกายภาพ", "ข้อมูลรับซื้อ", "ราคา", "อัปโหลดรูป", "ตรวจสอบ", "บันทึก"];
 const PHYSICAL_PARTS = ["จอ", "เคส/ตัวเครื่อง", "กระจกหลัง", "ปุ่มต่างๆ", "ลำโพง", "กล้องหลัง", "กล้องหน้า", "ชาร์จพอร์ต"];
 const CONDITIONS: PhysicalCondition[] = ["ปกติ", "มีตำหนิเล็ก", "มีปัญหา"];
 
-const IPHONE_MODELS = [
-  "iPhone 17 Pro Max", "iPhone 17 Pro", "iPhone 17 Air", "iPhone 17", "iPhone 17e",
-  "iPhone 16 Pro Max", "iPhone 16 Pro", "iPhone 16 Plus", "iPhone 16",
-  "iPhone 15 Pro Max", "iPhone 15 Pro", "iPhone 15 Plus", "iPhone 15",
-  "iPhone 14 Pro Max", "iPhone 14 Pro", "iPhone 14 Plus", "iPhone 14",
-  "iPhone 13 Pro Max", "iPhone 13 Pro", "iPhone 13", "iPhone 13 mini",
-  "iPhone 12 Pro Max", "iPhone 12 Pro", "iPhone 12", "iPhone 12 mini",
-  "iPhone 11 Pro Max", "iPhone 11 Pro", "iPhone 11",
-];
+const DEFAULT_STORAGE_OPTS = ["64GB", "128GB", "256GB", "512GB", "1TB", "2TB"];
 
 const INIT_FORM: AddStockForm = {
   model: "", storage: "", color: "", imei: "", serial: "",
@@ -219,11 +212,19 @@ export default function AddStockPage() {
                     <label style={labelStyle}>รุ่น *</label>
                     <select value={form.model} onChange={e => set("model", e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
                       <option value="">เลือกรุ่น</option>
-                      {IPHONE_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
+                      {CATEGORIES.map(cat => (
+                        <optgroup key={cat.key} label={cat.label}>
+                          {cat.products.filter(p => !p.discontinued).map(p => <option key={p.id} value={p.model}>{p.model}</option>)}
+                        </optgroup>
+                      ))}
                     </select>
                   </div>
                   {[
-                    { label: "ความจุ", field: "storage", placeholder: "เช่น 256GB", opts: ["64GB","128GB","256GB","512GB","1TB"] },
+                    { label: "ความจุ", field: "storage", placeholder: "เช่น 256GB", opts: (() => {
+                      const sel = allProducts.find(p => p.model === form.model);
+                      if (sel?.storage && sel.storage !== "—") return sel.storage.split("/").map(s => s.trim());
+                      return DEFAULT_STORAGE_OPTS;
+                    })() },
                     { label: "สี", field: "color", placeholder: "เช่น Natural Titanium" },
                   ].map(({ label, field, opts }) => (
                     <div key={field}>
