@@ -903,6 +903,17 @@ export async function updateStockItem(
     mapped["audit_log"] = newAuditLog;
   }
 
+  // เครื่องที่ขายไปแล้ว: แก้ทุนย้อนหลัง = แก้ข้อมูลที่ลงผิด → sold_cost_snapshot ต้องวิ่งตาม
+  // (ไม่งั้นกำไรใน Sales/Finance ค้างที่ทุนเก่า)
+  const costTouched = ["cost_price", "shipping_cost", "other_cost"].some(f => mapped[f] !== undefined);
+  if (costTouched && current?.sold_at != null) {
+    const num = (v: unknown, fallback: number) => (typeof v === "number" ? v : fallback);
+    mapped["sold_cost_snapshot"] =
+      num(mapped["cost_price"], current?.cost_price ?? 0) +
+      num(mapped["shipping_cost"], current?.shipping_cost ?? 0) +
+      num(mapped["other_cost"], current?.other_cost ?? 0);
+  }
+
   const { error } = await supabase.from("stocks").update(mapped).eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };
