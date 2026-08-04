@@ -1394,6 +1394,56 @@ export async function riderSubmitReturn(id: string, gps?: { lat: number; lng: nu
   return { success: true as const };
 }
 
+// ─── เพิ่มเครื่องหน้างาน (ลูกค้าขายเพิ่มตอนไรเดอร์ถึงแล้ว) ───────────────────
+export async function riderAddExtraDevice(id: string, model: string, storage: string) {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+  const now = new Date().toISOString();
+
+  const { data: req } = await supabase
+    .from("requests")
+    .select("rider_id, status, extra_devices, order_number, status_log")
+    .eq("id", id).single();
+  if (req?.rider_id !== user.id) return { success: false as const, error: "ไม่ใช่งานของคุณ" };
+  if (req?.status !== "inspecting") return { success: false as const, error: "เพิ่มเครื่องได้เฉพาะระหว่างขั้นตรวจสภาพหน้างาน" };
+  const existing = (req?.extra_devices ?? []) as unknown[];
+  if (existing.length >= 9) return { success: false as const, error: "เครื่องในงานเดียวเต็มแล้ว (สูงสุด 10)" };
+
+  // ราคาประเมินตั้งต้นจากตารางราคา (สภาพสูงสุด) — ราคาจริงไปเคาะกันที่ขั้นเสนอราคา
+  const { data: prod } = await supabase
+    .from("products")
+    .select("price_good, storage_prices")
+    .eq("model", model).eq("active", true)
+    .maybeSingle();
+  const est = (prod?.storage_prices as Record<string, number> | null)?.[storage] ?? prod?.price_good ?? 0;
+
+  const newDevice = {
+    model, storage, estimatedPrice: est,
+    details: [{ title: "ที่มา", value: "ลูกค้าขายเพิ่มหน้างาน (ไรเดอร์เพิ่ม)" }],
+  };
+  const newLog = [
+    ...(req?.status_log ?? []),
+    { status: "inspecting", timestamp: now, note: `➕ เพิ่มเครื่องหน้างาน: ${model} ${storage} (ประเมินตั้งต้น ฿${est.toLocaleString("th-TH")})` },
+  ];
+
+  const { error } = await supabase
+    .from("requests")
+    .update({ extra_devices: [...existing, newDevice], status_log: newLog, updated_at: now })
+    .eq("id", id);
+  if (error) return { success: false as const, error: error.message };
+
+  after(async () => {
+    await broadcastRequestUpdate(id);
+    await sendPushToOwners({
+      title: `➕ ลูกค้าขายเพิ่มหน้างาน — ${req?.order_number ?? ""}`,
+      body: `${model} ${storage} · ประเมินตั้งต้น ฿${est.toLocaleString("th-TH")} — รอผลตรวจจากไรเดอร์`,
+      url: `/admin/requests/${id}`,
+      tag: `extra-device-${id}`,
+    }).catch(console.error);
+  });
+  return { success: true as const, estimatedPrice: est, deviceIndex: existing.length + 1 };
+}
+
 // ─── Chain to next job (ไปงานถัดไปโดยไม่กลับออฟฟิศ) ─────────────────────────
 export async function riderChainToNext(jobId: string): Promise<{ nextJobId: string | null }> {
   const user = await requireAuth();

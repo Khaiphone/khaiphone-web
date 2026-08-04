@@ -5,12 +5,13 @@ import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import { ArrowLeft, Phone, MapPin, Camera, AlertTriangle, CheckCircle2, ExternalLink, ScanLine, ShieldCheck, ShieldAlert, ShieldX, Loader2, RefreshCw } from "lucide-react";
 import { scanDeviceInfo, checkSickw, scanIdCard } from "@/app/actions/device-scan";
+import { fetchPublicActiveProducts } from "@/app/actions/products";
 import { thaiDateStr } from "@/lib/thai-date";
 import type { SickwResult } from "@/app/actions/device-scan";
 import {
   fetchRiderJob, fetchRiderJobs,
   riderAcceptJob, riderRejectJob, riderStartJob, riderArriveJob, riderNoShow,
-  riderSaveInspection, riderAutoSaveSickw, riderConfirmPrice, riderAdjustPrice,
+  riderSaveInspection, riderAutoSaveSickw, riderConfirmPrice, riderAdjustPrice, riderAddExtraDevice,
   riderCustomerAccepted, riderCustomerRejected,
   riderCompleteCash, riderCompleteTransfer, riderRequestTransfer,
   riderRequestHelp, riderChainToNext, riderCancelAtInspection,
@@ -2094,6 +2095,32 @@ export default function JobWizardPage() {
   const [nextJobId,  setNextJobId]  = useState<string | null>(null);
   const [chainBusy,  setChainBusy]  = useState(false);
   const [inspectDevice, setInspectDevice] = useState(0); // งาน bundle: แท็บเครื่องที่กำลังตรวจ
+  // เพิ่มเครื่องหน้างาน (ลูกค้าขายเพิ่ม)
+  const [showAddDevice, setShowAddDevice] = useState(false);
+  const [addProducts, setAddProducts] = useState<Array<{ model: string; storage: string; category: string }>>([]);
+  const [addModel, setAddModel] = useState("");
+  const [addStorage, setAddStorage] = useState("");
+  const [addBusy, setAddBusy] = useState(false);
+  const [addError, setAddError] = useState("");
+
+  async function openAddDevice() {
+    setShowAddDevice(true); setAddError("");
+    if (addProducts.length === 0) {
+      const rows = await fetchPublicActiveProducts();
+      setAddProducts(rows.map(r => ({ model: r.model, storage: r.storage ?? "", category: r.category ?? "" })));
+    }
+  }
+
+  async function handleAddDevice() {
+    if (!addModel || !addStorage) { setAddError("เลือกรุ่นและความจุก่อน"); return; }
+    setAddBusy(true); setAddError("");
+    const result = await riderAddExtraDevice(id, addModel, addStorage);
+    setAddBusy(false);
+    if (!result.success) { setAddError((result as { success: false; error?: string }).error ?? "เกิดข้อผิดพลาด"); return; }
+    setShowAddDevice(false); setAddModel(""); setAddStorage("");
+    await reload();
+    setInspectDevice((result as { deviceIndex: number }).deviceIndex); // เด้งไปแท็บเครื่องใหม่ให้ตรวจต่อเลย
+  }
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason,    setCancelReason]    = useState("");
   const [cancelOther,     setCancelOther]     = useState("");
@@ -2394,6 +2421,57 @@ export default function JobWizardPage() {
                       </button>
                     );
                   })}
+                </div>
+              )}
+              {/* ลูกค้าขายเพิ่มหน้างาน */}
+              {job.status === "inspecting" && !showAddDevice && (
+                <button onClick={openAddDevice}
+                  style={{ padding:"10px 0", borderRadius:12, border:`1.5px dashed ${BORDER}`, background:"transparent",
+                    color:TEXT2, fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>
+                  ➕ ลูกค้าขายเพิ่ม — เพิ่มเครื่องในงานนี้
+                </button>
+              )}
+              {showAddDevice && (
+                <div style={{ background:CARD, borderRadius:14, padding:14, border:`1.5px solid ${ACCENT}`, display:"flex", flexDirection:"column", gap:10 }}>
+                  <p style={{ margin:0, fontSize:13, fontWeight:700, color:TEXT }}>➕ เพิ่มเครื่องที่ลูกค้าขายเพิ่ม</p>
+                  {addProducts.length === 0 ? (
+                    <p style={{ margin:0, fontSize:12, color:TEXT2 }}>กำลังโหลดรายการรุ่น...</p>
+                  ) : (
+                    <>
+                      <select value={addModel} onChange={e => { setAddModel(e.target.value); setAddStorage(""); }}
+                        style={{ width:"100%", background:CARD2, border:`1px solid ${BORDER}`, borderRadius:8, color:TEXT, fontSize:14, fontFamily:"inherit", padding:"10px 12px" }}>
+                        <option value="">เลือกรุ่น</option>
+                        {["iphone","ipad","macbook","watch","accessory"].map(cat => {
+                          const items = addProducts.filter(p => p.category === cat);
+                          if (!items.length) return null;
+                          return (
+                            <optgroup key={cat} label={{iphone:"iPhone",ipad:"iPad",macbook:"MacBook",watch:"Apple Watch",accessory:"อุปกรณ์เสริม"}[cat]}>
+                              {items.map(p => <option key={p.model} value={p.model}>{p.model}</option>)}
+                            </optgroup>
+                          );
+                        })}
+                      </select>
+                      {addModel && (
+                        <select value={addStorage} onChange={e => setAddStorage(e.target.value)}
+                          style={{ width:"100%", background:CARD2, border:`1px solid ${BORDER}`, borderRadius:8, color:TEXT, fontSize:14, fontFamily:"inherit", padding:"10px 12px" }}>
+                          <option value="">เลือกความจุ</option>
+                          {(addProducts.find(p => p.model === addModel)?.storage ?? "")
+                            .split("/").map(s => s.trim()).filter(s => s && s !== "—")
+                            .map(s => <option key={s} value={s}>{s}</option>)}
+                          {(addProducts.find(p => p.model === addModel)?.storage ?? "") === "—" && <option value="—">— (ไม่มีความจุ)</option>}
+                        </select>
+                      )}
+                      <p style={{ margin:0, fontSize:11, color:TEXT2 }}>ราคาประเมินตั้งต้นมาจากตารางราคา (สภาพสูงสุด) — ราคาจริงไปปรับที่ขั้นเสนอราคา</p>
+                    </>
+                  )}
+                  {addError && <p style={{ margin:0, fontSize:12, color:RED }}>{addError}</p>}
+                  <div style={{ display:"flex", gap:8 }}>
+                    <button onClick={() => setShowAddDevice(false)} style={{ flex:1, padding:"10px 0", borderRadius:10, border:`1px solid ${BORDER}`, background:CARD, color:TEXT2, fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>ยกเลิก</button>
+                    <button onClick={handleAddDevice} disabled={addBusy || !addModel || !addStorage}
+                      style={{ flex:2, padding:"10px 0", borderRadius:10, border:"none", background:ACCENT, color:"#111", fontWeight:800, fontSize:13, cursor:"pointer", fontFamily:"inherit", opacity: addBusy || !addModel || !addStorage ? 0.5 : 1 }}>
+                      {addBusy ? "กำลังเพิ่ม..." : "เพิ่มเครื่องนี้"}
+                    </button>
+                  </div>
                 </div>
               )}
               <InspectStep key={inspectDevice} job={job} deviceIndex={inspectDevice} reload={reload} c={c} />
