@@ -598,6 +598,8 @@ function InspectStep({ job, deviceIndex = 0, reload, c }: { job: AdminRequest; d
     String(job.device.estimatedPrice),
     ...(job.extraDevices ?? []).map(d => String(d.estimatedPrice)),
   ]);
+  // ตัดเครื่องพ่วงออกจากการรับซื้อ (ลูกค้าไม่ขาย/ไม่เข้าเงื่อนไข) — index ตาม extraDevices
+  const [excludeExtra, setExcludeExtra] = useState<boolean[]>((job.extraDevices ?? []).map((_, i) => !!job.inspection?.extraInspections?.[i]?.excluded));
   const [adjustReason, setAdjustReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -682,12 +684,13 @@ function InspectStep({ job, deviceIndex = 0, reload, c }: { job: AdminRequest; d
 
   async function handleAdjustPrice() {
     if (extraCount > 0) {
-      // bundle: รวมราคาต่อเครื่องเป็น perDevice
-      const perDevice = deviceAdjust.map(v => parseInt(v.replace(/,/g, "")));
-      if (perDevice.some(v => !v && v !== 0) || !adjustReason.trim()) { setError("กรุณากรอกราคาทุกเครื่องและเหตุผล"); return; }
+      // bundle: รวมราคาต่อเครื่องเป็น perDevice — เครื่องที่ถูกตัด = 0
+      const perDevice = deviceAdjust.map((v, i) => (i > 0 && excludeExtra[i - 1]) ? 0 : parseInt(v.replace(/,/g, "")));
+      if (perDevice.some(v => Number.isNaN(v)) || !adjustReason.trim()) { setError("กรุณากรอกราคาทุกเครื่องและเหตุผล"); return; }
       const total = perDevice.reduce((s, v) => s + v, 0);
+      if (total <= 0) { setError("ต้องรับซื้ออย่างน้อย 1 เครื่อง — ถ้าลูกค้าไม่ขายทั้งหมดให้ใช้ปุ่มยกเลิกงาน"); return; }
       setSubmitting(true);
-      const result = await riderAdjustPrice(job.id, total, adjustReason, perDevice);
+      const result = await riderAdjustPrice(job.id, total, adjustReason, perDevice, excludeExtra);
       if (!result.success) { setError((result as { success: false; error?: string }).error ?? "เกิดข้อผิดพลาด"); setSubmitting(false); return; }
       reload();
       return;
@@ -825,15 +828,28 @@ function InspectStep({ job, deviceIndex = 0, reload, c }: { job: AdminRequest; d
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {extraCount > 0 ? (
                 <>
-                  {[{ model: job.device.model, storage: job.device.storage }, ...(job.extraDevices ?? [])].map((d, i) => (
-                    <div key={i}>
-                      <p style={{ margin: "0 0 4px", fontSize: 12, color: c.TEXT2 }}>เครื่องที่ {i + 1} · {d.model} {d.storage} (บาท)</p>
-                      <input type="number" value={deviceAdjust[i] ?? ""} onChange={e => setDeviceAdjust(prev => prev.map((v, j) => j === i ? e.target.value : v))}
-                        style={{ width: "100%", background: c.CARD2, border: `1px solid ${c.BORDER}`, borderRadius: 8, color: c.TEXT, fontSize: 16, fontFamily: "inherit", outline: "none", padding: "10px 12px", boxSizing: "border-box" }} />
+                  {[{ model: job.device.model, storage: job.device.storage }, ...(job.extraDevices ?? [])].map((d, i) => {
+                    const excluded = i > 0 && excludeExtra[i - 1];
+                    return (
+                    <div key={i} style={{ opacity: excluded ? 0.55 : 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                        <p style={{ margin: 0, fontSize: 12, color: c.TEXT2 }}>เครื่องที่ {i + 1} · {d.model} {d.storage} (บาท)</p>
+                        {i > 0 && (
+                          <label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: excluded ? c.RED : c.TEXT2, cursor: "pointer" }}>
+                            <input type="checkbox" checked={excluded}
+                              onChange={e => setExcludeExtra(prev => prev.map((v, j) => j === i - 1 ? e.target.checked : v))} />
+                            ไม่รับเครื่องนี้
+                          </label>
+                        )}
+                      </div>
+                      <input type="number" value={excluded ? "0" : (deviceAdjust[i] ?? "")} disabled={excluded}
+                        onChange={e => setDeviceAdjust(prev => prev.map((v, j) => j === i ? e.target.value : v))}
+                        style={{ width: "100%", background: c.CARD2, border: `1px solid ${excluded ? c.RED : c.BORDER}`, borderRadius: 8, color: c.TEXT, fontSize: 16, fontFamily: "inherit", outline: "none", padding: "10px 12px", boxSizing: "border-box" }} />
                     </div>
-                  ))}
+                    );
+                  })}
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: c.TEXT, textAlign: "right" }}>
-                    รวม ฿{deviceAdjust.reduce((s, v) => s + (parseInt(v.replace(/,/g, "")) || 0), 0).toLocaleString("th-TH")}
+                    รวม ฿{deviceAdjust.reduce((s, v, i) => s + ((i > 0 && excludeExtra[i - 1]) ? 0 : (parseInt(v.replace(/,/g, "")) || 0)), 0).toLocaleString("th-TH")}
                   </p>
                 </>
               ) : (
@@ -1694,8 +1710,11 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
           batteryCycles: r.inspection?.batteryCycles,
           batteryHealth: r.inspection?.batteryHealth,
         },
-        ...(r.extraDevices ?? []).map((xd, i) => {
+        ...(r.extraDevices ?? []).filter((_, i) => !(extraInspArr[i] as { excluded?: boolean } | undefined)?.excluded).map((xd, iRaw) => {
+          // index เดิมใน extraDevices (หลัง filter ต้อง map กลับ)
+          const i = (r.extraDevices ?? []).indexOf(xd);
           const xi = extraInspArr[i];
+          void iRaw;
           return {
             label: `เครื่องที่ ${i + 2}`,
             model: xd.model,

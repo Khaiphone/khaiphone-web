@@ -99,6 +99,8 @@ export interface ExtraDeviceInspection {
   sickw_report?: string;
   carrierLock?: string;
   note?: string;
+  /** ไรเดอร์ตัดเครื่องนี้ออกจากการรับซื้อหน้างาน (ลูกค้าไม่ขาย/ไม่เข้าเงื่อนไข) */
+  excluded?: boolean;
 }
 
 export interface InspectionData {

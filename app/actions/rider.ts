@@ -109,6 +109,7 @@ async function autoCreateStock(requestId: string) {
   for (let i = 0; i < extras.length; i++) {
     const xd = extras[i];
     const xi = extraInsps[i] ?? {};
+    if (xi.excluded === true) continue; // เครื่องที่ไรเดอร์ตัดออกหน้างาน — ไม่เข้าสต็อก
     const { data: lastX } = await supabase.from("stocks").select("id").like("id", `STK-${year}-%`).order("id", { ascending: false }).limit(1);
     const seqX = lastX?.[0]?.id ? parseInt(lastX[0].id.split("-")[2], 10) : 0;
     const xId = `STK-${year}-${String(seqX + 1).padStart(5, "0")}`;
@@ -689,7 +690,7 @@ export async function riderConfirmPrice(id: string, actualPrice: number) {
 }
 
 // ─── Adjust price (price_negotiation) ────────────────────────────────────────
-export async function riderAdjustPrice(id: string, newPrice: number, reason: string, perDevice?: number[]) {
+export async function riderAdjustPrice(id: string, newPrice: number, reason: string, perDevice?: number[], excludedExtras?: boolean[]) {
   const user = await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
@@ -707,6 +708,7 @@ export async function riderAdjustPrice(id: string, newPrice: number, reason: str
   const updatedExtras = extras.map((e, i) => ({
     ...e,
     ...(perDevice?.[i + 1] != null ? { actualPrice: perDevice[i + 1], result: perDevice[i + 1] === e.originalPrice ? e.result : "adjusted" } : {}),
+    ...(excludedExtras?.[i] ? { excluded: true, actualPrice: 0 } : { excluded: false }),
   }));
   const total = mainNew + updatedExtras.reduce((s, e) => s + ((e.actualPrice as number) ?? 0), 0);
 

@@ -1493,6 +1493,38 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                         <p style={{ margin: "5px 0 0", fontSize: 12, color: TEXT2, fontStyle: "italic" }}>"{request.inspection.priceReason}"</p>
                       )}
                     </div>
+                    {/* ผลตรวจเครื่องพ่วง (งาน bundle) — ให้แอดมินเห็นครบทุกเครื่องก่อนอนุมัติ */}
+                    {(request.extraDevices ?? []).length > 0 && (
+                      <div style={{ borderRadius: 10, background: "rgba(255,159,10,0.06)", border: "1px solid rgba(255,159,10,0.35)", padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+                        <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#FF9F0A" }}>📦 ผลตรวจเครื่องพ่วง ({(request.extraDevices ?? []).length} เครื่อง)</p>
+                        {(request.extraDevices ?? []).map((xd, i) => {
+                          const xi = request.inspection?.extraInspections?.[i];
+                          if (!xi?.inspectedAt) {
+                            return (
+                              <p key={i} style={{ margin: 0, fontSize: 13, color: "#B45309" }}>
+                                เครื่องที่ {i + 2} · {xd.model} {xd.storage} — <b>⏳ ไรเดอร์ยังไม่ได้ตรวจ</b>
+                              </p>
+                            );
+                          }
+                          const passed = (xi.criteria ?? []).filter(cr => cr.pass).length;
+                          return (
+                            <div key={i} style={{ borderTop: i > 0 ? "1px dashed rgba(255,159,10,0.35)" : "none", paddingTop: i > 0 ? 8 : 0 }}>
+                              <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700 }}>เครื่องที่ {i + 2} · {xd.model} {xd.storage} ✅</p>
+                              <p style={{ margin: 0, fontSize: 12, opacity: 0.85 }}>
+                                เกณฑ์ผ่าน {passed}/{(xi.criteria ?? []).length}
+                                {xi.imei ? ` · IMEI ${xi.imei}` : ""}
+                                {xi.serial ? ` · SN ${xi.serial}` : ""}
+                                {xi.batteryHealth ? ` · แบต ${xi.batteryHealth}%` : ""}
+                                {` · รูป ${(xi.photos ?? []).length}`}
+                              </p>
+                              {(xi.criteria ?? []).filter(cr => !cr.pass).map((cr, j) => (
+                                <p key={j} style={{ margin: "2px 0 0", fontSize: 12, color: "#B45309" }}>⚠️ {cr.label}: แจ้ง "{cr.stated}" → จริง "{cr.actual}"</p>
+                              ))}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                     {request.status === "inspecting" && (() => {
                       const insp = request.inspection as { adminApprovedAt?: string; revisionNote?: string; adminPriceGuidance?: { priceMin?: number | null; priceMax?: number | null; note?: string | null } };
                       const approved = !!insp.adminApprovedAt;
