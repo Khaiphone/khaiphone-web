@@ -380,10 +380,29 @@ function CustomerSummaryCard({ job, c }: { job: AdminRequest; c: TC }) {
   );
 }
 
+// ── Multi-device: map ชื่อหัวข้อใน extra_devices.details → key เกณฑ์ตรวจ ─────
+const DETAIL_TITLE_TO_KEY: Record<string, string> = {
+  "ตัวเครื่อง": "body", "หน้าจอ": "screen", "ภาพหน้าจอ": "display",
+  "แบตเตอรี่": "battery", "ประกัน": "warranty", "iCloud": "icloud",
+};
+
 // ── Inspect Step (stateful component) ─────────────────────────────────────────
-function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void; c: TC }) {
+// deviceIndex: 0 = เครื่องหลัก, 1+ = เครื่องพ่วง (extra_devices[deviceIndex-1] / inspection.extraInspections[deviceIndex-1])
+function InspectStep({ job, deviceIndex = 0, reload, c }: { job: AdminRequest; deviceIndex?: number; reload: () => void; c: TC }) {
+  const isExtra   = deviceIndex > 0;
+  const extraDev  = isExtra ? (job.extraDevices ?? [])[deviceIndex - 1] : undefined;
+  const xIns      = isExtra ? job.inspection?.extraInspections?.[deviceIndex - 1] : undefined;
+  // "inspection ของเครื่องนี้" — เครื่องหลักอ่าน top-level, เครื่องพ่วงอ่านจาก extraInspections
+  const dIns      = (isExtra ? xIns : job.inspection) as (NonNullable<AdminRequest["inspection"]> & { carrierLock?: string }) | undefined;
+  const dModel    = isExtra ? (extraDev?.model ?? "") : job.device.model;
+  const dStorage  = isExtra ? (extraDev?.storage ?? "") : job.device.storage;
+  const dSelections: Record<string, string> = isExtra
+    ? Object.fromEntries((extraDev?.details ?? []).map(d => [DETAIL_TITLE_TO_KEY[d.title] ?? "", d.value]).filter(([k]) => k))
+    : (job.device.selections ?? {});
+  const devPathSeg = isExtra ? `/d${deviceIndex}` : "";
+
   const [slotPhotos, setSlotPhotos] = useState<Partial<Record<string, string>>>(() => {
-    const existing = (job.inspection as { photos?: string[] } | undefined)?.photos ?? [];
+    const existing = (dIns as { photos?: string[] } | undefined)?.photos ?? [];
     const slots: Partial<Record<string, string>> = {};
     for (const url of existing)
       for (const key of ALL_SLOT_KEYS)
@@ -391,50 +410,50 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
     return slots;
   });
   const [defectPhotos, setDefectPhotos] = useState<string[]>(() => {
-    const existing = (job.inspection as { photos?: string[] } | undefined)?.photos ?? [];
+    const existing = (dIns as { photos?: string[] } | undefined)?.photos ?? [];
     return existing.filter(url => !ALL_SLOT_KEYS.some(key => url.includes(`/slot-${key}-`)));
   });
   const defectRef = useRef<HTMLInputElement>(null!);
   const [uploading, setUploading] = useState(false);
-  const [imei,   setImei]   = useState(job.inspection?.imei ?? "");
-  const [serial, setSerial] = useState(job.inspection?.serial ?? "");
-  const [color,  setColor]  = useState(job.device?.color ?? "");
-  const [carrierLock, setCarrierLock] = useState<string>((job.inspection as { carrierLock?: string } | undefined)?.carrierLock ?? "");
-  const [battery, setBattery] = useState(job.inspection?.batteryHealth ? String(job.inspection.batteryHealth) : "");
+  const [imei,   setImei]   = useState(dIns?.imei ?? "");
+  const [serial, setSerial] = useState(dIns?.serial ?? "");
+  const [color,  setColor]  = useState(isExtra ? ((xIns as { color?: string } | undefined)?.color ?? "") : (job.device?.color ?? ""));
+  const [carrierLock, setCarrierLock] = useState<string>(dIns?.carrierLock ?? "");
+  const [battery, setBattery] = useState(dIns?.batteryHealth ? String(dIns.batteryHealth) : "");
   const [warrantyStatus, setWarrantyStatus] = useState<"valid" | "expired" | "">(
-    job.inspection?.warrantyExpiry === "expired" ? "expired" : job.inspection?.warrantyExpiry ? "valid" : ""
+    dIns?.warrantyExpiry === "expired" ? "expired" : dIns?.warrantyExpiry ? "valid" : ""
   );
   const [warrantyExpiry, setWarranty] = useState(
-    job.inspection?.warrantyExpiry && job.inspection.warrantyExpiry !== "expired" ? job.inspection.warrantyExpiry : ""
+    dIns?.warrantyExpiry && dIns.warrantyExpiry !== "expired" ? dIns.warrantyExpiry : ""
   );
   const [criteria, setCriteria] = useState<Record<string, { stated: string; actual: string }>>(() => {
-    const sels = job.device.selections ?? {};
+    const sels = dSelections;
     const init: Record<string, { stated: string; actual: string }> = {};
     INSPECT_KEYS.forEach(k => { if (sels[k]) init[k] = { stated: sels[k], actual: sels[k] }; });
     return init;
   });
   const [functional, setFunctional] = useState<Array<{ label: string; pass: boolean | null }>>(() => {
-    const saved = (job.inspection as { functionalTests?: FunctionalTest[] } | undefined)?.functionalTests;
+    const saved = (dIns as { functionalTests?: FunctionalTest[] } | undefined)?.functionalTests;
     if (saved?.length) return saved.map(t => ({ label: t.label, pass: t.pass }));
     const list: Array<{ label: string; pass: boolean | null }> = FUNCTIONAL_DEFAULTS.map(t => ({ label: t.label, pass: null }));
-    if (/iPhone\s+1[67]/i.test(job.device.model ?? "")) list.push({ label: "ปุ่ม Camera Control", pass: null });
+    if (/iPhone\s+1[67]/i.test(dModel ?? "")) list.push({ label: "ปุ่ม Camera Control", pass: null });
     return list;
   });
   const scanRef = useRef<HTMLInputElement>(null!);
   const [scanning,     setScanning]     = useState(false);
   const [sickwResult,  setSickwResult]  = useState<SickwResult | null>(null);
-  const [sickwRaw,     setSickwRaw]     = useState((job.inspection as { sickw_report?: string } | undefined)?.sickw_report ?? "");
+  const [sickwRaw,     setSickwRaw]     = useState((dIns as { sickw_report?: string } | undefined)?.sickw_report ?? "");
   const [sickwExpanded,setSickwExpanded]= useState(false);
   const [sickwError,   setSickwError]   = useState("");
   const [sickwLoading, setSickwLoading] = useState(false);
-  const savedAcc = (job.inspection as { accessories?: string[] } | undefined)?.accessories;
+  const savedAcc = (dIns as { accessories?: string[] } | undefined)?.accessories;
   const [accessories, setAccessories] = useState<string[]>(savedAcc ?? ["ตัวเครื่อง"]);
   const [accessoriesOther, setAccessoriesOther] = useState("");
-  const [conditionGrade, setConditionGrade] = useState<string>((job.inspection as { conditionGrade?: string } | undefined)?.conditionGrade ?? "");
-  const [conditionLabel, setConditionLabel] = useState<string>((job.inspection as { conditionLabel?: string } | undefined)?.conditionLabel ?? "");
-  const [inspectNote, setInspectNote] = useState<string>((job.inspection as { note?: string } | undefined)?.note ?? "");
+  const [conditionGrade, setConditionGrade] = useState<string>((dIns as { conditionGrade?: string } | undefined)?.conditionGrade ?? "");
+  const [conditionLabel, setConditionLabel] = useState<string>((dIns as { conditionLabel?: string } | undefined)?.conditionLabel ?? "");
+  const [inspectNote, setInspectNote] = useState<string>((dIns as { note?: string } | undefined)?.note ?? "");
   // ประวัติการซ่อม / เปลี่ยนอะไหล่
-  const savedRepair = (job.inspection as { repairHistory?: { status?: string; parts?: string[]; partType?: string; note?: string } } | undefined)?.repairHistory;
+  const savedRepair = (dIns as { repairHistory?: { status?: string; parts?: string[]; partType?: string; note?: string } } | undefined)?.repairHistory;
   const [repairedStatus, setRepairedStatus] = useState<"" | "no" | "yes" | "unsure">((savedRepair?.status as "no" | "yes" | "unsure") ?? "");
   const [repairedParts, setRepairedParts] = useState<string[]>(savedRepair?.parts ?? []);
   const [repairedPartType, setRepairedPartType] = useState<"" | "genuine" | "aftermarket" | "unsure">((savedRepair?.partType as "genuine" | "aftermarket" | "unsure") ?? "");
@@ -556,12 +575,29 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
   // Price confirm sub-step (shown after inspection saved)
   // Use inspectedAt (set by riderSaveInspection) — NOT just !!job.inspection which is also
   // set by riderAutoSaveSickw and would prematurely jump to the saved-screen.
-  const inspectionFullySaved = !!(job.inspection as { inspectedAt?: string } | undefined)?.inspectedAt;
+  const inspectionFullySaved = deviceIndex === 0
+    ? !!(job.inspection as { inspectedAt?: string } | undefined)?.inspectedAt
+    : !!xIns?.inspectedAt;
+  // งาน bundle: เสนอราคาได้เมื่อตรวจครบทุกเครื่องแล้วเท่านั้น
+  const extraCount = (job.extraDevices ?? []).length;
+  const allDevicesInspected =
+    !!(job.inspection as { inspectedAt?: string } | undefined)?.inspectedAt &&
+    (job.extraDevices ?? []).every((_, i) => !!job.inspection?.extraInspections?.[i]?.inspectedAt);
+  const pendingDeviceNo = !(job.inspection as { inspectedAt?: string } | undefined)?.inspectedAt
+    ? 1
+    : ((job.extraDevices ?? []).findIndex((_, i) => !job.inspection?.extraInspections?.[i]?.inspectedAt) + 2);
+  // ราคารวมทุกเครื่อง (ประเมิน)
+  const bundleEstTotal = job.device.estimatedPrice + (job.extraDevices ?? []).reduce((s, d) => s + d.estimatedPrice, 0);
   const adminInitApproved    = !!(job.inspection as { adminApprovedAt?: string } | undefined)?.adminApprovedAt;
   // showPrice = true only when admin has already approved (handles page refresh after approval)
-  const [showPrice, setShowPrice] = useState(inspectionFullySaved && adminInitApproved);
+  const [showPrice, setShowPrice] = useState(inspectionFullySaved && adminInitApproved && allDevicesInspected);
   const [priceMode, setPriceMode] = useState<"" | "confirm" | "adjust">("");
   const [adjustPrice, setAdjustPrice] = useState(String(job.device.estimatedPrice));
+  // งาน bundle: ปรับราคาแยกต่อเครื่อง [หลัก, พ่วง...]
+  const [deviceAdjust, setDeviceAdjust] = useState<string[]>([
+    String(job.device.estimatedPrice),
+    ...(job.extraDevices ?? []).map(d => String(d.estimatedPrice)),
+  ]);
   const [adjustReason, setAdjustReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -573,7 +609,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
     setUploading(true);
     try {
       const compressed = await compressImage(file);
-      const url = await uploadPhoto(compressed, `rider/${job.id}/slot-${key}-${Date.now()}.jpg`);
+      const url = await uploadPhoto(compressed, `rider/${job.id}${devPathSeg}/slot-${key}-${Date.now()}.jpg`);
       setSlotPhotos(prev => ({ ...prev, [key]: url }));
     } catch { setError("อัปโหลดรูปไม่สำเร็จ"); }
     finally { setUploading(false); }
@@ -584,7 +620,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
     try {
       const urls = await Promise.all(Array.from(files).map(async f => {
         const compressed = await compressImage(f);
-        return uploadPhoto(compressed, `rider/${job.id}/defect-${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`);
+        return uploadPhoto(compressed, `rider/${job.id}${devPathSeg}/defect-${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`);
       }));
       setDefectPhotos(prev => [...prev, ...urls]);
     } catch { setError("อัปโหลดรูปไม่สำเร็จ"); }
@@ -600,7 +636,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
       }));
       // Capacity check — record declared vs SICKW-scanned so admin sees it with the rest
       const normCap = (s?: string) => { const m = s?.match(/(\d+)\s*([GT])B/i); return m ? `${m[1]}${m[2].toUpperCase()}B` : undefined; };
-      const declaredCap = normCap(job.device.storage);
+      const declaredCap = normCap(dStorage);
       const scannedCap  = normCap(sickwResult?.storage);
       if (declaredCap && scannedCap) {
         criteriaArr.unshift({ label: "ความจุ", stated: declaredCap, actual: scannedCap, pass: declaredCap === scannedCap });
@@ -629,7 +665,7 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
           } : {}),
           note: repairNote.trim() || undefined,
         } : undefined,
-      });
+      }, deviceIndex);
       if (!result.success) { setError((result as { success: false; error?: string }).error ?? "เกิดข้อผิดพลาด"); return; }
       setIsEditingInspection(false);
       reload(); // admin sees inspection via realtime; rider stays on intermediate state
@@ -639,12 +675,23 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
 
   async function handleConfirmPrice() {
     setSubmitting(true);
-    const result = await riderConfirmPrice(job.id, job.device.estimatedPrice);
+    const result = await riderConfirmPrice(job.id, bundleEstTotal);
     if (!result.success) { setError((result as { success: false; error?: string }).error ?? "เกิดข้อผิดพลาด"); setSubmitting(false); return; }
     reload();
   }
 
   async function handleAdjustPrice() {
+    if (extraCount > 0) {
+      // bundle: รวมราคาต่อเครื่องเป็น perDevice
+      const perDevice = deviceAdjust.map(v => parseInt(v.replace(/,/g, "")));
+      if (perDevice.some(v => !v && v !== 0) || !adjustReason.trim()) { setError("กรุณากรอกราคาทุกเครื่องและเหตุผล"); return; }
+      const total = perDevice.reduce((s, v) => s + v, 0);
+      setSubmitting(true);
+      const result = await riderAdjustPrice(job.id, total, adjustReason, perDevice);
+      if (!result.success) { setError((result as { success: false; error?: string }).error ?? "เกิดข้อผิดพลาด"); setSubmitting(false); return; }
+      reload();
+      return;
+    }
     const np = parseInt(adjustPrice.replace(/,/g, ""));
     if (!np || !adjustReason.trim()) { setError("กรุณากรอกราคาและเหตุผล"); return; }
     setSubmitting(true);
@@ -653,13 +700,13 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
     reload();
   }
 
-  const price = job.device.estimatedPrice;
+  const price = bundleEstTotal;
   const inspectionSaved = inspectionFullySaved && job.status === "inspecting";
 
   // Intermediate state: inspection saved, admin reviewing, price not yet proposed
   // If revisionNote is set (admin requested revision), bypass this screen and show the form directly
   if (inspectionSaved && !showPrice && !isEditingInspection && !revisionNote) {
-    const insp = job.inspection!;
+    const insp = dIns!;
     const passed = (insp.criteria ?? []).filter(c => c.pass).length;
     const total  = (insp.criteria ?? []).length;
     const adminApproved = !!(insp as { adminApprovedAt?: string }).adminApprovedAt;
@@ -698,7 +745,12 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
           </div>
         </div>
 
-        {adminApproved ? (
+        {!allDevicesInspected ? (
+          <div style={{ padding: "14px 16px", borderRadius: 14, background: "rgba(10,132,255,0.08)", border: "1px solid rgba(10,132,255,0.35)", textAlign: "center" }}>
+            <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 700, color: "#0A84FF" }}>📱 ยังเหลือเครื่องที่ {pendingDeviceNo} ยังไม่ได้ตรวจ</p>
+            <p style={{ margin: 0, fontSize: 12, color: "#0A84FF" }}>สลับแท็บด้านบนเพื่อตรวจเครื่องถัดไป — ตรวจครบทุกเครื่องแล้วจึงเสนอราคาได้</p>
+          </div>
+        ) : adminApproved ? (
           <BigBtn label="เสนอราคา →" onClick={() => setShowPrice(true)} />
         ) : (
           <div style={{ padding: "14px 16px", borderRadius: 14, background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.4)", textAlign: "center" }}>
@@ -747,8 +799,18 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
         <div style={{ background: c.CARD, borderRadius: 14, padding: 16, border: `1px solid ${c.BORDER}` }}>
           <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: c.TEXT }}>ยืนยันราคา</p>
           <div style={{ background: c.CARD2, borderRadius: 10, padding: "14px", textAlign: "center", marginBottom: 14 }}>
-            <p style={{ margin: "0 0 4px", fontSize: 11, color: c.TEXT2 }}>ราคาประเมิน (ลูกค้าแจ้ง)</p>
+            <p style={{ margin: "0 0 4px", fontSize: 11, color: c.TEXT2 }}>{extraCount > 0 ? `ราคาประเมินรวม ${extraCount + 1} เครื่อง` : "ราคาประเมิน (ลูกค้าแจ้ง)"}</p>
             <p style={{ margin: 0, fontSize: 28, fontWeight: 800, color: c.ACCENT }}>฿{price.toLocaleString("th-TH")}</p>
+            {extraCount > 0 && (
+              <div style={{ marginTop: 10, borderTop: `1px dashed ${c.BORDER}`, paddingTop: 8, display: "flex", flexDirection: "column", gap: 3 }}>
+                {[{ model: job.device.model, storage: job.device.storage, estimatedPrice: job.device.estimatedPrice }, ...(job.extraDevices ?? [])].map((d, i) => (
+                  <p key={i} style={{ margin: 0, fontSize: 12, color: c.TEXT2, display: "flex", justifyContent: "space-between" }}>
+                    <span>เครื่องที่ {i + 1} · {d.model} {d.storage}</span>
+                    <span style={{ fontWeight: 700 }}>฿{d.estimatedPrice.toLocaleString("th-TH")}</span>
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
           <p style={{ margin: "0 0 10px", fontSize: 13, color: c.TEXT2 }}>เครื่องตรงตามที่แจ้งหรือไม่?</p>
           <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
@@ -761,11 +823,26 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
           </div>
           {priceMode === "adjust" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {extraCount > 0 ? (
+                <>
+                  {[{ model: job.device.model, storage: job.device.storage }, ...(job.extraDevices ?? [])].map((d, i) => (
+                    <div key={i}>
+                      <p style={{ margin: "0 0 4px", fontSize: 12, color: c.TEXT2 }}>เครื่องที่ {i + 1} · {d.model} {d.storage} (บาท)</p>
+                      <input type="number" value={deviceAdjust[i] ?? ""} onChange={e => setDeviceAdjust(prev => prev.map((v, j) => j === i ? e.target.value : v))}
+                        style={{ width: "100%", background: c.CARD2, border: `1px solid ${c.BORDER}`, borderRadius: 8, color: c.TEXT, fontSize: 16, fontFamily: "inherit", outline: "none", padding: "10px 12px", boxSizing: "border-box" }} />
+                    </div>
+                  ))}
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: c.TEXT, textAlign: "right" }}>
+                    รวม ฿{deviceAdjust.reduce((s, v) => s + (parseInt(v.replace(/,/g, "")) || 0), 0).toLocaleString("th-TH")}
+                  </p>
+                </>
+              ) : (
               <div>
                 <p style={{ margin: "0 0 4px", fontSize: 12, color: c.TEXT2 }}>ราคาที่เสนอใหม่ (บาท)</p>
                 <input type="number" value={adjustPrice} onChange={e => setAdjustPrice(e.target.value)}
                   style={{ width: "100%", background: c.CARD2, border: `1px solid ${c.BORDER}`, borderRadius: 8, color: c.TEXT, fontSize: 16, fontFamily: "inherit", outline: "none", padding: "10px 12px", boxSizing: "border-box" }} />
               </div>
+              )}
               <div>
                 <p style={{ margin: "0 0 4px", fontSize: 12, color: c.TEXT2 }}>เหตุผล</p>
                 <input value={adjustReason} onChange={e => setAdjustReason(e.target.value)} placeholder="เช่น แบตเตอรี่น้อย, มีรอยขีดข่วน"
@@ -800,7 +877,19 @@ function InspectStep({ job, reload, c }: { job: AdminRequest; reload: () => void
       )}
 
       {/* สรุปการประเมินของลูกค้า — ให้ไรเดอร์เห็นเหมือน admin ใช้เทียบกับเครื่องจริง */}
-      <CustomerSummaryCard job={job} c={c} />
+      {isExtra ? (
+        <div style={{ background: c.CARD, borderRadius: 14, padding: "12px 14px", border: `1px solid ${c.BORDER}` }}>
+          <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: c.TEXT2 }}>📦 เครื่องที่ {deviceIndex + 1} — สภาพที่ลูกค้าแจ้ง</p>
+          <p style={{ margin: "0 0 6px", fontSize: 14, fontWeight: 700, color: c.TEXT }}>{dModel} {dStorage} · ประเมิน ฿{(extraDev?.estimatedPrice ?? 0).toLocaleString("th-TH")}</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {(extraDev?.details ?? []).map((d, i) => (
+              <p key={i} style={{ margin: 0, fontSize: 12, color: c.TEXT2 }}>{d.title}: <span style={{ color: c.TEXT }}>{d.value}</span></p>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <CustomerSummaryCard job={job} c={c} />
+      )}
 
       {/* Photos */}
       <div ref={photoSlotsRef}>
@@ -1269,7 +1358,7 @@ function PriceNegotiationStep({ job, reload, c }: { job: AdminRequest; reload: (
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const insp = job.inspection;
-  const price = insp?.actualPrice ?? job.device.estimatedPrice;
+  const price = (insp?.actualPrice ?? job.device.estimatedPrice) + (insp?.extraInspections ?? []).reduce((s, e) => s + (e.actualPrice ?? 0), 0);
   const response = insp?.negotiationResponse;
 
   async function handleAccepted() {
@@ -1344,7 +1433,7 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
   const custFileRef = useRef<HTMLInputElement>(null!);
   const paymentFileRef = useRef<HTMLInputElement>(null!);
 
-  const price = job.inspection?.actualPrice ?? job.device.estimatedPrice;
+  const price = (job.inspection?.actualPrice ?? job.device.estimatedPrice) + (job.inspection?.extraInspections ?? []).reduce((s, e) => s + (e.actualPrice ?? 0), 0);
 
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
@@ -1583,28 +1672,53 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
 
       const devPrice = r.inspection?.actualPrice ?? r.device.estimatedPrice;
       const accList = r.inspection?.accessories ?? ["ตัวเครื่อง"];
+      const extraInspArr = r.inspection?.extraInspections ?? [];
+      const hasExtras = (r.extraDevices ?? []).length > 0;
 
-      const dev: ContractDevice = {
-        label: "",
-        model: r.device.model,
-        storage: r.device.storage,
-        color: deviceColor,
-        condition: (r.inspection as { conditionLabel?: string } | undefined)?.conditionLabel || r.device.condition,
-        imei,
-        serial,
-        accessories: accList,
-        price: devPrice,
-        criteria: (r.inspection?.criteria ?? []) as ContractDevice["criteria"],
-        issues: r.inspection?.issues ?? [],
-        functionalTests: (r.inspection?.functionalTests ?? []) as ContractDevice["functionalTests"],
-        warrantyExpiry: r.inspection?.warrantyExpiry,
-        batteryCycles: r.inspection?.batteryCycles,
-        batteryHealth: r.inspection?.batteryHealth,
-      };
+      // ทุกเครื่องในงาน (bundle = สัญญา/ใบเสร็จหน้าละเครื่อง เลขที่เอกสาร -1, -2 ตาม contract-builder)
+      const devices: ContractDevice[] = [
+        {
+          label: hasExtras ? "เครื่องที่ 1" : "",
+          model: r.device.model,
+          storage: r.device.storage,
+          color: deviceColor,
+          condition: (r.inspection as { conditionLabel?: string } | undefined)?.conditionLabel || r.device.condition,
+          imei,
+          serial,
+          accessories: accList,
+          price: devPrice,
+          criteria: (r.inspection?.criteria ?? []) as ContractDevice["criteria"],
+          issues: r.inspection?.issues ?? [],
+          functionalTests: (r.inspection?.functionalTests ?? []) as ContractDevice["functionalTests"],
+          warrantyExpiry: r.inspection?.warrantyExpiry,
+          batteryCycles: r.inspection?.batteryCycles,
+          batteryHealth: r.inspection?.batteryHealth,
+        },
+        ...(r.extraDevices ?? []).map((xd, i) => {
+          const xi = extraInspArr[i];
+          return {
+            label: `เครื่องที่ ${i + 2}`,
+            model: xd.model,
+            storage: xd.storage,
+            color: (xi as { color?: string } | undefined)?.color ?? "",
+            condition: (xi as { conditionLabel?: string } | undefined)?.conditionLabel ?? "",
+            imei: xi?.imei ?? "",
+            serial: xi?.serial ?? "",
+            accessories: (xi as { accessories?: string[] } | undefined)?.accessories ?? ["ตัวเครื่อง"],
+            price: xi?.actualPrice ?? xd.estimatedPrice,
+            criteria: (xi?.criteria ?? []) as ContractDevice["criteria"],
+            issues: xi?.issues ?? [],
+            functionalTests: (xi?.functionalTests ?? []) as ContractDevice["functionalTests"],
+            warrantyExpiry: (xi as { warrantyExpiry?: string } | undefined)?.warrantyExpiry,
+            batteryCycles: (xi as { batteryCycles?: number } | undefined)?.batteryCycles,
+            batteryHealth: (xi as { batteryHealth?: number } | undefined)?.batteryHealth,
+          } as ContractDevice;
+        }),
+      ];
 
       const ctx: ContractCtx = {
         docNo,
-        totalDevices: 1,
+        totalDevices: devices.length,
         dateStr,
         timeStr,
         dateShort,
@@ -1629,8 +1743,8 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
       };
 
       // Full HTML (with embedded photos) — used for in-browser preview only
-      const cBody = buildContractPage(dev, 0, true, ctx);
-      const rBody = buildReceiptPage(dev, 0, true, ctx);
+      const cBody = devices.map((d, i) => buildContractPage(d, i, i === 0, ctx)).join("");
+      const rBody = devices.map((d, i) => buildReceiptPage(d, i, i === 0, ctx)).join("");
       const printCSS = "@media print{.header,.footer{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{max-width:none}}";
       const wrap = (body: string) => `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">${FONT_LINK}<style>${DOC_CSS}${printCSS}</style></head><body>${body}</body></html>`;
 
@@ -1650,8 +1764,8 @@ function ContractStep({ job, reload, riderName, officerId, c }: { job: AdminRequ
 
       // Stored HTML uses storage URLs (small) instead of base64 data URLs (large)
       const ctxLight = { ...ctx, idPhotoDataUrl: idPhotoUrl, custProdPhotoDataUrl: custProdUrl, slipImgSrc: "" };
-      const cBodyLight = buildContractPage(dev, 0, true, ctxLight);
-      const rBodyLight = buildReceiptPage(dev, 0, true, ctxLight);
+      const cBodyLight = devices.map((d, i) => buildContractPage(d, i, i === 0, ctxLight)).join("");
+      const rBodyLight = devices.map((d, i) => buildReceiptPage(d, i, i === 0, ctxLight)).join("");
 
       const uploadResult = await uploadContractFiles(job.id, docNo, wrap(cBodyLight), wrap(rBodyLight));
       if (!uploadResult.success) throw new Error("อัปโหลดสัญญาไม่สำเร็จ: " + uploadResult.error);
@@ -1960,6 +2074,7 @@ export default function JobWizardPage() {
   const [helpBusy, setHelpBusy]       = useState(false);
   const [nextJobId,  setNextJobId]  = useState<string | null>(null);
   const [chainBusy,  setChainBusy]  = useState(false);
+  const [inspectDevice, setInspectDevice] = useState(0); // งาน bundle: แท็บเครื่องที่กำลังตรวจ
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason,    setCancelReason]    = useState("");
   const [cancelOther,     setCancelOther]     = useState("");
@@ -2086,7 +2201,7 @@ export default function JobWizardPage() {
   );
 
   const step      = stepFromStatus(job.status);
-  const price     = job.inspection?.actualPrice ?? job.device.estimatedPrice;
+  const price     = (job.inspection?.actualPrice ?? job.device.estimatedPrice) + (job.inspection?.extraInspections ?? []).reduce((s, e) => s + (e.actualPrice ?? 0), 0);
   const isCash    = job.payment.method === "cash";
   const deviceImg = getDeviceImage(job.device.model);
   const apptDest  = (job.appointment.lat != null && job.appointment.lng != null) ? `${job.appointment.lat},${job.appointment.lng}` : encodeURIComponent(job.appointment.location);
@@ -2239,9 +2354,30 @@ export default function JobWizardPage() {
           ) : step === 2 ? (
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
               <div style={{ background:CARD, borderRadius:14, padding:"12px 14px", border:`1px solid ${BORDER}` }}>
-                <p style={{ margin:0, fontSize:14, fontWeight:700, color:TEXT }}>ตรวจสภาพ: {job.device.model}</p>
+                <p style={{ margin:0, fontSize:14, fontWeight:700, color:TEXT }}>
+                  ตรวจสภาพ: {inspectDevice === 0 ? job.device.model : (job.extraDevices ?? [])[inspectDevice - 1]?.model}
+                  {(job.extraDevices ?? []).length > 0 && ` (เครื่องที่ ${inspectDevice + 1}/${(job.extraDevices ?? []).length + 1})`}
+                </p>
               </div>
-              <InspectStep job={job} reload={reload} c={c} />
+              {(job.extraDevices ?? []).length > 0 && (
+                <div style={{ display:"flex", gap:8 }}>
+                  {[job.device, ...(job.extraDevices ?? [])].map((d, i) => {
+                    const done = i === 0
+                      ? !!(job.inspection as { inspectedAt?: string } | undefined)?.inspectedAt
+                      : !!job.inspection?.extraInspections?.[i - 1]?.inspectedAt;
+                    const active = inspectDevice === i;
+                    return (
+                      <button key={i} onClick={() => setInspectDevice(i)}
+                        style={{ flex:1, padding:"10px 6px", borderRadius:12, fontFamily:"inherit", cursor:"pointer",
+                          border:`2px solid ${active ? ACCENT : BORDER}`, background: active ? "rgba(212,168,67,0.12)" : CARD,
+                          color: active ? ACCENT : TEXT2, fontWeight:700, fontSize:13 }}>
+                        เครื่องที่ {i + 1} {done ? "✅" : ""}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <InspectStep key={inspectDevice} job={job} deviceIndex={inspectDevice} reload={reload} c={c} />
               {job.status === "inspecting" && (
                 <BigBtn label="ยกเลิกงาน / ไม่เข้าเงื่อนไข" color={RED} textColor="#fff" outline
                   onClick={() => { setCancelReason(""); setCancelOther(""); setShowCancelModal(true); }} />

@@ -88,6 +88,17 @@ export interface ExtraDeviceInspection {
   imei?: string;
   serial?: string;
   color?: string;
+  // ฟิลด์จากการตรวจฝั่งไรเดอร์ (เพิ่มตอนทำ multi-device rider flow)
+  inspectedAt?: string;
+  batteryHealth?: number;
+  batteryCycles?: number;
+  warrantyExpiry?: string;
+  accessories?: string[];
+  conditionGrade?: string;
+  conditionLabel?: string;
+  sickw_report?: string;
+  carrierLock?: string;
+  note?: string;
 }
 
 export interface InspectionData {

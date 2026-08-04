@@ -15,7 +15,7 @@ async function autoCreateStock(requestId: string) {
 
   const { data: current } = await supabase
     .from("requests")
-    .select("order_number, source, device_model, device_storage, device_color, actual_price, estimated_price, customer_name, customer_phone, inspection")
+    .select("order_number, source, device_model, device_storage, device_color, actual_price, estimated_price, customer_name, customer_phone, inspection, extra_devices")
     .eq("id", requestId)
     .single();
 
@@ -70,7 +70,8 @@ async function autoCreateStock(requestId: string) {
         return [{ label: "ประวัติการซ่อม", condition: cond }];
       })(),
     ],
-    cost_price:     current.actual_price ?? current.estimated_price ?? 0,
+    // ทุนต่อเครื่อง: ใช้ราคาจริงของเครื่องหลักจาก inspection (actual_price คอลัมน์เป็นยอดรวมทุกเครื่องในงาน bundle)
+    cost_price:     insp.actualPrice ?? current.actual_price ?? current.estimated_price ?? 0,
     shipping_cost:  0, other_cost: 0, selling_price: 0,
     status:         "รอตรวจ",
     source_channel: sourceMap[current.source ?? "website"] ?? "เว็บไซต์",
@@ -101,6 +102,65 @@ async function autoCreateStock(requestId: string) {
     status_log: [{ status: "รอตรวจ", timestamp: now, note: `สร้างอัตโนมัติจาก ${current.order_number} (ไรเดอร์)`, by: "system" }],
     created_at: now, updated_at: now,
   });
+
+  // เครื่องพ่วง (bundle): สร้างสต็อกแยกเครื่องละแถว ใช้ผลตรวจของแต่ละเครื่องจาก extraInspections
+  const extras = (current.extra_devices ?? []) as Array<{ model?: string; storage?: string; estimatedPrice?: number }>;
+  const extraInsps = (insp.extraInspections ?? []) as Array<Record<string, unknown>>;
+  for (let i = 0; i < extras.length; i++) {
+    const xd = extras[i];
+    const xi = extraInsps[i] ?? {};
+    const { data: lastX } = await supabase.from("stocks").select("id").like("id", `STK-${year}-%`).order("id", { ascending: false }).limit(1);
+    const seqX = lastX?.[0]?.id ? parseInt(lastX[0].id.split("-")[2], 10) : 0;
+    const xId = `STK-${year}-${String(seqX + 1).padStart(5, "0")}`;
+    await supabase.from("stocks").insert({
+      id: xId,
+      model:          xd.model   ?? "",
+      storage:        xd.storage ?? "",
+      color:          (xi.color as string) ?? "",
+      imei:           (xi.imei as string)   ?? "",
+      serial:         (xi.serial as string) ?? "",
+      grade:          (xi.conditionGrade as string) ?? (xi.result === "matched" ? "A" : "B"),
+      battery_health: (xi.batteryHealth as number) ?? 0,
+      cycle_count:    (xi.batteryCycles as number) ?? 0,
+      icloud_status:  "",
+      carrier_lock:   (xi.carrierLock as string) ?? "",
+      accessories:    Array.isArray(xi.accessories) ? (xi.accessories as string[]).join(", ") : "",
+      physical_checks: [
+        ...(((xi.criteria as Array<{ label: string; pass: boolean; actual?: string }>) ?? []).map(c => ({ label: c.label, condition: c.pass ? "ปกติ" : (c.actual?.trim() || "มีตำหนิ") }))),
+        ...(((xi.functionalTests as Array<{ label: string; pass: boolean }>) ?? []).map(t => ({ label: t.label, condition: t.pass ? "ปกติ" : "มีปัญหา" }))),
+      ],
+      cost_price:     (xi.actualPrice as number) ?? (xi.originalPrice as number) ?? xd.estimatedPrice ?? 0,
+      shipping_cost:  0, other_cost: 0, selling_price: 0,
+      status:         "รอตรวจ",
+      source_channel: sourceMap[current.source ?? "website"] ?? "เว็บไซต์",
+      request_ref:    current.order_number,
+      seller_name:    current.customer_name  ?? "",
+      seller_phone:   current.customer_phone ?? "",
+      received_at:    now,
+      inspector:      "",
+      photos:         (xi.photos as string[]) ?? [],
+      inspection_snapshot: {
+        imei:            xi.imei    ?? null,
+        serial:          xi.serial  ?? null,
+        model:           xd.model   ?? null,
+        storage:         xd.storage ?? null,
+        color:           xi.color   ?? null,
+        source:          "inspection-extra",
+        result:          xi.result          ?? null,
+        batteryHealth:   xi.batteryHealth   ?? null,
+        batteryCycles:   xi.batteryCycles   ?? null,
+        warrantyExpiry:  xi.warrantyExpiry  ?? null,
+        criteria:        xi.criteria        ?? [],
+        functionalTests: xi.functionalTests ?? [],
+        issues:          xi.issues          ?? [],
+        accessories:     Array.isArray(xi.accessories) ? xi.accessories : [],
+        repairHistory:   null,
+      },
+      notes:      [],
+      status_log: [{ status: "รอตรวจ", timestamp: now, note: `สร้างอัตโนมัติจาก ${current.order_number} เครื่องที่ ${i + 2} (ไรเดอร์)`, by: "system" }],
+      created_at: now, updated_at: now,
+    });
+  }
 }
 
 // ─── Home page data — pending + active + stats in one round trip ─────────────
@@ -506,48 +566,75 @@ export async function riderSaveInspection(id: string, inspection: {
     partType?: "genuine" | "aftermarket" | "unsure";
     note?: string;
   };
-}) {
+}, deviceIndex = 0) {
   const user = await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
   const { color, ...inspectionRest } = inspection;
 
   const { data: req } = await supabase
-    .from("requests").select("order_number, device_model, estimated_price, rider_id, inspection").eq("id", id).single();
+    .from("requests").select("order_number, device_model, estimated_price, rider_id, inspection, extra_devices").eq("id", id).single();
   if (req?.rider_id !== user.id) return { success: false as const, error: "ไม่ใช่งานของคุณ" };
 
   const estimatedPrice = req?.estimated_price ?? 0;
-  const isRevision = !!(req?.inspection as { revisionNote?: string } | null)?.revisionNote;
+  const currentInsp = (req?.inspection ?? {}) as Record<string, unknown>;
+  const isRevision = !!(currentInsp as { revisionNote?: string }).revisionNote;
+
+  let newInspection: Record<string, unknown>;
+  if (deviceIndex === 0) {
+    // เครื่องหลัก: แทนที่ทั้งก้อนตามเดิม แต่ต้องรักษาผลตรวจเครื่องพ่วงที่ตรวจไปแล้ว
+    newInspection = {
+      ...inspectionRest,
+      inspectedAt: now,
+      arrivedAt: now,
+      result: "matched",
+      issues: [],
+      originalPrice: estimatedPrice,
+      actualPrice: estimatedPrice,
+      priceReason: "",
+      negotiationResponse: null,
+      negotiationRespondedAt: null,
+      negotiationRespondedBy: null,
+      ...(Array.isArray(currentInsp.extraInspections) ? { extraInspections: currentInsp.extraInspections } : {}),
+    };
+  } else {
+    // เครื่องพ่วง: เขียนลง extraInspections[deviceIndex-1] ตาม convention กลาง (ExtraDeviceInspection)
+    const extraDevice = (req?.extra_devices ?? [])[deviceIndex - 1] as { model?: string; storage?: string; estimatedPrice?: number } | undefined;
+    if (!extraDevice) return { success: false as const, error: "ไม่พบเครื่องพ่วงลำดับนี้ในคำขอ" };
+    const est = extraDevice.estimatedPrice ?? 0;
+    const arr = Array.isArray(currentInsp.extraInspections) ? [...(currentInsp.extraInspections as unknown[])] : [];
+    arr[deviceIndex - 1] = {
+      model: extraDevice.model ?? "",
+      storage: extraDevice.storage ?? "",
+      originalPrice: est,
+      actualPrice: est,
+      result: "matched",
+      issues: [],
+      ...inspectionRest,
+      ...(color ? { color } : {}),
+      inspectedAt: now,
+    };
+    newInspection = { ...currentInsp, extraInspections: arr };
+  }
 
   const { error } = await supabase
     .from("requests")
     .update({
-      inspection: {
-        ...inspectionRest,
-        inspectedAt: now,
-        arrivedAt: now,
-        result: "matched",
-        issues: [],
-        originalPrice: estimatedPrice,
-        actualPrice: estimatedPrice,
-        priceReason: "",
-        negotiationResponse: null,
-        negotiationRespondedAt: null,
-        negotiationRespondedBy: null,
-      },
-      ...(color ? { device_color: color } : {}),
+      inspection: newInspection,
+      ...(color && deviceIndex === 0 ? { device_color: color } : {}),
       updated_at: now,
     })
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
 
+  const deviceLabel = deviceIndex === 0 ? (req?.device_model ?? "เครื่อง") : `เครื่องที่ ${deviceIndex + 1}`;
   after(async () => {
     await broadcastRequestUpdate(id);
     await sendPushToOwners({
       title: isRevision ? "🔄 ผลตรวจแก้ไขแล้ว — รออนุมัติ" : "📋 ผลตรวจสภาพเครื่อง — รออนุมัติ",
-      body: `#${req?.order_number ?? "?"} · ${req?.device_model ?? "เครื่อง"} — กดเพื่อตรวจสอบและอนุมัติ`,
+      body: `#${req?.order_number ?? "?"} · ${deviceLabel} — กดเพื่อตรวจสอบและอนุมัติ`,
       url: `/admin/requests/${id}`,
-      tag: isRevision ? `inspection-revised-${id}` : `inspection-${id}`,
+      tag: isRevision ? `inspection-revised-${id}` : `inspection-${id}-d${deviceIndex}`,
     });
   });
   return { success: true as const };
@@ -560,14 +647,21 @@ export async function riderConfirmPrice(id: string, actualPrice: number) {
   const now = new Date().toISOString();
 
   const { data: req } = await supabase
-    .from("requests").select("inspection, status_log, rider_id").eq("id", id).single();
+    .from("requests").select("inspection, status_log, rider_id, estimated_price").eq("id", id).single();
   if (req?.rider_id !== user.id) return { success: false as const, error: "ไม่ใช่งานของคุณ" };
+
+  // ยืนยันตามประเมิน: เครื่องหลักใช้ราคาประเมินหลัก, เครื่องพ่วงคงราคาประเมินของตัวเอง
+  // actual_price (คอลัมน์) = ยอดรวมทุกเครื่อง — ฝั่งแอดมิน/ลูกค้ารวมจาก inspection เอง
+  const insp = (req?.inspection ?? {}) as { extraInspections?: Array<{ actualPrice: number }> };
+  const mainPrice = req?.estimated_price ?? actualPrice;
+  const extrasTotal = (insp.extraInspections ?? []).reduce((s, e) => s + (e.actualPrice ?? 0), 0);
+  const total = mainPrice + extrasTotal;
 
   const updatedInspection = {
     ...(req?.inspection ?? {}),
     result: "matched",
-    actualPrice,
-    originalPrice: actualPrice,
+    actualPrice: mainPrice,
+    originalPrice: mainPrice,
   };
 
   const newLog = [
@@ -577,7 +671,7 @@ export async function riderConfirmPrice(id: string, actualPrice: number) {
 
   const { error } = await supabase
     .from("requests")
-    .update({ status: "contracting", status_log: newLog, actual_price: actualPrice, inspection: updatedInspection, updated_at: now })
+    .update({ status: "contracting", status_log: newLog, actual_price: total, inspection: updatedInspection, updated_at: now })
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
 
@@ -585,7 +679,7 @@ export async function riderConfirmPrice(id: string, actualPrice: number) {
     await broadcastRequestUpdate(id);
     await sendPushToOwners({
       title: "ราคาตรงกัน — กำลังทำสัญญา",
-      body: `งาน ${id.slice(0, 8)}... · ฿${actualPrice.toLocaleString("th-TH")}`,
+      body: `งาน ${id.slice(0, 8)}... · ฿${total.toLocaleString("th-TH")}`,
       url: `/admin/requests/${id}`,
       tag: `contracting-${id}`,
     }).catch(console.error);
@@ -595,7 +689,7 @@ export async function riderConfirmPrice(id: string, actualPrice: number) {
 }
 
 // ─── Adjust price (price_negotiation) ────────────────────────────────────────
-export async function riderAdjustPrice(id: string, newPrice: number, reason: string) {
+export async function riderAdjustPrice(id: string, newPrice: number, reason: string, perDevice?: number[]) {
   const user = await requireAuth();
   const supabase = createServerClient();
   const now = new Date().toISOString();
@@ -606,25 +700,36 @@ export async function riderAdjustPrice(id: string, newPrice: number, reason: str
     .eq("id", id).single();
   if (req?.rider_id !== user.id) return { success: false as const, error: "ไม่ใช่งานของคุณ" };
 
+  // perDevice = [ราคาเครื่องหลัก, ราคาเครื่องพ่วง...] — งานหลายเครื่องต้องส่งมาเสมอ
+  const insp = (req?.inspection ?? {}) as { extraInspections?: Array<Record<string, unknown>> };
+  const extras = insp.extraInspections ?? [];
+  const mainNew = perDevice?.[0] ?? newPrice;
+  const updatedExtras = extras.map((e, i) => ({
+    ...e,
+    ...(perDevice?.[i + 1] != null ? { actualPrice: perDevice[i + 1], result: perDevice[i + 1] === e.originalPrice ? e.result : "adjusted" } : {}),
+  }));
+  const total = mainNew + updatedExtras.reduce((s, e) => s + ((e.actualPrice as number) ?? 0), 0);
+
   const updatedInspection = {
     ...(req?.inspection ?? {}),
     result: "adjusted",
-    actualPrice: newPrice,
+    actualPrice: mainNew,
     originalPrice: req?.estimated_price ?? 0,
     priceReason: reason,
     negotiationResponse: null,
     negotiationRespondedAt: null,
     negotiationRespondedBy: null,
+    ...(extras.length > 0 ? { extraInspections: updatedExtras } : {}),
   };
 
   const newLog = [
     ...(req?.status_log ?? []),
-    { status: "price_negotiation", timestamp: now, note: `เสนอราคาใหม่ ฿${newPrice.toLocaleString("th-TH")} — ${reason}` },
+    { status: "price_negotiation", timestamp: now, note: `เสนอราคาใหม่ ฿${total.toLocaleString("th-TH")} — ${reason}` },
   ];
 
   const { error } = await supabase
     .from("requests")
-    .update({ status: "price_negotiation", status_log: newLog, actual_price: newPrice, inspection: updatedInspection, updated_at: now })
+    .update({ status: "price_negotiation", status_log: newLog, actual_price: total, inspection: updatedInspection, updated_at: now })
     .eq("id", id);
   if (error) return { success: false as const, error: error.message };
 
